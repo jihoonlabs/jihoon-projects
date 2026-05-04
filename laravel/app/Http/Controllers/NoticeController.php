@@ -106,6 +106,11 @@ class NoticeController extends Controller
     */
     public function store(Request $request)
     {
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'content' => ['nullable', 'string'],
+        ]);
+
         /*
         | Notice::create()
         | ex: created_at, updated_at은 자동 생성
@@ -114,10 +119,7 @@ class NoticeController extends Controller
         | VALUES (...);
         |
         */
-        $notice = Notice::create([
-            'title' => $request->title,
-            'content' => $request->content,
-        ]);
+        $notice = Notice::create($validated);
 
         /*
         | JSON 응답 반환
@@ -143,15 +145,19 @@ class NoticeController extends Controller
     {
         $notice = Notice::findOrFail($id);
 
-        $notice->update([
-            /*
-            | $notice->update([...])
-            | 찾은 공지 row의 title/content를 수정
-            | updated_at은 자동 갱신
-            */
-            'title' => $request->title,
-            'content' => $request->content,
+        $validated = $request->validate([
+            // title은 필수 문자 255자
+            'title' => ['required', 'string', 'max:255'],
+            // 없어도 가능 문자
+            'content' => ['nullable', 'string'],
         ]);
+
+        /*
+        | $notice->update([...])
+        | 찾은 공지 row의 title/content를 수정
+        | updated_at은 자동 갱신
+        */
+        $notice->update($validated);
 
         return response()->json([
             'message' => 'notice updated',
