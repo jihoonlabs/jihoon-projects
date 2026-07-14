@@ -1,0 +1,9 @@
+### 게시글 등록
+POST http://127.0.0.1:8000/api/posts
+Content-Type: application/json
+Accept: application/json
+
+{
+  "content": "첫 번째 게시글입니다.",
+  "image_url": null
+}
