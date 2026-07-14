@@ -20,7 +20,7 @@ return new class extends Migration
     /**
      * Run the migrations.
      *
-     * "DB에 적용"할 때 실행됨
+     * DB에 적용
      * php artisan migrate 실행 시
      * DB에 notices table을 생성
      * 보이드 이므로 아무것도 리턴 안함
@@ -41,7 +41,7 @@ return new class extends Migration
 
             /*
             | title 문자열 컬럼 생성
-            | VARCHAR(255) 타입
+            | VARCHAR(255) 타입 글자수 제한
             */
             $table->string('title');
 
@@ -55,8 +55,8 @@ return new class extends Migration
             /*
             | timestamps
             | 밑의 2개 칼럼 자동 생성
-            | created_at → 생성 시간
-            | updated_at → 수정 시간
+            | created_at 생성 시간
+            | updated_at 수정 시간
             |
             | Laravel이 자동으로 관리
             */
@@ -65,16 +65,12 @@ return new class extends Migration
     }
 
     /**
-     * 되돌릴때 실행
      * php artisan migrate:rollback
      */
     public function down(): void
     {
         /*
-        |--------------------------------------------------------------------------
         | notices 테이블 삭제
-        |--------------------------------------------------------------------------
-        | 존재하면 삭제
         */
         Schema::dropIfExists('notices');
     }
