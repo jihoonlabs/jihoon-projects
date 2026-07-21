@@ -1,0 +1,28 @@
+.textarea {
+  width: 100%;
+  min-height: 120px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+  resize: vertical;
+
+  &:focus {
+    border-color: #333;
+  }
+
+  &:disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+  }
+}
+
+.error {
+  border-color: red;
+
+  &:focus {
+    border-color: red;
+  }
+}
