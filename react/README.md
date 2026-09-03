@@ -1,64 +1,55 @@
-JIHOON-PROJECTS
-A modern web application built with Next.js App Router, TypeScript, and SCSS modules. This repository houses feature-based integrations and core UI components.
+技術スタック (Tech Stack)
+フレームワーク: Next.js (App Router)
 
-Tech Stack
-Framework: Next.js (App Router)
+言語: TypeScript
 
-Language: TypeScript
+状態管理: Zustand
 
-State Management: Zustand
+スタイリング: SCSS Modules
 
-Styling: SCSS Modules
+パッケージマネージャー: pnpm
 
-Package Manager: pnpm
+セットアップ (Getting Started)
+前提条件 (Prerequisites)
+Node.js および pnpm がインストールされていることを確認してください。
 
-Getting Started
-Prerequisites
-Ensure you have Node.js and pnpm installed on your machine.
+クイックスタート (Quick Start)
+依存関係のインストール
 
-Quick Start
-Run the following commands in order to set up and run the development environment:
+コマンド: pnpm install
 
-Install Dependencies
+ビルドスクリプトの承認 (セキュリティポリシーで求められた場合のみ)
 
-Command: pnpm install
+コマンド: pnpm approve-builds
 
-Approve Build Scripts (If prompted by security policy)
+開発サーバー起動
 
-Command: pnpm approve-builds
+コマンド: pnpm dev
 
-Run Development Server
+ブラウザで http://localhost:3000 を開いて確認します。
 
-Command: pnpm dev
+利用可能なスクリプト (Available Scripts)
+pnpm dev — ローカル開発サーバー起動 (localhost:3000)
 
-Open http://localhost:3000 in your browser to view the application.
+pnpm build — プロダクション用にアプリケーションをビルド
 
-Available Scripts
-pnpm dev — Starts the local development server at localhost:3000
+pnpm start — ビルド後にプロダクションサーバーを起動
 
-pnpm build — Builds the application for production
+pnpm lint — コードクオリティチェック (ESLint)
 
-pnpm start — Starts the production server after building
-
-pnpm lint — Runs ESLint to check for code quality issues
-
-Project Structure
+ディレクトリ構造 (Project Structure)
 react/
-├── public/               # Publicly accessible static assets
+├── public/    # 静的ファイル (ファビコン、パブリックメディア)
 └── src/
-├── app/              # App Router routes and page components
-│   └── (auth)/       # Authenticated route group
-│       └── login/    # Login page component
-├── assets/           # Module-bundled, build-optimized static assets
-├── components/       # Reusable UI components
-└── store/            # Global Zustand state stores
+├── app/        # App Router ページ & レイアウト
+├── assets/     # スタイル & ローカルメディア
+├── components/ # UI コンポーネント
+└── store/      # 状態管理
 
-Development Workflow
-This repository follows a feature-branch workflow:
+Git ワークフロー (Development Workflow)
+main — 安定した本番コードベース
 
-main — Stable production codebase
+feature/* — 機能開発および実験用ブランチ (例: feature/dashboard)
 
-feature/* — Feature development and active experiments (e.g., feature/dashboard)
-
-License
-This project is maintained for internal development and learning purposes.
+ライセンス (License)
+社内開発および学習目的で管理されています。
