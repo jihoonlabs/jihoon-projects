@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { validateLoginForm } from "@/utils/validation/auth";
-import styles from  './page.module.scss';
-import { LoginValidationErrors, User } from "@/types";
+import styles from './page.module.scss';
+import { LoginValidationErrors } from "@/types";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,29 +33,35 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      // ★ 실제 라라벨 백엔드 API 호출로 변경
+      const response = await fetch('http://localhost:8000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-      const dummyUser: User = {
-        id: 1,
-        name: 'Test User',
-        email,
-        companyId: 101,
-        companyName: 'Tech Corp',
-        role: 'member',
-        status: 'active',
-        createdAt: new Date().toISOString(),
-      };
+      const data = await response.json();
 
-      const dummyToken = 'mock-jwt-token-123456';
+      // 백엔드 인증 실패 처리 (비밀번호 틀림 등 401/422 에러)
+      if (!response.ok) {
+        const errorMsg = data.errors?.email?.[0] || data.message || 'ログイン情報が 올바르지 않습니다.';
+        throw new Error(errorMsg);
+      }
 
-      login(dummyUser, dummyToken);
+      // 라라벨에서 반환받은 유저 정보 및 토큰으로 Zustand 스토어 업데이트
+      login(data.user, data.access_token);
+
+      // 로그인 성공 시 이동
       router.push('/tickets');
     } catch (error) {
       if (error instanceof Error) {
-          setServerError(error.message);
-        } else {
-          setServerError('ログイン中にエラーが発生しました。');
-        }
+        setServerError(error.message);
+      } else {
+        setServerError('ログイン中にエラーが発生しました。');
+      }
     } finally {
       setLoading(false);
     }
@@ -112,5 +118,5 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
-  )
+  );
 }
