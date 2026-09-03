@@ -3,8 +3,9 @@
 use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
-// /api/auth/login
+// 공개 라우트 (/api/auth/*)
 Route::post('login', [AuthController::class, 'login']);
+Route::post('register', [AuthController::class, 'register']);
 
 // Sanctum Bearer Token
 Route::middleware('auth:sanctum')->group(function () {
