@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+JIHOON-PROJECTS
+A modern web application built with Next.js App Router, TypeScript, and SCSS modules. This repository houses feature-based integrations and core UI components.
 
-## Getting Started
+Tech Stack
+Framework: Next.js (App Router)
 
-First, run the development server:
+Language: TypeScript
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+State Management: Zustand
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Styling: SCSS Modules
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Package Manager: pnpm
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Getting Started
+Prerequisites
+Ensure you have Node.js and pnpm installed on your machine.
 
-## Learn More
+Quick Start
+Run the following commands in order to set up and run the development environment:
 
-To learn more about Next.js, take a look at the following resources:
+Install Dependencies
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Command: pnpm install
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Approve Build Scripts (If prompted by security policy)
 
-## Deploy on Vercel
+Command: pnpm approve-builds
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Run Development Server
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Command: pnpm dev
+
+Open http://localhost:3000 in your browser to view the application.
+
+Available Scripts
+pnpm dev — Starts the local development server at localhost:3000
+
+pnpm build — Builds the application for production
+
+pnpm start — Starts the production server after building
+
+pnpm lint — Runs ESLint to check for code quality issues
+
+Project Structure
+react/
+├── public/               # Publicly accessible static assets
+└── src/
+├── app/              # App Router routes and page components
+│   └── (auth)/       # Authenticated route group
+│       └── login/    # Login page component
+├── assets/           # Module-bundled, build-optimized static assets
+├── components/       # Reusable UI components
+└── store/            # Global Zustand state stores
+
+Development Workflow
+This repository follows a feature-branch workflow:
+
+main — Stable production codebase
+
+feature/* — Feature development and active experiments (e.g., feature/dashboard)
+
+License
+This project is maintained for internal development and learning purposes.
