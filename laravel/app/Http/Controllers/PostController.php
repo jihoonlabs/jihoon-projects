@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StorePostRequest;
 use App\Models\Post;
 use Illuminate\Http\Request;
 
@@ -12,6 +13,7 @@ class PostController extends Controller
      */
     public function index()
     {
+        // 최신 게시글부터 정렬해 전체 게시글을 가져온다.
         $posts = Post::latest()->get();
 
         return response()->json([
@@ -31,15 +33,15 @@ class PostController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StorePostRequest $request)
     {
-        $validated = $request->validate([
-            'content' => ['required', 'string'],
-            'image_url' => ['nullable', 'string'],
-        ]);
+        // StorePostRequest의 검증을 통과한 데이터만 가져온다.
+        $validated = $request->validated();
 
+        // 검증된 데이터로 게시글을 생성한다.
         $post = Post::create($validated);
 
+        // 201 상태 코드 반환
         return response()->json([
             'message' => 'Post created',
             'data' => $post,
@@ -51,6 +53,7 @@ class PostController extends Controller
      */
     public function show(Post $post)
     {
+        // Route Model Binding으로 조회된 게시글을 반환한다.
         return response()->json([
             'message' => 'Post detail',
             'data' => $post,
