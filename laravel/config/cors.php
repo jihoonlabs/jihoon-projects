@@ -7,11 +7,9 @@ return [
     | Cross-Origin Resource Sharing (CORS) Configuration
     |--------------------------------------------------------------------------
     |
-    | Here you may configure your settings for cross-origin resource sharing
-    | or "CORS". This determines what cross-origin operations may execute
-    | in web browsers. You are free to adjust these settings as needed.
-    |
-    | To learn more: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+    | Next.js から Laravel API へのクロスオリジン通信を許可します。
+    | Sanctum の SPA 認証で Cookie を送受信するため、
+    | credentials を有効にします。
     |
     */
 
@@ -19,7 +17,10 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    // Next.js の開発環境のみ許可
+    'allowed_origins' => [
+        env('FRONTEND_URL', 'http://localhost:3000'),
+    ],
 
     'allowed_origins_patterns' => [],
 
@@ -29,6 +30,7 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => false,
+    // Sanctum SPA 認証で Cookie を送受信するために必要
+    'supports_credentials' => true,
 
 ];

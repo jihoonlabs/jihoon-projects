@@ -1,0 +1,28 @@
+import { fetchWithCsrf } from '@/shared/api/fetchWithCsrf';
+
+import type {
+  AuthResponse,
+  LoginRequest,
+} from '@/features/auth/types/auth';
+
+export const loginApi = async (
+  params: LoginRequest,
+): Promise<AuthResponse> => {
+  const response = await fetchWithCsrf('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMessage =
+      data.errors?.email?.[0] ??
+      data.message ??
+      'ログイン情報が正しくありません。';
+
+    throw new Error(errorMessage);
+  }
+
+  return data;
+};

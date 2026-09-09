@@ -4,39 +4,36 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
     /**
-     * login & Sanctum Bearer Token
+     * ログイン
+     * Sanctum の SPA セッション認証を使用します。
      */
     public function login(Request $request)
     {
-        $request->validate([
+        $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', $request->email)->first();
-
-        // search password
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+        if (! Auth::attempt($credentials)) {
             throw ValidationException::withMessages([
                 'email' => ['メールアドレス及びパスワードが違います。'],
             ]);
         }
 
-        // $user->tokens()->delete();
+        // セッション固定攻撃対策
+        $request->session()->regenerate();
 
-        // New Bearer Token
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $user = $request->user();
 
         return response()->json([
             'message' => 'ログイン成功',
-            'access_token' => $token,
-            'token_type' => 'Bearer',
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -58,8 +55,13 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
-        // Delete Bearer Token
-        $request->user()->currentAccessToken()->delete();
+        Auth::guard('web')->logout();
+
+        // 現在のセッションを無効化
+        $request->session()->invalidate();
+
+        // CSRF トークンを再生成
+        $request->session()->regenerateToken();
 
         return response()->json([
             'message' => 'ログアウトしました。',
@@ -71,24 +73,25 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8'],
         ]);
 
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
         ]);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        // 登録後、そのままログイン状態にする
+        Auth::login($user);
+
+        $request->session()->regenerate();
 
         return response()->json([
             'message' => '会員登録が完了しました。',
-            'access_token' => $token,
-            'token_type' => 'Bearer',
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,

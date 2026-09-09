@@ -1,38 +1,24 @@
 import { create } from 'zustand';
-import Cookies from 'js-cookie';
 
-interface User {
-  id: number;
-  name: string;
-  email: string;
-}
-
-interface AuthState {
-  user: User | null;
-  token: string | null;
-  isLoggedIn: boolean;
-  login: (user: User, token: string) => void;
-  logout: () => void;
-}
+import type { AuthState } from '@/features/auth/types/auth';
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  token: null,
-  isLoggedIn: false,
+  isAuthenticated: false,
 
-  login: (user, token) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('token', token);
-      Cookies.set('token', token, { expires: 7 });
-    }
-    set({ user, token, isLoggedIn: true });
+  // 認証情報は Laravel のセッション Cookie で管理する
+  login: (user) => {
+    set({
+      user,
+      isAuthenticated: true,
+    });
   },
 
+  // フロントエンドの認証状態を初期化する
   logout: () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      Cookies.remove('token');
-    }
-    set({ user: null, token: null, isLoggedIn: false });
+    set({
+      user: null,
+      isAuthenticated: false,
+    });
   },
 }));

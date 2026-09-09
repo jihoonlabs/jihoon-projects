@@ -1,4 +1,4 @@
-import { User } from './user';
+import type { User } from './user';
 
 export interface LoginRequest {
   email: string;
@@ -9,19 +9,17 @@ export interface RegisterRequest {
   email: string;
   password: string;
   name: string;
-  companyCode: string; 
+  companyCode: string;
 }
 
 export interface AuthResponse {
-  user: User;       
-  accessToken: string; 
+  user: User;
 }
 
 export interface AuthState {
   user: User | null;
-  token: string | null;
   isAuthenticated: boolean;
-  login: (user: User, token: string) => void;
+  login: (user: User) => void;
   logout: () => void;
 }
 
