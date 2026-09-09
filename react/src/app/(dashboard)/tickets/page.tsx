@@ -4,7 +4,7 @@ import { useTicketStore } from '@/features/tickets/store/useTicketStore';
 import TicketCard from '@/features/tickets/components/TicketCard';
 import { Header } from '@/shared/components/Header';
 
-import styles from './.module.css';
+import styles from './page.module.css';
 
 export default function TicketsPage() {
   const tickets = useTicketStore((state) => state.tickets);
