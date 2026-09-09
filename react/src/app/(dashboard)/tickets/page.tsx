@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTicketStore } from '@/store/useTicketStore';
 import TicketCard from './_components/TicketCard';
-import styles from './page.module.scss';
+import styles from './.module.css';
 
 export default function TicketsPage() {
   const router = useRouter();

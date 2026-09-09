@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { validateLoginForm } from "@/utils/validation/auth";
-import styles from './page.module.scss';
+import styles from './.module.css';
 import { LoginValidationErrors } from "@/types";
 
 export default function LoginPage() {
