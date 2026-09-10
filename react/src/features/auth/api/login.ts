@@ -17,9 +17,10 @@ export const loginApi = async (
 
   if (!response.ok) {
     const errorMessage =
-      data.errors?.email?.[0] ??
-      data.message ??
-      'ログイン情報が正しくありません。';
+      response.status === 422
+        ? (data.errors?.email?.[0] ??
+          'ログイン情報が正しくありません。')
+        : 'ログイン処理に失敗しました。';
 
     throw new Error(errorMessage);
   }

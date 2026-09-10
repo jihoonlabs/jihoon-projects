@@ -1,4 +1,4 @@
-import type { User } from './user';
+import type { User } from '@/features/users/types/user';
 
 export interface LoginRequest {
   email: string;
@@ -9,7 +9,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   name: string;
-  companyCode: string;
+  companyCode?: string;
 }
 
 export interface AuthResponse {
@@ -19,8 +19,10 @@ export interface AuthResponse {
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  isInitialized: boolean;
   login: (user: User) => void;
   logout: () => void;
+  initialize: () => void;
 }
 
 export interface LoginValidationErrors {

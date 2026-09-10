@@ -5,8 +5,9 @@ import type { AuthState } from '@/features/auth/types/auth';
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
+  isInitialized: false,
 
-  // 認証情報は Laravel のセッション Cookie で管理する
+  // ログイン成功後、ユーザー情報を認証状態として保持する
   login: (user) => {
     set({
       user,
@@ -19,6 +20,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({
       user: null,
       isAuthenticated: false,
+    });
+  },
+
+  // Laravel のセッション確認が完了したことを記録する
+  initialize: () => {
+    set({
+      isInitialized: true,
     });
   },
 }));
