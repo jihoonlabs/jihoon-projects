@@ -12,7 +12,7 @@ class AuthController extends Controller
 {
     /**
      * ログイン
-     * Sanctum の SPA セッション認証を使用します。
+     * SanctumのSPAセッション認証を使用します。
      */
     public function login(Request $request)
     {
@@ -34,20 +34,18 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'ログイン成功',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-            ],
+            'user' => $this->formatUser($user),
         ]);
     }
 
     /**
-     * ログイン中のユーザ情報
+     * ログイン中のユーザー情報を取得
      */
     public function user(Request $request)
     {
-        return response()->json($request->user());
+        return response()->json(
+            $this->formatUser($request->user()),
+        );
     }
 
     /**
@@ -60,7 +58,7 @@ class AuthController extends Controller
         // 現在のセッションを無効化
         $request->session()->invalidate();
 
-        // CSRF トークンを再生成
+        // CSRFトークンを再生成
         $request->session()->regenerateToken();
 
         return response()->json([
@@ -87,16 +85,25 @@ class AuthController extends Controller
 
         // 登録後、そのままログイン状態にする
         Auth::login($user);
-
         $request->session()->regenerate();
 
         return response()->json([
             'message' => '会員登録が完了しました。',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-            ],
+            'user' => $this->formatUser($user),
         ], 201);
+    }
+
+    /**
+     * フロントエンドで使用するユーザー形式に変換
+     */
+    private function formatUser(User $user): array
+    {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'status' => $user->status,
+            'createdAt' => $user->created_at?->toISOString(),
+        ];
     }
 }

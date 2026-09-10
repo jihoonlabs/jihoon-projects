@@ -16,13 +16,11 @@ class LoginTest extends TestCase
      */
     public function test_user_can_login_with_valid_credentials(): void
     {
-        // テスト用ユーザーを作成
         $user = User::factory()->create([
             'email' => 'test@example.com',
             'password' => Hash::make('password123'),
         ]);
 
-        // ログインAPIを実行
         $response = $this
             ->withHeader('Origin', 'http://localhost:3000')
             ->postJson('/api/auth/login', [
@@ -30,13 +28,23 @@ class LoginTest extends TestCase
                 'password' => 'password123',
             ]);
 
-        // ログイン成功を確認
         $response
             ->assertStatus(200)
             ->assertJsonPath('user.id', $user->id)
-            ->assertJsonPath('user.email', 'test@example.com');
+            ->assertJsonPath('user.name', $user->name)
+            ->assertJsonPath('user.email', $user->email)
+            ->assertJsonPath('user.status', 'active')
+            ->assertJsonStructure([
+                'message',
+                'user' => [
+                    'id',
+                    'name',
+                    'email',
+                    'status',
+                    'createdAt',
+                ],
+            ]);
 
-        // Laravelのセッションで認証されていることを確認
         $this->assertAuthenticatedAs($user);
     }
 
@@ -71,22 +79,28 @@ class LoginTest extends TestCase
      */
     public function test_authenticated_user_can_get_own_information(): void
     {
-        // テスト用ユーザーを作成
         $user = User::factory()->create();
 
         // ログイン状態にする
         $this->actingAs($user);
 
-        // ログイン中のユーザー情報を取得
         $response = $this
             ->withHeader('Origin', 'http://localhost:3000')
             ->getJson('/api/auth/me');
 
-        // ユーザー情報が取得できることを確認
         $response
             ->assertStatus(200)
             ->assertJsonPath('id', $user->id)
-            ->assertJsonPath('email', $user->email);
+            ->assertJsonPath('name', $user->name)
+            ->assertJsonPath('email', $user->email)
+            ->assertJsonPath('status', 'active')
+            ->assertJsonStructure([
+                'id',
+                'name',
+                'email',
+                'status',
+                'createdAt',
+            ]);
     }
 
     /**

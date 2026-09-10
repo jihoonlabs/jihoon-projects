@@ -15,7 +15,6 @@ class RegisterTest extends TestCase
      */
     public function test_user_can_register_with_valid_data(): void
     {
-        // 会員登録APIを実行
         $response = $this
             ->withHeader('Origin', 'http://localhost:3000')
             ->postJson('/api/auth/register', [
@@ -24,15 +23,26 @@ class RegisterTest extends TestCase
                 'password' => 'password123',
             ]);
 
-        // 会員登録成功を確認
         $response
             ->assertStatus(201)
             ->assertJsonPath('user.name', 'test')
-            ->assertJsonPath('user.email', 'test@example.com');
+            ->assertJsonPath('user.email', 'test@example.com')
+            ->assertJsonPath('user.status', 'active')
+            ->assertJsonStructure([
+                'message',
+                'user' => [
+                    'id',
+                    'name',
+                    'email',
+                    'status',
+                    'createdAt',
+                ],
+            ]);
 
         // ユーザーがDBに登録されていることを確認
         $this->assertDatabaseHas('users', [
             'email' => 'test@example.com',
+            'status' => 'active',
         ]);
 
         // 登録後、そのままログイン状態になっていることを確認
