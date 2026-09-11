@@ -39,12 +39,12 @@ pnpm lint — コードクオリティチェック (ESLint)
 
 ディレクトリ構造 (Project Structure)
 react/
-├── public/    # 静的ファイル (ファビコン、パブリックメディア)
+├── public/ # 静的ファイル (ファビコン、パブリックメディア)
 └── src/
-├── app/        # App Router ページ & レイアウト
-├── assets/     # スタイル & ローカルメディア
+├── app/ # App Router ページ & レイアウト
+├── assets/ # スタイル & ローカルメディア
 ├── components/ # UI コンポーネント
-└── store/      # 状態管理
+└── store/ # 状態管理
 
 Git ワークフロー (Development Workflow)
 main — 安定した本番コードベース

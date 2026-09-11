@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SocialAccount;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
@@ -106,4 +108,102 @@ class AuthController extends Controller
             'createdAt' => $user->created_at?->toISOString(),
         ];
     }
+
+    /**
+     * Google の認証画面へリダイレクト
+     */
+    public function googleRedirect()
+    {
+        return Socialite::driver('google')->redirect();
+    }
+
+    /**
+     * Google 認証後のコールバック
+     */
+    public function googleCallback(Request $request)
+    {
+        $googleUser = Socialite::driver('google')->user();
+
+        $socialAccount = SocialAccount::where('provider', 'google')
+            ->where('provider_user_id', $googleUser->getId())
+            ->first();
+
+        if ($socialAccount) {
+            Auth::login($socialAccount->user);
+            $request->session()->regenerate();
+
+            return redirect(
+                env('FRONTEND_URL', 'http://localhost:3000') . '/tickets'
+            );
+        }
+
+        $email = $googleUser->getEmail();
+
+        if (! $email) {
+            abort(422, 'Google アカウントからメールアドレスを取得できませんでした。');
+        }
+
+        $emailVerified = (bool) ($googleUser->user['email_verified'] ?? false);
+
+        if (! $emailVerified) {
+            abort(422, 'Google アカウントのメールアドレスを確認できませんでした。');
+        }
+
+        $user = User::where('email', $email)->first();
+
+        if (! $user) {
+            $user = User::create([
+                'name' => $googleUser->getName() ?? 'Google User',
+                'email' => $email,
+                'password' => null,
+            ]);
+        }
+
+        SocialAccount::create([
+            'user_id' => $user->id,
+            'provider' => 'google',
+            'provider_user_id' => $googleUser->getId(),
+            'provider_email' => $email,
+        ]);
+
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        return redirect(
+            env('FRONTEND_URL', 'http://localhost:3000') . '/tickets'
+        );
+    }
+
+    /**
+     * LINE の認証画面へリダイレクト
+     */
+    public function lineRedirect()
+    {
+        return Socialite::driver('line')->redirect();
+    }
+
+    /**
+     * LINE 認証後のコールバック
+     */
+    public function lineCallback(Request $request)
+    {
+        $lineUser = Socialite::driver('line')->user();
+
+        $socialAccount = SocialAccount::where('provider', 'line')
+            ->where('provider_user_id', $lineUser->getId())
+            ->first();
+
+        if ($socialAccount) {
+            Auth::login($socialAccount->user);
+            $request->session()->regenerate();
+
+            return redirect(
+                env('FRONTEND_URL', 'http://localhost:3000') . '/tickets'
+            );
+        }
+
+        $email = $lineUser->getEmail();
+        
+    }
+
 }

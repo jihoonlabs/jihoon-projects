@@ -1,6 +1,6 @@
 // Redux store를 React 컴포넌트 트리에 inject하는 역할(뷰의 Pinia 등록)
-import { StoreProvider } from '@/store/provider'
-import NoticePageClient from '@/features/notices/ui/NoticePageClient'
+import { StoreProvider } from '@/store/provider';
+import NoticePageClient from '@/features/notices/ui/NoticePageClient';
 
 export default function NoticesPage() {
   return (
@@ -8,5 +8,5 @@ export default function NoticesPage() {
     <StoreProvider>
       <NoticePageClient />
     </StoreProvider>
-  )
+  );
 }

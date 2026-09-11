@@ -8,7 +8,7 @@ export class AuthApiError extends Error {
     public readonly status: number,
   ) {
     super(message);
-    this.name = 'AuthApiError'; 
+    this.name = 'AuthApiError';
   }
 }
 

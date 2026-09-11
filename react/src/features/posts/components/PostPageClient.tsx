@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import PostList from './PostList'
+import PostList from './PostList';
 
 export default function PostsPageClient() {
   return (
@@ -9,5 +9,5 @@ export default function PostsPageClient() {
 
       <PostList />
     </main>
-  )
+  );
 }

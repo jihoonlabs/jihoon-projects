@@ -1,6 +1,10 @@
 'use client';
 
-import { Ticket, TicketStatus, useTicketStore } from '@/features/tickets/store/useTicketStore';
+import {
+  Ticket,
+  TicketStatus,
+  useTicketStore,
+} from '@/features/tickets/store/useTicketStore';
 import styles from './index.module.css';
 
 interface TicketCardProps {

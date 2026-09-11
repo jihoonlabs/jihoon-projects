@@ -1,9 +1,9 @@
-import type { TextareaHTMLAttributes } from 'react'
-import styles from './Textarea.module.scss'
+import type { TextareaHTMLAttributes } from 'react';
+import styles from './Textarea.module.scss';
 
 type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
-  hasError?: boolean
-}
+  hasError?: boolean;
+};
 
 export default function Textarea({
   hasError = false,
@@ -16,7 +16,7 @@ export default function Textarea({
     className,
   ]
     .filter(Boolean)
-    .join(' ')
+    .join(' ');
 
-  return <textarea className={textareaClassName} {...props} />
+  return <textarea className={textareaClassName} {...props} />;
 }

@@ -69,7 +69,7 @@ export const useTicketStore = create<TicketState>((set) => ({
   updateStatus: (id, status) =>
     set((state) => ({
       tickets: state.tickets.map((ticket) =>
-        ticket.id === id ? { ...ticket, status } : ticket
+        ticket.id === id ? { ...ticket, status } : ticket,
       ),
     })),
 

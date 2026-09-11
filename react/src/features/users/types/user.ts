@@ -1,8 +1,8 @@
 export interface User {
   id: number;
   email: string;
-  name: string;         
-  status: 'active' | 'suspended'; 
+  name: string;
+  status: 'active' | 'suspended';
   createdAt: string;
 }
 

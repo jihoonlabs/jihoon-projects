@@ -10,6 +10,9 @@ import { validateLoginForm } from '@/features/auth/validation/auth';
 
 import styles from './LoginForm.module.css';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+
+
 export function LoginForm() {
   const router = useRouter();
 
@@ -20,6 +23,11 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<LoginValidationErrors>({});
   const [serverError, setServerError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleGoogleLogin = () => {
+    window.location.href = `${API_URL}/api/auth/google/redirect`;
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -74,6 +82,7 @@ export function LoginForm() {
             <input
               id="email"
               type="email"
+              autoComplete="email"
               placeholder="user@example.com"
               value={email}
               onChange={(event) => {
@@ -100,7 +109,8 @@ export function LoginForm() {
 
             <input
               id="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={(event) => {
@@ -117,17 +127,31 @@ export function LoginForm() {
               disabled={loading}
             />
 
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={
+                showPassword ? 'パスワードを隠す' : 'パスワードを表示'
+              }
+            >
+              {showPassword ? '隠す' : '表示'}
+            </button>
+
             {errors.password && (
               <span className={styles.fieldError}>{errors.password}</span>
             )}
           </div>
 
-          <button
-            type="submit"
-            className={styles.submitBtn}
-            disabled={loading}
-          >
+          <button type="submit" className={styles.submitBtn} disabled={loading}>
             {loading ? 'ログイン中...' : 'ログイン'}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            >
+            Googleでログイン
           </button>
         </form>
       </div>

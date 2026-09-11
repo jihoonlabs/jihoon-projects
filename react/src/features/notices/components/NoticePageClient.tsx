@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import { useEffect } from 'react'
-import { fetchNotices } from '../api/noticeApi'
-import { setNotices } from '../noticeSlice'
-import { useAppDispatch, useAppSelector } from '@/store/hooks'
+import { useEffect } from 'react';
+import { fetchNotices } from '../api/noticeApi';
+import { setNotices } from '../noticeSlice';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
 export default function NoticePageClient() {
   // vue: store.action()
-  const dispatch = useAppDispatch()
+  const dispatch = useAppDispatch();
   // vue: const notices = store.notices
-  const notices = useAppSelector(state => state.notices.list)
+  const notices = useAppSelector((state) => state.notices.list);
 
   // useEffect(컴포넌트 마운트시 실행) vue: onMounted(async () => { ... })
   useEffect(() => {
-    fetchNotices().then(data => {
+    fetchNotices().then((data) => {
       // store.notices = data
-      dispatch(setNotices(data))
-    })
-  }, [dispatch])
+      dispatch(setNotices(data));
+    });
+  }, [dispatch]);
 
   return (
     <main>
@@ -33,7 +33,7 @@ export default function NoticePageClient() {
           {/*
           | v-for="notice in notices"
           */}
-          {notices.map(notice => (
+          {notices.map((notice) => (
             <li key={notice.id}>
               <h2>{notice.title}</h2>
               <p>{notice.content}</p>
@@ -42,5 +42,5 @@ export default function NoticePageClient() {
         </ul>
       )}
     </main>
-  )
+  );
 }

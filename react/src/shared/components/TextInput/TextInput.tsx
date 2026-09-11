@@ -1,9 +1,9 @@
-import type { InputHTMLAttributes } from 'react'
-import styles from './TextInput.module.scss'
+import type { InputHTMLAttributes } from 'react';
+import styles from './TextInput.module.scss';
 
 type TextInputProps = InputHTMLAttributes<HTMLInputElement> & {
-  hasError?: boolean
-}
+  hasError?: boolean;
+};
 
 export default function TextInput({
   hasError = false,
@@ -11,13 +11,9 @@ export default function TextInput({
   type = 'text',
   ...props
 }: TextInputProps) {
-  const inputClassName = [
-    styles.input,
-    hasError && styles.error,
-    className,
-  ]
+  const inputClassName = [styles.input, hasError && styles.error, className]
     .filter(Boolean)
-    .join(' ')
+    .join(' ');
 
   return (
     <input
@@ -26,5 +22,5 @@ export default function TextInput({
       aria-invalid={hasError}
       {...props}
     />
-  )
+  );
 }

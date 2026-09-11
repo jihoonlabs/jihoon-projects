@@ -12,12 +12,8 @@ export default function DashboardLayout({
 }>) {
   const router = useRouter();
 
-  const isAuthenticated = useAuthStore(
-    (state) => state.isAuthenticated,
-  );
-  const isInitialized = useAuthStore(
-    (state) => state.isInitialized,
-  );
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
 
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {

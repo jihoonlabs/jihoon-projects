@@ -1,5 +1,4 @@
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 const getCookie = (name: string): string | null => {
   const cookies = document.cookie.split('; ');
@@ -20,12 +19,9 @@ export const fetchWithCsrf = async (
   init: RequestInit = {},
 ): Promise<Response> => {
   // Sanctum の CSRF Cookie を取得
-  const csrfResponse = await fetch(
-    `${API_URL}/sanctum/csrf-cookie`,
-    {
-      credentials: 'include',
-    },
-  );
+  const csrfResponse = await fetch(`${API_URL}/sanctum/csrf-cookie`, {
+    credentials: 'include',
+  });
 
   if (!csrfResponse.ok) {
     throw new Error('CSRF Cookie の取得に失敗しました。');
