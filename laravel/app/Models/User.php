@@ -20,6 +20,14 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     /**
+     * ユーザー作成時の初期ステータス
+     */
+    protected $attributes = [
+        'status' => 'active',
+    ];
+
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
