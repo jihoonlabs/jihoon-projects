@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
 use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
@@ -133,44 +134,60 @@ class AuthController extends Controller
             $request->session()->regenerate();
 
             return redirect(
-                env('FRONTEND_URL', 'http://localhost:3000') . '/tickets'
+                config('services.frontend.url') . '/tickets'
             );
         }
 
         $email = $googleUser->getEmail();
 
         if (! $email) {
-            abort(422, 'Google アカウントからメールアドレスを取得できませんでした。');
+            return redirect(
+                config('services.frontend.url') . '/login?error=google_email_missing'
+            );
         }
 
         $emailVerified = (bool) ($googleUser->user['email_verified'] ?? false);
 
         if (! $emailVerified) {
-            abort(422, 'Google アカウントのメールアドレスを確認できませんでした。');
+            return redirect(
+                config('services.frontend.url') . '/login?error=google_email_unverified'
+            );
         }
 
-        $user = User::where('email', $email)->first();
+        $user = DB::transaction(function () use ($googleUser, $email) {
+            $user = User::where('email', $email)->first();
 
-        if (! $user) {
-            $user = User::create([
-                'name' => $googleUser->getName() ?? 'Google User',
-                'email' => $email,
-                'password' => null,
+            if (! $user) {
+                $user = User::create([
+                    'name' => $googleUser->getName() ?? 'Google User',
+                    'email' => $email,
+                    'password' => null,
+                ]);
+
+                // Googleが確認済みのメールアドレスのみ認証済みとして扱う
+                $user->email_verified_at = now();
+                $user->save();
+            } elseif (! $user->email_verified_at) {
+                // Googleがメール所有を確認したため、既存ユーザーも認証済みにする
+                $user->email_verified_at = now();
+                $user->save();
+            }
+
+            SocialAccount::create([
+                'user_id' => $user->id,
+                'provider' => 'google',
+                'provider_user_id' => $googleUser->getId(),
+                'provider_email' => $email,
             ]);
-        }
 
-        SocialAccount::create([
-            'user_id' => $user->id,
-            'provider' => 'google',
-            'provider_user_id' => $googleUser->getId(),
-            'provider_email' => $email,
-        ]);
+            return $user;
+        });
 
         Auth::login($user);
         $request->session()->regenerate();
 
         return redirect(
-            env('FRONTEND_URL', 'http://localhost:3000') . '/tickets'
+            config('services.frontend.url') . '/tickets'
         );
     }
 
@@ -198,7 +215,7 @@ class AuthController extends Controller
             $request->session()->regenerate();
 
             return redirect(
-                env('FRONTEND_URL', 'http://localhost:3000') . '/tickets'
+                config('services.frontend.url') . '/tickets'
             );
         }
 

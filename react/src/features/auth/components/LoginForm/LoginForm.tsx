@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { loginApi } from '@/features/auth/api/login';
@@ -22,8 +22,27 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<LoginValidationErrors>({});
-  const [serverError, setServerError] = useState('');
+  const [serverError, setServerError] = useState(() => {
+    const error = new URLSearchParams(window.location.search).get('error');
+
+    if (error === 'google_email_missing') {
+      return 'Googleアカウントからメールアドレスを取得できませんでした。';
+    }
+
+    if (error === 'google_email_unverified') {
+      return 'Googleアカウントのメールアドレスを確認できませんでした。';
+    }
+
+    return '';
+  });
+  
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (window.location.search) {
+      window.history.replaceState({}, '', '/login');
+    }
+  }, []);
 
   const handleGoogleLogin = () => {
     window.location.href = `${API_URL}/api/auth/google/redirect`;
