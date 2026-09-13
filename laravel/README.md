@@ -1,56 +1,47 @@
-# Task Management System API (Laravel)
+# Task Management System API
 
-Next.js フロントエンドと連携するタスク・チケット管理システムのバックエンド API です。
+Next.js フロントエンドと連携する、タスク・チケット管理システムの Laravel API です。
 
---------------------------------------------------
-Tech Stack
---------------------------------------------------
-- Framework: Laravel 11+
-- PHP: ^8.3
-- Database: SQLite / MySQL
-- Authentication: Laravel Sanctum (Bearer Token)
+## Tech Stack
 
---------------------------------------------------
-Environment Setup
---------------------------------------------------
-git pull 後に実行する環境構築の手順です。
+- Laravel
+- PHP
+- Laravel Sanctum
+- Laravel Socialite
+- Google OAuth
+- SQLite / MySQL
 
-1. Install Dependencies
-$ composer install
-$ npm install
+## Authentication
 
-2. Environment Setup & Key Generation
-$ copy .env.example .env
-$ php artisan key:generate
+- Email / Password Login
+- Session-based Authentication
+- CSRF Protection
+- Google OAuth Login
+- Verified Email による既存アカウント連携
+- Social Account Management
+- Laravel Feature Tests
 
-3. Database Migration & API Setup
-$ php artisan migrate
-$ php artisan install:api
+## Setup
 
-4. Run Server
-$ php artisan serve
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
+php artisan serve
+```
 
-* API Base URL: http://127.0.0.1:8000
+Google OAuth を利用する場合は `.env` に認証情報を設定してください。
 
---------------------------------------------------
-API Endpoints
---------------------------------------------------
-[POST] /api/login
-- Description: User Login & Issue Token
-- Auth: Public
+```env
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=
+FRONTEND_URL=http://localhost:3000
+```
 
-[POST] /api/logout
-- Description: User Logout
-- Auth: Required (Bearer Token)
+## Test
 
-[GET] /api/user
-- Description: Get Current User Info
-- Auth: Required (Bearer Token)
-
-[GET] /api/tickets
-- Description: Get Ticket List
-- Auth: Required (Bearer Token)
-
-[POST] /api/tickets
-- Description: Create New Ticket
-- Auth: Required (Bearer Token)
+```bash
+php artisan test
+```
