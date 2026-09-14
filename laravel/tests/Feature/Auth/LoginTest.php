@@ -105,6 +105,7 @@ class LoginTest extends TestCase
     /**
      * ログイン済みでも停止中のユーザーは認証必須APIにアクセスできないこと
      */
+    
     public function test_suspended_authenticated_user_cannot_access_protected_api(): void
     {
         $user = User::factory()->create([
@@ -116,7 +117,12 @@ class LoginTest extends TestCase
         $this->getJson('/api/auth/me')
             ->assertStatus(403);
 
-        $this->assertGuest();
+        // テスト内に保持されている認証Guardのキャッシュをリセット
+        $this->app['auth']->forgetGuards();
+
+        // セッションが破棄され、次のリクエストでは未認証になることを確認
+        $this->getJson('/api/auth/me')
+            ->assertStatus(401);
     }
     
     /**

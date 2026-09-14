@@ -9,9 +9,6 @@ Route::post('login', [AuthController::class, 'login'])
 Route::post('register', [AuthController::class, 'register'])
     ->middleware('throttle:3,1');
 
-Route::get('{provider}/redirect', [AuthController::class, 'socialRedirect']);
-Route::get('{provider}/callback', [AuthController::class, 'socialCallback']);
-
 // 認証必須
 Route::middleware([
     'auth:sanctum',

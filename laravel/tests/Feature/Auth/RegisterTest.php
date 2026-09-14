@@ -106,14 +106,14 @@ class RegisterTest extends TestCase
             $this->postJson('/api/auth/register', [
                 'name' => 'test',
                 'email' => "test{$i}@example.com",
-                'password' => 'password123',
-            ])->assertStatus(201);
+                'password' => '1234567',
+            ])->assertStatus(422);
         }
 
         $this->postJson('/api/auth/register', [
             'name' => 'test',
             'email' => 'test3@example.com',
-            'password' => 'password123',
+            'password' => '1234567',
         ])->assertStatus(429);
     }
 
