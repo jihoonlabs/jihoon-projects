@@ -4,7 +4,6 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class LoginTest extends TestCase
@@ -18,7 +17,7 @@ class LoginTest extends TestCase
     {
         $user = User::factory()->create([
             'email' => 'test@example.com',
-            'password' => Hash::make('password123'),
+            'password' => 'password123',
         ]);
 
         $response = $this
@@ -56,7 +55,7 @@ class LoginTest extends TestCase
         // テスト用ユーザーを作成
         User::factory()->create([
             'email' => 'test@example.com',
-            'password' => Hash::make('password123'),
+           'password' => 'password123',
         ]);
 
         // 間違ったパスワードでログイン
@@ -119,6 +118,15 @@ class LoginTest extends TestCase
 
         $this->assertGuest();
     }
+    
+    /**
+     * 未認証ユーザーは認証必須APIにアクセスできないこと
+     */
+    public function test_guest_cannot_access_me(): void
+    {
+        $this->getJson('/api/auth/me')
+            ->assertStatus(401);
+    }
 
     /**
      * ログアウト後、認証状態が解除されること
@@ -127,7 +135,7 @@ class LoginTest extends TestCase
     {
         $user = User::factory()->create([
             'email' => 'test@example.com',
-            'password' => Hash::make('password123'),
+           'password' => 'password123',
         ]);
 
         // 実際のログインAPIでログイン

@@ -14,7 +14,9 @@ export const loginApi = async (params: LoginRequest): Promise<AuthResponse> => {
     const errorMessage =
       response.status === 422
         ? (data.errors?.email?.[0] ?? 'ログイン情報が正しくありません。')
-        : 'ログイン処理に失敗しました。';
+        : response.status === 429
+          ? 'ログイン試行回数が多すぎます。しばらくしてから再度お試しください。'
+          : 'ログイン処理に失敗しました。';
 
     throw new Error(errorMessage);
   }

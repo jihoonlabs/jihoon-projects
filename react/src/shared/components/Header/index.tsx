@@ -15,11 +15,11 @@ export function Header() {
   const handleLogout = async () => {
     try {
       await logoutApi();
-
-      logout();
-      router.push('/login');
     } catch (error) {
       console.error(error);
+    } finally {
+      logout();
+      router.push('/login');
     }
   };
 

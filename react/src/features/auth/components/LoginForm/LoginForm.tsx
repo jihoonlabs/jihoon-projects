@@ -27,9 +27,16 @@ export function LoginForm() {
     const provider = params.get('provider');
 
     if (error === 'social_login_failed') {
-      return provider
-        ? `${provider}認証に失敗しました。`
-        : 'ソーシャルログインに失敗しました。';
+    const providerName = 
+      provider === 'google' 
+      ? 'Google' 
+      : provider === 'line' 
+      ? 'LINE' 
+      : null;
+
+    return providerName
+      ? `${providerName}認証に失敗しました。`
+      : 'ソーシャルログインに失敗しました。';
     }
 
     if (error === 'account_unavailable') {

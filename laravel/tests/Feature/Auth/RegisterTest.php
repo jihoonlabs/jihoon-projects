@@ -131,4 +131,19 @@ class RegisterTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['password']);
     }
+
+    /**
+     * 英字を含まないパスワードでは登録できないこと
+     */
+    public function test_register_requires_password_with_letter(): void
+    {
+        $this->postJson('/api/auth/register', [
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+            'password' => '12345678',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['password']);
+    }
+
 }
