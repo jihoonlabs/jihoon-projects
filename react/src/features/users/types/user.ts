@@ -1,6 +1,6 @@
 export interface User {
   id: number;
-  email: string;
+  email: string | null;
   name: string;
   status: 'active' | 'suspended';
   createdAt: string;
@@ -17,6 +17,6 @@ export interface UserProfile {
 export interface UserSummary {
   id: number;
   name: string;
-  email: string;
+  email: string | null;
   avatarUrl?: string;
 }

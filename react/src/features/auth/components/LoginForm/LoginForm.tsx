@@ -23,19 +23,19 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<LoginValidationErrors>({});
   const [serverError, setServerError] = useState(() => {
-    const error = new URLSearchParams(window.location.search).get('error');
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+    const provider = params.get('provider');
 
-    if (error === 'google_email_missing') {
-      return 'Googleアカウントからメールアドレスを取得できませんでした。';
-    }
-
-    if (error === 'google_email_unverified') {
-      return 'Googleアカウントのメールアドレスを確認できませんでした。';
+    if (error === 'social_login_failed') {
+      return provider
+        ? `${provider}認証に失敗しました。`
+        : 'ソーシャルログインに失敗しました。';
     }
 
     return '';
   });
-  
+
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
@@ -44,8 +44,8 @@ export function LoginForm() {
     }
   }, []);
 
-  const handleGoogleLogin = () => {
-    window.location.href = `${API_URL}/api/auth/google/redirect`;
+  const handleSocialLogin = (provider: 'google' | 'line') => {
+    window.location.href = `${API_URL}/api/auth/${provider}/redirect`;
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -167,10 +167,18 @@ export function LoginForm() {
 
           <button
             type="button"
-            onClick={handleGoogleLogin}
+            onClick={() => handleSocialLogin('google')}
             disabled={loading}
             >
             Googleでログイン
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSocialLogin('line')}
+            disabled={loading}
+            >
+            LINEでログイン
           </button>
         </form>
       </div>

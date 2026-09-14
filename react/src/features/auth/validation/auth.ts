@@ -1,4 +1,4 @@
-import { LoginValidationErrors } from '@/features/auth/types/auth';
+import type { LoginValidationErrors } from '@/features/auth/types/auth';
 
 export const validateLoginForm = (
   email: string,
