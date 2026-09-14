@@ -6,10 +6,11 @@ use App\Models\SocialAccount;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\DB;
 use Laravel\Socialite\Facades\Socialite;
+use Throwable;
 
 class AuthController extends Controller
 {
@@ -17,6 +18,7 @@ class AuthController extends Controller
      * ログイン
      * SanctumのSPAセッション認証を使用します。
      */
+ 
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -44,6 +46,7 @@ class AuthController extends Controller
     /**
      * ログイン中のユーザー情報を取得
      */
+ 
     public function user(Request $request)
     {
         return response()->json(
@@ -54,6 +57,7 @@ class AuthController extends Controller
     /**
      * ログアウト
      */
+ 
     public function logout(Request $request)
     {
         Auth::guard('web')->logout();
@@ -72,6 +76,7 @@ class AuthController extends Controller
     /**
      * 新規会員登録
      */
+ 
     public function register(Request $request)
     {
         $validated = $request->validate([
@@ -97,36 +102,35 @@ class AuthController extends Controller
     }
 
     /**
-     * フロントエンドで使用するユーザー形式に変換
+     * ソーシャルログインの認証画面へリダイレクト
      */
-    private function formatUser(User $user): array
+   
+    public function socialRedirect(string $provider)
     {
-        return [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'status' => $user->status,
-            'createdAt' => $user->created_at?->toISOString(),
-        ];
+        $this->ensureSupportedProvider($provider);
+
+        return Socialite::driver($provider)->redirect();
     }
 
     /**
-     * Google の認証画面へリダイレクト
+     * ソーシャルログイン認証後のコールバック
      */
-    public function googleRedirect()
+  
+    public function socialCallback(string $provider, Request $request)
     {
-        return Socialite::driver('google')->redirect();
-    }
+        $this->ensureSupportedProvider($provider);
 
-    /**
-     * Google 認証後のコールバック
-     */
-    public function googleCallback(Request $request)
-    {
-        $googleUser = Socialite::driver('google')->user();
+        try {
+            $providerUser = Socialite::driver($provider)->user();
+        } catch (Throwable) {
+            return redirect(
+                config('services.frontend.url')
+                    . "/login?error=social_login_failed&provider={$provider}"
+            );
+        }
 
-        $socialAccount = SocialAccount::where('provider', 'google')
-            ->where('provider_user_id', $googleUser->getId())
+        $socialAccount = SocialAccount::where('provider', $provider)
+            ->where('provider_user_id', $providerUser->getId())
             ->first();
 
         if ($socialAccount) {
@@ -138,45 +142,25 @@ class AuthController extends Controller
             );
         }
 
-        $email = $googleUser->getEmail();
+        $email = $providerUser->getEmail();
 
-        if (! $email) {
-            return redirect(
-                config('services.frontend.url') . '/login?error=google_email_missing'
-            );
-        }
-
-        $emailVerified = (bool) ($googleUser->user['email_verified'] ?? false);
-
-        if (! $emailVerified) {
-            return redirect(
-                config('services.frontend.url') . '/login?error=google_email_unverified'
-            );
-        }
-
-        $user = DB::transaction(function () use ($googleUser, $email) {
-            $user = User::where('email', $email)->first();
-
-            if (! $user) {
-                $user = User::create([
-                    'name' => $googleUser->getName() ?? 'Google User',
-                    'email' => $email,
-                    'password' => null,
-                ]);
-
-                // Googleが確認済みのメールアドレスのみ認証済みとして扱う
-                $user->email_verified_at = now();
-                $user->save();
-            } elseif (! $user->email_verified_at) {
-                // Googleがメール所有を確認したため、既存ユーザーも認証済みにする
-                $user->email_verified_at = now();
-                $user->save();
-            }
+        $user = DB::transaction(function () use (
+            $provider,
+            $providerUser,
+            $email
+        ) {
+            // メールアドレスでは既存ユーザーと自動連携しない
+            $user = User::create([
+                'name' => $providerUser->getName()
+                    ?? ucfirst($provider) . ' User',
+                'email' => null,
+                'password' => null,
+            ]);
 
             SocialAccount::create([
                 'user_id' => $user->id,
-                'provider' => 'google',
-                'provider_user_id' => $googleUser->getId(),
+                'provider' => $provider,
+                'provider_user_id' => $providerUser->getId(),
                 'provider_email' => $email,
             ]);
 
@@ -192,35 +176,29 @@ class AuthController extends Controller
     }
 
     /**
-     * LINE の認証画面へリダイレクト
+     * 対応している認証プロバイダーのみ許可
      */
-    public function lineRedirect()
+   
+    private function ensureSupportedProvider(string $provider): void
     {
-        return Socialite::driver('line')->redirect();
+        abort_unless(
+            in_array($provider, ['google', 'line'], true),
+            404
+        );
     }
 
     /**
-     * LINE 認証後のコールバック
+     * フロントエンドで使用するユーザー形式に変換
      */
-    public function lineCallback(Request $request)
+    
+    private function formatUser(User $user): array
     {
-        $lineUser = Socialite::driver('line')->user();
-
-        $socialAccount = SocialAccount::where('provider', 'line')
-            ->where('provider_user_id', $lineUser->getId())
-            ->first();
-
-        if ($socialAccount) {
-            Auth::login($socialAccount->user);
-            $request->session()->regenerate();
-
-            return redirect(
-                config('services.frontend.url') . '/tickets'
-            );
-        }
-
-        $email = $lineUser->getEmail();
-        
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'status' => $user->status,
+            'createdAt' => $user->created_at?->toISOString(),
+        ];
     }
-
 }

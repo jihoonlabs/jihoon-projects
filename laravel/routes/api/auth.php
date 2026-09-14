@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Route;
 Route::post('login', [AuthController::class, 'login']);
 Route::post('register', [AuthController::class, 'register']);
 
+Route::get('{provider}/redirect', [AuthController::class, 'socialRedirect']);
+Route::get('{provider}/callback', [AuthController::class, 'socialCallback']);
+
 // 認証必須
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('me', [AuthController::class, 'user']);
