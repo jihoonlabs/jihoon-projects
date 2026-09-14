@@ -7,8 +7,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Laravel\Socialite\Facades\Socialite;
 use Throwable;
 
@@ -18,7 +18,6 @@ class AuthController extends Controller
      * ログイン
      * SanctumのSPAセッション認証を使用します。
      */
- 
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -49,7 +48,6 @@ class AuthController extends Controller
     /**
      * ログイン中のユーザー情報を取得
      */
- 
     public function user(Request $request)
     {
         return response()->json(
@@ -60,7 +58,6 @@ class AuthController extends Controller
     /**
      * ログアウト
      */
- 
     public function logout(Request $request)
     {
         Auth::guard('web')->logout();
@@ -79,7 +76,6 @@ class AuthController extends Controller
     /**
      * 新規会員登録
      */
- 
     public function register(Request $request)
     {
         $validated = $request->validate([
@@ -113,7 +109,6 @@ class AuthController extends Controller
     /**
      * ソーシャルログインの認証画面へリダイレクト
      */
-   
     public function socialRedirect(string $provider)
     {
         $this->ensureSupportedProvider($provider);
@@ -124,17 +119,18 @@ class AuthController extends Controller
     /**
      * ソーシャルログイン認証後のコールバック
      */
-  
     public function socialCallback(string $provider, Request $request)
     {
         $this->ensureSupportedProvider($provider);
 
         try {
             $providerUser = Socialite::driver($provider)->user();
-        } catch (Throwable) {
+        } catch (Throwable $exception) {
+            report($exception);
+
             return redirect(
                 config('services.frontend.url')
-                    . "/login?error=social_login_failed&provider={$provider}"
+                    ."/login?error=social_login_failed&provider={$provider}"
             );
         }
 
@@ -146,7 +142,7 @@ class AuthController extends Controller
             if ($socialAccount->user->status !== 'active') {
                 return redirect(
                     config('services.frontend.url')
-                        . "/login?error=account_unavailable&provider={$provider}"
+                        ."/login?error=account_unavailable&provider={$provider}"
                 );
             }
 
@@ -154,7 +150,7 @@ class AuthController extends Controller
             $request->session()->regenerate();
 
             return redirect(
-                config('services.frontend.url') . '/tickets'
+                config('services.frontend.url').'/tickets'
             );
         }
 
@@ -168,7 +164,7 @@ class AuthController extends Controller
             // メールアドレスでは既存ユーザーと自動連携しない
             $user = User::create([
                 'name' => $providerUser->getName()
-                    ?? ucfirst($provider) . ' User',
+                    ?? ucfirst($provider).' User',
                 'email' => null,
                 'password' => null,
             ]);
@@ -187,14 +183,13 @@ class AuthController extends Controller
         $request->session()->regenerate();
 
         return redirect(
-            config('services.frontend.url') . '/tickets'
+            config('services.frontend.url').'/tickets'
         );
     }
 
     /**
      * 対応している認証プロバイダーのみ許可
      */
-   
     private function ensureSupportedProvider(string $provider): void
     {
         abort_unless(
@@ -206,7 +201,6 @@ class AuthController extends Controller
     /**
      * フロントエンドで使用するユーザー形式に変換
      */
-    
     private function formatUser(User $user): array
     {
         return [
