@@ -104,6 +104,23 @@ class LoginTest extends TestCase
     }
 
     /**
+     * ログイン済みでも停止中のユーザーは認証必須APIにアクセスできないこと
+     */
+    public function test_suspended_authenticated_user_cannot_access_protected_api(): void
+    {
+        $user = User::factory()->create([
+            'status' => 'suspended',
+        ]);
+
+        $this->actingAs($user);
+
+        $this->getJson('/api/auth/me')
+            ->assertStatus(403);
+
+        $this->assertGuest();
+    }
+
+    /**
      * ログアウト後、認証状態が解除されること
      */
     public function test_authenticated_user_can_logout(): void
@@ -137,5 +154,43 @@ class LoginTest extends TestCase
             ->withHeader('Origin', 'http://localhost:3000')
             ->getJson('/api/auth/me')
             ->assertStatus(401);
+    }
+
+    /**
+     * ログイン試行回数が上限を超えた場合、429が返されること
+     */
+    public function test_login_is_rate_limited(): void
+    {
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/auth/login', [
+                'email' => 'test@example.com',
+                'password' => 'wrongpassword',
+            ])->assertStatus(422);
+        }
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'test@example.com',
+            'password' => 'wrongpassword',
+        ])->assertStatus(429);
+    }
+
+    /**
+     * 停止中のユーザーはログインできないこと
+     */
+    public function test_suspended_user_cannot_login(): void
+    {
+        User::factory()->create([
+            'email' => 'suspended@example.com',
+            'password' => 'password123',
+            'status' => 'suspended',
+        ]);
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'suspended@example.com',
+            'password' => 'password123',
+        ])
+            ->assertStatus(422);
+
+        $this->assertGuest();
     }
 }

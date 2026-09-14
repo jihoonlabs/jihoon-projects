@@ -185,4 +185,38 @@ class SocialLoginTest extends TestCase
         $this->assertDatabaseCount('users', 0);
         $this->assertDatabaseCount('social_accounts', 0);
     }
+
+    /**
+     * 停止中のソーシャルアカウントはログインできないこと
+     */
+    public function test_suspended_social_account_cannot_login(): void
+    {
+        $user = User::factory()->create([
+            'status' => 'suspended',
+        ]);
+
+        SocialAccount::create([
+            'user_id' => $user->id,
+            'provider' => 'google',
+            'provider_user_id' => 'google-user-123',
+            'provider_email' => 'google@example.com',
+        ]);
+
+        $socialUser = new SocialiteUser;
+        $socialUser->id = 'google-user-123';
+        $socialUser->name = 'Google User';
+        $socialUser->email = 'google@example.com';
+
+        Socialite::shouldReceive('driver->user')
+            ->once()
+            ->andReturn($socialUser);
+
+        $response = $this->get('/api/auth/google/callback');
+
+        $response->assertRedirect(
+            'http://localhost:3000/login?error=account_unavailable&provider=google'
+        );
+
+        $this->assertGuest();
+    }
 }

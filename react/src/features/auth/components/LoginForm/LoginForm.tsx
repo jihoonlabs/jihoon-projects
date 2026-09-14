@@ -12,7 +12,6 @@ import styles from './LoginForm.module.css';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
-
 export function LoginForm() {
   const router = useRouter();
 
@@ -31,6 +30,10 @@ export function LoginForm() {
       return provider
         ? `${provider}認証に失敗しました。`
         : 'ソーシャルログインに失敗しました。';
+    }
+
+    if (error === 'account_unavailable') {
+      return 'このアカウントは現在利用できません。';
     }
 
     return '';

@@ -7,8 +7,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rules\Password;
 use Laravel\Socialite\Facades\Socialite;
 use Throwable;
 
@@ -26,7 +26,10 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (! Auth::attempt($credentials)) {
+        if (! Auth::attempt([
+            ...$credentials,
+            'status' => 'active',
+        ])) {
             throw ValidationException::withMessages([
                 'email' => ['メールアドレス及びパスワードが違います。'],
             ]);
@@ -82,13 +85,19 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:8'],
+            'password' => [
+                'required',
+                'string',
+                Password::min(8)
+                    ->letters()
+                    ->numbers(),
+            ],
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'password' => $validated['password'],
         ]);
 
         // 登録後、そのままログイン状態にする
@@ -134,6 +143,13 @@ class AuthController extends Controller
             ->first();
 
         if ($socialAccount) {
+            if ($socialAccount->user->status !== 'active') {
+                return redirect(
+                    config('services.frontend.url')
+                        . "/login?error=account_unavailable&provider={$provider}"
+                );
+            }
+
             Auth::login($socialAccount->user);
             $request->session()->regenerate();
 

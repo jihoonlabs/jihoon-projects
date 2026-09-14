@@ -16,7 +16,10 @@ export function AuthInitializer() {
         const user = await fetchMe();
         login(user);
       } catch (error) {
-        if (error instanceof AuthApiError && error.status === 401) {
+        if (
+          error instanceof AuthApiError &&
+          (error.status === 401 || error.status === 403)
+        ) {
           logout();
         } else {
           console.error('認証情報の取得に失敗しました。', error);

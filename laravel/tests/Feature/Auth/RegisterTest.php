@@ -97,4 +97,38 @@ class RegisterTest extends TestCase
         ]);
     }
 
+    /**
+     * 会員登録の試行回数が上限を超えた場合、429が返されること
+     */
+    public function test_register_is_rate_limited(): void
+    {
+        for ($i = 0; $i < 3; $i++) {
+            $this->postJson('/api/auth/register', [
+                'name' => 'test',
+                'email' => "test{$i}@example.com",
+                'password' => 'password123',
+            ])->assertStatus(201);
+        }
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'test',
+            'email' => 'test3@example.com',
+            'password' => 'password123',
+        ])->assertStatus(429);
+    }
+
+    /**
+     * 数字を含まないパスワードでは登録できないこと
+     */
+    public function test_register_requires_password_with_number(): void
+    {
+        $response = $this->postJson('/api/auth/register', [
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+            'password' => 'password',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['password']);
+    }
 }
