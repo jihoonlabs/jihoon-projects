@@ -47,7 +47,7 @@ export default function PostList() {
                 <span>Comments: {post.comment_count}</span>
               </div>
 
-              <time>{post.createdAt}</time>
+              <time>{post.created_at}</time>
             </article>
           </li>
         ))}
