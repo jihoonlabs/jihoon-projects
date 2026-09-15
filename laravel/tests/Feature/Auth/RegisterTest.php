@@ -3,7 +3,9 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class RegisterTest extends TestCase
@@ -11,16 +13,19 @@ class RegisterTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * 正しい入力内容で新規会員登録できること
+     * 正しい入力内容で新規会員登録し、認証メールが送信されること
      */
     public function test_user_can_register_with_valid_data(): void
     {
+        Notification::fake();
+
         $response = $this
             ->withHeader('Origin', 'http://localhost:3000')
             ->postJson('/api/auth/register', [
                 'name' => 'test',
                 'email' => 'test@example.com',
                 'password' => 'password123',
+                'password_confirmation' => 'password123',
             ]);
 
         $response
@@ -39,14 +44,17 @@ class RegisterTest extends TestCase
                 ],
             ]);
 
-        // ユーザーがDBに登録されていることを確認
-        $this->assertDatabaseHas('users', [
-            'email' => 'test@example.com',
-            'status' => 'active',
-        ]);
+        $user = User::where('email', 'test@example.com')->firstOrFail();
 
-        // 登録後、そのままログイン状態になっていることを確認
-        $this->assertAuthenticated();
+        $this->assertNull($user->email_verified_at);
+
+        Notification::assertSentTo(
+            $user,
+            VerifyEmail::class,
+        );
+
+        // メール認証が完了するまではログイン状態にしない
+        $this->assertGuest();
     }
 
     /**
@@ -66,6 +74,7 @@ class RegisterTest extends TestCase
                 'name' => 'test',
                 'email' => 'test@example.com',
                 'password' => 'password123',
+                'password_confirmation' => 'password123',
             ]);
 
         // バリデーションエラーになることを確認
@@ -85,6 +94,7 @@ class RegisterTest extends TestCase
                 'name' => 'test',
                 'email' => 'test@example.com',
                 'password' => '1234567',
+                'password_confirmation' => '1234567',
             ]);
 
         $response
@@ -107,6 +117,7 @@ class RegisterTest extends TestCase
                 'name' => 'test',
                 'email' => "test{$i}@example.com",
                 'password' => '1234567',
+                'password_confirmation' => '1234567',
             ])->assertStatus(422);
         }
 
@@ -114,6 +125,7 @@ class RegisterTest extends TestCase
             'name' => 'test',
             'email' => 'test3@example.com',
             'password' => '1234567',
+            'password_confirmation' => '1234567',
         ])->assertStatus(429);
     }
 
@@ -126,6 +138,7 @@ class RegisterTest extends TestCase
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => 'password',
+            'password_confirmation' => '1234567',
         ]);
 
         $response->assertStatus(422)
@@ -141,9 +154,30 @@ class RegisterTest extends TestCase
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => '12345678',
+            'password_confirmation' => '1234567',
         ])
             ->assertStatus(422)
             ->assertJsonValidationErrors(['password']);
     }
 
+    /**
+     * 確認用パスワードが一致しない場合は登録できないこと
+     */
+    public function test_user_cannot_register_when_password_confirmation_does_not_match(): void
+    {
+        $this
+            ->withHeader('Origin', 'http://localhost:3000')
+            ->postJson('/api/auth/register', [
+                'name' => 'Test User',
+                'email' => 'test@example.com',
+                'password' => 'password123',
+                'password_confirmation' => 'different123',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['password']);
+
+        $this->assertDatabaseMissing('users', [
+            'email' => 'test@example.com',
+        ]);
+    }
 }

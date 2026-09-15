@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
-import { loginApi } from '@/features/auth/api/login';
+import { LoginApiError, loginApi } from '@/features/auth/api/login';
+import { resendVerificationEmailApi } from '@/features/auth/api/resendVerificationEmail';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import type { LoginValidationErrors } from '@/features/auth/types/auth';
 import { validateLoginForm } from '@/features/auth/validation/auth';
@@ -21,34 +23,51 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<LoginValidationErrors>({});
-  const [serverError, setServerError] = useState(() => {
+  const [serverError, setServerError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [verificationEmailRequired, setVerificationEmailRequired] =
+    useState(false);
+  const [resendingVerificationEmail, setResendingVerificationEmail] =
+    useState(false);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const error = params.get('error');
     const provider = params.get('provider');
+    const verified = params.get('verified');
+    const registered = params.get('registered');
 
+    // メール認証完了メッセージ
+    if (verified === '1') {
+      setSuccessMessage(
+        'メールアドレスの認証が完了しました。ログインしてください。',
+      );
+    }
+
+    // メール会員登録完了メッセージ
+    if (registered === '1') {
+      setSuccessMessage('認証メールを送信しました。メールをご確認ください。');
+    }
+
+    // ソーシャルログインエラー
     if (error === 'social_login_failed') {
-    const providerName = 
-      provider === 'google' 
-      ? 'Google' 
-      : provider === 'line' 
-      ? 'LINE' 
-      : null;
+      const providerName =
+        provider === 'google' ? 'Google' : provider === 'line' ? 'LINE' : null;
 
-    return providerName
-      ? `${providerName}認証に失敗しました。`
-      : 'ソーシャルログインに失敗しました。';
+      setServerError(
+        providerName
+          ? `${providerName}認証に失敗しました。`
+          : 'ソーシャルログインに失敗しました。',
+      );
     }
 
+    // 利用停止アカウント
     if (error === 'account_unavailable') {
-      return 'このアカウントは現在利用できません。';
+      setServerError('このアカウントは現在利用できません。');
     }
 
-    return '';
-  });
-
-  const [showPassword, setShowPassword] = useState(false);
-
-  useEffect(() => {
+    // 処理済みのクエリパラメータをURLから削除
     if (window.location.search) {
       window.history.replaceState({}, '', '/login');
     }
@@ -62,6 +81,8 @@ export function LoginForm() {
     event.preventDefault();
 
     setServerError('');
+    setSuccessMessage('');
+    setVerificationEmailRequired(false);
 
     const validationErrors = validateLoginForm(email, password);
 
@@ -83,6 +104,16 @@ export function LoginForm() {
 
       router.push('/tickets');
     } catch (error) {
+      if (error instanceof LoginApiError) {
+        setServerError(error.message);
+
+        if (error.code === 'email_not_verified') {
+          setVerificationEmailRequired(true);
+        }
+
+        return;
+      }
+
       if (error instanceof Error) {
         setServerError(error.message);
         return;
@@ -94,14 +125,57 @@ export function LoginForm() {
     }
   };
 
+  const handleResendVerificationEmail = async () => {
+    setServerError('');
+    setSuccessMessage('');
+    setResendingVerificationEmail(true);
+
+    try {
+      const data = await resendVerificationEmailApi({
+        email,
+      });
+
+      setSuccessMessage(data.message);
+      setVerificationEmailRequired(false);
+    } catch (error) {
+      if (error instanceof Error) {
+        setServerError(error.message);
+        return;
+      }
+
+      setServerError('認証メールの再送中にエラーが発生しました。');
+    } finally {
+      setResendingVerificationEmail(false);
+    }
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.card}>
         <h1>タスク管理</h1>
         <p>チケット管理</p>
 
+        {successMessage && (
+          <div className={styles.successMessage} role="status">
+            {successMessage}
+          </div>
+        )}
+
         {serverError && (
           <div className={styles.errorMessage}>{serverError}</div>
+        )}
+
+        {verificationEmailRequired && (
+          <button
+            type="button"
+            className={styles.resendButton}
+            onClick={handleResendVerificationEmail}
+            disabled={resendingVerificationEmail}
+          >
+            {resendingVerificationEmail
+              ? '認証メールを再送中...'
+              : '認証メールを再送する'}
+          </button>
         )}
 
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
@@ -116,6 +190,7 @@ export function LoginForm() {
               value={email}
               onChange={(event) => {
                 setEmail(event.target.value);
+                setVerificationEmailRequired(false);
 
                 if (errors.email) {
                   setErrors((prev) => ({
@@ -179,7 +254,7 @@ export function LoginForm() {
             type="button"
             onClick={() => handleSocialLogin('google')}
             disabled={loading}
-            >
+          >
             Googleでログイン
           </button>
 
@@ -187,10 +262,17 @@ export function LoginForm() {
             type="button"
             onClick={() => handleSocialLogin('line')}
             disabled={loading}
-            >
+          >
             LINEでログイン
           </button>
         </form>
+
+        <div className={styles.registerGuide}>
+          <span>アカウントをお持ちでない方は</span>
+          <Link href="/register" className={styles.registerLink}>
+            新規会員登録へ
+          </Link>
+        </div>
       </div>
     </div>
   );

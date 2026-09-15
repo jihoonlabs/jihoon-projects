@@ -55,7 +55,7 @@ class LoginTest extends TestCase
         // テスト用ユーザーを作成
         User::factory()->create([
             'email' => 'test@example.com',
-           'password' => 'password123',
+            'password' => 'password123',
         ]);
 
         // 間違ったパスワードでログイン
@@ -105,7 +105,6 @@ class LoginTest extends TestCase
     /**
      * ログイン済みでも停止中のユーザーは認証必須APIにアクセスできないこと
      */
-    
     public function test_suspended_authenticated_user_cannot_access_protected_api(): void
     {
         $user = User::factory()->create([
@@ -124,7 +123,7 @@ class LoginTest extends TestCase
         $this->getJson('/api/auth/me')
             ->assertStatus(401);
     }
-    
+
     /**
      * 未認証ユーザーは認証必須APIにアクセスできないこと
      */
@@ -141,7 +140,7 @@ class LoginTest extends TestCase
     {
         $user = User::factory()->create([
             'email' => 'test@example.com',
-           'password' => 'password123',
+            'password' => 'password123',
         ]);
 
         // 実際のログインAPIでログイン
@@ -186,6 +185,32 @@ class LoginTest extends TestCase
             'email' => 'test@example.com',
             'password' => 'wrongpassword',
         ])->assertStatus(429);
+    }
+
+    /**
+     * メール認証が完了していないユーザーはログインできないこと
+     */
+    public function test_unverified_user_cannot_login(): void
+    {
+        User::factory()->unverified()->create([
+            'email' => 'unverified@example.com',
+            'password' => 'password123',
+            'status' => 'active',
+        ]);
+
+        $this
+            ->withHeader('Origin', 'http://localhost:3000')
+            ->postJson('/api/auth/login', [
+                'email' => 'unverified@example.com',
+                'password' => 'password123',
+            ])
+            ->assertStatus(403)
+            ->assertJson([
+                'message' => 'メール認証が完了していません。',
+                'code' => 'email_not_verified',
+            ]);
+
+        $this->assertGuest();
     }
 
     /**

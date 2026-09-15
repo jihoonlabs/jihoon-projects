@@ -34,10 +34,23 @@ class AuthController extends Controller
             ]);
         }
 
+        $user = $request->user();
+
+        // メール認証が完了していないユーザーのログインを拒否する
+        if (! $user->hasVerifiedEmail()) {
+            Auth::guard('web')->logout();
+
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return response()->json([
+                'message' => 'メール認証が完了していません。',
+                'code' => 'email_not_verified',
+            ], 403);
+        }
+
         // セッション固定攻撃対策
         $request->session()->regenerate();
-
-        $user = $request->user();
 
         return response()->json([
             'message' => 'ログイン成功',
@@ -84,6 +97,7 @@ class AuthController extends Controller
             'password' => [
                 'required',
                 'string',
+                'confirmed',
                 Password::min(8)
                     ->letters()
                     ->numbers(),
@@ -96,12 +110,11 @@ class AuthController extends Controller
             'password' => $validated['password'],
         ]);
 
-        // 登録後、そのままログイン状態にする
-        Auth::login($user);
-        $request->session()->regenerate();
+        // 入力されたメールアドレスの所有者であることを確認する
+        $user->sendEmailVerificationNotification();
 
         return response()->json([
-            'message' => '会員登録が完了しました。',
+            'message' => '認証メールを送信しました。メールをご確認ください。',
             'user' => $this->formatUser($user),
         ], 201);
     }

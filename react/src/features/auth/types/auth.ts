@@ -6,14 +6,28 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
+  name: string;
   email: string;
   password: string;
-  name: string;
-  companyCode?: string;
+  passwordConfirmation: string;
 }
 
-export interface AuthResponse {
+export interface LoginResponse {
+  message: string;
   user: User;
+}
+
+export interface RegisterResponse {
+  message: string;
+  user: User;
+}
+
+export interface VerificationEmailResendRequest {
+  email: string;
+}
+
+export interface VerificationEmailResendResponse {
+  message: string;
 }
 
 export interface AuthState {
@@ -31,8 +45,8 @@ export interface LoginValidationErrors {
 }
 
 export interface RegisterValidationErrors {
+  name?: string;
   email?: string;
   password?: string;
-  name?: string;
-  companyCode?: string;
+  passwordConfirmation?: string;
 }
