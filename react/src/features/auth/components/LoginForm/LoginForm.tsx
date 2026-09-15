@@ -7,14 +7,22 @@ import { useEffect, useState } from 'react';
 import { LoginApiError, loginApi } from '@/features/auth/api/login';
 import { resendVerificationEmailApi } from '@/features/auth/api/resendVerificationEmail';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
-import type { LoginValidationErrors } from '@/features/auth/types/auth';
+import type {
+  LoginRedirectParams,
+  LoginValidationErrors,
+} from '@/features/auth/types/auth';
 import { validateLoginForm } from '@/features/auth/validation/auth';
 
 import styles from './LoginForm.module.css';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
-export function LoginForm() {
+export function LoginForm({
+  error,
+  provider,
+  verified,
+  registered,
+}: LoginRedirectParams) {
   const router = useRouter();
 
   const login = useAuthStore((state) => state.login);
@@ -23,55 +31,46 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<LoginValidationErrors>({});
-  const [serverError, setServerError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+const [serverError, setServerError] = useState(() => {
+  if (error === 'social_login_failed') {
+    const providerName =
+      provider === 'google' ? 'Google' : provider === 'line' ? 'LINE' : null;
+
+    return providerName
+      ? `${providerName}認証に失敗しました。`
+      : 'ソーシャルログインに失敗しました。';
+  }
+
+  if (error === 'account_unavailable') {
+    return 'このアカウントは現在利用できません。';
+  }
+
+  return '';
+});
+
+const [successMessage, setSuccessMessage] = useState(() => {
+  if (verified === '1') {
+    return 'メールアドレスの認証が完了しました。ログインしてください。';
+  }
+
+  if (registered === '1') {
+    return '認証メールを送信しました。メールをご確認ください。';
+  }
+
+  return '';
+});
   const [showPassword, setShowPassword] = useState(false);
   const [verificationEmailRequired, setVerificationEmailRequired] =
     useState(false);
   const [resendingVerificationEmail, setResendingVerificationEmail] =
     useState(false);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const error = params.get('error');
-    const provider = params.get('provider');
-    const verified = params.get('verified');
-    const registered = params.get('registered');
-
-    // メール認証完了メッセージ
-    if (verified === '1') {
-      setSuccessMessage(
-        'メールアドレスの認証が完了しました。ログインしてください。',
-      );
-    }
-
-    // メール会員登録完了メッセージ
-    if (registered === '1') {
-      setSuccessMessage('認証メールを送信しました。メールをご確認ください。');
-    }
-
-    // ソーシャルログインエラー
-    if (error === 'social_login_failed') {
-      const providerName =
-        provider === 'google' ? 'Google' : provider === 'line' ? 'LINE' : null;
-
-      setServerError(
-        providerName
-          ? `${providerName}認証に失敗しました。`
-          : 'ソーシャルログインに失敗しました。',
-      );
-    }
-
-    // 利用停止アカウント
-    if (error === 'account_unavailable') {
-      setServerError('このアカウントは現在利用できません。');
-    }
-
-    // 処理済みのクエリパラメータをURLから削除
-    if (window.location.search) {
-      window.history.replaceState({}, '', '/login');
-    }
-  }, []);
+useEffect(() => {
+  // 表示済みのクエリパラメータをURLから削除する
+  if (window.location.search) {
+    window.history.replaceState({}, '', '/login');
+  }
+}, []);
 
   const handleSocialLogin = (provider: 'google' | 'line') => {
     window.location.href = `${API_URL}/api/auth/${provider}/redirect`;

@@ -50,3 +50,10 @@ export interface RegisterValidationErrors {
   password?: string;
   passwordConfirmation?: string;
 }
+
+export interface LoginRedirectParams {
+  error?: string;
+  provider?: string;
+  verified?: string;
+  registered?: string;
+}
