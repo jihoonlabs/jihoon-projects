@@ -245,6 +245,15 @@ useEffect(() => {
             )}
           </div>
 
+          <div className={styles.forgotPasswordGuide}>
+            <Link
+              href="/forgot-password"
+              className={styles.forgotPasswordLink}
+            >
+              パスワードをお忘れですか？
+            </Link>
+          </div>
+
           <button type="submit" className={styles.submitBtn} disabled={loading}>
             {loading ? 'ログイン中...' : 'ログイン'}
           </button>
