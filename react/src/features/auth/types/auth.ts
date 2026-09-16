@@ -57,3 +57,31 @@ export interface LoginRedirectParams {
   verified?: string;
   registered?: string;
 }
+
+export interface PasswordResetLinkRequest {
+  email: string;
+}
+
+export interface PasswordResetLinkResponse {
+  message: string;
+}
+
+export interface PasswordResetRequest {
+  email: string;
+  token: string;
+  password: string;
+  passwordConfirmation: string;
+}
+
+export interface PasswordResetResponse {
+  message: string;
+}
+
+export interface PasswordResetLinkValidationErrors {
+  email?: string;
+}
+
+export interface PasswordResetValidationErrors {
+  password?: string;
+  passwordConfirmation?: string;
+}
