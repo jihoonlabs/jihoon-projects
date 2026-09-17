@@ -21,15 +21,18 @@ export const registerApi = async (
   const data = await response.json();
 
   if (!response.ok) {
-    const errorMessage =
-      response.status === 422
-        ? (data.errors?.email?.[0] ??
-          data.errors?.password?.[0] ??
-          data.errors?.name?.[0] ??
-          '入力内容を確認してください。')
-        : response.status === 429
-          ? '登録試行回数が多すぎます。しばらくしてから再度お試しください。'
-          : '会員登録処理に失敗しました。';
+    let errorMessage = '会員登録処理に失敗しました。';
+
+    if (response.status === 422) {
+      errorMessage =
+        data.errors?.email?.[0] ??
+        data.errors?.password?.[0] ??
+        data.errors?.name?.[0] ??
+        '入力内容を確認してください。';
+    } else if (response.status === 429) {
+      errorMessage =
+        '登録試行回数が多すぎます。しばらくしてから再度お試しください。';
+    }
 
     throw new Error(errorMessage);
   }

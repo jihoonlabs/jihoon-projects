@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 import { registerApi } from '@/features/auth/api/register';
 import type { RegisterValidationErrors } from '@/features/auth/types/auth';
 import { validateRegisterForm } from '@/features/auth/validation/auth';
-import Link from 'next/link';
+
 import styles from './RegisterForm.module.css';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
@@ -88,6 +88,8 @@ export function RegisterForm() {
               type="text"
               autoComplete="name"
               value={name}
+              aria-invalid={Boolean(errors.name)}
+              aria-describedby={errors.name ? 'name-error' : undefined}
               onChange={(event) => {
                 setName(event.target.value);
 
@@ -102,7 +104,9 @@ export function RegisterForm() {
               disabled={loading}
             />
             {errors.name && (
-              <span className={styles.fieldError}>{errors.name}</span>
+              <span id="name-error" className={styles.fieldError}>
+                {errors.name}
+              </span>
             )}
           </div>
 
@@ -114,6 +118,8 @@ export function RegisterForm() {
               autoComplete="email"
               placeholder="user@example.com"
               value={email}
+              aria-invalid={Boolean(errors.email)}
+              aria-describedby={errors.email ? 'email-error' : undefined}
               onChange={(event) => {
                 setEmail(event.target.value);
 
@@ -128,7 +134,9 @@ export function RegisterForm() {
               disabled={loading}
             />
             {errors.email && (
-              <span className={styles.fieldError}>{errors.email}</span>
+              <span id="email-error" className={styles.fieldError}>
+                {errors.email}
+              </span>
             )}
           </div>
 
@@ -139,6 +147,8 @@ export function RegisterForm() {
               type="password"
               autoComplete="new-password"
               placeholder="8文字以上の英字と数字"
+              aria-invalid={Boolean(errors.password)}
+              aria-describedby={errors.password ? 'password-error' : undefined}
               value={password}
               onChange={(event) => {
                 setPassword(event.target.value);
@@ -154,7 +164,9 @@ export function RegisterForm() {
               disabled={loading}
             />
             {errors.password && (
-              <span className={styles.fieldError}>{errors.password}</span>
+              <span id="password-error" className={styles.fieldError}>
+                {errors.password}
+              </span>
             )}
           </div>
 
@@ -165,6 +177,12 @@ export function RegisterForm() {
               type="password"
               autoComplete="new-password"
               value={passwordConfirmation}
+              aria-invalid={Boolean(errors.passwordConfirmation)}
+              aria-describedby={
+                errors.passwordConfirmation
+                  ? 'password-confirmation-error'
+                  : undefined
+              }
               onChange={(event) => {
                 setPasswordConfirmation(event.target.value);
 
@@ -179,7 +197,10 @@ export function RegisterForm() {
               disabled={loading}
             />
             {errors.passwordConfirmation && (
-              <span className={styles.fieldError}>
+              <span
+                id="password-confirmation-error"
+                className={styles.fieldError}
+              >
                 {errors.passwordConfirmation}
               </span>
             )}
