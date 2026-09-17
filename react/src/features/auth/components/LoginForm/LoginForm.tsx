@@ -31,49 +31,49 @@ export function LoginForm({
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<LoginValidationErrors>({});
-const [serverError, setServerError] = useState(() => {
-  if (error === 'social_login_failed') {
-    const providerName =
-      provider === 'google' ? 'Google' : provider === 'line' ? 'LINE' : null;
+  const [serverError, setServerError] = useState(() => {
+    if (error === 'social_login_failed') {
+      const providerName =
+        provider === 'google' ? 'Google' : provider === 'line' ? 'LINE' : null;
 
-    return providerName
-      ? `${providerName}認証に失敗しました。`
-      : 'ソーシャルログインに失敗しました。';
-  }
+      return providerName
+        ? `${providerName}認証に失敗しました。`
+        : 'ソーシャルログインに失敗しました。';
+    }
 
-  if (error === 'account_unavailable') {
-    return 'このアカウントは現在利用できません。';
-  }
+    if (error === 'account_unavailable') {
+      return 'このアカウントは現在利用できません。';
+    }
 
-  return '';
-});
+    return '';
+  });
 
-const [successMessage, setSuccessMessage] = useState(() => {
-  if (verified === '1') {
-    return 'メールアドレスの認証が完了しました。ログインしてください。';
-  }
+  const [successMessage, setSuccessMessage] = useState(() => {
+    if (verified === '1') {
+      return 'メールアドレスの認証が完了しました。ログインしてください。';
+    }
 
-  if (registered === '1') {
-    return '認証メールを送信しました。メールをご確認ください。';
-  }
+    if (registered === '1') {
+      return '認証メールを送信しました。メールをご確認ください。';
+    }
 
-  return '';
-});
+    return '';
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [verificationEmailRequired, setVerificationEmailRequired] =
     useState(false);
   const [resendingVerificationEmail, setResendingVerificationEmail] =
     useState(false);
 
-useEffect(() => {
-  // 表示済みのクエリパラメータをURLから削除する
-  if (window.location.search) {
-    window.history.replaceState({}, '', '/login');
-  }
-}, []);
+  useEffect(() => {
+    // 表示済みのクエリパラメータをURLから削除する
+    if (window.location.search) {
+      window.history.replaceState({}, '', '/login');
+    }
+  }, []);
 
-  const handleSocialLogin = (provider: 'google' | 'line') => {
-    window.location.href = `${API_URL}/api/auth/${provider}/redirect`;
+  const handleSocialLogin = (socialProvider: 'google' | 'line') => {
+    window.location.href = `${API_URL}/api/auth/${socialProvider}/redirect`;
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -161,7 +161,9 @@ useEffect(() => {
         )}
 
         {serverError && (
-          <div className={styles.errorMessage}>{serverError}</div>
+          <div className={styles.errorMessage} role="alert">
+            {serverError}
+          </div>
         )}
 
         {verificationEmailRequired && (
@@ -186,6 +188,8 @@ useEffect(() => {
               type="email"
               autoComplete="email"
               placeholder="user@example.com"
+              aria-invalid={Boolean(errors.email)}
+              aria-describedby={errors.email ? 'email-error' : undefined}
               value={email}
               onChange={(event) => {
                 setEmail(event.target.value);
@@ -203,7 +207,9 @@ useEffect(() => {
             />
 
             {errors.email && (
-              <span className={styles.fieldError}>{errors.email}</span>
+              <span id="email-error" className={styles.fieldError}>
+                {errors.email}
+              </span>
             )}
           </div>
 
@@ -215,6 +221,8 @@ useEffect(() => {
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               placeholder="••••••••"
+              aria-invalid={Boolean(errors.password)}
+              aria-describedby={errors.password ? 'password-error' : undefined}
               value={password}
               onChange={(event) => {
                 setPassword(event.target.value);
@@ -241,15 +249,14 @@ useEffect(() => {
             </button>
 
             {errors.password && (
-              <span className={styles.fieldError}>{errors.password}</span>
+              <span id="password-error" className={styles.fieldError}>
+                {errors.password}
+              </span>
             )}
           </div>
 
           <div className={styles.forgotPasswordGuide}>
-            <Link
-              href="/forgot-password"
-              className={styles.forgotPasswordLink}
-            >
+            <Link href="/forgot-password" className={styles.forgotPasswordLink}>
               パスワードをお忘れですか？
             </Link>
           </div>
