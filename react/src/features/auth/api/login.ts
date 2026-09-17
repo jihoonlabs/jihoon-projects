@@ -28,14 +28,17 @@ export const loginApi = async (
         ? data.code
         : undefined;
 
-    const errorMessage =
-      response.status === 422
-        ? (data.errors?.email?.[0] ?? 'ログイン情報が正しくありません。')
-        : errorCode === 'email_not_verified'
-          ? (data.message ?? 'メール認証が完了していません。')
-          : response.status === 429
-            ? 'ログイン試行回数が多すぎます。しばらくしてから再度お試しください。'
-            : 'ログイン処理に失敗しました。';
+    let errorMessage = 'ログイン処理に失敗しました。';
+
+    if (response.status === 422) {
+      errorMessage =
+        data.errors?.email?.[0] ?? 'ログイン情報が正しくありません。';
+    } else if (errorCode === 'email_not_verified') {
+      errorMessage = data.message ?? 'メール認証が完了していません。';
+    } else if (response.status === 429) {
+      errorMessage =
+        'ログイン試行回数が多すぎます。しばらくしてから再度お試しください。';
+    }
 
     throw new LoginApiError(errorMessage, errorCode);
   }

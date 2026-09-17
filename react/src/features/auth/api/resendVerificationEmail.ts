@@ -21,12 +21,15 @@ export const resendVerificationEmailApi = async (
   const data = await response.json();
 
   if (!response.ok) {
-    const errorMessage =
-      response.status === 422
-        ? (data.errors?.email?.[0] ?? 'メールアドレスを確認してください。')
-        : response.status === 429
-          ? '認証メールの再送回数が多すぎます。しばらくしてから再度お試しください。'
-          : '認証メールの再送に失敗しました。';
+    let errorMessage = '認証メールの再送に失敗しました。';
+
+    if (response.status === 422) {
+      errorMessage =
+        data.errors?.email?.[0] ?? 'メールアドレスを確認してください。';
+    } else if (response.status === 429) {
+      errorMessage =
+        '認証メールの再送回数が多すぎます。しばらくしてから再度お試しください。';
+    }
 
     throw new Error(errorMessage);
   }
