@@ -1,55 +1,42 @@
-技術スタック (Tech Stack)
-フレームワーク: Next.js (App Router)
+# Next.js Frontend
 
-言語: TypeScript
+Laravel APIと連携するNext.jsフロントエンドです。
 
-状態管理: Zustand
+## 使用技術
 
-スタイリング: SCSS Modules
+- Next.js
+- TypeScript
+- Zustand
+- CSS Modules
+- pnpm
 
-パッケージマネージャー: pnpm
+## セットアップ
 
-セットアップ (Getting Started)
-前提条件 (Prerequisites)
-Node.js および pnpm がインストールされていることを確認してください。
+依存関係をインストールします。
 
-クイックスタート (Quick Start)
-依存関係のインストール
+```bash
+pnpm install
+```
 
-コマンド: pnpm install
+環境に応じてAPIのURLを設定してください。
 
-ビルドスクリプトの承認 (セキュリティポリシーで求められた場合のみ)
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
 
-コマンド: pnpm approve-builds
+開発サーバーを起動します。
 
-開発サーバー起動
+```bash
+pnpm dev
+```
 
-コマンド: pnpm dev
+ブラウザで `http://localhost:3000` を開いてください。
 
-ブラウザで http://localhost:3000 を開いて確認します。
+## コマンド
 
-利用可能なスクリプト (Available Scripts)
-pnpm dev — ローカル開発サーバー起動 (localhost:3000)
-
-pnpm build — プロダクション用にアプリケーションをビルド
-
-pnpm start — ビルド後にプロダクションサーバーを起動
-
-pnpm lint — コードクオリティチェック (ESLint)
-
-ディレクトリ構造 (Project Structure)
-react/
-├── public/ # 静的ファイル (ファビコン、パブリックメディア)
-└── src/
-├── app/ # App Router ページ & レイアウト
-├── assets/ # スタイル & ローカルメディア
-├── components/ # UI コンポーネント
-└── store/ # 状態管理
-
-Git ワークフロー (Development Workflow)
-main — 安定した本番コードベース
-
-feature/* — 機能開発および実験用ブランチ (例: feature/dashboard)
-
-ライセンス (License)
-社内開発および学習目的で管理されています。
+```bash
+pnpm dev
+pnpm build
+pnpm lint
+pnpm test:run
+```
