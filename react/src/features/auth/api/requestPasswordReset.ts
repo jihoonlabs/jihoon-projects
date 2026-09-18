@@ -18,12 +18,15 @@ export const requestPasswordResetApi = async (
   const data = await response.json();
 
   if (!response.ok) {
-    const errorMessage =
-      response.status === 422
-        ? (data.errors?.email?.[0] ?? 'メールアドレスを確認してください。')
-        : response.status === 429
-          ? 'パスワード再設定メールの送信回数が多すぎます。しばらくしてから再度お試しください。'
-          : 'パスワード再設定メールの送信に失敗しました。';
+    let errorMessage = 'パスワード再設定メールの送信に失敗しました。';
+
+    if (response.status === 422) {
+      errorMessage =
+        data.errors?.email?.[0] ?? 'メールアドレスを確認してください。';
+    } else if (response.status === 429) {
+      errorMessage =
+        'パスワード再設定メールの送信回数が多すぎます。しばらくしてから再度お試しください。';
+    }
 
     throw new Error(errorMessage);
   }

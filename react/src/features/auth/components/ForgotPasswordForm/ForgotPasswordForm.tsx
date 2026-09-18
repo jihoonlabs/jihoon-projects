@@ -11,8 +11,7 @@ import styles from './ForgotPasswordForm.module.css';
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState('');
-  const [errors, setErrors] =
-    useState<PasswordResetLinkValidationErrors>({});
+  const [errors, setErrors] = useState<PasswordResetLinkValidationErrors>({});
   const [serverError, setServerError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -45,9 +44,7 @@ export function ForgotPasswordForm() {
         return;
       }
 
-      setServerError(
-        'パスワード再設定メールの送信中にエラーが発生しました。',
-      );
+      setServerError('パスワード再設定メールの送信中にエラーが発生しました。');
     } finally {
       setLoading(false);
     }
@@ -86,6 +83,8 @@ export function ForgotPasswordForm() {
               value={email}
               onChange={(event) => {
                 setEmail(event.target.value);
+                setServerError('');
+                setSuccessMessage('');
 
                 if (errors.email) {
                   setErrors((previousErrors) => ({
@@ -94,12 +93,16 @@ export function ForgotPasswordForm() {
                   }));
                 }
               }}
+              aria-invalid={Boolean(errors.email)}
+              aria-describedby={errors.email ? 'email-error' : undefined}
               required
               disabled={loading}
             />
 
             {errors.email && (
-              <span className={styles.fieldError}>{errors.email}</span>
+              <span id="email-error" className={styles.fieldError}>
+                {errors.email}
+              </span>
             )}
           </div>
 
