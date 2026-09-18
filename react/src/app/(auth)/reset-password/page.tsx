@@ -2,15 +2,18 @@ import { ResetPasswordForm } from '@/features/auth/components/ResetPasswordForm/
 
 interface ResetPasswordPageProps {
   searchParams: Promise<{
-    email?: string;
-    token?: string;
+    email?: string | string[];
+    token?: string | string[];
   }>;
 }
 
 export default async function ResetPasswordPage({
   searchParams,
 }: ResetPasswordPageProps) {
-  const { email = '', token = '' } = await searchParams;
+  const params = await searchParams;
+
+  const email = typeof params.email === 'string' ? params.email : '';
+  const token = typeof params.token === 'string' ? params.token : '';
 
   return <ResetPasswordForm email={email} token={token} />;
 }
