@@ -19,3 +19,8 @@ Route::prefix('notices')->group(
 Route::prefix('posts')->group(
     base_path('routes/api/posts.php')
 );
+
+// /api/auth/* 
+Route::prefix('auth')->group(
+    base_path('routes/api/auth.php')
+);

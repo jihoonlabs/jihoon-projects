@@ -1,0 +1,180 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f4f6f8;
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  padding: 2.5rem;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.05),
+    0 8px 10px -6px rgba(0, 0, 0, 0.01);
+}
+
+.card h1 {
+  margin-bottom: 0.375rem;
+  color: #111827;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.card p {
+  margin-bottom: 2rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.inputGroup label {
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.inputGroup input {
+  padding: 0.75rem 1rem;
+  color: #111827;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  outline: none;
+  font-size: 0.95rem;
+  transition:
+    border-color 0.2s ease-in-out,
+    box-shadow 0.2s ease-in-out;
+}
+
+.inputGroup input::placeholder {
+  color: #9ca3af;
+}
+
+.inputGroup input:focus {
+  border-color: #0070f3;
+  box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.15);
+}
+
+.errorMessage {
+  padding: 0.75rem 1rem;
+  color: #b91c1c;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+.successMessage {
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+  color: #166534;
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.fieldError {
+  color: #b91c1c;
+  font-size: 0.8rem;
+}
+
+.submitBtn {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  color: #ffffff;
+  background-color: #0070f3;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.submitBtn:hover {
+  background-color: #0051a8;
+}
+
+.submitBtn:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.registerGuide {
+  display: flex;
+  gap: 0.375rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1.5rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.registerLink {
+  color: #0070f3;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.registerLink:hover {
+  text-decoration: underline;
+}
+
+.resendButton {
+  width: 100%;
+  margin-bottom: 1.25rem;
+  padding: 0.75rem;
+  color: #0070f3;
+  background-color: #ffffff;
+  border: 1px solid #0070f3;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.resendButton:hover {
+  background-color: #eff6ff;
+}
+
+.resendButton:disabled {
+  color: #6b7280;
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+  cursor: not-allowed;
+}
+
+.forgotPasswordGuide {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.5rem;
+}
+
+.forgotPasswordLink {
+  color: #0070f3;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.forgotPasswordLink:hover {
+  text-decoration: underline;
+}

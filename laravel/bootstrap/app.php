@@ -12,7 +12,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Sanctum の SPA セッション認証を有効化
+        $middleware->statefulApi();
+
+        // 停止中のユーザーによる認証必須 API へのアクセスを防止
+        $middleware->alias([
+            'active.user' => \App\Http\Middleware\EnsureUserIsActive::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
