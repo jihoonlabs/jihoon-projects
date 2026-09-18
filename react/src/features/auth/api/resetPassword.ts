@@ -27,16 +27,21 @@ export const resetPasswordApi = async (
       data.errors?.email?.[0] ??
       data.errors?.token?.[0];
 
-    const errorMessage =
-      response.status === 422
-        ? (validationMessage ??
+    if (response.status === 422) {
+      throw new Error(
+        validationMessage ??
           data.message ??
-          'メールアドレスまたは再設定トークンを確認してください。')
-        : response.status === 429
-          ? 'パスワード再設定の試行回数が多すぎます。しばらくしてから再度お試しください。'
-          : 'パスワードの再設定に失敗しました。';
+          'メールアドレスまたは再設定トークンを確認してください。',
+      );
+    }
 
-    throw new Error(errorMessage);
+    if (response.status === 429) {
+      throw new Error(
+        'パスワード再設定の試行回数が多すぎます。しばらくしてから再度お試しください。',
+      );
+    }
+
+    throw new Error('パスワードの再設定に失敗しました。');
   }
 
   return data;

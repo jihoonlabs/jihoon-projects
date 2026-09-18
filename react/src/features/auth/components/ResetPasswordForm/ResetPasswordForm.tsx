@@ -14,10 +14,7 @@ interface ResetPasswordFormProps {
   token: string;
 }
 
-export function ResetPasswordForm({
-  email,
-  token,
-}: ResetPasswordFormProps) {
+export function ResetPasswordForm({ email, token }: ResetPasswordFormProps) {
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [errors, setErrors] = useState<PasswordResetValidationErrors>({});
@@ -105,13 +102,31 @@ export function ResetPasswordForm({
                 autoComplete="new-password"
                 placeholder="••••••••"
                 value={password}
+                aria-invalid={Boolean(errors.password)}
+                aria-describedby={
+                  errors.password ? 'password-error' : undefined
+                }
                 onChange={(event) => {
-                  setPassword(event.target.value);
+                  const nextPassword = event.target.value;
 
-                  if (errors.password) {
+                  setPassword(nextPassword);
+
+                  if (serverError) {
+                    setServerError('');
+                  }
+
+                  if (
+                    errors.password ||
+                    (errors.passwordConfirmation &&
+                      nextPassword === passwordConfirmation)
+                  ) {
                     setErrors((previousErrors) => ({
                       ...previousErrors,
                       password: undefined,
+                      passwordConfirmation:
+                        nextPassword === passwordConfirmation
+                          ? undefined
+                          : previousErrors.passwordConfirmation,
                     }));
                   }
                 }}
@@ -120,7 +135,9 @@ export function ResetPasswordForm({
               />
 
               {errors.password && (
-                <span className={styles.fieldError}>{errors.password}</span>
+                <span id="password-error" className={styles.fieldError}>
+                  {errors.password}
+                </span>
               )}
             </div>
 
@@ -131,13 +148,21 @@ export function ResetPasswordForm({
 
               <input
                 id="passwordConfirmation"
+                aria-invalid={Boolean(errors.passwordConfirmation)}
+                aria-describedby={
+                  errors.passwordConfirmation
+                    ? 'password-confirmation-error'
+                    : undefined
+                }
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="new-password"
                 placeholder="••••••••"
                 value={passwordConfirmation}
                 onChange={(event) => {
                   setPasswordConfirmation(event.target.value);
-
+                  if (serverError) {
+                    setServerError('');
+                  }
                   if (errors.passwordConfirmation) {
                     setErrors((previousErrors) => ({
                       ...previousErrors,
@@ -150,7 +175,10 @@ export function ResetPasswordForm({
               />
 
               {errors.passwordConfirmation && (
-                <span className={styles.fieldError}>
+                <span
+                  id="password-confirmation-error"
+                  className={styles.fieldError}
+                >
                   {errors.passwordConfirmation}
                 </span>
               )}
