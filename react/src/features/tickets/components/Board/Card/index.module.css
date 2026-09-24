@@ -1,0 +1,97 @@
+.card {
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-color: #d1d5db;
+}
+
+.title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #111827;
+  margin: 0;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.metaInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.issueKey {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.priorityBadge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.HIGHEST {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.HIGH {
+  background-color: #fff7ed;
+  color: #ea580c;
+}
+
+.MEDIUM {
+  background-color: #fefce8;
+  color: #ca8a04;
+}
+
+.LOW {
+  background-color: #f0fdf4;
+  color: #16a34a;
+}
+
+.LOWEST {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #2563eb;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.unassigned {
+  background-color: #e5e7eb;
+  color: #9ca3af;
+}
