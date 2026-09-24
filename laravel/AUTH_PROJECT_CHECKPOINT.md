@@ -65,3 +65,27 @@ Next.jsとLaravelを使用した認証機能の実装が完了しています。
 - 自動テストとブラウザ確認を分けて実施する
 - ページは薄く保ち、実際の動作はコンポーネント側で確認する
 - 不要な共通化や過剰なコメントを避ける
+
+---
+
+# チケットAPI実装 進捗状況 (2026-09-24)
+
+作業ブランチ：`feature/ticket-api`
+
+## 本日の作業完了内容
+
+1. **Laravel バックエンド CRUD API 実装完了**
+   - `GET /api/tickets` (一覧取得)
+   - `POST /api/tickets` (新規作成 / `TICK-{id}` イシューキー自動生成)
+   - `GET /api/tickets/{ticket}` (詳細取得)
+   - `PATCH /api/tickets/{ticket}` (ステータス更新)
+   - `DELETE /api/tickets/{ticket}` (削除)
+
+2. **Next.js (Zustand) 非同期 API 連携完了**
+   - `useTicketStore.ts` の `addTicket`, `deleteTicket`, `updateStatus` を REST API 非同期通信へ移行
+
+## 次の作業 (ここから再開)
+
+1. チケット作成モーダル UI (`CreateTicketModal.tsx`) の実装と連携
+2. チケットカード内の削除ボタン UI 実装
+3. 画面での作成・更新・削除 E2E 動作テスト

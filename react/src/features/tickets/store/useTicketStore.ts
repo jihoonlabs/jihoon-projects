@@ -7,7 +7,7 @@ interface TicketState {
   error: string | null;
   fetchTickets: () => Promise<void>;
   updateStatus: (id: string, status: TicketStatus) => Promise<void>;
-  addTicket: (ticket: Omit<Ticket, 'id' | 'issueKey' | 'position' | 'createdAt' | 'updatedAt'>) => void;
+  addTicket: (ticket: Omit<Ticket, 'id' | 'issueKey' | 'position' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   deleteTicket: (id: string) => void;
 }
 
@@ -68,20 +68,36 @@ set((state) => ({
     }
   },
 
-  addTicket: (ticketData) =>
+addTicket: async (ticketData) => {
+  set({ isLoading: true, error: null });
+  try {
+    const response = await fetch('http://127.0.0.1:8000/api/tickets', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        ...ticketData,
+       status: ticketData.status || 'TODO',
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create ticket');
+    }
+
+    const newTicket = await response.json();
+
     set((state) => ({
-      tickets: [
-        ...state.tickets,
-        {
-          ...ticketData,
-          id: String(Date.now()),
-          issueKey: `KAN-${state.tickets.length + 101}`,
-          position: state.tickets.length,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ],
-    })),
+      tickets: [...state.tickets, newTicket],
+      isLoading: false,
+    }));
+  } catch (err: any) {
+    set({ error: err.message, isLoading: false });
+    console.error('Failed to add ticket:', err);
+  }
+},
 
   deleteTicket: (id) =>
     set((state) => ({
