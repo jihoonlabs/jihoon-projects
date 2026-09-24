@@ -1,91 +1,150 @@
-# 認証機能チェックポイント
+# チケット機能チェックポイント
 
-最終更新：2026-09-23
-
-作業ブランチ：`feature/auth-login`
-
-最新コミット：`d101f36 fix: harden CSRF token handling`
-
-## 現在の状況
-
-Next.jsとLaravelを使用した認証機能の実装が完了しています。
-
-- メールアドレスによる会員登録・ログイン
-- メールアドレス認証および再送
-- Google・LINEログイン
-- パスワード再設定
-- active・suspendedアカウントの制御
-- Laravel SanctumによるSPAセッション認証
-- パスワード変更後の既存セッション無効化
-- CSRF Cookieの取得およびXSRF Tokenの送信処理
-
-## 認証方針
-
-- メール・Google・LINEアカウントは自動連携しない
-- 未認証または停止中のアカウントはログイン不可
-- アカウントの存在や状態が外部から判別されない応答を使用する
-- パスワード変更後は既存セッションを無効化する
-- 認証関連の主要処理にはRate Limitを適用する
-
-## フロントエンド確認・改善状況
-
-- LoginFormのコード確認およびテスト作成
-- RegisterFormのコード確認およびテスト作成
-- ForgotPasswordFormのコード確認およびテスト作成
-- ResetPasswordFormのコード確認およびテスト作成
-- ログイン・会員登録・パスワード再設定関連の入力チェックテスト作成
-- MSWを使用した認証API通信テスト作成
-- CSRF Cookieの解析およびToken未取得時のエラー処理を改善
-- MSWのCSRF handlerにCookie設定処理を追加
-- `axios.ts`の責任と使用箇所を確認
-- `apiClient`は共通のAxios設定として維持
-- `noticeApi.ts`・`postApi.ts`ではGETリクエストに使用されていることを確認
-- 現時点では`fetchWithCsrf`との統合・共通化は行わない
-- 認証関連テスト13ファイルの内容を再確認し、追加修正不要と判断
-
-## 確認状況
-
-- Laravel：57 tests、230 assertions（全件成功）
-- React：14 test files、47 tests（全件成功）
-- React lint完了
-- React production build完了
-- `git diff --check`完了
-- メール・Google・LINEログインをブラウザで確認済み
-- パスワード再設定の一連の動作を確認済み
-
-## 次の作業
-
-- 認証関連READMEの整理
-- `main`ブランチへのマージ準備
-
-## 作業ルール
-
-- 一度に一つのファイルまたは機能を確認する
-- 必要な変更だけを行い、既存機能を不用意に変更しない
-- 自動テストとブラウザ確認を分けて実施する
-- ページは薄く保ち、実際の動作はコンポーネント側で確認する
-- 不要な共通化や過剰なコメントを避ける
-
----
-
-# チケットAPI実装 進捗状況 (2026-09-24)
-
+最終更新：2026-09-24
 作業ブランチ：`feature/ticket-api`
 
-## 本日の作業完了内容
+## 本日完了した作業
 
-1. **Laravel バックエンド CRUD API 実装完了**
-   - `GET /api/tickets` (一覧取得)
-   - `POST /api/tickets` (新規作成 / `TICK-{id}` イシューキー自動生成)
-   - `GET /api/tickets/{ticket}` (詳細取得)
-   - `PATCH /api/tickets/{ticket}` (ステータス更新)
-   - `DELETE /api/tickets/{ticket}` (削除)
+### 1. Laravel Ticket API
 
-2. **Next.js (Zustand) 非同期 API 連携完了**
-   - `useTicketStore.ts` の `addTicket`, `deleteTicket`, `updateStatus` を REST API 非同期通信へ移行
+以下のAPIを実装済み。
 
-## 次の作業 (ここから再開)
+- `GET /api/tickets`
+- `POST /api/tickets`
+- `GET /api/tickets/{ticket}`
+- `PATCH /api/tickets/{ticket}`
+- `DELETE /api/tickets/{ticket}`
 
-1. チケット作成モーダル UI (`CreateTicketModal.tsx`) の実装と連携
-2. チケットカード内の削除ボタン UI 実装
-3. 画面での作成・更新・削除 E2E 動作テスト
+チケット作成時：
+
+- `issue_key` は `TICK-{id}` 形式で生成
+- `status` 未指定時は `TODO`
+- `priority` 未指定時は `MEDIUM`
+- priority:
+  - `HIGHEST`
+  - `HIGH`
+  - `MEDIUM`
+  - `LOW`
+  - `LOWEST`
+
+`issue_key` をDBのID確定後に設定するため、nullable化する追加migrationを作成済み。
+
+### 2. Ticket API認証
+
+`routes/api/tickets.php` に以下を適用済み。
+
+- `auth:sanctum`
+- `active.user`
+
+そのためTicket APIはログイン済みかつactiveユーザーのみ利用可能。
+
+認証テスト：
+
+- 未認証ユーザー → `401`
+- suspendedユーザー → `403`
+- activeユーザー → CRUD利用可能
+
+### 3. Laravel Ticket tests
+
+以下に分割済み。
+
+- `tests/Feature/Ticket/StoreTest.php`
+- `tests/Feature/Ticket/IndexTest.php`
+- `tests/Feature/Ticket/ShowTest.php`
+- `tests/Feature/Ticket/UpdateStatusTest.php`
+- `tests/Feature/Ticket/DestroyTest.php`
+- `tests/Feature/Ticket/AuthenticationTest.php`
+
+Ticket CRUDテストではactiveユーザーを作成し、`actingAs()` で認証して実行。
+
+Laravel全体テスト結果：
+
+69 tests / 273 assertions PASS
+
+### 4. React useTicketStore
+
+`useTicketStore.ts` のAPI通信を修正。
+
+GET:
+- `credentials: 'include'` を追加
+
+POST:
+- `fetchWithCsrf()` を使用
+
+PATCH:
+- `fetchWithCsrf()` を使用
+- DnD用のOptimistic Update
+- API失敗時rollback
+
+DELETE:
+- `fetchWithCsrf()` を使用
+- Optimistic Delete
+- API失敗時rollback
+
+catchの型はすべて `unknown` に統一し、
+`@typescript-eslint/no-explicit-any` を解消。
+
+`deleteTicket` の型：
+
+`(id: string) => Promise<void>`
+
+React lint結果：
+
+`pnpm lint` PASS
+
+## UIの現在状況
+
+Kanban UI / DnDは既に実装済み。
+
+ただし以下はまだUI未実装：
+
+- チケット作成UI
+- チケット削除UI
+
+予定：
+
+- 作成 → Modal
+- 削除 → カードメニュー等から確認Dialog
+
+Store/API側の `addTicket()` / `deleteTicket()` は準備済み。
+
+## 次に確認する箇所
+
+最優先：
+
+`react/src/features/tickets/types/ticket.ts`
+
+Laravel APIはsnake_case：
+
+- `issue_key`
+- `assignee_id`
+- `created_at`
+- `updated_at`
+
+一方、React側では以下のcamelCase型が使われている可能性がある：
+
+- `issueKey`
+- `createdAt`
+- `updatedAt`
+- `position`
+
+LaravelレスポンスをStoreでそのまま `Ticket[]` に入れているため、
+型と実データの不一致がないか確認する。
+
+まず実行：
+
+`cat src/features/tickets/types/ticket.ts`
+
+その後：
+
+1. Ticket TypeとLaravel JSONの整合性確認
+2. priority/status値の整合性確認
+3. StoreのaddTicket payload確認
+4. DnD/updateStatus確認
+5. React Ticket tests追加判断
+6. 作成Modal / 削除Dialog実装
+7. ブラウザE2E確認
+8. formatter / diff cleanup
+9. Laravel / React全テスト
+10. `git diff --check`
+11. commit / push / branch整理

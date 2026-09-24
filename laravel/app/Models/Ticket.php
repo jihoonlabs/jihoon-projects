@@ -19,9 +19,6 @@ class Ticket extends Model
         'assignee_id',
     ];
 
-    /**
-     * 担当者(User) 
-     */
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assignee_id');

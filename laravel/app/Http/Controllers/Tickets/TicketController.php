@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class TicketController extends Controller
 {
@@ -29,22 +30,26 @@ class TicketController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'status' => 'required|in:BACKLOG,TODO,IN_PROGRESS,IN_REVIEW,DONE',
-            'priority' => 'required|in:LOW,MEDIUM,HIGH,URGENT',
+            'status' => 'sometimes|in:BACKLOG,TODO,IN_PROGRESS,IN_REVIEW,DONE',
+            'priority' => 'sometimes|in:HIGHEST,HIGH,MEDIUM,LOW,LOWEST',
             'assignee_id' => 'nullable|exists:users,id',
         ]);
 
-        $latestId = Ticket::max('id') ?? 0;
-        $issueKey = 'TICK-' . ($latestId + 1);
+        $ticket = DB::transaction(function () use ($validated) {
+            $ticket = Ticket::create([
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? null,
+                'status' => $validated['status'] ?? 'TODO',
+                'priority' => $validated['priority'] ?? 'MEDIUM',
+                'assignee_id' => $validated['assignee_id'] ?? null,
+            ]);
 
-        $ticket = Ticket::create([
-            'title' => $validated['title'],
-            'description' => $validated['description'] ?? null,
-            'status' => $validated['status'],
-            'priority' => $validated['priority'],
-            'assignee_id' => $validated['assignee_id'] ?? null,
-            'issue_key' => $issueKey,
-        ]);
+            $ticket->update([
+                'issue_key' => 'TICK-' . $ticket->id,
+            ]);
+
+            return $ticket;
+        });
 
         return response()->json(
             $ticket->load('assignee:id,name,email'),
