@@ -15,6 +15,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Sanctum の SPA セッション認証を有効化
         $middleware->statefulApi();
 
+        // APIパスのCSRFトークン検証例外処理
+        $middleware->validateCsrfTokens(except: [
+            'api/*',
+        ]);
+
         // 停止中のユーザーによる認証必須 API へのアクセスを防止
         $middleware->alias([
             'active.user' => \App\Http\Middleware\EnsureUserIsActive::class,

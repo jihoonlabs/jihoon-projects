@@ -10,4 +10,4 @@ use App\Http\Controllers\Tickets\TicketController;
 */
 
 Route::get('/', [TicketController::class, 'index']);
-Route::patch('/{ticket}/status', [TicketController::class, 'updateStatus']);
+Route::patch('/{ticket}', [TicketController::class, 'updateStatus']);
