@@ -24,3 +24,8 @@ Route::prefix('posts')->group(
 Route::prefix('auth')->group(
     base_path('routes/api/auth.php')
 );
+
+// /api/tickets/*
+Route::prefix('tickets')->group(
+    base_path('routes/api/tickets.php')
+);
