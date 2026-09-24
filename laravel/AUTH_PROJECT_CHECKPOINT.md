@@ -114,30 +114,29 @@ Store/API側の `addTicket()` / `deleteTicket()` は準備済み。
 
 `react/src/features/tickets/types/ticket.ts`
 
-Laravel APIはsnake_case：
+React側のTicket型を確認した結果、Laravel APIレスポンスとの命名差異を確認済み。
+
+Laravel API：
 
 - `issue_key`
-- `assignee_id`
 - `created_at`
 - `updated_at`
 
-一方、React側では以下のcamelCase型が使われている可能性がある：
+React Ticket型：
 
 - `issueKey`
 - `createdAt`
 - `updatedAt`
 - `position`
 
-LaravelレスポンスをStoreでそのまま `Ticket[]` に入れているため、
-型と実データの不一致がないか確認する。
+また、React側では `id: string` だが、Laravel側のIDは数値。
 
-まず実行：
+現在 `useTicketStore.ts` ではLaravelのレスポンスをそのままstateへ格納しているため、
+APIレスポンスとReactのTicket型をどの層で変換するかを次回最初に検討する。
 
-`cat src/features/tickets/types/ticket.ts`
+次の作業：
 
-その後：
-
-1. Ticket TypeとLaravel JSONの整合性確認
+1. Ticket TypeとLaravel JSONの整合性修正
 2. priority/status値の整合性確認
 3. StoreのaddTicket payload確認
 4. DnD/updateStatus確認
