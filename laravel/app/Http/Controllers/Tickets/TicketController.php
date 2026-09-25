@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tickets;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Tickets\TicketResource;
 use App\Models\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -13,19 +14,19 @@ class TicketController extends Controller
     /**
      * GET /api/tickets
      */
-    public function index(): JsonResponse
+    public function index()
     {
-        $tickets = Ticket::with('assignee:id,name,email')
+        $tickets = Ticket::with('assignee:id,name')
             ->orderBy('id', 'asc')
             ->get();
 
-        return response()->json($tickets);
+        return TicketResource::collection($tickets);
     }
 
     /**
      * POST /api/tickets
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request)
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -51,26 +52,23 @@ class TicketController extends Controller
             return $ticket;
         });
 
-        return response()->json(
-            $ticket->load('assignee:id,name,email'),
-            201
-        );
+        return (new TicketResource($ticket->load('assignee:id,name')))
+            ->response()
+            ->setStatusCode(201);
     }
 
     /**
      * GET /api/tickets/{ticket}
      */
-    public function show(Ticket $ticket): JsonResponse
+    public function show(Ticket $ticket)
     {
-        return response()->json(
-            $ticket->load('assignee:id,name,email')
-        );
+        return new TicketResource($ticket->load('assignee:id,name'));
     }
 
     /**
      * PATCH /api/tickets/{ticket}
      */
-    public function updateStatus(Request $request, Ticket $ticket): JsonResponse
+    public function updateStatus(Request $request, Ticket $ticket)
     {
         $validated = $request->validate([
             'status' => 'required|in:BACKLOG,TODO,IN_PROGRESS,IN_REVIEW,DONE',
@@ -80,10 +78,7 @@ class TicketController extends Controller
             'status' => $validated['status'],
         ]);
 
-        return response()->json([
-            'message' => 'Status updated successfully',
-            'ticket' => $ticket->load('assignee:id,name,email'),
-        ]);
+        return new TicketResource($ticket->load('assignee:id,name'));
     }
 
     /**

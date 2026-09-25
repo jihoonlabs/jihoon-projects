@@ -33,10 +33,10 @@ class StoreTest extends TestCase
 
         $response
             ->assertCreated()
-            ->assertJsonPath('title', 'テストチケット')
-            ->assertJsonPath('status', 'TODO')
-            ->assertJsonPath('priority', 'MEDIUM')
-            ->assertJsonPath('issue_key', 'TICK-1');
+            ->assertJsonPath('data.title', 'テストチケット')
+            ->assertJsonPath('data.status', 'TODO')
+            ->assertJsonPath('data.priority', 'MEDIUM')
+            ->assertJsonPath('data.issueKey', 'TICK-1');
 
         $this->assertDatabaseHas('tickets', [
             'id' => 1,
@@ -88,8 +88,8 @@ class StoreTest extends TestCase
 
         $response
             ->assertCreated()
-            ->assertJsonPath('status', 'TODO')
-            ->assertJsonPath('priority', 'MEDIUM');
+            ->assertJsonPath('data.status', 'TODO')
+            ->assertJsonPath('data.priority', 'MEDIUM');
 
         $this->assertDatabaseHas('tickets', [
             'title' => 'テストチケット',

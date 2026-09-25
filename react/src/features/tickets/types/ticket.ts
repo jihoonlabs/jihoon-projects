@@ -30,3 +30,4 @@ export interface Ticket {
   createdAt: string;
   updatedAt: string;
 }
+

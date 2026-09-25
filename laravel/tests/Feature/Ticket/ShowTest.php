@@ -34,11 +34,11 @@ class ShowTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertJsonPath('id', $ticket->id)
-            ->assertJsonPath('issue_key', $ticket->issue_key)
-            ->assertJsonPath('title', '詳細確認チケット')
-            ->assertJsonPath('status', 'IN_PROGRESS')
-            ->assertJsonPath('priority', 'HIGH');
+            ->assertJsonPath('data.id', (string) $ticket->id)
+            ->assertJsonPath('data.issueKey', $ticket->issue_key)
+            ->assertJsonPath('data.title', '詳細確認チケット')
+            ->assertJsonPath('data.status', 'IN_PROGRESS')
+            ->assertJsonPath('data.priority', 'HIGH');
     }
 
     public function test_存在しないチケットは取得できない(): void

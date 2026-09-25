@@ -34,8 +34,8 @@ class UpdateStatusTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertJsonPath('ticket.id', $ticket->id)
-            ->assertJsonPath('ticket.status', 'IN_PROGRESS');
+            ->assertJsonPath('data.id', (string) $ticket->id)
+            ->assertJsonPath('data.status', 'IN_PROGRESS');
 
         $this->assertDatabaseHas('tickets', [
             'id' => $ticket->id,

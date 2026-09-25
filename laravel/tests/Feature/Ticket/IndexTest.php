@@ -32,9 +32,9 @@ class IndexTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertJsonCount(3)
-            ->assertJsonPath('0.id', $firstTicket->id)
-            ->assertJsonPath('1.id', $secondTicket->id)
-            ->assertJsonPath('2.id', $thirdTicket->id);
+            ->assertJsonCount(3, 'data')
+            ->assertJsonPath('data.0.id', (string) $firstTicket->id)
+            ->assertJsonPath('data.1.id', (string) $secondTicket->id)
+            ->assertJsonPath('data.2.id', (string) $thirdTicket->id);
     }
 }
