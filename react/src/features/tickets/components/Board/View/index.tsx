@@ -40,8 +40,7 @@ export function TicketBoardView() {
 
   const handleDragStart = (event: DragStartEvent) => {
     const activeId = String(event.active.id);
-    // t.id를 String으로 변환하여 비교
-    const found = tickets.find((t) => String(t.id) === activeId);
+    const found = tickets.find((t) => t.id === activeId);
     if (found) setActiveTicket(found);
   };
 

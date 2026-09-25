@@ -136,14 +136,7 @@ APIレスポンスとReactのTicket型をどの層で変換するかを次回最
 
 次の作業：
 
-1. Ticket TypeとLaravel JSONの整合性修正
-2. priority/status値の整合性確認
-3. StoreのaddTicket payload確認
-4. DnD/updateStatus確認
-5. React Ticket tests追加判断
-6. 作成Modal / 削除Dialog実装
-7. ブラウザE2E確認
-8. formatter / diff cleanup
-9. Laravel / React全テスト
-10. `git diff --check`
-11. commit / push / branch整
+1. DnD/updateStatus確認
+2. 作成Modal / 削除Dialog実装
+3. ブラウザE2E確認
+4. feature/ticket 親ブランチへの最終統合
