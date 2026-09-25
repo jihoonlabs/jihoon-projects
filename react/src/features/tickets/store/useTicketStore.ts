@@ -16,6 +16,12 @@ interface TicketState {
       'id' | 'issueKey' | 'position' | 'createdAt' | 'updatedAt'
     >,
   ) => Promise<void>;
+  updateTicket: (
+    id: string,
+    ticketData: Partial<
+      Omit<Ticket, 'id' | 'issueKey' | 'createdAt' | 'updatedAt'>
+    >,
+  ) => Promise<void>;
   deleteTicket: (id: string) => Promise<void>;
 }
 
@@ -108,6 +114,41 @@ export const useTicketStore = create<TicketState>((set, get) => ({
 
       set({ error: message, isLoading: false });
       console.error('Failed to add ticket:', err);
+    }
+  },
+
+  // チケット更新 (추가된 기능: Optimistic Update + API連携)
+  updateTicket: async (id, ticketData) => {
+    const previousTickets = get().tickets;
+
+    // 1. UI 즉시 반영 (Optimistic Update)
+    set((state) => ({
+      tickets: state.tickets.map((ticket) =>
+        ticket.id === id ? { ...ticket, ...ticketData } : ticket,
+      ),
+    }));
+
+    try {
+      const response = await fetchWithCsrf(`/api/tickets/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(ticketData),
+      });
+
+      if (!response.ok) {
+        throw new Error('チケットの更新に失敗しました。');
+      }
+
+      const result = await response.json();
+      const updatedTicket: Ticket = result.data ?? result;
+
+      // API 응답 데이터로 최종 상태 동기화
+      set((state) => ({
+        tickets: state.tickets.map((t) => (t.id === id ? updatedTicket : t)),
+      }));
+    } catch (err: unknown) {
+      // 에러 시 기존 상태로 롤백
+      set({ tickets: previousTickets });
+      console.error('Failed to update ticket:', err);
     }
   },
 

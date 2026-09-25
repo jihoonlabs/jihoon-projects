@@ -8,6 +8,8 @@ import styles from './index.module.css';
 interface CardProps {
   ticket: Ticket;
   isOverlay?: boolean;
+  onEdit?: (ticket: Ticket) => void;
+  onDelete?: (id: string, title: string) => void;
 }
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -18,7 +20,7 @@ const PRIORITY_LABELS: Record<string, string> = {
   LOWEST: '最低',
 };
 
-export default function Card({ ticket, isOverlay }: CardProps) {
+export default function Card({ ticket, isOverlay, onEdit, onDelete }: CardProps) {
   const {
     attributes,
     listeners,
@@ -34,6 +36,16 @@ export default function Card({ ticket, isOverlay }: CardProps) {
     opacity: isDragging ? 0.3 : 1,
   };
 
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation(); // DnD 드래그 이벤트 전파 방지
+    onEdit?.(ticket);
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation(); // DnD 드래그 이벤트 전파 방지
+    onDelete?.(ticket.id, ticket.title);
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -42,7 +54,33 @@ export default function Card({ ticket, isOverlay }: CardProps) {
       {...listeners}
       className={`${styles.card} ${isOverlay ? styles.overlayCard : ''}`}
     >
-      <p className={styles.title}>{ticket.title}</p>
+      <div className={styles.cardHeader}>
+        <p className={styles.title}>{ticket.title}</p>
+        <div className={styles.actionButtons}>
+          {onEdit && (
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={handleEdit}
+              title="編集"
+              aria-label="編集"
+            >
+              ✏️
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              className={`${styles.iconButton} ${styles.deleteBtn}`}
+              onClick={handleDelete}
+              title="削除"
+              aria-label="削除"
+            >
+              🗑️
+            </button>
+          )}
+        </div>
+      </div>
 
       <div className={styles.footer}>
         <div className={styles.metaInfo}>

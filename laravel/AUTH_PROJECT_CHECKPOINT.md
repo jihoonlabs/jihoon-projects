@@ -134,9 +134,34 @@ React Ticket型：
 現在 `useTicketStore.ts` ではLaravelのレスポンスをそのままstateへ格納しているため、
 APIレスポンスとReactのTicket型をどの層で変換するかを次回最初に検討する。
 
-次の作業：
+# 📌 作業引き継ぎ・進捗メモ
 
-1. DnD/updateStatus確認
-2. 作成Modal / 削除Dialog実装
-3. ブラウザE2E確認
-4. feature/ticket 親ブランチへの最終統合
+## 1. 概要 & 検討事項 (次回最初に対応)
+現在 `useTicketStore.ts` では Laravel のレスポンス（`TicketResource`）をそのまま State へ格納しているため、
+**API レスポンス（snake_case）と React の Ticket 型（camelCase）をどの層（API Client層 / Store層 / Adapter関数）で変換するか**を次回最初に検討・実装する。
+
+---
+
+## 2. 本日の作業完了内容
+- [x] **공통 및 도메인 모달 컴포넌트 작성**
+  - `src/shared/components/BaseModal` (공통 모달 껍데기)
+  - `src/features/tickets/components/Modal/FormModal` (티켓 생성/수정 모달)
+  - `src/features/tickets/components/Modal/DeleteModal` (티켓 삭제 확인 모달)
+- [x] **Card 컴포넌트 이벤트 처리**
+  - 카드 호버 시 나타나는 수정(✏️) / 삭제(🗑️) 버튼 추가
+  - `@dnd-kit` 드래그 이벤트 간섭 방지 (`e.stopPropagation()`) 적용
+- [x] **TicketBoardView & Header 연동**
+  - `Header`에 `onCreateClick` 이벤트 핸들러 바인딩
+  - 최상위 View에서 모달 상태(`isOpen`) 및 CRUD 핸들러 바인딩 구조 완료
+
+---
+
+## 3. 次の作業手順
+1. **DnD / `updateStatus` 動作確認**
+   - ドラッグ＆ドロップ時の State 更新および API 呼び出しの確認
+2. **作成 Modal / 削除 Dialog(Modal) の実装・連携完了**
+   - API レスポンスの型変換処理を追加し、Modal 経由での CRUD テスト
+3. **ブラウザ E2E 確認**
+   - チケット作成 ➔ 編集 ➔ ドラッグ移動 ➔ 削除の全フローの動作確認
+4. **`feature/ticket` 親ブランチへの最終統合**
+   - Git Commit & Push 実行後、親ブランチへの PR 作成および Merge

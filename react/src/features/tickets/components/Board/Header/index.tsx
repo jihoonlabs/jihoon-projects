@@ -7,6 +7,7 @@ interface HeaderProps {
   onSearchChange: (value: string) => void;
   assigneeFilter: string;
   onAssigneeChange: (value: string) => void;
+  onCreateClick?: () => void;
 }
 
 export default function Header({
@@ -14,6 +15,7 @@ export default function Header({
   onSearchChange,
   assigneeFilter,
   onAssigneeChange,
+  onCreateClick,
 }: HeaderProps) {
   return (
     <header className={styles.container}>
@@ -41,7 +43,11 @@ export default function Header({
       </div>
 
       <div className={styles.rightSection}>
-        <button type="button" className={styles.createBtn}>
+        <button
+          type="button"
+          className={styles.createBtn}
+          onClick={onCreateClick}
+        >
           + チケット作成
         </button>
       </div>
