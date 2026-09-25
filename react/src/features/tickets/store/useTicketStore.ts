@@ -25,7 +25,7 @@ export const useTicketStore = create<TicketState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  // Laravel APIからチケット一覧を取得
+  // チケット一覧取得 (Laravel TicketResource Standard: { data: Ticket[] })
   fetchTickets: async () => {
     set({ isLoading: true, error: null });
 
@@ -41,8 +41,8 @@ export const useTicketStore = create<TicketState>((set, get) => ({
         throw new Error('チケットデータの取得に失敗しました。');
       }
 
-      const data = await response.json();
-      const ticketList = Array.isArray(data) ? data : data.data || [];
+      const result = await response.json();
+      const ticketList = Array.isArray(result) ? result : result.data || [];
 
       set({ tickets: ticketList, isLoading: false });
     } catch (err: unknown) {
@@ -61,7 +61,7 @@ export const useTicketStore = create<TicketState>((set, get) => ({
 
     set((state) => ({
       tickets: state.tickets.map((ticket) =>
-        String(ticket.id) === String(id) ? { ...ticket, status } : ticket,
+        ticket.id === id ? { ...ticket, status } : ticket,
       ),
     }));
 
@@ -81,6 +81,7 @@ export const useTicketStore = create<TicketState>((set, get) => ({
     }
   },
 
+  // チケット追加 (Laravel TicketResource Standard: { data: Ticket })
   addTicket: async (ticketData) => {
     set({ isLoading: true, error: null });
 
@@ -94,10 +95,11 @@ export const useTicketStore = create<TicketState>((set, get) => ({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create ticket');
+        throw new Error('チケットの作成に失敗しました。');
       }
 
-      const newTicket = await response.json();
+      const result = await response.json();
+      const newTicket: Ticket = result.data ?? result; // TicketResource data 抽出
 
       set((state) => ({
         tickets: [...state.tickets, newTicket],
@@ -114,13 +116,12 @@ export const useTicketStore = create<TicketState>((set, get) => ({
     }
   },
 
+  // チケット削除
   deleteTicket: async (id) => {
     const previousTickets = get().tickets;
 
     set((state) => ({
-      tickets: state.tickets.filter(
-        (ticket) => String(ticket.id) !== String(id),
-      ),
+      tickets: state.tickets.filter((ticket) => ticket.id !== id),
     }));
 
     try {

@@ -13,7 +13,7 @@ export type TicketPriority =
   | 'LOWEST'; 
 
 export interface UserSummary {
-  id: number;
+  id: string;
   name: string;
   avatarUrl?: string;
 }
