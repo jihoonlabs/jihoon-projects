@@ -35,44 +35,44 @@ export function TicketBoardView() {
       activationConstraint: {
         distance: 5,
       },
-    })
+    }),
   );
 
-const handleDragStart = (event: DragStartEvent) => {
-  const activeId = String(event.active.id);
-  // t.id를 String으로 변환하여 비교
-  const found = tickets.find((t) => String(t.id) === activeId);
-  if (found) setActiveTicket(found);
-};
+  const handleDragStart = (event: DragStartEvent) => {
+    const activeId = String(event.active.id);
+    // t.id를 String으로 변환하여 비교
+    const found = tickets.find((t) => String(t.id) === activeId);
+    if (found) setActiveTicket(found);
+  };
 
-const handleDragEnd = (event: DragEndEvent) => {
-  const { active, over } = event;
-  setActiveTicket(null);
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTicket(null);
 
-  if (!over) return;
+    if (!over) return;
 
-  const activeId = String(active.id);
-  const overId = String(over.id);
+    const activeId = String(active.id);
+    const overId = String(over.id);
 
-  const draggedTicket = tickets.find((t) => String(t.id) === activeId);
-  if (!draggedTicket) return;
+    const draggedTicket = tickets.find((t) => String(t.id) === activeId);
+    if (!draggedTicket) return;
 
-  const isOverColumn = INITIAL_COLUMNS.some((col) => col.id === overId);
-  let newStatus: TicketStatus = draggedTicket.status;
+    const isOverColumn = INITIAL_COLUMNS.some((col) => col.id === overId);
+    let newStatus: TicketStatus = draggedTicket.status;
 
-  if (isOverColumn) {
-    newStatus = overId as TicketStatus;
-  } else {
-    const overTicket = tickets.find((t) => String(t.id) === overId);
-    if (overTicket) {
-      newStatus = overTicket.status;
+    if (isOverColumn) {
+      newStatus = overId as TicketStatus;
+    } else {
+      const overTicket = tickets.find((t) => String(t.id) === overId);
+      if (overTicket) {
+        newStatus = overTicket.status;
+      }
     }
-  }
 
-  if (draggedTicket.status !== newStatus) {
-    updateStatus(activeId, newStatus);
-  }
-};
+    if (draggedTicket.status !== newStatus) {
+      updateStatus(activeId, newStatus);
+    }
+  };
 
   return (
     <div className={styles.container}>

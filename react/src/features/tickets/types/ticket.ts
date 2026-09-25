@@ -1,16 +1,7 @@
-export type TicketStatus = 
-  | 'BACKLOG'      
-  | 'TODO'         
-  | 'IN_PROGRESS'  
-  | 'IN_REVIEW'    
-  | 'DONE';        
+export type TicketStatus =
+  'BACKLOG' | 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE';
 
-export type TicketPriority = 
-  | 'HIGHEST' 
-  | 'HIGH'    
-  | 'MEDIUM' 
-  | 'LOW'     
-  | 'LOWEST'; 
+export type TicketPriority = 'HIGHEST' | 'HIGH' | 'MEDIUM' | 'LOW' | 'LOWEST';
 
 export interface UserSummary {
   id: string;
@@ -20,7 +11,7 @@ export interface UserSummary {
 
 export interface Ticket {
   id: string;
-  issueKey: string; 
+  issueKey: string;
   title: string;
   description?: string;
   status: TicketStatus;
@@ -30,4 +21,3 @@ export interface Ticket {
   createdAt: string;
   updatedAt: string;
 }
-

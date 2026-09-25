@@ -96,8 +96,7 @@ export const validatePasswordResetForm = (
   }
 
   if (!passwordConfirmation) {
-    errors.passwordConfirmation =
-      '確認用のパスワードを入力してください。';
+    errors.passwordConfirmation = '確認用のパスワードを入力してください。';
   } else if (password !== passwordConfirmation) {
     errors.passwordConfirmation = 'パスワードが一致しません。';
   }

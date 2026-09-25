@@ -47,7 +47,9 @@ export default function Card({ ticket, isOverlay }: CardProps) {
       <div className={styles.footer}>
         <div className={styles.metaInfo}>
           <span className={styles.issueKey}>{ticket.issueKey}</span>
-          <span className={`${styles.priorityBadge} ${styles[ticket.priority]}`}>
+          <span
+            className={`${styles.priorityBadge} ${styles[ticket.priority]}`}
+          >
             {PRIORITY_LABELS[ticket.priority] || ticket.priority}
           </span>
         </div>
@@ -57,7 +59,10 @@ export default function Card({ ticket, isOverlay }: CardProps) {
             {ticket.assignee.name.charAt(0)}
           </div>
         ) : (
-          <div className={`${styles.avatar} ${styles.unassigned}`} title="未割り当て">
+          <div
+            className={`${styles.avatar} ${styles.unassigned}`}
+            title="未割り当て"
+          >
             ?
           </div>
         )}

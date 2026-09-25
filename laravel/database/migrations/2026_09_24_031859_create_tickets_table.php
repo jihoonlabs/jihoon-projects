@@ -13,17 +13,17 @@ return new class extends Migration
             $table->string('issue_key')->unique();
             $table->string('title');
             $table->text('description')->nullable();
-            
+
             $table->enum('status', ['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'])
-                  ->default('TODO');
-            
+                ->default('TODO');
+
             $table->enum('priority', ['HIGHEST', 'HIGH', 'MEDIUM', 'LOW', 'LOWEST'])
-                  ->default('MEDIUM');
+                ->default('MEDIUM');
 
             $table->foreignId('assignee_id')
-                  ->nullable()
-                  ->constrained('users')
-                  ->nullOnDelete();
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
 
             $table->timestamps();
         });

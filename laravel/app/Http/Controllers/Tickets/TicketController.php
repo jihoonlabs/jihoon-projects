@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Tickets;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Tickets\TicketResource;
 use App\Models\Ticket;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class TicketController extends Controller
@@ -46,7 +46,7 @@ class TicketController extends Controller
             ]);
 
             $ticket->update([
-                'issue_key' => 'TICK-' . $ticket->id,
+                'issue_key' => 'TICK-'.$ticket->id,
             ]);
 
             return $ticket;

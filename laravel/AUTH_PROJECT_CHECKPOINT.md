@@ -146,4 +146,4 @@ APIレスポンスとReactのTicket型をどの層で変換するかを次回最
 8. formatter / diff cleanup
 9. Laravel / React全テスト
 10. `git diff --check`
-11. commit / push / branch整理
+11. commit / push / branch整

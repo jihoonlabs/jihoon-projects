@@ -5,6 +5,7 @@
 | PHP가 NoticeController 클래스를 App\Http\Controllers\NoticeController 라는 이름으로 찾을 수 있게 하는 선언
 |
 */
+
 namespace App\Http\Controllers;
 
 /*
@@ -16,8 +17,7 @@ namespace App\Http\Controllers;
 | })
 |
 */
-use Illuminate\Http\Request;
-
+use App\Models\Notice;
 /*
 | Notice Model은 DB의 notices 테이블과 연결
 |
@@ -27,7 +27,7 @@ use Illuminate\Http\Request;
 | Notice::create([...])
 |   notices 테이블에 새 데이터를 저장
 */
-use App\Models\Notice;
+use Illuminate\Http\Request;
 
 /*
 | Route::get('/notices', [NoticeController::class, 'index']);

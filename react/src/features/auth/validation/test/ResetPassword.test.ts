@@ -4,9 +4,7 @@ import { validatePasswordResetForm } from '../auth';
 
 describe('validatePasswordResetForm', () => {
   it('正しい入力内容の場合、エラーがないこと', () => {
-    expect(
-      validatePasswordResetForm('password123', 'password123'),
-    ).toEqual({});
+    expect(validatePasswordResetForm('password123', 'password123')).toEqual({});
   });
 
   it('すべての入力項目が必須であること', () => {
@@ -35,9 +33,7 @@ describe('validatePasswordResetForm', () => {
   });
 
   it('確認用パスワードが一致しない場合、エラーになること', () => {
-    expect(
-      validatePasswordResetForm('password123', 'different123'),
-    ).toEqual({
+    expect(validatePasswordResetForm('password123', 'different123')).toEqual({
       passwordConfirmation: 'パスワードが一致しません。',
     });
   });

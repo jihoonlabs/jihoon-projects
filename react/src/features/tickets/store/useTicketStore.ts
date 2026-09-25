@@ -2,8 +2,7 @@ import { fetchWithCsrf } from '@/shared/api/fetchWithCsrf';
 import { create } from 'zustand';
 import type { Ticket, TicketStatus } from '../types/ticket';
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 interface TicketState {
   tickets: Ticket[];
@@ -47,9 +46,7 @@ export const useTicketStore = create<TicketState>((set, get) => ({
       set({ tickets: ticketList, isLoading: false });
     } catch (err: unknown) {
       const message =
-        err instanceof Error
-          ? err.message
-          : '予期しないエラーが発生しました。';
+        err instanceof Error ? err.message : '予期しないエラーが発生しました。';
 
       set({ error: message, isLoading: false });
     }
@@ -107,9 +104,7 @@ export const useTicketStore = create<TicketState>((set, get) => ({
       }));
     } catch (err: unknown) {
       const message =
-        err instanceof Error
-          ? err.message
-          : '予期しないエラーが発生しました。';
+        err instanceof Error ? err.message : '予期しないエラーが発生しました。';
 
       set({ error: message, isLoading: false });
       console.error('Failed to add ticket:', err);

@@ -2,10 +2,8 @@
 
 // Migration 관련 클래스 import
 use Illuminate\Database\Migrations\Migration;
-
 // 테이블 구조 정의할 때 사용하는 클래스
 use Illuminate\Database\Schema\Blueprint;
-
 // DB 스키마(테이블 생성/삭제)를 다루는 클래스
 use Illuminate\Support\Facades\Schema;
 

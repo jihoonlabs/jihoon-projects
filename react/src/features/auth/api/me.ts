@@ -22,10 +22,7 @@ export const fetchMe = async (): Promise<User> => {
   });
 
   if (!response.ok) {
-    throw new AuthApiError(
-      '認証情報を取得できませんでした。',
-      response.status,
-    );
+    throw new AuthApiError('認証情報を取得できませんでした。', response.status);
   }
 
   return response.json();

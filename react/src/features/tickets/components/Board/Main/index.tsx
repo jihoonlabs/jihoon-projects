@@ -14,7 +14,6 @@ export default function Main({
   searchQuery,
   assigneeFilter,
 }: MainProps) {
-
   const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch =
       ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -22,7 +21,7 @@ export default function Main({
 
     let matchesAssignee = true;
     if (assigneeFilter === 'ME') {
-      matchesAssignee = ticket.assignee?.id === 1;
+      matchesAssignee = ticket.assignee?.id === '1';
     } else if (assigneeFilter === 'UNASSIGNED') {
       matchesAssignee = !ticket.assignee;
     }
@@ -34,7 +33,7 @@ export default function Main({
     <main className={styles.container}>
       {INITIAL_COLUMNS.map((column) => {
         const columnTickets = filteredTickets.filter(
-          (ticket) => ticket.status === column.id
+          (ticket) => ticket.status === column.id,
         );
 
         return (
