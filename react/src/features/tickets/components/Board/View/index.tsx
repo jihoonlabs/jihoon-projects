@@ -44,6 +44,10 @@ export function TicketBoardView() {
     if (found) setActiveTicket(found);
   };
 
+  const handleDragCancel = () => {
+    setActiveTicket(null);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTicket(null);
@@ -87,6 +91,7 @@ export function TicketBoardView() {
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
         <Main
           tickets={tickets}
