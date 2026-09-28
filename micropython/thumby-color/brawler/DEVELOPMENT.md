@@ -21,3 +21,5 @@ A 2.5D retro oriental action engine featuring 3-step character customization, ho
 3. Check Brawler enemy 3-hit combo & hitstop/camera feedback.
 4. Defeat Boss -> Verify Expedition Branch UI popup.
 5. All .py files use 100% English comments (MicroPython encoding safety).
+
+"Thumby Color 동양 시대극 벨트스크롤 엔진 프로젝트야. 원격 리포지토리의 feature/brawler-assets 브랜치에 최신 코드가 푸시되어 있어. DEVELOPMENT.md 참고해서 전체 아키텍처 점검하고 실기 테스트 및 후속 작업 이어가자."
