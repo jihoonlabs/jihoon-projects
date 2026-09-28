@@ -39,10 +39,10 @@ A 2.5D belt-scroll action RPG/Brawler engine built for **Thumby Color** (128x128
 
 ### Phase 02: 2D Movement & Jump Physics
 - **Branch:** `feature/brawler-physics`
-- [ ] **8-Way Walking:** Responsive directional movement across the street plane
-- [ ] **Jump Trajectory:** Arc jump physics with ground landing checks
-- [ ] **Dash Mechanism:** Double-tap directional dash for fast travel
-- [ ] **Stage Boundaries:** Y-axis street limits (top/bottom walls)
+- [x] **8-Way Walking:** Responsive directional movement across the street plane
+- [x] **Jump Trajectory:** Arc jump physics with ground landing checks
+- [x] **Dash Mechanism:** Double-tap directional dash for fast travel
+- [x] **Stage Boundaries:** Y-axis street limits (top/bottom walls)
 
 ### Phase 03: Hitbox & Impact Pipeline
 - **Branch:** `feature/brawler-hitbox`
