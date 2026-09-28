@@ -1,33 +1,32 @@
-# Phase 03: Hitbox & Impact Pipeline Specification
+# Phase 04: Combat State Machine Specification
 
-This document contains localized context and technical specifications for the feature/brawler-hitbox branch.
+This document contains localized context and technical specifications for the feature/brawler-combat-fsm branch.
 
 ---
 
 ## 1. Scope & Core Objectives
-- Volume Hitbox Overlap: 3D spatial bounding check (dX <= 16, dY <= 8, dZ <= 12)
-- Hurtbox & Active Frames: Frame-based attack activation windows
-- Hit Reaction & Knockback: Velocity impulse application on impact
-- Hitstun & Invincibility (i-frames): Temporary state locks during hit reactions
+- FSM Architecture: Entity state machine management (IDLE, WALK, ATTACK, JUMP, HIT, DOWN)
+- Combo Branching: Sequential input buffers (Light -> Heavy -> Finisher)
+- Special Skill: Emergency Area-of-Effect (AoE) break skill consuming HP
 
 ---
 
 ## 2. Technical Architecture
 
-### A. Hitbox Volume Matrix
-  [ Attacker (X1, Y1, Z1) ] ---------- Overlap Test ---------- [ Victim (X2, Y2, Z2) ]
-   - Attack Range: 16px                                         - Hitbox Width: 12px
-   - Depth Tolerance: 8px                                       - Depth Tolerance: 8px
-   - Height Reach: 12px                                         - Height Reach: 16px
+### A. State Transition Flow
+  [ IDLE / WALK ] ---> (Button A) ---> [ ATK_1 ] ---> (A within window) ---> [ ATK_2 ] ---> [ FINISHER ]
+        |                                                                                         |
+        +----------------------------> (Button A + B) -------------------> [ AOE_SPECIAL ] <------+
 
 ### B. Module Breakdown
-- engine/hitbox.py: Spatial overlap calculator & damage resolution
-- entities/player.py: Attack trigger & active frame management
+- engine/fsm.py: Generic Finite State Machine base & State interface
+- entities/player.py: Combo input buffer and attack animation branching
+- entities/base.py: Stun, Down, and Recovery states
 
 ---
 
 ## 3. Sub-Task Checklist
-- [ ] Implement VolumeHitbox spatial overlap checker in engine/hitbox.py
-- [ ] Add attack button input (Button A) with frame-based active windows in player.py
-- [ ] Add hitstun & directional knockback state handling for targets
-- [ ] Visual debug display for hitboxes (Red: Attack, Green: Hurtbox)
+- [ ] Implement FSM architecture and State handler in engine/fsm.py
+- [ ] Add 3-stage combo input buffering (ATK_1, ATK_2, FINISHER) in player.py
+- [ ] Implement HP-consuming AoE emergency break skill (A + B button trigger)
+- [ ] Add knockback DOWN and recovery state transitions
