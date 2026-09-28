@@ -1,31 +1,27 @@
-# Phase 08: Stage, Wave & Dialogue System Specifications
+# Phase 09: Boss Battle Logic Specifications
 
 ## 1. Objective
-Implement the core belt-scroll progression loop: Camera Wave Lock -> Enemy Spawning -> All Defeated -> "GO!" Indicator -> Dialogue Overlay.
+Implement high-intensity boss encounter mechanics including multi-phase pattern shifts, super-armor stun resistance, and telegraphed attack indicators.
 
 ## 2. Deliverables & Modules
 
-### A. Data-Driven Level Spec (`data/stage_01.py`)
-- Camera lock boundaries (`trigger_x`)
-- Wave specs: spawn positions, enemy types, and counts
+### A. Boss State Machine (`entities/boss.py`)
+- Extends standard Enemy FSM (`IDLE`, `PATROL`, `APPROACH`, `ATTACK`, `STUN`, `SUPER_ARMOR`, `PHASE_CHANGE`)
+- Boss HP threshold checks (Phase 1 -> Phase 2 transition at <= 50% HP)
 
-### B. Stage & Wave Manager (`engine/stage_manager.py`)
-- Player position tracking and Camera Deadzone Lock
-- Enemy survival tracking (`enemies_remaining`)
-- Camera unlock & "GO!" trigger on wave clear
+### B. Super Armor & Resistance System
+- Ignore hitstun/knockback when executing heavy boss animations
+- Visual aura flash / color pulse when Super Armor is active
 
-### C. "GO! ▶" Indicator (`ui/go_indicator.py`)
-- Blinking arrow indicator on right edge after wave clear
-- Auto-hide when player moves towards next area
+### C. Telegraphed Attack Indicator (`gfx/telegraph.py`)
+- Ground hazard indicators (red outline/fill boxes) before high-damage AoE skills
+- Charge-up frame delay giving players time to dodge vertically (Y-axis)
 
-### D. Lightweight Dialogue UI (`ui/dialogue.py`)
-- Compact box renderer optimized for 128x128 screen
-- Typewriter text scrolling & A-button input handler
-- Pause player/enemy FSMs during dialogue (`STATE_DIALOGUE`)
+### D. Boss Stage Config (`data/boss_spec.py`)
+- Boss stats (HP, ATK, move speed) and attack pattern probability tables
 
 ## 3. Verification Checklist
-- [ ] Camera locks correctly at target X coordinate.
-- [ ] Camera remains locked until all spawned enemies are defeated.
-- [ ] "GO! ▶" indicator blinks after wave clear.
-- [ ] Dialogue box freezes gameplay and handles A button input.
-- [ ] Maintains 30 FPS sync and memory stability on RP2040 MicroPython.
+- [ ] Boss switches to Phase 2 pattern upon dropping below 50% HP.
+- [ ] Super Armor prevents stun frame freeze during critical attacks.
+- [ ] Ground telegraph warnings correctly render before heavy AoE attacks.
+- [ ] Maintains 30 FPS sync and MicroPython memory stability on RP2040.
