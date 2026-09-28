@@ -1,32 +1,32 @@
-# Phase 04: Combat State Machine Specification
+# Phase 05: In-Game Debug Visualizer Specification
 
-This document contains localized context and technical specifications for the feature/brawler-combat-fsm branch.
+This document contains localized context and technical specifications for the feature/brawler-debug branch.
 
 ---
 
 ## 1. Scope & Core Objectives
-- FSM Architecture: Entity state machine management (IDLE, WALK, ATTACK, JUMP, HIT, DOWN)
-- Combo Branching: Sequential input buffers (Light -> Heavy -> Finisher)
-- Special Skill: Emergency Area-of-Effect (AoE) break skill consuming HP
+- Hitbox Overlay: Toggleable visual debug boxes (Red: Attack, Green: Hurtbox, Blue: Z-Height)
+- State & Telemetry Monitor: Real-time entity state, memory usage, and locked FPS counter
+- GOD Mode Trigger: Invincibility toggle switch for rapid combat testing
 
 ---
 
 ## 2. Technical Architecture
 
-### A. State Transition Flow
-  [ IDLE / WALK ] ---> (Button A) ---> [ ATK_1 ] ---> (A within window) ---> [ ATK_2 ] ---> [ FINISHER ]
-        |                                                                                         |
-        +----------------------------> (Button A + B) -------------------> [ AOE_SPECIAL ] <------+
+### A. Debug Overlay Control
+  [ SELECT Button Toggle ] ---> [ DEBUG_LEVEL_0: Clean HUD ]
+                           ---> [ DEBUG_LEVEL_1: FPS & State Telemetry ]
+                           ---> [ DEBUG_LEVEL_2: Full Hitbox/Hurtbox Wireframes ]
 
 ### B. Module Breakdown
-- engine/fsm.py: Generic Finite State Machine base & State interface
-- entities/player.py: Combo input buffer and attack animation branching
-- entities/base.py: Stun, Down, and Recovery states
+- engine/debug.py: Telemetry collector, memory profiler & overlay toggle
+- gfx/renderer.py: Conditional wireframe hitbox drawing routines
+- entities/player.py: GOD mode invincibility flag and toggle switch
 
 ---
 
 ## 3. Sub-Task Checklist
-- [ ] Implement FSM architecture and State handler in engine/fsm.py
-- [ ] Add 3-stage combo input buffering (ATK_1, ATK_2, FINISHER) in player.py
-- [ ] Implement HP-consuming AoE emergency break skill (A + B button trigger)
-- [ ] Add knockback DOWN and recovery state transitions
+- [ ] Implement DebugManager and profile telemetry in engine/debug.py
+- [ ] Add SELECT button debug view level toggle switch
+- [ ] Implement conditional Hitbox/Hurtbox/Z-Height wireframe rendering in renderer.py
+- [ ] Add GOD mode invincibility toggle for player testing
