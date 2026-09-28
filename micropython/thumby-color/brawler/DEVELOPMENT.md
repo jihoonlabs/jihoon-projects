@@ -75,10 +75,10 @@ A 2.5D belt-scroll action RPG/Brawler engine built for **Thumby Color** (128x128
 
 ### Phase 08: Stage, Wave & Dialogue System
 - **Branch:** `feature/brawler-stage`
-- [ ] **Data-Driven Level Spec:** External stage configuration dictionaries
-- [ ] **Wave Triggers:** Locked screen arenas requiring enemy defeat to advance
-- [ ] **Dialogue Overlay:** Story dialog box with NPC portrait and text scrolling
-- [ ] **Interactive Props:** Destructible objects dropping health or temporary weapons
+- [x] **Data-Driven Level Spec:** External stage configuration dictionaries
+- [x] **Wave Triggers:** Locked screen arenas requiring enemy defeat to advance
+- [x] **Dialogue Overlay:** Story dialog box with NPC portrait and text scrolling
+- [x] **Interactive Props:** Destructible objects dropping health or temporary weapons
 
 ### Phase 09: Boss Battle Logic
 - **Branch:** `feature/brawler-boss`
