@@ -1,28 +1,20 @@
-# Phase 10: Item, Shop & Skill Scroll System Specifications
+# Phase 11: Save/Load & Progression State Specifications
 
 ## 1. Objective
-Implement the item economy and RPG progression system: Field Pickups (Coins/Health/Throwables), Weapon Durability, and the Town Shop for purchasing skill scrolls and upgrading attributes.
+Implement persistent storage using MicroPython's Flash File IO (`json`) to save and load player progression, unlocked skill scrolls, coin balance, and stage progress without GC memory bottlenecks.
 
 ## 2. Deliverables & Modules
 
-### A. Field Item & Pickup Pipeline (`entities/item.py`)
-- Coins, Health Consumables, and Temporary Throwable Weapons
-- Y-sorting world placement & collision pickup triggers (`3D Volume Overlap`)
+### A. Save State Manager (`engine/save_manager.py`)
+- Standardized data schema (`coins`, `max_hp`, `base_atk`, `unlocked_skills`, `current_stage_idx`, `equipped_weapon_id`)
+- Flash IO safe write/read logic using MicroPython `json` library with corruption fallback
 
-### B. Weapon Durability & Lifecycle Engine (`engine/weapon.py`)
-- Limited hit/use durability counters for equipped weapons
-- Custom weapon attack hitboxes & destruction state on durability depletion
-
-### C. Town Shop & Skill Scroll UI (`ui/shop.py`)
-- Compact town store interface optimized for 128x128 screen
-- Spend coins to unlock new combo skill scrolls and upgrade player ATK/HP stats
-
-### D. Skill Scroll Inventory & Equipment Handler (`engine/skill_manager.py`)
-- Dynamic skill scroll mapping to specific controller button combinations
+### B. Progression State Integration (`engine/progression.py`)
+- Stage transition persistence (Carrying over player stats between stages)
+- Game Over / Retry stat reset handler
 
 ## 3. Verification Checklist
-- [ ] Field items drop from broken props/enemies and are collected via collision.
-- [ ] Equipped weapons track durability and break after max uses.
-- [ ] Town Shop UI renders correctly and handles coin transactions.
-- [ ] Purchased skill scrolls correctly modify player combat combo behavior.
-- [ ] Maintains 30 FPS sync and MicroPython memory stability on RP2040.
+- [ ] Progression data correctly serializes to `save_data.json` upon stage clear or shop exit.
+- [ ] Game restart restores coins, unlocked skills, and stat upgrades seamlessly.
+- [ ] Fallback mechanism returns default initial state if save file is missing or corrupt.
+- [ ] Zero frame-drop IO execution (IO calls run outside high-frequency render loops).
