@@ -25,6 +25,11 @@ from engine.progression import ProgressionEngine
 from engine.audio import AudioEngine
 from ui.title import TitleUI
 
+# Newly Added Phase 12 Customization & Branching Modules
+from ui.character_select import CharacterSelectUI
+from ui.stage_branch import StageBranchUI
+from data.stage_presets import HomeOriginRouteManager
+
 thumby.display.setFPS(30)
 
 COLOR_WHITE = 0xFFFF
@@ -43,9 +48,12 @@ shop_ui = ShopUI(screen_w=128, screen_h=128)
 skill_mgr = SkillManager()
 progression = ProgressionEngine()
 
-# Phase 12 Audio & Title UI Setup
+# Audio, Title, Character Custom & Branch UI Setup
 audio = AudioEngine()
 title_ui = TitleUI(screen_w=128, screen_h=128)
+char_select_ui = CharacterSelectUI(screen_w=128, screen_h=128)
+branch_ui = StageBranchUI(screen_w=128, screen_h=128)
+route_mgr = None  # Will be initialized after character selection
 
 screen_flash_frames = 0  # Screen flash effect timer for heavy hits/gunshots
 
@@ -84,7 +92,7 @@ while True:
     audio.update()  # Non-blocking audio timer tick
 
     if thumby.buttonSelect.justPressed():
-        if debug_mgr.level == 0 and not title_ui.active:
+        if debug_mgr.level == 0 and not title_ui.active and not char_select_ui.active and not branch_ui.active:
             shop_ui.open_shop()
         debug_mgr.toggle_level()
 
@@ -101,11 +109,59 @@ while True:
             SaveManager.reset_save()
             progression.init_from_save(player)
             audio.play_sfx_coin()
+            # Transition to Character Customization UI
+            title_ui.active = False
+            char_select_ui.open_select()
         elif title_action == "CONTINUE":
             progression.init_from_save(player)
             audio.play_sfx_coin()
+            title_ui.active = False
 
         title_ui.draw(thumby.display)
+        thumby.display.update()
+        continue
+
+    # ----------------------------------------------------
+    # A-2. Character Customization Step (Gender/Outfit/Color)
+    # ----------------------------------------------------
+    elif char_select_ui.active:
+        hero_config = char_select_ui.handle_input(
+            button_left=thumby.buttonLeft.justPressed(),
+            button_right=thumby.buttonRight.justPressed(),
+            button_a=thumby.buttonA.justPressed(),
+            button_b=thumby.buttonB.justPressed()
+        )
+        if hero_config:
+            # Apply chosen hero properties to Player
+            player.outfit = hero_config["outfit"]
+            player.color = hero_config["color"]
+            
+            # Setup Route Manager starting at player's home ground
+            route_mgr = HomeOriginRouteManager(player_culture=hero_config["outfit"])
+            audio.play_sfx_coin()
+
+        char_select_ui.draw(thumby.display)
+        thumby.display.update()
+        continue
+
+    # ----------------------------------------------------
+    # A-3. Overseas Expedition Branching UI
+    # ----------------------------------------------------
+    elif branch_ui.active:
+        next_stage = branch_ui.handle_input(
+            button_up=thumby.buttonUp.justPressed(),
+            button_down=thumby.buttonDown.justPressed(),
+            button_a=thumby.buttonA.justPressed()
+        )
+        if next_stage:
+            route_mgr.select_next_stage(next_stage["id"])
+            # Reset player position for next stage
+            player.x, player.y = 40, 80
+            boss.hp = boss.max_hp
+            boss.state = boss.STATE_IDLE
+            audio.play_sfx_coin()
+
+        branch_ui.draw(thumby.display)
         thumby.display.update()
         continue
 
@@ -177,7 +233,7 @@ while True:
                 elif thumby.buttonB.justPressed():
                     dpad_str = "FORWARD" if (thumby.buttonRight.pressed() or thumby.buttonLeft.pressed()) \
                                else ("UP" if thumby.buttonUp.pressed() else ("DOWN" if thumby.buttonDown.pressed() else "NEUTRAL"))
-                    
+                  
                     triggered_skill = skill_mgr.check_skill_trigger(dpad_str, True)
                     if triggered_skill:
                         audio.play_sfx_skill()
@@ -189,10 +245,16 @@ while True:
                     audio.play_sfx_game_over()
                     progression.trigger_game_over()
 
-            # Check Boss Defeat
+            # Check Boss Defeat & Trigger Branch UI
             if boss.hp <= 0 and progression.state == ProgressionEngine.STATE_PLAYING:
                 progression.trigger_stage_clear(player)
                 audio.play_sfx_coin()
+                
+                # Open Overseas Branching Path UI if more stages remain
+                if route_mgr:
+                    choices = route_mgr.get_expedition_choices()
+                    if len(choices) > 0:
+                        branch_ui.open_branch(choices)
 
             # Enemies & Boss Logic
             for enemy in world_enemies:
@@ -202,6 +264,7 @@ while True:
             if getattr(boss, 'hp', 0) > 0:
                 boss.update_boss_ai(player, world_width=camera.world_width)
 
+                
             # Field Items & Pickups
             for item in field_items:
                 item.update()
@@ -212,7 +275,6 @@ while True:
             for enemy in world_enemies:
                 if getattr(enemy, 'hp', 0) <= 0:
                     continue
-
                 if player.is_attacking and player.hitbox:
                     if player.hitbox.check_overlap(enemy):
                         if hasattr(player, 'equipped_weapon'):
