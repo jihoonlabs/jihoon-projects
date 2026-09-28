@@ -1,32 +1,31 @@
-# Phase 07: Game Feel & Impact Juice Specification
+# Phase 08: Stage, Wave & Dialogue System Specifications
 
-This document contains localized context and technical specifications for the feature/brawler-feel branch.
+## 1. Objective
+Implement the core belt-scroll progression loop: Camera Wave Lock -> Enemy Spawning -> All Defeated -> "GO!" Indicator -> Dialogue Overlay.
 
----
+## 2. Deliverables & Modules
 
-## 1. Scope & Core Objectives
-- Hitstop (Frame Freeze): Momentary 2~4 frame execution lock on impact to deliver tactile feedback
-- Camera Shake: Directional Screen Offset Jitter decay on heavy hits and finishers
-- Impact FX Particles: Burst spark visual rendering on successful collision
+### A. Data-Driven Level Spec (`data/stage_01.py`)
+- Camera lock boundaries (`trigger_x`)
+- Wave specs: spawn positions, enemy types, and counts
 
----
+### B. Stage & Wave Manager (`engine/stage_manager.py`)
+- Player position tracking and Camera Deadzone Lock
+- Enemy survival tracking (`enemies_remaining`)
+- Camera unlock & "GO!" trigger on wave clear
 
-## 2. Technical Architecture
+### C. "GO! ▶" Indicator (`ui/go_indicator.py`)
+- Blinking arrow indicator on right edge after wave clear
+- Auto-hide when player moves towards next area
 
-### A. Impact Feedback Pipeline
-  [ Hit Collision Detected ] ---> Trigger Hitstop (Freeze 3 frames)
-                              ---> Trigger Camera Shake (Intensity: 4px decay)
-                              ---> Spawn Impact Spark FX (12 frames lifespan)
+### D. Lightweight Dialogue UI (`ui/dialogue.py`)
+- Compact box renderer optimized for 128x128 screen
+- Typewriter text scrolling & A-button input handler
+- Pause player/enemy FSMs during dialogue (`STATE_DIALOGUE`)
 
-### B. Module Breakdown
-- engine/camera.py: Camera Shake offset calculation with trapezoidal decay
-- engine/hitbox.py: Hitstop freeze trigger dispatch on impact resolution
-- gfx/renderer.py: Screen jitter application and Impact FX rendering
-
----
-
-## 3. Sub-Task Checklist
-- [ ] Add Hitstop frame delay manager in engine/hitbox.py
-- [ ] Add camera shake offset and intensity decay logic in engine/camera.py
-- [ ] Render Screen Shake offset in gfx/renderer.py
-- [ ] Add hit impact spark visualizers
+## 3. Verification Checklist
+- [ ] Camera locks correctly at target X coordinate.
+- [ ] Camera remains locked until all spawned enemies are defeated.
+- [ ] "GO! ▶" indicator blinks after wave clear.
+- [ ] Dialogue box freezes gameplay and handles A button input.
+- [ ] Maintains 30 FPS sync and memory stability on RP2040 MicroPython.
