@@ -1,27 +1,28 @@
-# Phase 09: Boss Battle Logic Specifications
+# Phase 10: Item, Shop & Skill Scroll System Specifications
 
 ## 1. Objective
-Implement high-intensity boss encounter mechanics including multi-phase pattern shifts, super-armor stun resistance, and telegraphed attack indicators.
+Implement the item economy and RPG progression system: Field Pickups (Coins/Health/Throwables), Weapon Durability, and the Town Shop for purchasing skill scrolls and upgrading attributes.
 
 ## 2. Deliverables & Modules
 
-### A. Boss State Machine (`entities/boss.py`)
-- Extends standard Enemy FSM (`IDLE`, `PATROL`, `APPROACH`, `ATTACK`, `STUN`, `SUPER_ARMOR`, `PHASE_CHANGE`)
-- Boss HP threshold checks (Phase 1 -> Phase 2 transition at <= 50% HP)
+### A. Field Item & Pickup Pipeline (`entities/item.py`)
+- Coins, Health Consumables, and Temporary Throwable Weapons
+- Y-sorting world placement & collision pickup triggers (`3D Volume Overlap`)
 
-### B. Super Armor & Resistance System
-- Ignore hitstun/knockback when executing heavy boss animations
-- Visual aura flash / color pulse when Super Armor is active
+### B. Weapon Durability & Lifecycle Engine (`engine/weapon.py`)
+- Limited hit/use durability counters for equipped weapons
+- Custom weapon attack hitboxes & destruction state on durability depletion
 
-### C. Telegraphed Attack Indicator (`gfx/telegraph.py`)
-- Ground hazard indicators (red outline/fill boxes) before high-damage AoE skills
-- Charge-up frame delay giving players time to dodge vertically (Y-axis)
+### C. Town Shop & Skill Scroll UI (`ui/shop.py`)
+- Compact town store interface optimized for 128x128 screen
+- Spend coins to unlock new combo skill scrolls and upgrade player ATK/HP stats
 
-### D. Boss Stage Config (`data/boss_spec.py`)
-- Boss stats (HP, ATK, move speed) and attack pattern probability tables
+### D. Skill Scroll Inventory & Equipment Handler (`engine/skill_manager.py`)
+- Dynamic skill scroll mapping to specific controller button combinations
 
 ## 3. Verification Checklist
-- [ ] Boss switches to Phase 2 pattern upon dropping below 50% HP.
-- [ ] Super Armor prevents stun frame freeze during critical attacks.
-- [ ] Ground telegraph warnings correctly render before heavy AoE attacks.
+- [ ] Field items drop from broken props/enemies and are collected via collision.
+- [ ] Equipped weapons track durability and break after max uses.
+- [ ] Town Shop UI renders correctly and handles coin transactions.
+- [ ] Purchased skill scrolls correctly modify player combat combo behavior.
 - [ ] Maintains 30 FPS sync and MicroPython memory stability on RP2040.
