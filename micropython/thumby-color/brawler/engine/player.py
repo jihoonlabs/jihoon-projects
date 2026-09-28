@@ -9,6 +9,7 @@ COLOR_ATK1 = 0xFFE0
 COLOR_ATK2 = 0xFD20
 COLOR_FINISHER = 0xF800
 COLOR_SPECIAL = 0x07FF
+COLOR_GOD_MODE = 0xF81F
 
 class Player(Entity):
     def __init__(self, x=40, y=80):
@@ -19,15 +20,23 @@ class Player(Entity):
         self.is_jumping = False
         self.is_dashing = False
 
-        # Combo Engine
-        self.combo_step = 0          # 0: None, 1: Atk1, 2: Atk2, 3: Finisher
-        self.combo_timer = 0         # Combo window countdown
-        self.combo_buffer = False    # Buffer next attack press
-        self.is_special = False      # AoE Skill flag
+        self.combo_step = 0
+        self.combo_timer = 0
+        self.combo_buffer = False
+        self.is_special = False
 
         self.hitbox = None
         self.double_tap = DoubleTapDetector()
         self.jump_physics = JumpPhysics()
+
+    def apply_hit(self, damage, knockback_x, hitstun, debug_mgr=None):
+        # Block damage & knockback if GOD mode is active
+        if debug_mgr and debug_mgr.god_mode:
+            return
+
+        self.hp = max(0, self.hp - damage)
+        self.vx = knockback_x
+        self.hitstun = hitstun
 
     def trigger_attack(self, step):
         self.combo_step = step
@@ -41,51 +50,50 @@ class Player(Entity):
             self.combo_timer = 12
             self.color = COLOR_ATK2
             self.hitbox = VolumeHitbox(self, range_x=16, depth_y=8, height_z=12, damage=12, knockback_x=3.0, hitstun_frames=8)
-        elif step == 3: # Finisher
+        elif step == 3:
             self.combo_timer = 16
             self.color = COLOR_FINISHER
             self.hitbox = VolumeHitbox(self, range_x=20, depth_y=10, height_z=14, damage=22, knockback_x=6.5, hitstun_frames=16)
 
-    def trigger_special(self):
-        if self.hp > 10:
-            self.hp -= 10  # Consumes HP
+    def trigger_special(self, debug_mgr=None):
+        # In GOD mode, special skill is free (doesn't consume HP)
+        if (debug_mgr and debug_mgr.god_mode) or self.hp > 10:
+            if not (debug_mgr and debug_mgr.god_mode):
+                self.hp -= 10
             self.is_special = True
             self.combo_step = 4
             self.combo_timer = 18
             self.color = COLOR_SPECIAL
-            # Radial 360-degree Hitbox
             self.hitbox = VolumeHitbox(self, range_x=24, depth_y=16, height_z=16, damage=30, knockback_x=8.0, hitstun_frames=20)
 
-    def update(self, world_width=512):
+    def update(self, world_width=512, debug_mgr=None):
         self.update_physics()
         if self.hitstun > 0:
             self.combo_step = 0
             return
 
-        # 1. Emergency AoE Special Trigger (Button A + B)
+        # 1. Emergency Special (Button A + B)
         if thumby.buttonA.pressed() and thumby.buttonB.pressed() and self.combo_step == 0:
-            self.trigger_special()
+            self.trigger_special(debug_mgr)
             return
 
-        # 2. Combo Processing & Input Buffering
+        # 2. Combo Processing
         if self.combo_step > 0:
             if thumby.buttonA.justPressed():
                 self.combo_buffer = True
 
             self.combo_timer -= 1
             if self.combo_timer <= 0:
-                # Execute Next Combo Stage if buffered
                 if self.combo_buffer and self.combo_step < 3 and not self.is_special:
                     self.trigger_attack(self.combo_step + 1)
                 else:
-                    # Reset Combo State
                     self.combo_step = 0
                     self.combo_buffer = False
                     self.is_special = False
                     self.hitbox = None
             return
 
-        # 3. Base Combo Trigger (Button A)
+        # 3. Base Attack
         if thumby.buttonA.justPressed() and not self.is_jumping:
             self.trigger_attack(1)
             return
@@ -122,7 +130,12 @@ class Player(Entity):
             self.vz = self.jump_physics.jump_force
 
         self.z, self.vz, self.is_jumping = self.jump_physics.update(self.z, self.vz, self.is_jumping)
-        self.color = COLOR_PLAYER_DASH if self.is_dashing else COLOR_PLAYER
+
+        # Visual Feedback for GOD mode
+        if debug_mgr and debug_mgr.god_mode:
+            self.color = COLOR_GOD_MODE
+        else:
+            self.color = COLOR_PLAYER_DASH if self.is_dashing else COLOR_PLAYER
 
     @property
     def is_attacking(self):

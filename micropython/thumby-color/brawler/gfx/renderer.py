@@ -8,26 +8,26 @@ COLOR_TILE_LINE = 0x2965
 COLOR_SHADOW = 0x10A2
 COLOR_HITBOX_RED = 0xF800
 COLOR_HURTBOX_GREEN = 0x07E0
+COLOR_Z_AXIS_BLUE = 0x001F
 
 class Renderer:
-    def render_scene(self, camera, entities):
+    def render_scene(self, camera, entities, debug_mgr=None):
         thumby.display.fill(COLOR_SKY)
 
         int_cam = int(camera.x)
 
-        # Parallax Background
+        # Background Layers
         bg_offset = int(camera.x * 0.4)
         for bx in range(- (bg_offset % 32), 128, 32):
             thumby.display.drawRectangle(bx, 15, 28, 30, COLOR_BG_BUILDING)
 
-        # Main Street Floor
         thumby.display.drawRectangle(0, 45, 128, 12, COLOR_WALL)
         thumby.display.drawRectangle(0, 57, 128, 71, COLOR_STREET)
 
         for tx in range(- (int_cam % 24), 128, 24):
             thumby.display.drawLine(tx, 57, tx, 128, COLOR_TILE_LINE)
 
-        # Y-Sorting
+        # Depth Y-Sorting
         sorted_entities = sorted(entities, key=lambda e: e.y)
 
         for ent in sorted_entities:
@@ -45,11 +45,17 @@ class Renderer:
                 draw_y = ey + ez
                 thumby.display.drawRectangle(ex, draw_y, ew, eh, ent.color)
 
-                # Hurtbox Visualizer (Green Box)
-                thumby.display.drawRectangle(ex, draw_y, ew, eh, COLOR_HURTBOX_GREEN)
+                # DEBUG LEVEL 2: Detailed Wireframe Overlays
+                if debug_mgr and debug_mgr.level >= 2:
+                    # Hurtbox (Green Box)
+                    thumby.display.drawRectangle(ex, draw_y, ew, eh, COLOR_HURTBOX_GREEN)
+                    
+                    # Z-Height Line Offset (Blue Line showing height off ground)
+                    if ez < 0:
+                        thumby.display.drawLine(ex + ew // 2, ey + eh, ex + ew // 2, draw_y + eh, COLOR_Z_AXIS_BLUE)
 
-                # Active Attack Hitbox Visualizer (Red Box)
-                if getattr(ent, 'is_attacking', False) and hasattr(ent, 'hitbox'):
-                    dir_offset = 12 if getattr(ent, 'facing_right', True) else -14
-                    atk_x = ex + dir_offset
-                    thumby.display.drawRectangle(atk_x, draw_y, 14, 12, COLOR_HITBOX_RED)
+                    # Attack Hitbox (Red Box)
+                    if getattr(ent, 'is_attacking', False) and hasattr(ent, 'hitbox') and ent.hitbox:
+                        dir_offset = 12 if getattr(ent, 'facing_right', True) else -14
+                        atk_x = ex + dir_offset
+                        thumby.display.drawRectangle(atk_x, draw_y, 14, 12, COLOR_HITBOX_RED)
