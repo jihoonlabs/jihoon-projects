@@ -4,93 +4,123 @@ import time
 # Display Settings (128x128 RGB565)
 thumby.display.setFPS(30)
 
-# Color Palette (RGB565)
-COLOR_SKY = 0x2104
-COLOR_WALL = 0x4208
-COLOR_ROAD = 0x31A6
-COLOR_ROAD_LINE = 0x630C
+# Color Palette (RGB565 - Generic Oriental Period Style)
+COLOR_SKY = 0x18A3
+COLOR_BG_BUILDING = 0x3165
+COLOR_WALL = 0x52AA
+COLOR_STREET = 0x4A49
+COLOR_TILE_LINE = 0x2965
 COLOR_PLAYER = 0x07E0
 COLOR_NPC = 0xF800
 COLOR_WHITE = 0xFFFF
 
-# World & Camera State
-WORLD_WIDTH = 384  # 3 Screens wide (128 * 3)
-cam_x = 0
+# World Map Specifications
+WORLD_WIDTH = 512   # Extended Stage Map
+WORLD_HEIGHT = 128
+DEADZONE_LEFT = 48  # Camera deadzone margins
+DEADZONE_RIGHT = 80
 
-# Player State
-player_x = 30
-player_y = 80
-PLAYER_SPEED = 2.0
+# State Management
+player_x, player_y = 40, 80
+PLAYER_SPEED = 1.8
+cam_x = 0.0
 
-# Entities for Depth Sorting Test
+# Entities Array
 entities = [
-    {'id': 'player', 'x': player_x, 'y': player_y, 'color': COLOR_PLAYER},
-    {'id': 'npc1', 'x': 80, 'y': 65, 'color': COLOR_NPC},
-    {'id': 'npc2', 'x': 140, 'y': 95, 'color': COLOR_NPC},
-    {'id': 'npc3', 'x': 220, 'y': 75, 'color': COLOR_NPC},
+    {'id': 'player', 'x': player_x, 'y': player_y, 'w': 12, 'h': 16, 'color': COLOR_PLAYER},
+    {'id': 'npc_guard1', 'x': 110, 'y': 70, 'w': 12, 'h': 16, 'color': COLOR_NPC},
+    {'id': 'npc_guard2', 'x': 210, 'y': 95, 'w': 12, 'h': 16, 'color': COLOR_NPC},
+    {'id': 'npc_merchant', 'x': 340, 'y': 75, 'w': 12, 'h': 16, 'color': COLOR_NPC},
+    {'id': 'npc_boss_gate', 'x': 460, 'y': 85, 'w': 14, 'h': 18, 'color': COLOR_WHITE},
 ]
 
 last_tick = time.ticks_ms()
+fps_counter = 0
+current_fps = 30
+fps_timer = time.ticks_ms()
 
 while True:
-    # 1. 30 FPS Frame Timing Control
-    current_tick = time.ticks_ms()
-    delta_time = time.ticks_diff(current_tick, last_tick)
-    last_tick = current_tick
+    # 1. 30 FPS Sync & Frame Time Delta
+    now = time.ticks_ms()
+    delta = time.ticks_diff(now, last_tick) / 1000.0
+    last_tick = now
 
-    # 2. Input Processing (8-Way Movement Test)
-    if thumby.buttonL.pressed():
-        player_x -= PLAYER_SPEED
-    if thumby.buttonR.pressed():
-        player_x += PLAYER_SPEED
-    if thumby.buttonU.pressed():
-        player_y -= PLAYER_SPEED * 0.75
-    if thumby.buttonD.pressed():
-        player_y += PLAYER_SPEED * 0.75
+    # Real-time FPS Calculation
+    fps_counter += 1
+    if time.ticks_diff(now, fps_timer) >= 1000:
+        current_fps = fps_counter
+        fps_counter = 0
+        fps_timer = now
 
-    # World Boundaries (Y-axis Depth Area)
+    # 2. Input Logic
+    move_x = 0
+    move_y = 0
+    if thumby.buttonL.pressed(): move_x -= 1
+    if thumby.buttonR.pressed(): move_x += 1
+    if thumby.buttonU.pressed(): move_y -= 1
+    if thumby.buttonD.pressed(): move_y += 1
+
+    # Apply Velocity
+    player_x += move_x * PLAYER_SPEED
+    player_y += move_y * (PLAYER_SPEED * 0.65) # Y-depth movement is slower for perspective
+
+    # Stage Boundaries
     player_x = max(8, min(WORLD_WIDTH - 16, player_x))
-    player_y = max(55, min(110, player_y))
+    player_y = max(58, min(112, player_y))
 
-    # Update Player Entity Position
+    # Update Entity Entry
     entities[0]['x'] = player_x
     entities[0]['y'] = player_y
 
-    # 3. Camera Tracking with Deadzone
-    # Keep player centered when moving right/left
-    target_cam_x = player_x - 64 + 6
-    cam_x = max(0, min(WORLD_WIDTH - 128, target_cam_x))
+    # 3. Camera Deadzone Logic
+    screen_player_x = player_x - cam_x
+    if screen_player_x > DEADZONE_RIGHT:
+        cam_x += (screen_player_x - DEADZONE_RIGHT)
+    elif screen_player_x < DEADZONE_LEFT:
+        cam_x -= (DEADZONE_LEFT - screen_player_x)
 
-    # 4. Render Background & World
+    # Clamp Camera to World Edge
+    cam_x = max(0, min(WORLD_WIDTH - 128, cam_x))
+
+    # 4. Multi-Layer Background Rendering (Screen Offset Aware)
     thumby.display.fill(COLOR_SKY)
 
-    # Render Screen-relative Wall & Road
-    thumby.display.drawRectangle(0 - int(cam_x), 20, WORLD_WIDTH, 30, COLOR_WALL)
-    thumby.display.drawRectangle(0 - int(cam_x), 50, WORLD_WIDTH, 70, COLOR_ROAD)
+    # Parallax Distant Buildings/Tiles
+    bg_offset = int(cam_x * 0.4)
+    for bx in range(- (bg_offset % 32), 128, 32):
+        thumby.display.drawRectangle(bx, 15, 28, 30, COLOR_BG_BUILDING)
 
-    # Road Markings (Period Action Street Detail)
-    for rx in range(0, WORLD_WIDTH, 32):
-        screen_rx = rx - int(cam_x)
-        if -10 <= screen_rx <= 128:
-            thumby.display.drawLine(screen_rx, 52, screen_rx + 16, 52, COLOR_ROAD_LINE)
+    # Main Wall & Street Floor
+    int_cam = int(cam_x)
+    thumby.display.drawRectangle(0, 45, 128, 12, COLOR_WALL)
+    thumby.display.drawRectangle(0, 57, 128, 71, COLOR_STREET)
 
-    # 5. Y-Sorting Depth Rendering
-    # Sort entities by Y-coordinate so lower entities draw over higher ones
-    sorted_entities = sorted(entities, key=lambda e: e['y'])
+    # Tile Grid Details on Street
+    for tx in range(- (int_cam % 24), 128, 24):
+        thumby.display.drawLine(tx, 57, tx, 128, COLOR_TILE_LINE)
 
-    for e in sorted_entities:
-        screen_x = int(e['x'] - cam_x)
-        screen_y = int(e['y'])
+    # 5. Y-Sorting & Screen Culling Pipeline
+    # Sort entities based on Y position (Depth Order)
+    sorted_entities = sorted(entities, key=lambda ent: ent['y'])
 
-        # Culling: Only draw if visible on the 128x128 screen
-        if -16 <= screen_x <= 128:
-            # Shadow
-            thumby.display.drawLine(screen_x + 2, screen_y + 12, screen_x + 10, screen_y + 12, 0x0000)
-            # Body Rectangle (Placeholders for Sprites)
-            thumby.display.drawRectangle(screen_x, screen_y, 12, 14, e['color'])
+    visible_count = 0
+    for ent in sorted_entities:
+        ex = int(ent['x'] - int_cam)
+        ey = int(ent['y'])
+        ew = ent['w']
+        eh = ent['h']
 
-    # 6. Debug HUD
+        # Culling Check: Only process and render if inside screen boundary + margin
+        if -ew <= ex <= 128 + ew and -eh <= ey <= 128 + eh:
+            visible_count += 1
+            # Ground Contact Shadow
+            thumby.display.drawLine(ex + 2, ey + eh - 1, ex + ew - 2, ey + eh - 1, 0x0000)
+            # Entity Body Placeholder
+            thumby.display.drawRectangle(ex, ey, ew, eh, ent['color'])
+
+    # 6. Engine Telemetry & Debug HUD
     thumby.display.setFont("/lib/font3x5.bin", 3, 5, 1)
-    thumby.display.drawText(f"P1 CORE CAM:{int(cam_x)} Y:{int(player_y)}", 2, 2, COLOR_WHITE)
+    thumby.display.drawText(f"P01-ENGINE FPS:{current_fps}", 2, 2, COLOR_WHITE)
+    thumby.display.drawText(f"CAM:{int(cam_x)} VIS:{visible_count}/{len(entities)}", 2, 8, COLOR_WHITE)
 
     thumby.display.update()
