@@ -32,9 +32,9 @@ A 2.5D belt-scroll action RPG/Brawler engine built for **Thumby Color** (128x128
 
 ### Phase 01: Core Engine & Screen Scrolling
 - **Branch:** `feature/brawler-core`
-- [ ] **Frame Control:** Stable 30 FPS display sync loop via MicroPython ticks
-- [ ] **2D Depth Ordering:** Classic Y-sorting (entities drawn in order of Y-position)
-- [ ] **Camera Scroll:** Smooth horizontal stage scrolling following the player
+- [x] **Frame Control:** Stable 30 FPS display sync loop via MicroPython ticks
+- [x] **2D Depth Ordering:** Classic Y-sorting (entities drawn in order of Y-position)
+- [x] **Camera Scroll:** Smooth horizontal stage scrolling following the player
 
 ### Phase 02: 2D Movement & Jump Physics
 - **Branch:** `feature/brawler-physics`
