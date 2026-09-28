@@ -14,25 +14,27 @@ class Renderer:
     def render_scene(self, camera, entities, debug_mgr=None):
         thumby.display.fill(COLOR_SKY)
 
-        int_cam = int(camera.x)
+        # Apply Camera Shake Offsets
+        int_cam = int(camera.x) + camera.shake_offset_x
+        shake_y = camera.shake_offset_y
 
-        # Background Layers
-        bg_offset = int(camera.x * 0.4)
+        # Background Layers with Shake
+        bg_offset = int(camera.x * 0.4) + camera.shake_offset_x
         for bx in range(- (bg_offset % 32), 128, 32):
-            thumby.display.drawRectangle(bx, 15, 28, 30, COLOR_BG_BUILDING)
+            thumby.display.drawRectangle(bx, 15 + shake_y, 28, 30, COLOR_BG_BUILDING)
 
-        thumby.display.drawRectangle(0, 45, 128, 12, COLOR_WALL)
-        thumby.display.drawRectangle(0, 57, 128, 71, COLOR_STREET)
+        thumby.display.drawRectangle(0, 45 + shake_y, 128, 12, COLOR_WALL)
+        thumby.display.drawRectangle(0, 57 + shake_y, 128, 71, COLOR_STREET)
 
         for tx in range(- (int_cam % 24), 128, 24):
-            thumby.display.drawLine(tx, 57, tx, 128, COLOR_TILE_LINE)
+            thumby.display.drawLine(tx, 57 + shake_y, tx, 128 + shake_y, COLOR_TILE_LINE)
 
         # Depth Y-Sorting
         sorted_entities = sorted(entities, key=lambda e: e.y)
 
         for ent in sorted_entities:
             ex = int(ent.x - int_cam)
-            ey = int(ent.y)
+            ey = int(ent.y) + shake_y
             ez = int(ent.z)
             ew, eh = ent.w, ent.h
 
@@ -45,16 +47,11 @@ class Renderer:
                 draw_y = ey + ez
                 thumby.display.drawRectangle(ex, draw_y, ew, eh, ent.color)
 
-                # DEBUG LEVEL 2: Detailed Wireframe Overlays
+                # DEBUG WIREFRAMES
                 if debug_mgr and debug_mgr.level >= 2:
-                    # Hurtbox (Green Box)
                     thumby.display.drawRectangle(ex, draw_y, ew, eh, COLOR_HURTBOX_GREEN)
-                    
-                    # Z-Height Line Offset (Blue Line showing height off ground)
                     if ez < 0:
                         thumby.display.drawLine(ex + ew // 2, ey + eh, ex + ew // 2, draw_y + eh, COLOR_Z_AXIS_BLUE)
-
-                    # Attack Hitbox (Red Box)
                     if getattr(ent, 'is_attacking', False) and hasattr(ent, 'hitbox') and ent.hitbox:
                         dir_offset = 12 if getattr(ent, 'facing_right', True) else -14
                         atk_x = ex + dir_offset
