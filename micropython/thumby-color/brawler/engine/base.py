@@ -7,11 +7,23 @@ class Entity:
         self.w = w
         self.h = h
         self.color = color
+        
+        # Combat State Vars
+        self.vx = 0.0
+        self.facing_right = True
+        self.hitstun = 0
+        self.hp = 100
 
-    @property
-    def screen_x(self):
-        return self.x
+    def apply_hit(self, damage, knockback_x, hitstun):
+        self.hp = max(0, self.hp - damage)
+        self.vx = knockback_x
+        self.hitstun = hitstun
 
-    @property
-    def depth_y(self):
-        return self.y
+    def update_physics(self):
+        # Apply Knockback Friction & Hitstun decay
+        if self.hitstun > 0:
+            self.hitstun -= 1
+            self.x += self.vx
+            self.vx *= 0.8  # Friction slowdown
+        else:
+            self.vx = 0.0

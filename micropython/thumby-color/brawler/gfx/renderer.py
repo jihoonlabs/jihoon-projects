@@ -6,6 +6,8 @@ COLOR_WALL = 0x52AA
 COLOR_STREET = 0x4A49
 COLOR_TILE_LINE = 0x2965
 COLOR_SHADOW = 0x10A2
+COLOR_HITBOX_RED = 0xF800
+COLOR_HURTBOX_GREEN = 0x07E0
 
 class Renderer:
     def render_scene(self, camera, entities):
@@ -25,7 +27,7 @@ class Renderer:
         for tx in range(- (int_cam % 24), 128, 24):
             thumby.display.drawLine(tx, 57, tx, 128, COLOR_TILE_LINE)
 
-        # Y-Sorting (Depth-based rendering)
+        # Y-Sorting
         sorted_entities = sorted(entities, key=lambda e: e.y)
 
         for ent in sorted_entities:
@@ -35,10 +37,19 @@ class Renderer:
             ew, eh = ent.w, ent.h
 
             if -ew <= ex <= 128 + ew:
-                # Shadow on the Ground
+                # Shadow
                 shadow_w = max(4, ew - int(abs(ez) * 0.4))
                 thumby.display.drawLine(ex + (ew - shadow_w) // 2, ey + eh - 1, ex + (ew + shadow_w) // 2, ey + eh - 1, COLOR_SHADOW)
 
-                # Entity Body (Lifted by Z height)
+                # Entity Body
                 draw_y = ey + ez
                 thumby.display.drawRectangle(ex, draw_y, ew, eh, ent.color)
+
+                # Hurtbox Visualizer (Green Box)
+                thumby.display.drawRectangle(ex, draw_y, ew, eh, COLOR_HURTBOX_GREEN)
+
+                # Active Attack Hitbox Visualizer (Red Box)
+                if getattr(ent, 'is_attacking', False) and hasattr(ent, 'hitbox'):
+                    dir_offset = 12 if getattr(ent, 'facing_right', True) else -14
+                    atk_x = ex + dir_offset
+                    thumby.display.drawRectangle(atk_x, draw_y, 14, 12, COLOR_HITBOX_RED)
