@@ -82,9 +82,9 @@ A 2.5D belt-scroll action RPG/Brawler engine built for **Thumby Color** (128x128
 
 ### Phase 09: Boss Battle Logic
 - **Branch:** `feature/brawler-boss`
-- [ ] **Phase Transitions:** Dynamic behavior shifts triggered at HP thresholds
-- [ ] **Super Armor:** Stun resistance during heavy boss attack animations
-- [ ] **Telegraphed Attacks:** Visual floor indicators prior to high-damage skills
+- [x] **Phase Transitions:** Dynamic behavior shifts triggered at HP thresholds
+- [x] **Super Armor:** Stun resistance during heavy boss attack animations
+- [x] **Telegraphed Attacks:** Visual floor indicators prior to high-damage skills
 
 ### Phase 10: Item, Shop & Skill Scroll System
 - **Branch:** `feature/brawler-items`
