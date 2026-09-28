@@ -20,9 +20,9 @@ A 2.5D belt-scroll action RPG/Brawler engine built for **Thumby Color** (128x128
 | **05** | In-Game Debug Visualizer | `feature/brawler-debug` | `[x]` |
 | **06** | Enemy AI Framework | `feature/brawler-enemy-ai` | `[x]` |
 | **07** | Combat Juice & Game Feel | `feature/brawler-game-feel` | `[x]` |
-| **08** | Stage, Wave & Dialogue System | `feature/brawler-stage` | `[/]` |
-| **09** | Boss Battle Logic | `feature/brawler-boss` | `[ ]` |
-| **10** | Item, Shop & Skill Scroll System | `feature/brawler-items` | `[ ]` |
+| **08** | Stage, Wave & Dialogue System | `feature/brawler-stage` | `[x]` |
+| **09** | Boss Battle Logic | `feature/brawler-boss` | `[x]` |
+| **10** | Item, Shop & Skill Scroll System | `feature/brawler-items` | `[x]` |
 | **11** | Pixel Sprites & Chiptune Audio | `feature/brawler-polish` | `[ ]` |
 | **12** | Save Data & Performance | `feature/brawler-optimization` | `[ ]` |
 
@@ -88,10 +88,10 @@ A 2.5D belt-scroll action RPG/Brawler engine built for **Thumby Color** (128x128
 
 ### Phase 10: Item, Shop & Skill Scroll System
 - **Branch:** `feature/brawler-items`
-- [ ] **Pickup Logic:** Coins, health consumables, and throwable melee weapons
-- [ ] **Weapon Lifecycle:** Limited durability and custom attack hitboxes
-- [ ] **Town Shop Interface:** Menu for buying skill scrolls and upgrading stats using coins
-- [ ] **Skill Equipment:** Equipping purchased moves to specific button combinations
+- [x] **Pickup Logic:** Coins, health consumables, and throwable melee weapons
+- [x] **Weapon Lifecycle:** Limited durability and custom attack hitboxes
+- [x] **Town Shop Interface:** Menu for buying skill scrolls and upgrading stats using coins
+- [x] **Skill Equipment:** Equipping purchased moves to specific button combinations
 
 ### Phase 11: Pixel Sprites & Chiptune Audio
 - **Branch:** `feature/brawler-polish`
