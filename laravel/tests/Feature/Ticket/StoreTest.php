@@ -36,7 +36,7 @@ class StoreTest extends TestCase
             ->assertJsonPath('data.title', 'テストチケット')
             ->assertJsonPath('data.status', 'TODO')
             ->assertJsonPath('data.priority', 'MEDIUM')
-            ->assertJsonPath('data.issueKey', 'TICK-1');
+            ->assertJsonPath('data.issue_key', 'TICK-1');
 
         $this->assertDatabaseHas('tickets', [
             'id' => 1,

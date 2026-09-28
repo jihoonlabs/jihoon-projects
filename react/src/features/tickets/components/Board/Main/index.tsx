@@ -17,7 +17,7 @@ export default function Main({
   const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch =
       ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.issueKey.toLowerCase().includes(searchQuery.toLowerCase());
+      (ticket.issueKey ?? '').toLowerCase().includes(searchQuery.toLowerCase());
 
     let matchesAssignee = true;
     if (assigneeFilter === 'ME') {
@@ -32,9 +32,9 @@ export default function Main({
   return (
     <main className={styles.container}>
       {INITIAL_COLUMNS.map((column) => {
-        const columnTickets = filteredTickets.filter(
-          (ticket) => ticket.status === column.id,
-        );
+        const columnTickets = filteredTickets
+          .filter((ticket) => ticket.status === column.id)
+          .sort((a, b) => a.position - b.position);
 
         return (
           <Column key={column.id} column={column} tickets={columnTickets} />

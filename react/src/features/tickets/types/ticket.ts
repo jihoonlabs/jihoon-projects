@@ -11,13 +11,21 @@ export interface UserSummary {
 
 export interface Ticket {
   id: string;
-  issueKey: string;
+  issueKey: string | null;
   title: string;
-  description?: string;
+  description: string | null;
   status: TicketStatus;
   priority: TicketPriority;
-  assignee?: UserSummary;
+  assignee: UserSummary | null;
   position: number;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface CreateTicketInput {
+  title: string;
+  description?: string | null;
+  status?: TicketStatus;
+  priority?: TicketPriority;
+  assigneeId?: string | null;
 }

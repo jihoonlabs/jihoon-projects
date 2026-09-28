@@ -69,12 +69,12 @@ export function TicketBoardView() {
       const overTicket = tickets.find((t) => String(t.id) === overId);
       if (overTicket) {
         newStatus = overTicket.status;
-      }
+      } else return;
     }
 
-    if (draggedTicket.status !== newStatus) {
-      updateStatus(activeId, newStatus);
-    }
+    // The displayed status can lag queued writes. Let the store compare the
+    // requested status when its turn executes, so the final drop is not lost.
+    updateStatus(activeId, newStatus);
   };
 
   return (

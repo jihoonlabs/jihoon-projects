@@ -17,7 +17,7 @@ class UserSummaryResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'avatarUrl' => $this->avatar_url ?? null,
+            'avatar_url' => $this->avatar_url ?? null,
         ];
     }
 }

@@ -35,7 +35,7 @@ class ShowTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonPath('data.id', (string) $ticket->id)
-            ->assertJsonPath('data.issueKey', $ticket->issue_key)
+            ->assertJsonPath('data.issue_key', $ticket->issue_key)
             ->assertJsonPath('data.title', '詳細確認チケット')
             ->assertJsonPath('data.status', 'IN_PROGRESS')
             ->assertJsonPath('data.priority', 'HIGH');

@@ -43,6 +43,7 @@ export const MOCK_TICKETS: Ticket[] = [
   },
   {
     id: '3',
+    assignee: null,
     issueKey: 'KAN-103',
     title: 'ドラッグ＆ドロップライブラリの検討と連携',
     description: '@hello-pangea/dnd導入の検討',
@@ -54,6 +55,7 @@ export const MOCK_TICKETS: Ticket[] = [
   },
   {
     id: '4',
+    assignee: null,
     issueKey: 'KAN-104',
     title: 'チケット詳細モーダルコンポーネントの設計',
     description: '担当者、優先度、説明の編集機能を含む',

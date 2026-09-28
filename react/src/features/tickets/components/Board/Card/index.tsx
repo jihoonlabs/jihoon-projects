@@ -46,7 +46,7 @@ export default function Card({ ticket, isOverlay }: CardProps) {
 
       <div className={styles.footer}>
         <div className={styles.metaInfo}>
-          <span className={styles.issueKey}>{ticket.issueKey}</span>
+          <span className={styles.issueKey}>{ticket.issueKey ?? '—'}</span>
           <span
             className={`${styles.priorityBadge} ${styles[ticket.priority]}`}
           >
