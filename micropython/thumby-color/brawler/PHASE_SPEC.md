@@ -1,31 +1,32 @@
-# Phase 06: Enemy AI & Y-Axis Tracking Specification
+# Phase 07: Game Feel & Impact Juice Specification
 
-This document contains localized context and technical specifications for the feature/brawler-ai branch.
+This document contains localized context and technical specifications for the feature/brawler-feel branch.
 
 ---
 
 ## 1. Scope & Core Objectives
-- Enemy FSM States: IDLE, PATROL, CHASE, ATTACK, HITSTUN, DOWN
-- Y-Axis Alignment AI: Strategic positioning along the vertical depth plane before attacking
-- Attack Cooldown & Range Checks: Aggression timers and spatial attack triggers
+- Hitstop (Frame Freeze): Momentary 2~4 frame execution lock on impact to deliver tactile feedback
+- Camera Shake: Directional Screen Offset Jitter decay on heavy hits and finishers
+- Impact FX Particles: Burst spark visual rendering on successful collision
 
 ---
 
 ## 2. Technical Architecture
 
-### A. Enemy AI Behavioral Loop
-  [ IDLE / PATROL ] ---> (Player within Sight X) ---> [ Y-ALIGNMENT ]
-                            |                                |
-                            +<-- (Aligned Y & In Range X) <--+ ---> [ ATTACK ] ---> [ COOLDOWN ]
+### A. Impact Feedback Pipeline
+  [ Hit Collision Detected ] ---> Trigger Hitstop (Freeze 3 frames)
+                              ---> Trigger Camera Shake (Intensity: 4px decay)
+                              ---> Spawn Impact Spark FX (12 frames lifespan)
 
 ### B. Module Breakdown
-- entities/enemy.py: Enemy AI entity class with state machine, sight ranges, and attack logic
-- main.py: Dynamic entity loop updating player and AI combat interactions
+- engine/camera.py: Camera Shake offset calculation with trapezoidal decay
+- engine/hitbox.py: Hitstop freeze trigger dispatch on impact resolution
+- gfx/renderer.py: Screen jitter application and Impact FX rendering
 
 ---
 
 ## 3. Sub-Task Checklist
-- [ ] Implement Enemy class with FSM state loops in entities/enemy.py
-- [ ] Add Y-axis alignment steering logic for natural belt-scroll movement
-- [ ] Add attack range detection and cooldown timer handling
-- [ ] Connect enemy attack hitboxes to impact player HP/Hitstun
+- [ ] Add Hitstop frame delay manager in engine/hitbox.py
+- [ ] Add camera shake offset and intensity decay logic in engine/camera.py
+- [ ] Render Screen Shake offset in gfx/renderer.py
+- [ ] Add hit impact spark visualizers
