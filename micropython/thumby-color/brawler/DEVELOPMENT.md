@@ -14,13 +14,13 @@ A 2.5D belt-scroll action RPG/Brawler engine built for **Thumby Color** (128x128
 | Phase | Title | Branch | Status |
 | :--- | :--- | :--- | :---: |
 | **01** | Core Engine & Screen Scrolling | `feature/brawler-core` | `[x]` |
-| **02** | 2D Movement & Jump Physics | `feature/brawler-physics` | `[ ]` |
-| **03** | Hitbox & Impact Pipeline | `feature/brawler-hitbox` | `[ ]` |
-| **04** | Combat State Machine | `feature/brawler-combat-fsm` | `[ ]` |
-| **05** | In-Game Debug Visualizer | `feature/brawler-debug` | `[ ]` |
-| **06** | Enemy AI Framework | `feature/brawler-enemy-ai` | `[ ]` |
-| **07** | Combat Juice & Game Feel | `feature/brawler-game-feel` | `[ ]` |
-| **08** | Stage, Wave & Dialogue System | `feature/brawler-stage` | `[ ]` |
+| **02** | 2D Movement & Jump Physics | `feature/brawler-physics` | `[x]` |
+| **03** | Hitbox & Impact Pipeline | `feature/brawler-hitbox` | `[x]` |
+| **04** | Combat State Machine | `feature/brawler-combat-fsm` | `[x]` |
+| **05** | In-Game Debug Visualizer | `feature/brawler-debug` | `[x]` |
+| **06** | Enemy AI Framework | `feature/brawler-enemy-ai` | `[x]` |
+| **07** | Combat Juice & Game Feel | `feature/brawler-game-feel` | `[x]` |
+| **08** | Stage, Wave & Dialogue System | `feature/brawler-stage` | `[/]` |
 | **09** | Boss Battle Logic | `feature/brawler-boss` | `[ ]` |
 | **10** | Item, Shop & Skill Scroll System | `feature/brawler-items` | `[ ]` |
 | **11** | Pixel Sprites & Chiptune Audio | `feature/brawler-polish` | `[ ]` |
@@ -46,32 +46,32 @@ A 2.5D belt-scroll action RPG/Brawler engine built for **Thumby Color** (128x128
 
 ### Phase 03: Hitbox & Impact Pipeline
 - **Branch:** `feature/brawler-hitbox`
-- [ ] **Hitbox Overlap:** X/Y/Z spatial overlap checks for attacks
-- [ ] **Hit Reaction:** Directional knockback and hitstun frame pauses
+- [x] **Hitbox Overlap:** X/Y/Z spatial overlap checks for attacks
+- [x] **Hit Reaction:** Directional knockback and hitstun frame pauses
 
 ### Phase 04: Combat State Machine
 - **Branch:** `feature/brawler-combat-fsm`
-- [ ] **FSM Architecture:** States (`IDLE`, `WALK`, `ATTACK`, `JUMP`, `HIT`, `DOWN`)
-- [ ] **Combo Branching:** Light $\rightarrow$ Heavy $\rightarrow$ Finisher sequential input buffers
-- [ ] **Special Skill:** Area-of-Effect (AoE) emergency break consuming HP
+- [x] **FSM Architecture:** States (`IDLE`, `WALK`, `ATTACK`, `JUMP`, `HIT`, `DOWN`)
+- [x] **Combo Branching:** Light -> Heavy -> Finisher sequential input buffers
+- [x] **Special Skill:** Area-of-Effect (AoE) emergency break consuming HP
 
 ### Phase 05: In-Game Debug Visualizer
 - **Branch:** `feature/brawler-debug`
-- [ ] **Hitbox Overlay:** Toggleable visual debug boxes (Red: Attack, Green: Hurtbox)
-- [ ] **State & FPS Counter:** Real-time entity state display and frame-rate monitor
-- [ ] **Invincibility Toggle:** GOD mode testing trigger for rapid debugging
+- [x] **Hitbox Overlay:** Toggleable visual debug boxes (Red: Attack, Green: Hurtbox)
+- [x] **State & FPS Counter:** Real-time entity state display and frame-rate monitor
+- [x] **Invincibility Toggle:** GOD mode testing trigger for rapid debugging
 
 ### Phase 06: Enemy AI Framework
 - **Branch:** `feature/brawler-enemy-ai`
-- [ ] **FSM AI System:** States (`PATROL`, `APPROACH`, `ALIGN`, `ATTACK`, `STUN`)
-- [ ] **Spatial Alignment:** AI positioning along Y-depth before attacking
-- [ ] **Enemy Archetypes:** Melee brawler, ranged attacker, and heavy super-armor unit
+- [x] **FSM AI System:** States (`PATROL`, `APPROACH`, `ALIGN`, `ATTACK`, `STUN`)
+- [x] **Spatial Alignment:** AI positioning along Y-depth before attacking
+- [x] **Enemy Archetypes:** Melee brawler, ranged attacker, and heavy super-armor unit
 
 ### Phase 07: Combat Juice & Game Feel
 - **Branch:** `feature/brawler-game-feel`
-- [ ] **Hitstop (Freeze Frames):** Micro-pauses on contact to amplify impact feel
-- [ ] **Camera Shake:** Dynamic screen offsets on heavy attacks or finishers
-- [ ] **Impact Effects:** Color-flashing impact sprites and floating combat text
+- [x] **Hitstop (Freeze Frames):** Micro-pauses on contact to amplify impact feel
+- [x] **Camera Shake:** Dynamic screen offsets on heavy attacks or finishers
+- [x] **Impact Effects:** Color-flashing impact sprites and floating combat text
 
 ### Phase 08: Stage, Wave & Dialogue System
 - **Branch:** `feature/brawler-stage`
