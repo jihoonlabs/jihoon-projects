@@ -1,32 +1,31 @@
-# Phase 05: In-Game Debug Visualizer Specification
+# Phase 06: Enemy AI & Y-Axis Tracking Specification
 
-This document contains localized context and technical specifications for the feature/brawler-debug branch.
+This document contains localized context and technical specifications for the feature/brawler-ai branch.
 
 ---
 
 ## 1. Scope & Core Objectives
-- Hitbox Overlay: Toggleable visual debug boxes (Red: Attack, Green: Hurtbox, Blue: Z-Height)
-- State & Telemetry Monitor: Real-time entity state, memory usage, and locked FPS counter
-- GOD Mode Trigger: Invincibility toggle switch for rapid combat testing
+- Enemy FSM States: IDLE, PATROL, CHASE, ATTACK, HITSTUN, DOWN
+- Y-Axis Alignment AI: Strategic positioning along the vertical depth plane before attacking
+- Attack Cooldown & Range Checks: Aggression timers and spatial attack triggers
 
 ---
 
 ## 2. Technical Architecture
 
-### A. Debug Overlay Control
-  [ SELECT Button Toggle ] ---> [ DEBUG_LEVEL_0: Clean HUD ]
-                           ---> [ DEBUG_LEVEL_1: FPS & State Telemetry ]
-                           ---> [ DEBUG_LEVEL_2: Full Hitbox/Hurtbox Wireframes ]
+### A. Enemy AI Behavioral Loop
+  [ IDLE / PATROL ] ---> (Player within Sight X) ---> [ Y-ALIGNMENT ]
+                            |                                |
+                            +<-- (Aligned Y & In Range X) <--+ ---> [ ATTACK ] ---> [ COOLDOWN ]
 
 ### B. Module Breakdown
-- engine/debug.py: Telemetry collector, memory profiler & overlay toggle
-- gfx/renderer.py: Conditional wireframe hitbox drawing routines
-- entities/player.py: GOD mode invincibility flag and toggle switch
+- entities/enemy.py: Enemy AI entity class with state machine, sight ranges, and attack logic
+- main.py: Dynamic entity loop updating player and AI combat interactions
 
 ---
 
 ## 3. Sub-Task Checklist
-- [ ] Implement DebugManager and profile telemetry in engine/debug.py
-- [ ] Add SELECT button debug view level toggle switch
-- [ ] Implement conditional Hitbox/Hurtbox/Z-Height wireframe rendering in renderer.py
-- [ ] Add GOD mode invincibility toggle for player testing
+- [ ] Implement Enemy class with FSM state loops in entities/enemy.py
+- [ ] Add Y-axis alignment steering logic for natural belt-scroll movement
+- [ ] Add attack range detection and cooldown timer handling
+- [ ] Connect enemy attack hitboxes to impact player HP/Hitstun
