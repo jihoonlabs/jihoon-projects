@@ -23,7 +23,7 @@ A 2.5D belt-scroll action RPG/Brawler engine built for **Thumby Color** (128x128
 | **08** | Stage, Wave & Dialogue System | `feature/brawler-stage` | `[x]` |
 | **09** | Boss Battle Logic | `feature/brawler-boss` | `[x]` |
 | **10** | Item, Shop & Skill Scroll System | `feature/brawler-items` | `[x]` |
-| **11** | Pixel Sprites & Chiptune Audio | `feature/brawler-polish` | `[ ]` |
+| **11** | Pixel Sprites & Chiptune Audio | `feature/brawler-polish` | `[x]` |
 | **12** | Save Data & Performance | `feature/brawler-optimization` | `[ ]` |
 
 ---
@@ -95,9 +95,9 @@ A 2.5D belt-scroll action RPG/Brawler engine built for **Thumby Color** (128x128
 
 ### Phase 11: Pixel Sprites & Chiptune Audio
 - **Branch:** `feature/brawler-polish`
-- [ ] **RGB565 Sprites:** Animated character and enemy pixel bitmap pipeline
-- [ ] **Chiptune Audio:** Sound effects (SFX) for hits, jumps, and UI cues
-- [ ] **HUD Interface:** Dynamic health bars, combo count overlays, and status text
+- [x] **RGB565 Sprites:** Animated character and enemy pixel bitmap pipeline
+- [x] **Chiptune Audio:** Sound effects (SFX) for hits, jumps, and UI cues
+- [x] **HUD Interface:** Dynamic health bars, combo count overlays, and status text
 
 ### Phase 12: Save Data & Performance
 - **Branch:** `feature/brawler-optimization`
