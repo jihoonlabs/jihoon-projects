@@ -1,0 +1,95 @@
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+  color: #111827;
+}
+
+.page h1 {
+  margin-bottom: 1.5rem;
+}
+
+.panel {
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.panel h2 {
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.status {
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 3rem;
+  margin: 1.25rem 0;
+}
+
+.times dt {
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.times dd {
+  margin: 0.25rem 0 0;
+  font-weight: 600;
+}
+
+.actions,
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.actions button,
+.pagination button {
+  padding: 0.6rem 1.1rem;
+  border: 1px solid #1d4ed8;
+  border-radius: 6px;
+  background: #1d4ed8;
+  color: #fff;
+  cursor: pointer;
+}
+
+.actions button:disabled,
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  margin: 1rem 0;
+  color: #b91c1c;
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.tableScroll table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.tableScroll th,
+.tableScroll td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.pagination {
+  justify-content: flex-end;
+  margin-top: 1rem;
+}

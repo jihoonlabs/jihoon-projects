@@ -1,9 +1,12 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
+
+import styles from './layout.module.css';
 
 export default function DashboardLayout({
   children,
@@ -31,5 +34,13 @@ export default function DashboardLayout({
     return null;
   }
 
-  return children;
+  return (
+    <>
+      <nav className={styles.nav} aria-label="メインメニュー">
+        <Link href="/tickets">チケット</Link>
+        <Link href="/attendance">勤怠管理</Link>
+      </nav>
+      {children}
+    </>
+  );
 }
