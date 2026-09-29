@@ -88,3 +88,24 @@ it('disables both buttons after checkout and displays the elapsed duration', asy
   expect(screen.getByRole('button', { name: '退勤' })).toBeDisabled();
   expect(screen.getByText('1時間31分')).toBeInTheDocument();
 });
+
+it('keeps the previous work date visible while an overnight shift is still active', async () => {
+  vi.mocked(api.fetchAttendanceToday).mockResolvedValue({
+    date: '2026-09-30',
+    timezone: 'Asia/Tokyo',
+    status: 'working',
+    record: {
+      ...record,
+      workDate: '2026-09-29',
+    },
+  });
+
+  render(<AttendancePageClient />);
+  await screen.findByText('勤務中');
+
+  expect(
+    screen.getByText('勤務日: 2026-09-29（日付をまたいで勤務中）'),
+  ).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '出勤' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '退勤' })).toBeEnabled();
+});
