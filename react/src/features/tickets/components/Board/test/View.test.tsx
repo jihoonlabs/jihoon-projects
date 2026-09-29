@@ -9,6 +9,7 @@ import type { ComponentProps } from 'react';
 import { expect, it, vi } from 'vitest';
 import * as api from '../../../api/ticketApi';
 import { responseTicket } from '../../../api/test/ticketFixture';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useTicketStore } from '../../../store/useTicketStore';
 import { TicketBoardView } from '../View';
 
@@ -71,4 +72,38 @@ it('keeps the final DONE drop while DONE and IN_REVIEW requests are queued', asy
     vi.mocked(api.updateTicketStatus).mock.calls.map((call) => call[1]),
   ).toEqual(['DONE', 'IN_REVIEW', 'DONE']);
   expect(useTicketStore.getState().tickets[0].status).toBe('DONE');
+});
+
+it('shows tickets assigned to the signed-in user in the ME filter', async () => {
+  const mine = api.toTicket(responseTicket);
+  const other = api.toTicket({
+    ...responseTicket,
+    id: '2',
+    title: 'Other ticket',
+    assignee: { id: 1, name: 'Other', avatar_url: null },
+  });
+  vi.mocked(api.fetchTickets).mockResolvedValue([mine, other]);
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+  useAuthStore.setState({
+    user: {
+      id: 7,
+      name: 'Tester',
+      email: 'tester@example.com',
+      status: 'active',
+      createdAt: '2026-09-24T00:00:00.000000Z',
+    },
+    isAuthenticated: true,
+  });
+
+  try {
+    render(<TicketBoardView />);
+    await waitFor(() =>
+      expect(screen.getByText('First ticket')).toBeInTheDocument(),
+    );
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'ME' } });
+    expect(screen.getByText('First ticket')).toBeInTheDocument();
+    expect(screen.queryByText('Other ticket')).not.toBeInTheDocument();
+  } finally {
+    useAuthStore.setState({ user: null, isAuthenticated: false });
+  }
 });

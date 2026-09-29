@@ -7,12 +7,14 @@ interface MainProps {
   tickets: Ticket[];
   searchQuery: string;
   assigneeFilter: string;
+  currentUserId: number | null;
 }
 
 export default function Main({
   tickets,
   searchQuery,
   assigneeFilter,
+  currentUserId,
 }: MainProps) {
   const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch =
@@ -21,7 +23,8 @@ export default function Main({
 
     let matchesAssignee = true;
     if (assigneeFilter === 'ME') {
-      matchesAssignee = ticket.assignee?.id === '1';
+      matchesAssignee =
+        currentUserId !== null && ticket.assignee?.id === String(currentUserId);
     } else if (assigneeFilter === 'UNASSIGNED') {
       matchesAssignee = !ticket.assignee;
     }

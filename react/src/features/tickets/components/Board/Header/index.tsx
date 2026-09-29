@@ -34,7 +34,7 @@ export default function Header({
             onChange={(e) => onAssigneeChange(e.target.value)}
           >
             <option value="ALL">すべての担当者</option>
-            <option value="ME">自分に割り当て (朴)</option>
+            <option value="ME">自分に割り当て</option>
             <option value="UNASSIGNED">未割り当て</option>
           </select>
         </div>

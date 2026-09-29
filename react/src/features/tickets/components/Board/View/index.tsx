@@ -12,6 +12,7 @@ import {
   closestCorners,
 } from '@dnd-kit/core';
 import { INITIAL_COLUMNS } from '@/features/tickets/mocks/tickets';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { Ticket, TicketStatus } from '@/features/tickets/types/ticket';
 import { useTicketStore } from '@/features/tickets/store/useTicketStore';
 import Header from '../Header';
@@ -21,6 +22,7 @@ import styles from './index.module.css';
 
 export function TicketBoardView() {
   const { tickets, fetchTickets, updateStatus } = useTicketStore();
+  const currentUserId = useAuthStore((state) => state.user?.id ?? null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [assigneeFilter, setAssigneeFilter] = useState('ALL');
@@ -97,6 +99,7 @@ export function TicketBoardView() {
           tickets={tickets}
           searchQuery={searchQuery}
           assigneeFilter={assigneeFilter}
+          currentUserId={currentUserId}
         />
 
         <DragOverlay>
