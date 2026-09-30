@@ -5,7 +5,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Ticket } from '@/features/tickets/types/ticket';
+import { Ticket, TicketStatus } from '@/features/tickets/types/ticket';
 import { ColumnConfig } from '@/features/tickets/mocks/tickets';
 import Card from '../Card';
 import styles from './index.module.css';
@@ -13,9 +13,18 @@ import styles from './index.module.css';
 interface ColumnProps {
   column: ColumnConfig;
   tickets: Ticket[];
+  onStatusChange: (id: string, status: TicketStatus) => void;
+  onEdit: (ticket: Ticket) => void;
+  onDelete: (ticket: Ticket) => void;
 }
 
-export default function Column({ column, tickets }: ColumnProps) {
+export default function Column({
+  column,
+  tickets,
+  onStatusChange,
+  onEdit,
+  onDelete,
+}: ColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
   });
@@ -32,7 +41,13 @@ export default function Column({ column, tickets }: ColumnProps) {
       <SortableContext items={ticketIds} strategy={verticalListSortingStrategy}>
         <div className={styles.cardList}>
           {tickets.map((ticket) => (
-            <Card key={ticket.id} ticket={ticket} />
+            <Card
+              key={ticket.id}
+              ticket={ticket}
+              onStatusChange={onStatusChange}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
           ))}
         </div>
       </SortableContext>
