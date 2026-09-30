@@ -25,12 +25,14 @@ export default function Header({
         <div className={styles.filterGroup}>
           <input
             type="text"
+            aria-label="チケット検索"
             placeholder="チケットを検索..."
             className={styles.searchInput}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
           />
           <select
+            aria-label="担当者フィルター"
             className={styles.selectFilter}
             value={assigneeFilter}
             onChange={(e) => onAssigneeChange(e.target.value)}
