@@ -71,12 +71,14 @@ class TicketController extends Controller
     public function updateStatus(Request $request, Ticket $ticket)
     {
         $validated = $request->validate([
-            'status' => 'required|in:BACKLOG,TODO,IN_PROGRESS,IN_REVIEW,DONE',
+            'title' => 'sometimes|required|string|max:255',
+            'description' => 'sometimes|nullable|string',
+            'status' => 'sometimes|required|in:BACKLOG,TODO,IN_PROGRESS,IN_REVIEW,DONE',
+            'priority' => 'sometimes|required|in:HIGHEST,HIGH,MEDIUM,LOW,LOWEST',
+            'assignee_id' => 'sometimes|nullable|exists:users,id',
         ]);
 
-        $ticket->update([
-            'status' => $validated['status'],
-        ]);
+        $ticket->update($validated);
 
         return new TicketResource($ticket->load('assignee:id,name'));
     }
