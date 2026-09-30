@@ -19,15 +19,11 @@ Laravel API と React による Jira 形式の Ticket ボードを提供する�
 
 ## 検証状態
 
-- `feature/ticket-complete` と `feature/ticket-comments` の変更は本ブランチで順番に統合済み。
-- Laravel全テスト 83件、React全テスト 112件、TypeScript、ESLint、Pint、production build は通過。
-- テストで判明したボードテストのコメントAPI mock不足・曖昧なアクセシビリティ検索を修正した。Ticket modal の初期値をpropsから設定し、対象Ticket変更時に再生成することでESLint違反も解消した。
-- 初回Laravelテストは隔離環境にAPP_KEYがなく失敗したため、一時環境変数を設定して再実行した。初回buildはGoogle Fonts取得に失敗したが、ネットワーク許可後の再実行で成功した。
-- Laravel Sanctum のセッション認証には `token` Cookie がないため、古い Cookie 判定を行う `middleware.ts` を削除した。保護画面は既存の `/api/auth/me` による `AuthInitializer` と `DashboardLayout` の認証状態で制御する。
-- middleware 相当の認証動作テストで、認証済みユーザーの保護画面表示と未認証ユーザーの `/login` リダイレクトを確認した。
-- Chrome Headless 154 で実ログイン後の Ticket 一覧・作成・編集・状態変更・再読み込み後の保持・削除、およびコメント作成・編集・削除を確認した。各変更は Laravel API に反映され、最後に Ticket が0件であることを確認した。
+- Laravel の `api/*` CSRF 例外を削除し、stateful Sanctum API でも通常の CSRF 検証を適用する。
+- 回帰テストで有効な CSRF トークン付き状態変更が成功し、トークンなしの状態変更が `419` で拒否されることを確認。
+- Laravel 全テスト 85件（361 assertions）、React 全テスト 112件、TypeScript、ESLint、Pint、production build が通過。
+- Chrome Headless 154 でログイン後、Ticket 一覧・作成・編集・状態変更・再読み込み後の保持・削除、コメント作成・編集・削除を確認。最後に Ticket が0件であることを確認。
 
 ## 次の作業
 
-1. 既存の `feature/ticket` worktreeにある未コミット変更を保持したまま、統合結果を同Epicブランチへ安全に反映する。
-2. Epicブランチへ反映後、最終diffと検証状態を確認する。
+1. この変更の最終 diff を確認し、ユーザーと `main` への統合可否を判断する。
