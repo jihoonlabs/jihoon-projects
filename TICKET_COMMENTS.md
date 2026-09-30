@@ -30,17 +30,14 @@ Ticket에 실제 협업용 댓글 기능을 추가한다. 댓글은 인증 사�
 - 댓글 목록/작성/수정/삭제 Laravel API 구현.
 - 댓글 작성자는 세션 사용자와 명시적으로 연결하며 payload의 user_id는 사용하지 않는다.
 - guest/suspended 접근 차단 및 작성자 전용 수정/삭제 권한 구현.
-- Laravel feature tests 추가: 생성/목록, validation, 작성자 위조 방지, suspended/guest, 권한, 다른 Ticket 접근.
+- Laravel feature tests 8개 통과 (26 assertions), 댓글 범위 Pint 통과: 생성/목록, validation, 작성자 위조 방지, suspended/guest, 권한, 다른 Ticket 접근.
 - React comment type/API client 구현.
-- Ticket 편집 modal에 댓글 목록/작성/수정/삭제 UI 연결.
-- React API tests 추가: mapping, CSRF write, delete, HTTP/error envelope.
-- 위 신규 테스트는 아직 실제 실행하지 않았다.
-- 실제 브라우저 검증도 아직 수행하지 않았다.
+- Ticket 편집 modal에 댓글 목록/작성/수정/삭제 UI 및 상호작용 테스트 연결. React API/UI 관련 테스트 15개 통과.
+- 댓글 파일 ESLint/Prettier, TypeScript 검사, production build 통과.
+- 전체 React lint는 기존 `TicketModal/index.tsx`의 effect 내 동기 상태 설정에서 실패한다. 해당 modal 초기화 코드는 댓글 작업 전부터 존재한다.
+- 격리된 SQLite DB의 테스트 사용자로 Headless Chrome에서 Sanctum 로그인·CSRF 및 댓글 작성/수정/삭제 확인.
 
 ## 남은 작업
 
-1. React 댓글 UI interaction tests 추가.
-2. Laravel/React 관련 테스트 실제 실행 및 실패 수정.
-3. lint/build 확인.
-4. 실제 브라우저에서 댓글 생성/수정/삭제 및 권한/오류 동작 확인.
-5. 검증 완료 후 Ticket Epic으로 통합.
+1. 기존 Ticket modal lint 오류를 정리한 뒤 전체 lint를 재검증.
+2. 검증 완료 후 Ticket Epic으로 통합.

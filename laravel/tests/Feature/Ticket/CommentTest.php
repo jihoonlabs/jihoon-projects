@@ -3,7 +3,6 @@
 namespace Tests\Feature\Ticket;
 
 use App\Models\Ticket;
-use App\Models\TicketComment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -21,7 +20,7 @@ class CommentTest extends TestCase
             ->postJson("/api/tickets/{$ticket->id}/comments", ['body' => ' first comment '])
             ->assertCreated()
             ->assertJsonPath('data.body', 'first comment')
-            ->assertJsonPath('data.author.id', (string) $user->id);
+            ->assertJsonPath('data.author.id', $user->id);
 
         $this->actingAs($user)
             ->getJson("/api/tickets/{$ticket->id}/comments")
@@ -64,7 +63,7 @@ class CommentTest extends TestCase
                 'user_id' => $other->id,
             ])
             ->assertCreated()
-            ->assertJsonPath('data.author.id', (string) $user->id);
+            ->assertJsonPath('data.author.id', $user->id);
     }
 
     public function test_suspended_user_cannot_access_comments(): void
@@ -86,11 +85,9 @@ class CommentTest extends TestCase
         $author = User::factory()->create();
         $other = User::factory()->create();
         $ticket = Ticket::factory()->create();
-        $comment = TicketComment::query()->create([
-            'ticket_id' => $ticket->id,
-            'user_id' => $author->id,
-            'body' => 'original',
-        ]);
+        $comment = $ticket->comments()->make(['body' => 'original']);
+        $comment->user()->associate($author);
+        $comment->save();
 
         $this->actingAs($other)
             ->patchJson("/api/tickets/{$ticket->id}/comments/{$comment->id}", ['body' => 'changed'])
@@ -117,11 +114,9 @@ class CommentTest extends TestCase
         $user = User::factory()->create();
         $ticket = Ticket::factory()->create();
         $otherTicket = Ticket::factory()->create();
-        $comment = TicketComment::query()->create([
-            'ticket_id' => $otherTicket->id,
-            'user_id' => $user->id,
-            'body' => 'other ticket',
-        ]);
+        $comment = $otherTicket->comments()->make(['body' => 'other ticket']);
+        $comment->user()->associate($user);
+        $comment->save();
 
         $this->actingAs($user)
             ->patchJson("/api/tickets/{$ticket->id}/comments/{$comment->id}", ['body' => 'changed'])

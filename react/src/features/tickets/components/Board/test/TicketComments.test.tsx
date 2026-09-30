@@ -93,7 +93,9 @@ it('deletes an owned comment', async () => {
 });
 
 it('keeps content and shows an error when creation fails', async () => {
-  vi.mocked(api.createTicketComment).mockRejectedValue(new Error('create failed'));
+  vi.mocked(api.createTicketComment).mockRejectedValue(
+    new Error('create failed'),
+  );
   render(<TicketComments ticketId="1" currentUserId={7} />);
 
   await screen.findByText('my comment');

@@ -14,7 +14,10 @@ interface TicketCommentsProps {
   currentUserId: number | null;
 }
 
-export default function TicketComments({ ticketId, currentUserId }: TicketCommentsProps) {
+export default function TicketComments({
+  ticketId,
+  currentUserId,
+}: TicketCommentsProps) {
   const [comments, setComments] = useState<TicketComment[]>([]);
   const [body, setBody] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -24,13 +27,20 @@ export default function TicketComments({ ticketId, currentUserId }: TicketCommen
 
   useEffect(() => {
     let active = true;
-    setError(null);
     fetchTicketComments(ticketId)
       .then((items) => {
-        if (active) setComments(items);
+        if (active) {
+          setComments(items);
+          setError(null);
+        }
       })
       .catch((reason) => {
-        if (active) setError(reason instanceof Error ? reason.message : 'コメントの取得に失敗しました。');
+        if (active)
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : 'コメントの取得に失敗しました。',
+          );
       });
     return () => {
       active = false;
@@ -48,7 +58,11 @@ export default function TicketComments({ ticketId, currentUserId }: TicketCommen
       setComments((items) => [...items, comment]);
       setBody('');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'コメントの投稿に失敗しました。');
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : 'コメントの投稿に失敗しました。',
+      );
     } finally {
       setBusy(false);
     }
@@ -61,11 +75,17 @@ export default function TicketComments({ ticketId, currentUserId }: TicketCommen
     setError(null);
     try {
       const updated = await updateTicketComment(ticketId, commentId, value);
-      setComments((items) => items.map((item) => item.id === commentId ? updated : item));
+      setComments((items) =>
+        items.map((item) => (item.id === commentId ? updated : item)),
+      );
       setEditingId(null);
       setEditingBody('');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'コメントの更新に失敗しました。');
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : 'コメントの更新に失敗しました。',
+      );
     } finally {
       setBusy(false);
     }
@@ -79,7 +99,11 @@ export default function TicketComments({ ticketId, currentUserId }: TicketCommen
       await deleteTicketComment(ticketId, commentId);
       setComments((items) => items.filter((item) => item.id !== commentId));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'コメントの削除に失敗しました。');
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : 'コメントの削除に失敗しました。',
+      );
     } finally {
       setBusy(false);
     }
@@ -103,19 +127,43 @@ export default function TicketComments({ ticketId, currentUserId }: TicketCommen
                     onChange={(event) => setEditingBody(event.target.value)}
                     maxLength={5000}
                   />
-                  <button type="button" disabled={busy || !editingBody.trim()} onClick={() => saveEdit(comment.id)}>保存</button>
-                  <button type="button" disabled={busy} onClick={() => setEditingId(null)}>キャンセル</button>
+                  <button
+                    type="button"
+                    disabled={busy || !editingBody.trim()}
+                    onClick={() => saveEdit(comment.id)}
+                  >
+                    保存
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setEditingId(null)}
+                  >
+                    キャンセル
+                  </button>
                 </>
               ) : (
                 <>
                   <p>{comment.body}</p>
                   {String(currentUserId) === comment.author.id && (
                     <div>
-                      <button type="button" disabled={busy} onClick={() => {
-                        setEditingId(comment.id);
-                        setEditingBody(comment.body);
-                      }}>編集</button>
-                      <button type="button" disabled={busy} onClick={() => remove(comment.id)}>削除</button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          setEditingId(comment.id);
+                          setEditingBody(comment.body);
+                        }}
+                      >
+                        編集
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => remove(comment.id)}
+                      >
+                        削除
+                      </button>
                     </div>
                   )}
                 </>
@@ -127,9 +175,15 @@ export default function TicketComments({ ticketId, currentUserId }: TicketCommen
       <form onSubmit={submit}>
         <label>
           コメントを追加
-          <textarea value={body} onChange={(event) => setBody(event.target.value)} maxLength={5000} />
+          <textarea
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+            maxLength={5000}
+          />
         </label>
-        <button type="submit" disabled={busy || !body.trim()}>{busy ? '送信中...' : '送信'}</button>
+        <button type="submit" disabled={busy || !body.trim()}>
+          {busy ? '送信中...' : '送信'}
+        </button>
       </form>
       {error && <p role="alert">{error}</p>}
     </section>

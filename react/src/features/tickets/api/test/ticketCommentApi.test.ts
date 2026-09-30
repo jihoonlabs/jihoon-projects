@@ -42,17 +42,26 @@ describe('Ticket comment API boundary', () => {
       http.post(`${url}/api/tickets/1/comments`, async ({ request }) => {
         expect(request.headers.get('X-XSRF-TOKEN')).toBe('test-csrf-token');
         expect(await request.json()).toEqual({ body: 'new comment' });
-        return HttpResponse.json({ data: { ...responseComment, body: 'new comment' } }, { status: 201 });
+        return HttpResponse.json(
+          { data: { ...responseComment, body: 'new comment' } },
+          { status: 201 },
+        );
       }),
       http.patch(`${url}/api/tickets/1/comments/10`, async ({ request }) => {
         expect(request.headers.get('X-XSRF-TOKEN')).toBe('test-csrf-token');
         expect(await request.json()).toEqual({ body: 'updated comment' });
-        return HttpResponse.json({ data: { ...responseComment, body: 'updated comment' } });
+        return HttpResponse.json({
+          data: { ...responseComment, body: 'updated comment' },
+        });
       }),
     );
 
-    await expect(createTicketComment('1', 'new comment')).resolves.toMatchObject({ body: 'new comment' });
-    await expect(updateTicketComment('1', '10', 'updated comment')).resolves.toMatchObject({ body: 'updated comment' });
+    await expect(
+      createTicketComment('1', 'new comment'),
+    ).resolves.toMatchObject({ body: 'new comment' });
+    await expect(
+      updateTicketComment('1', '10', 'updated comment'),
+    ).resolves.toMatchObject({ body: 'updated comment' });
   });
 
   it('deletes a comment', async () => {
@@ -75,8 +84,15 @@ describe('Ticket comment API boundary', () => {
     await expect(fetchTicketComments('1')).rejects.toThrow(String(status));
   });
 
-  it.each([{}, { data: null }, { data: {} }])('rejects invalid list envelope %j', async (body) => {
-    server.use(http.get(`${url}/api/tickets/1/comments`, () => HttpResponse.json(body)));
-    await expect(fetchTicketComments('1')).rejects.toThrow();
-  });
+  it.each([{}, { data: null }, { data: {} }])(
+    'rejects invalid list envelope %j',
+    async (body) => {
+      server.use(
+        http.get(`${url}/api/tickets/1/comments`, () =>
+          HttpResponse.json(body),
+        ),
+      );
+      await expect(fetchTicketComments('1')).rejects.toThrow();
+    },
+  );
 });

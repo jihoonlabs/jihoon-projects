@@ -36,39 +36,66 @@ async function data<T>(response: Response): Promise<T> {
   return result.data as T;
 }
 
-export async function fetchTicketComments(ticketId: string): Promise<TicketComment[]> {
+export async function fetchTicketComments(
+  ticketId: string,
+): Promise<TicketComment[]> {
   const comments = await data<TicketCommentResponse[]>(
-    await fetch(`${API_URL}/api/tickets/${encodeURIComponent(ticketId)}/comments`, {
-      credentials: 'include',
-      headers: { Accept: 'application/json' },
-    }),
+    await fetch(
+      `${API_URL}/api/tickets/${encodeURIComponent(ticketId)}/comments`,
+      {
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      },
+    ),
   );
-  if (!Array.isArray(comments)) throw new Error('コメント一覧の応答形式が不正です。');
+  if (!Array.isArray(comments))
+    throw new Error('コメント一覧の応答形式が不正です。');
   return comments.map(toComment);
 }
 
-export async function createTicketComment(ticketId: string, body: string): Promise<TicketComment> {
-  return toComment(await data<TicketCommentResponse>(
-    await fetchWithCsrf(`/api/tickets/${encodeURIComponent(ticketId)}/comments`, {
-      method: 'POST',
-      body: JSON.stringify({ body }),
-    }),
-  ));
+export async function createTicketComment(
+  ticketId: string,
+  body: string,
+): Promise<TicketComment> {
+  return toComment(
+    await data<TicketCommentResponse>(
+      await fetchWithCsrf(
+        `/api/tickets/${encodeURIComponent(ticketId)}/comments`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ body }),
+        },
+      ),
+    ),
+  );
 }
 
-export async function updateTicketComment(ticketId: string, commentId: string, body: string): Promise<TicketComment> {
-  return toComment(await data<TicketCommentResponse>(
-    await fetchWithCsrf(`/api/tickets/${encodeURIComponent(ticketId)}/comments/${encodeURIComponent(commentId)}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ body }),
-    }),
-  ));
+export async function updateTicketComment(
+  ticketId: string,
+  commentId: string,
+  body: string,
+): Promise<TicketComment> {
+  return toComment(
+    await data<TicketCommentResponse>(
+      await fetchWithCsrf(
+        `/api/tickets/${encodeURIComponent(ticketId)}/comments/${encodeURIComponent(commentId)}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ body }),
+        },
+      ),
+    ),
+  );
 }
 
-export async function deleteTicketComment(ticketId: string, commentId: string): Promise<void> {
+export async function deleteTicketComment(
+  ticketId: string,
+  commentId: string,
+): Promise<void> {
   const response = await fetchWithCsrf(
     `/api/tickets/${encodeURIComponent(ticketId)}/comments/${encodeURIComponent(commentId)}`,
     { method: 'DELETE' },
   );
-  if (!response.ok) throw new Error(`コメントの削除に失敗しました (${response.status})`);
+  if (!response.ok)
+    throw new Error(`コメントの削除に失敗しました (${response.status})`);
 }
