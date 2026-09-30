@@ -21,14 +21,11 @@ class TicketCommentController extends Controller
 
     public function store(Request $request, Ticket $ticket): TicketCommentResource
     {
-        $validated = $request->validate([
-            'body' => ['required', 'string', 'max:5000'],
-        ]);
+        $validated = $this->validateBody($request);
 
-        $comment = $ticket->comments()->create([
-            'user_id' => $request->user()->id,
-            'body' => trim($validated['body']),
-        ]);
+        $comment = $ticket->comments()->make(['body' => $validated['body']]);
+        $comment->user()->associate($request->user());
+        $comment->save();
 
         return new TicketCommentResource($comment->load('user'));
     }
@@ -38,11 +35,9 @@ class TicketCommentController extends Controller
         $this->ensureCommentBelongsToTicket($ticket, $comment);
         abort_unless($comment->user_id === $request->user()->id, 403);
 
-        $validated = $request->validate([
-            'body' => ['required', 'string', 'max:5000'],
-        ]);
+        $validated = $this->validateBody($request);
 
-        $comment->update(['body' => trim($validated['body'])]);
+        $comment->update(['body' => $validated['body']]);
 
         return new TicketCommentResource($comment->load('user'));
     }
@@ -55,6 +50,17 @@ class TicketCommentController extends Controller
         $comment->delete();
 
         return response()->noContent();
+    }
+
+    private function validateBody(Request $request): array
+    {
+        if (is_string($request->input('body'))) {
+            $request->merge(['body' => trim($request->input('body'))]);
+        }
+
+        return $request->validate([
+            'body' => ['required', 'string', 'max:5000'],
+        ]);
     }
 
     private function ensureCommentBelongsToTicket(Ticket $ticket, TicketComment $comment): void
