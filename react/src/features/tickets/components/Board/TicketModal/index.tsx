@@ -86,7 +86,13 @@ export default function TicketModal({
   };
 
   return (
-    <div className={styles.backdrop} role="presentation" onMouseDown={onClose}>
+    <div
+      className={styles.backdrop}
+      role="presentation"
+      onMouseDown={() => {
+        if (!submitting) onClose();
+      }}
+    >
       <section
         className={styles.modal}
         role="dialog"
