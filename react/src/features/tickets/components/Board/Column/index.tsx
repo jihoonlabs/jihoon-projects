@@ -13,9 +13,9 @@ import styles from './index.module.css';
 interface ColumnProps {
   column: ColumnConfig;
   tickets: Ticket[];
-  onStatusChange: (id: string, status: TicketStatus) => void;
-  onEdit: (ticket: Ticket) => void;
-  onDelete: (ticket: Ticket) => void;
+  onStatusChange?: (id: string, status: TicketStatus) => void;
+  onEdit?: (ticket: Ticket) => void;
+  onDelete?: (ticket: Ticket) => void;
 }
 
 export default function Column({
