@@ -7,6 +7,7 @@ import {
   fetchTicket,
   fetchTickets,
   toTicket,
+  updateTicket,
   updateTicketStatus,
 } from '../ticketApi';
 import { responseTicket } from './ticketFixture';
@@ -105,6 +106,54 @@ describe('Ticket API boundary', () => {
       await createTicket({ title: 'New', description: null, assigneeId: '7' }),
     ).toMatchObject({ title: 'New', issueKey: 'TICK-1' });
   });
+  it('sends editable ticket fields through PATCH', async () => {
+    server.use(
+      http.patch(`${url}/api/tickets/1`, async ({ request }) => {
+        expect(request.headers.get('X-XSRF-TOKEN')).toBe('test-csrf-token');
+        expect(await request.json()).toEqual({
+          title: 'Updated',
+          description: 'Details',
+          status: 'IN_REVIEW',
+          priority: 'HIGH',
+          assignee_id: 7,
+        });
+        return HttpResponse.json({
+          data: {
+            ...responseTicket,
+            title: 'Updated',
+            description: 'Details',
+            status: 'IN_REVIEW',
+            priority: 'HIGH',
+          },
+        });
+      }),
+    );
+
+    await expect(
+      updateTicket('1', {
+        title: 'Updated',
+        description: 'Details',
+        status: 'IN_REVIEW',
+        priority: 'HIGH',
+        assigneeId: '7',
+      }),
+    ).resolves.toMatchObject({
+      title: 'Updated',
+      description: 'Details',
+      status: 'IN_REVIEW',
+      priority: 'HIGH',
+    });
+  });
+
+  it.each(['not-an-id', '0', '1.5'])(
+    'rejects invalid update assignee ID %j',
+    async (assigneeId) => {
+      await expect(updateTicket('1', { assigneeId })).rejects.toThrow(
+        '担当者ID',
+      );
+    },
+  );
+
   it('does not interpret DELETE message as a Ticket', async () => {
     server.use(
       http.delete(`${url}/api/tickets/1`, () =>
