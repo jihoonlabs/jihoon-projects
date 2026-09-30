@@ -41,6 +41,46 @@ class CommentTest extends TestCase
             ->assertJsonValidationErrors('body');
     }
 
+    public function test_whitespace_only_body_is_rejected(): void
+    {
+        $user = User::factory()->create();
+        $ticket = Ticket::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson("/api/tickets/{$ticket->id}/comments", ['body' => '   '])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('body');
+    }
+
+    public function test_client_cannot_spoof_comment_author(): void
+    {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        $ticket = Ticket::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson("/api/tickets/{$ticket->id}/comments", [
+                'body' => 'comment',
+                'user_id' => $other->id,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.author.id', (string) $user->id);
+    }
+
+    public function test_suspended_user_cannot_access_comments(): void
+    {
+        $user = User::factory()->create(['status' => 'suspended']);
+        $ticket = Ticket::factory()->create();
+
+        $this->actingAs($user)
+            ->getJson("/api/tickets/{$ticket->id}/comments")
+            ->assertForbidden();
+
+        $this->actingAs($user)
+            ->postJson("/api/tickets/{$ticket->id}/comments", ['body' => 'comment'])
+            ->assertForbidden();
+    }
+
     public function test_only_author_can_update_or_delete_comment(): void
     {
         $author = User::factory()->create();
