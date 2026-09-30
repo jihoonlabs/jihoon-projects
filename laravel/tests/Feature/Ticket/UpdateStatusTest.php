@@ -62,4 +62,40 @@ class UpdateStatusTest extends TestCase
             'status' => 'TODO',
         ]);
     }
+    public function test_チケットの内容を更新できる(): void
+    {
+        $assignee = User::factory()->create();
+        $ticket = Ticket::factory()->create([
+            'title' => '更新前',
+            'description' => null,
+            'status' => 'TODO',
+            'priority' => 'MEDIUM',
+            'assignee_id' => null,
+        ]);
+
+        $response = $this->patchJson("/api/tickets/{$ticket->id}", [
+            'title' => '更新後',
+            'description' => '説明を更新',
+            'status' => 'IN_REVIEW',
+            'priority' => 'HIGH',
+            'assignee_id' => $assignee->id,
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.title', '更新後')
+            ->assertJsonPath('data.description', '説明を更新')
+            ->assertJsonPath('data.status', 'IN_REVIEW')
+            ->assertJsonPath('data.priority', 'HIGH')
+            ->assertJsonPath('data.assignee.id', $assignee->id);
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'title' => '更新後',
+            'status' => 'IN_REVIEW',
+            'priority' => 'HIGH',
+            'assignee_id' => $assignee->id,
+        ]);
+    }
+
 }
