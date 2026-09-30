@@ -4,6 +4,7 @@ import type {
   Ticket,
   TicketPriority,
   TicketStatus,
+  UpdateTicketInput,
 } from '../types/ticket';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
@@ -114,6 +115,45 @@ export async function updateTicketStatus(
       await fetchWithCsrf(`/api/tickets/${encodeURIComponent(id)}`, {
         method: 'PATCH',
         body: JSON.stringify({ status }),
+      }),
+    ),
+  );
+}
+
+export async function updateTicket(
+  id: string,
+  input: UpdateTicketInput,
+): Promise<Ticket> {
+  const assigneeId =
+    input.assigneeId === undefined
+      ? undefined
+      : input.assigneeId === null
+        ? null
+        : Number(input.assigneeId);
+
+  if (
+    assigneeId !== undefined &&
+    assigneeId !== null &&
+    (!Number.isSafeInteger(assigneeId) || assigneeId <= 0)
+  ) {
+    throw new Error('担当者IDが不正です。');
+  }
+
+  const body = {
+    ...(input.title !== undefined ? { title: input.title } : {}),
+    ...(input.description !== undefined
+      ? { description: input.description }
+      : {}),
+    ...(input.status !== undefined ? { status: input.status } : {}),
+    ...(input.priority !== undefined ? { priority: input.priority } : {}),
+    ...(assigneeId !== undefined ? { assignee_id: assigneeId } : {}),
+  };
+
+  return toTicket(
+    await resource<TicketResponse>(
+      await fetchWithCsrf(`/api/tickets/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
       }),
     ),
   );
