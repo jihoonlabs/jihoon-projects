@@ -24,3 +24,8 @@ Route::prefix('posts')->group(
 Route::prefix('auth')->group(
     base_path('routes/api/auth.php')
 );
+
+// /api/schedules/*
+Route::prefix('schedules')->group(
+    base_path('routes/api/schedules.php')
+);
