@@ -174,6 +174,21 @@ describe('Ticket state and client order', () => {
     });
   });
 
+  it('moves an edited ticket to the end of its new column', async () => {
+    useTicketStore.setState({
+      tickets: [ticket('1', 4), ticket('2', 8, 'DONE')],
+    });
+    vi.mocked(api.updateTicket).mockResolvedValue(ticket('1', 0, 'DONE'));
+
+    await state().updateTicket('1', { status: 'DONE' });
+
+    expect(state().tickets[0]).toMatchObject({
+      id: '1',
+      status: 'DONE',
+      position: 9,
+    });
+  });
+
   it('keeps the existing ticket and exposes an edit failure', async () => {
     useTicketStore.setState({ tickets: [ticket('1', 4)] });
     vi.mocked(api.updateTicket).mockRejectedValue(new Error('edit failed'));
