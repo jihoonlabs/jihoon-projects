@@ -49,6 +49,7 @@ export default function TicketModal({
   const [priority, setPriority] = useState<TicketPriority>('MEDIUM');
   const [assigneeId, setAssigneeId] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     setTitle(ticket?.title ?? '');
@@ -56,12 +57,14 @@ export default function TicketModal({
     setStatus(ticket?.status ?? 'TODO');
     setPriority(ticket?.priority ?? 'MEDIUM');
     setAssigneeId(ticket?.assignee?.id ?? '');
+    setSaveError(null);
   }, [ticket]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!title.trim() || submitting) return;
     setSubmitting(true);
+    setSaveError(null);
     try {
       const input = {
         title: title.trim(),
@@ -73,8 +76,10 @@ export default function TicketModal({
       if (ticket) await onUpdate(ticket.id, input);
       else await onCreate(input);
       onClose();
-    } catch {
-      // The store exposes the API error on the board; keep the form open.
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : '保存に失敗しました。',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -120,6 +125,7 @@ export default function TicketModal({
               )}
             </select>
           </label>
+          {saveError && <p className={styles.error} role="alert">{saveError}</p>}
           <div className={styles.actions}>
             <button type="button" onClick={onClose} disabled={submitting}>キャンセル</button>
             <button type="submit" disabled={submitting || !title.trim()}>
