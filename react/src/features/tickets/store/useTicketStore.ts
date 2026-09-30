@@ -162,6 +162,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
         }));
       } catch (error) {
         fail(error);
+        throw error;
       } finally {
         revision += 1;
         creating -= 1;
