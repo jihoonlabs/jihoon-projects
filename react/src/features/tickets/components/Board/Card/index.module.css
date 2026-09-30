@@ -97,3 +97,30 @@
   background-color: #e5e7eb;
   color: #9ca3af;
 }
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.controls select {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  padding: 0.3rem;
+  background: #fff;
+  color: #374151;
+  font-size: 0.72rem;
+}
+
+.controls button {
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  padding: 0.3rem 0.45rem;
+  background: #fff;
+  color: #374151;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
