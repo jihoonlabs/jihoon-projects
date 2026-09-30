@@ -4,6 +4,13 @@
 >
 > Repository-wide rules are defined by `AGENTS.md`. Branch-specific state and handoff information belong here.
 
+> **Branch workflow (mandatory)**
+>
+> Ticket is an Epic. New features or independent parts must not be implemented directly on the Epic branch.
+> Create a child branch per feature/part and keep one dedicated context MD on that branch.
+> Complete implementation, automated tests, required local/browser verification, and the child MD handoff first; only then merge the child branch into the Ticket Epic.
+> Repeat this process for each child feature. Merge the Ticket Epic into `main` only after Epic-level integration verification is complete.
+
 ## 목표
 
 Next.js·React·Zustand와 Laravel API를 연결한 Jira형 칸반 보드를 완성한다.
