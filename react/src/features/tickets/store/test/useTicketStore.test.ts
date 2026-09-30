@@ -278,7 +278,9 @@ describe('Ticket state and client order', () => {
     vi.mocked(api.fetchTickets).mockRejectedValue(new Error('fetch failed'));
     await state().fetchTickets();
     vi.mocked(api.createTicket).mockRejectedValue(new Error('create failed'));
-    await state().addTicket({ title: 'New' });
+    await expect(state().addTicket({ title: 'New' })).rejects.toThrow(
+      'create failed',
+    );
     expect(state().tickets).toEqual([ticket('1', 4)]);
     expect(state().error).toBe('create failed');
     expect(state().isLoading).toBe(false);
