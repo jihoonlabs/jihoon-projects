@@ -26,4 +26,4 @@ Laravel API と React による Jira 形式の Ticket ボードを提供する�
 
 ## 次の作業
 
-1. この変更の最終 diff を確認し、ユーザーと `main` への統合可否を判断する。
+1. 公開済みチェックポイントを基準に次のTicket作業範囲を定め、必要に応じて `feature/ticket` からChild branchを作成する。
