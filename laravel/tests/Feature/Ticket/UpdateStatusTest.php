@@ -98,4 +98,30 @@ class UpdateStatusTest extends TestCase
         ]);
     }
 
+    public function test_編集項目の不正な値は更新できない(): void
+    {
+        $ticket = Ticket::factory()->create([
+            'title' => '更新前',
+            'priority' => 'MEDIUM',
+            'assignee_id' => null,
+        ]);
+
+        $response = $this->patchJson("/api/tickets/{$ticket->id}", [
+            'title' => '',
+            'priority' => 'URGENT',
+            'assignee_id' => 999999,
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['title', 'priority', 'assignee_id']);
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'title' => '更新前',
+            'priority' => 'MEDIUM',
+            'assignee_id' => null,
+        ]);
+    }
+
 }
