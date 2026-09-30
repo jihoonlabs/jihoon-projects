@@ -20,13 +20,15 @@ Next.js·React·Zustand와 Laravel API를 연결한 Jira형 칸반 보드를 완
 - 카드의 편집 UI에서 제목, 설명, 상태, 우선순위, 담당자를 수정할 수 있다.
 - 카드 삭제 버튼과 확인 절차를 구현했다.
 - 생성/편집 담당자 선택은 현재 로그인 사용자 또는 미할당으로 제한한다. 전체 사용자 선택 API는 이번 범위에 추가하지 않았다.
-- 생성/편집 실패 시 폼을 닫지 않고 store 오류를 유지한다. 상태 변경/삭제 실패는 기존 rollback 동작을 사용한다.
+- 생성/편집 실패 시 폼을 닫지 않고 모달 내부에 오류를 표시하며 store 오류도 유지한다. 상태 변경/삭제 실패는 기존 rollback 동작을 사용한다.
+- 저장 요청 중에는 모달의 취소 버튼과 backdrop 닫기를 막아 요청 결과가 확정되기 전에 폼이 사라지지 않게 했다.
+- 검색창과 담당자 필터에 접근 가능한 이름을 부여했다.
 
 ## 자동 검증 상태
 
 기존 `feature/ticket` 체크포인트 기준으로 Ticket 관련 35개, React 전체 82개, Laravel 전체 71개 테스트가 통과한 기록이 있다.
 
-이번 `feature/ticket-complete` 작업에서는 Laravel의 일반 티켓 수정 회귀 테스트를 추가했다. 다만 GitHub 원격 편집 환경에서는 Laravel/React 테스트, TypeScript, ESLint, Pint, build를 실제 실행하지 못했다. 따라서 새 변경분은 **테스트 코드 추가/정적 검토 완료, 실행 검증 대기** 상태다.
+이번 `feature/ticket-complete` 작업에서는 Laravel 일반 수정/validation/쓰기 권한 회귀 테스트와 React API/store/modal 오류·편집 이동·접근성 회귀 테스트를 추가했다. 생성/편집 실패 시 입력 유지, 저장 중 backdrop 보호도 테스트 범위에 포함했다. 다만 GitHub 원격 편집 환경에서는 Laravel/React 테스트, TypeScript, ESLint, Pint, build를 실제 실행하지 못했다. 따라서 새 변경분은 **테스트 코드 추가/정적 검토 완료, 실행 검증 대기** 상태다.
 
 ## 실제 브라우저 검증 상태
 
