@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import * as api from '../api/ticketApi';
-import type { CreateTicketInput, Ticket, TicketStatus } from '../types/ticket';
+import type { CreateTicketInput, Ticket, TicketStatus, UpdateTicketInput } from '../types/ticket';
 
 interface TicketState {
   tickets: Ticket[];
@@ -9,6 +9,7 @@ interface TicketState {
   fetchTickets: () => Promise<void>;
   updateStatus: (id: string, status: TicketStatus) => Promise<void>;
   addTicket: (ticket: CreateTicketInput) => Promise<void>;
+  updateTicket: (id: string, input: UpdateTicketInput) => Promise<void>;
   deleteTicket: (id: string) => Promise<void>;
 }
 
@@ -168,6 +169,28 @@ export const useTicketStore = create<TicketState>((set, get) => {
         await refreshWhenIdle();
       }
     },
+    updateTicket: (id, input) =>
+      write(id, async () => {
+        const before = get().tickets.find((ticket) => ticket.id === id);
+        if (!before) return;
+        revision += 1;
+        set({ error: null });
+        try {
+          const updated = await api.updateTicket(id, input);
+          set((state) => ({
+            tickets: state.tickets.map((ticket) =>
+              ticket.id === id
+                ? { ...updated, position: ticket.status === updated.status ? ticket.position : nextPosition(updated.status) }
+                : ticket,
+            ),
+          }));
+        } catch (error) {
+          fail(error);
+          throw error;
+        } finally {
+          revision += 1;
+        }
+      }),
     deleteTicket: (id) =>
       write(id, async () => {
         const before = get().tickets.find((ticket) => ticket.id === id);
