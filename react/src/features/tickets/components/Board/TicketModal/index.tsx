@@ -73,6 +73,8 @@ export default function TicketModal({
       if (ticket) await onUpdate(ticket.id, input);
       else await onCreate(input);
       onClose();
+    } catch {
+      // The store exposes the API error on the board; keep the form open.
     } finally {
       setSubmitting(false);
     }
