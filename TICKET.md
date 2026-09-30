@@ -1,5 +1,11 @@
 # Ticket Epic
 
+> Branch work document: `feature/ticket-complete`
+>
+> `AGENTS.md` is the repository-wide immutable instruction document for this work.
+> Do not edit, overwrite, reformat, or repurpose `AGENTS.md` from this branch.
+> Branch-specific progress, decisions, pending verification, and handoff notes belong in this file.
+
 ## 목표
 
 Next.js·React·Zustand와 Laravel API를 연결한 Jira형 칸반 보드를 완성한다.
