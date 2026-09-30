@@ -37,3 +37,12 @@ export interface UpdateTicketInput {
   priority?: TicketPriority;
   assigneeId?: string | null;
 }
+
+
+export interface TicketComment {
+  id: string;
+  body: string;
+  author: UserSummary;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
