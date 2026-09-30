@@ -52,3 +52,47 @@ This Epic is independent from Ticket and Attendance. Existing authentication and
 ## Branch
 
 `feature/calendar`
+
+
+## Verification handoff
+
+The Calendar branch is being implemented through GitHub remote changes. Checks that require a local runtime must be completed later on the development Mac.
+
+### Completed remotely
+
+- Calendar/Schedule MVP scope documented.
+- Schedule model and database migration added.
+- User-to-schedules Eloquent relation added.
+- Authenticated schedule CRUD routes and controller added.
+- Ownership and validation feature tests added.
+- `/api/schedules` route registration added.
+
+### Pending local verification
+
+Run these checks before treating the API step as complete:
+
+1. Run the Laravel Schedule feature tests.
+2. Run the full Laravel test suite.
+3. Run Laravel Pint / formatting checks.
+4. Run migrations from a clean test database and confirm the `schedules` table is created correctly.
+5. Verify authenticated API requests with the existing Sanctum session/CSRF flow.
+6. Confirm create, monthly-range list, update, delete, validation failure, and cross-user access behavior in the real application.
+
+If any check fails, fix it on `feature/calendar` before continuing browser-level verification.
+
+### Company-side review
+
+When only code review is possible, inspect these files first:
+
+- `laravel/app/Http/Controllers/ScheduleController.php`
+- `laravel/routes/api/schedules.php`
+- `laravel/tests/Feature/ScheduleTest.php`
+- `laravel/database/migrations/2026_09_30_000000_create_schedules_table.php`
+
+Review points:
+
+- Schedule ownership is always derived from the authenticated user.
+- Another user's schedule returns 404 for update/delete.
+- `ends_at` must be later than `starts_at`.
+- Monthly-range queries include schedules overlapping the requested range.
+- UTC storage and Asia/Tokyo display responsibilities remain separated.
