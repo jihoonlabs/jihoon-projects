@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { expect, it, vi } from 'vitest';
@@ -134,7 +135,9 @@ it('keeps the create modal open and shows the save error when creation fails', a
   });
   fireEvent.click(screen.getByRole('button', { name: '保存' }));
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('create failed');
+  expect(
+    await within(screen.getByRole('dialog')).findByRole('alert'),
+  ).toHaveTextContent('create failed');
   expect(screen.getByRole('dialog')).toBeInTheDocument();
   expect(screen.getByLabelText('タイトル')).toHaveValue('New ticket');
 });
@@ -182,7 +185,9 @@ it('keeps the edit modal open and shows the save error when editing fails', asyn
   });
   fireEvent.click(screen.getByRole('button', { name: '保存' }));
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('update failed');
+  expect(
+    await within(screen.getByRole('dialog')).findByRole('alert'),
+  ).toHaveTextContent('update failed');
   expect(screen.getByRole('dialog')).toBeInTheDocument();
   expect(screen.getByLabelText('タイトル')).toHaveValue('Updated ticket');
 });
