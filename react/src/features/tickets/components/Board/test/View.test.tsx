@@ -110,6 +110,18 @@ it('shows tickets assigned to the signed-in user in the ME filter', async () => 
   }
 });
 
+it('exposes accessible names for search and assignee filters', async () => {
+  vi.mocked(api.fetchTickets).mockResolvedValue([]);
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+
+  render(<TicketBoardView />);
+
+  expect(screen.getByRole('textbox', { name: 'チケット検索' })).toBeInTheDocument();
+  expect(
+    screen.getByRole('combobox', { name: '担当者フィルター' }),
+  ).toBeInTheDocument();
+});
+
 it('keeps the create modal open and shows the save error when creation fails', async () => {
   vi.mocked(api.fetchTickets).mockResolvedValue([]);
   vi.mocked(api.createTicket).mockRejectedValue(new Error('create failed'));
