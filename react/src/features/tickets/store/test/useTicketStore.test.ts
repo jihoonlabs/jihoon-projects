@@ -9,6 +9,7 @@ vi.mock('../../api/ticketApi', async (importOriginal) => ({
   fetchTickets: vi.fn(),
   createTicket: vi.fn(),
   updateTicketStatus: vi.fn(),
+  updateTicket: vi.fn(),
   deleteTicket: vi.fn(),
 }));
 const ticket = (
@@ -152,6 +153,39 @@ describe('Ticket state and client order', () => {
     await Promise.all([first, second]);
     expect(state().tickets[0].status).toBe('DONE');
   });
+  it('applies server-confirmed ticket edits and keeps the current position', async () => {
+    useTicketStore.setState({ tickets: [ticket('1', 4)] });
+    vi.mocked(api.updateTicket).mockResolvedValue({
+      ...ticket('1'),
+      title: 'Updated',
+      priority: 'HIGH',
+    });
+
+    await state().updateTicket('1', { title: 'Updated', priority: 'HIGH' });
+
+    expect(api.updateTicket).toHaveBeenCalledWith('1', {
+      title: 'Updated',
+      priority: 'HIGH',
+    });
+    expect(state().tickets[0]).toMatchObject({
+      title: 'Updated',
+      priority: 'HIGH',
+      position: 4,
+    });
+  });
+
+  it('keeps the existing ticket and exposes an edit failure', async () => {
+    useTicketStore.setState({ tickets: [ticket('1', 4)] });
+    vi.mocked(api.updateTicket).mockRejectedValue(new Error('edit failed'));
+
+    await expect(
+      state().updateTicket('1', { title: 'Updated' }),
+    ).rejects.toThrow('edit failed');
+
+    expect(state().tickets[0]).toEqual(ticket('1', 4));
+    expect(state().error).toBe('edit failed');
+  });
+
   it('restores failed deletion without discarding a new ticket', async () => {
     useTicketStore.setState({ tickets: [ticket('1', 4)] });
     const request = deferred<void>();
