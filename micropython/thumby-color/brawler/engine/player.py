@@ -26,6 +26,10 @@ class Player(Entity):
         self.is_special = False
 
         self.hitbox = None
+        self._cached_hitbox = VolumeHitbox(self)
+        self.input_buffer_a = 0
+        self.input_buffer_b = 0
+
         self.double_tap = DoubleTapDetector()
         self.jump_physics = JumpPhysics()
 
@@ -45,15 +49,15 @@ class Player(Entity):
         if step == 1:
             self.combo_timer = 12
             self.color = COLOR_ATK1
-            self.hitbox = VolumeHitbox(self, range_x=14, depth_y=8, height_z=12, damage=8, knockback_x=2.0, hitstun_frames=6)
+            self.hitbox = self._cached_hitbox.set_spec(range_x=14, depth_y=8, height_z=12, damage=8, knockback_x=2.0, hitstun_frames=6)
         elif step == 2:
             self.combo_timer = 12
             self.color = COLOR_ATK2
-            self.hitbox = VolumeHitbox(self, range_x=16, depth_y=8, height_z=12, damage=12, knockback_x=3.0, hitstun_frames=8)
+            self.hitbox = self._cached_hitbox.set_spec(range_x=16, depth_y=8, height_z=12, damage=12, knockback_x=3.0, hitstun_frames=8)
         elif step == 3:
             self.combo_timer = 16
             self.color = COLOR_FINISHER
-            self.hitbox = VolumeHitbox(self, range_x=20, depth_y=10, height_z=14, damage=22, knockback_x=6.5, hitstun_frames=16)
+            self.hitbox = self._cached_hitbox.set_spec(range_x=20, depth_y=10, height_z=14, damage=22, knockback_x=6.5, hitstun_frames=16)
 
     def trigger_special(self, debug_mgr=None):
         # In GOD mode, special skill is free (doesn't consume HP)
@@ -64,16 +68,34 @@ class Player(Entity):
             self.combo_step = 4
             self.combo_timer = 18
             self.color = COLOR_SPECIAL
-            self.hitbox = VolumeHitbox(self, range_x=24, depth_y=16, height_z=16, damage=30, knockback_x=8.0, hitstun_frames=20)
+            self.hitbox = self._cached_hitbox.set_spec(range_x=24, depth_y=16, height_z=16, damage=30, knockback_x=8.0, hitstun_frames=20)
+            self.input_buffer_a = 0
+            self.input_buffer_b = 0
 
     def update(self, world_width=512, debug_mgr=None):
         self.update_physics()
         if self.hitstun > 0:
             self.combo_step = 0
+            self.input_buffer_a = 0
+            self.input_buffer_b = 0
             return
 
-        # 1. Emergency Special (Button A + B)
-        if thumby.buttonA.pressed() and thumby.buttonB.pressed() and self.combo_step == 0:
+        # Maintain button input buffers (3 frames window)
+        if thumby.buttonA.justPressed():
+            self.input_buffer_a = 3
+        elif self.input_buffer_a > 0:
+            self.input_buffer_a -= 1
+
+        if thumby.buttonB.justPressed():
+            self.input_buffer_b = 3
+        elif self.input_buffer_b > 0:
+            self.input_buffer_b -= 1
+
+        # 1. Emergency Special (Button A + B or Input Buffer overlap)
+        is_a_active = thumby.buttonA.pressed() or self.input_buffer_a > 0
+        is_b_active = thumby.buttonB.pressed() or self.input_buffer_b > 0
+
+        if is_a_active and is_b_active and self.combo_step == 0:
             self.trigger_special(debug_mgr)
             return
 
@@ -96,6 +118,7 @@ class Player(Entity):
         # 3. Base Attack
         if thumby.buttonA.justPressed() and not self.is_jumping:
             self.trigger_attack(1)
+            self.input_buffer_a = 0
             return
 
         # 4. Movement
@@ -124,10 +147,11 @@ class Player(Entity):
         self.x = max(8.0, min(float(world_width - 16), self.x))
         self.y = max(58.0, min(112.0, self.y))
 
-        # 5. Jump
-        if thumby.buttonB.justPressed() and not self.is_jumping:
+        # 5. Jump (only if A was not buffered)
+        if (thumby.buttonB.justPressed() or self.input_buffer_b > 0) and not self.is_jumping and not self.is_attacking:
             self.is_jumping = True
             self.vz = self.jump_physics.jump_force
+            self.input_buffer_b = 0
 
         self.z, self.vz, self.is_jumping = self.jump_physics.update(self.z, self.vz, self.is_jumping)
 
