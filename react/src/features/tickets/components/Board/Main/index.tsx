@@ -1,5 +1,5 @@
 import { INITIAL_COLUMNS } from '../../../mocks/tickets';
-import { Ticket } from '../../../types/ticket';
+import { Ticket, TicketStatus } from '../../../types/ticket';
 import Column from '../Column';
 import styles from './index.module.css';
 
@@ -8,6 +8,9 @@ interface MainProps {
   searchQuery: string;
   assigneeFilter: string;
   currentUserId: number | null;
+  onStatusChange: (id: string, status: TicketStatus) => void;
+  onEdit: (ticket: Ticket) => void;
+  onDelete: (ticket: Ticket) => void;
 }
 
 export default function Main({
@@ -15,6 +18,9 @@ export default function Main({
   searchQuery,
   assigneeFilter,
   currentUserId,
+  onStatusChange,
+  onEdit,
+  onDelete,
 }: MainProps) {
   const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch =
@@ -40,7 +46,14 @@ export default function Main({
           .sort((a, b) => a.position - b.position);
 
         return (
-          <Column key={column.id} column={column} tickets={columnTickets} />
+          <Column
+            key={column.id}
+            column={column}
+            tickets={columnTickets}
+            onStatusChange={onStatusChange}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
         );
       })}
     </main>
