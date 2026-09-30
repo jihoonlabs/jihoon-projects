@@ -139,6 +139,35 @@ it('keeps the create modal open and shows the save error when creation fails', a
   expect(screen.getByLabelText('タイトル')).toHaveValue('New ticket');
 });
 
+it('keeps the modal open when the backdrop is clicked while saving', async () => {
+  vi.mocked(api.fetchTickets).mockResolvedValue([]);
+  let resolveCreate!: (value: ReturnType<typeof api.toTicket>) => void;
+  vi.mocked(api.createTicket).mockReturnValue(
+    new Promise((resolve) => {
+      resolveCreate = resolve;
+    }),
+  );
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+
+  render(<TicketBoardView />);
+  fireEvent.click(screen.getByRole('button', { name: '+ チケット作成' }));
+  fireEvent.change(screen.getByLabelText('タイトル'), {
+    target: { value: 'New ticket' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: '保存' }));
+
+  const dialog = screen.getByRole('dialog');
+  fireEvent.mouseDown(dialog.parentElement!);
+  expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+  await act(async () => {
+    resolveCreate(api.toTicket(responseTicket));
+  });
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+  );
+});
+
 it('keeps the edit modal open and shows the save error when editing fails', async () => {
   const ticket = api.toTicket(responseTicket);
   vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
