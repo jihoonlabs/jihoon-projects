@@ -17,7 +17,6 @@ class SocialLoginTest extends TestCase
     /**
      * Google認証で新規ユーザーとしてログインできること
      */
-
     public function test_google_user_can_login(): void
     {
         $socialUser = new SocialiteUser;
@@ -52,7 +51,6 @@ class SocialLoginTest extends TestCase
     /**
      * メールアドレスが取得できないLINEユーザーでもログインできること
      */
-
     public function test_line_user_can_login_without_email(): void
     {
         $socialUser = new SocialiteUser;
@@ -86,8 +84,7 @@ class SocialLoginTest extends TestCase
 
     /**
      * 既存のソーシャルアカウントで同じユーザーとしてログインできること
-     */    
-
+     */
     public function test_existing_social_account_can_login(): void
     {
         $user = User::factory()->create();
@@ -121,7 +118,6 @@ class SocialLoginTest extends TestCase
     /**
      * 同じメールアドレスでも既存ユーザーとは自動連携しないこと
      */
-
     public function test_social_user_is_not_automatically_linked_by_email(): void
     {
         $existingUser = User::factory()->create([
@@ -155,11 +151,9 @@ class SocialLoginTest extends TestCase
         ]);
     }
 
-
     /**
      * 未対応の認証プロバイダーは拒否されること
      */
-
     public function test_unsupported_provider_returns_404(): void
     {
         $this->get('/api/auth/facebook/callback')

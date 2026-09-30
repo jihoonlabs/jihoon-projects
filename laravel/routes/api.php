@@ -20,7 +20,12 @@ Route::prefix('posts')->group(
     base_path('routes/api/posts.php')
 );
 
-// /api/auth/* 
+// /api/auth/*
 Route::prefix('auth')->group(
     base_path('routes/api/auth.php')
+);
+
+// /api/tickets/*
+Route::prefix('tickets')->group(
+    base_path('routes/api/tickets.php')
 );

@@ -15,12 +15,11 @@ class NoticeApiTest extends TestCase
 {
     use RefreshDatabase;
 
-
     /*
     |
-    | 1. no title POST 
-    | 2. 422 status 
-    | 3. title validation error 
+    | 1. no title POST
+    | 2. 422 status
+    | 3. title validation error
     */
     public function test_title_is_required_when_creating_notice(): void
     {
@@ -33,9 +32,9 @@ class NoticeApiTest extends TestCase
     }
 
     /*
-    | 1. title + content POST 
+    | 1. title + content POST
     | 2. 201 Created
-    | 3. JSON 
+    | 3. JSON
     | 4. DB check
     */
 
@@ -52,7 +51,7 @@ class NoticeApiTest extends TestCase
             'content' => 'test',
         ]);
 
-        // checked DB 
+        // checked DB
         $this->assertDatabaseHas('notices', [
             'title' => '1st',
             'content' => 'test',

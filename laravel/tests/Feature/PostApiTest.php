@@ -39,7 +39,7 @@ class PostApiTest extends TestCase
             'image_url' => null,
         ]);
     }
-    
+
     /**
      * 게시글 하나를 조회할 수 있다.
      */
@@ -101,7 +101,7 @@ class PostApiTest extends TestCase
             'image_url' => 'https://example.com/image.jpg',
         ]);
     }
-    
+
     /**
      * 게시글을 삭제할 수 있다.
      */
