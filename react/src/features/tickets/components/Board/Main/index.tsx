@@ -8,9 +8,9 @@ interface MainProps {
   searchQuery: string;
   assigneeFilter: string;
   currentUserId: number | null;
-  onStatusChange: (id: string, status: TicketStatus) => void;
-  onEdit: (ticket: Ticket) => void;
-  onDelete: (ticket: Ticket) => void;
+  onStatusChange?: (id: string, status: TicketStatus) => void;
+  onEdit?: (ticket: Ticket) => void;
+  onDelete?: (ticket: Ticket) => void;
 }
 
 export default function Main({
