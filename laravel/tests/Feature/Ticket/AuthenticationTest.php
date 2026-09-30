@@ -59,5 +59,4 @@ class AuthenticationTest extends TestCase
         $this->deleteJson("/api/tickets/{$ticket->id}")
             ->assertForbidden();
     }
-
 }

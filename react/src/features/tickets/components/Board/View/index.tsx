@@ -142,6 +142,7 @@ export function TicketBoardView() {
 
       {isModalOpen && (
         <TicketModal
+          key={editingTicket?.id ?? 'create'}
           ticket={editingTicket}
           currentUserId={currentUserId}
           currentUserName={currentUser?.name}

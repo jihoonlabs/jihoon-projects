@@ -62,6 +62,7 @@ class UpdateStatusTest extends TestCase
             'status' => 'TODO',
         ]);
     }
+
     public function test_チケットの内容を更新できる(): void
     {
         $assignee = User::factory()->create();
@@ -123,5 +124,4 @@ class UpdateStatusTest extends TestCase
             'assignee_id' => null,
         ]);
     }
-
 }

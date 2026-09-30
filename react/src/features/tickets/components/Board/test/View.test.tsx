@@ -21,6 +21,12 @@ vi.mock('../../../api/ticketApi', async (importOriginal) => ({
   createTicket: vi.fn(),
   updateTicket: vi.fn(),
 }));
+vi.mock('../../../api/ticketCommentApi', () => ({
+  fetchTicketComments: vi.fn().mockResolvedValue([]),
+  createTicketComment: vi.fn(),
+  updateTicketComment: vi.fn(),
+  deleteTicketComment: vi.fn(),
+}));
 vi.mock('@dnd-kit/core', async (importOriginal) => {
   const original = await importOriginal<typeof import('@dnd-kit/core')>();
   return {
@@ -103,7 +109,9 @@ it('shows tickets assigned to the signed-in user in the ME filter', async () => 
     await waitFor(() =>
       expect(screen.getByText('First ticket')).toBeInTheDocument(),
     );
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'ME' } });
+    fireEvent.change(screen.getByRole('combobox', { name: '担当者フィルター' }), {
+      target: { value: 'ME' },
+    });
     expect(screen.getByText('First ticket')).toBeInTheDocument();
     expect(screen.queryByText('Other ticket')).not.toBeInTheDocument();
   } finally {

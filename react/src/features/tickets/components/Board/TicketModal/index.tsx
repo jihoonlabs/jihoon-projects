@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import type {
   CreateTicketInput,
   Ticket,
@@ -44,22 +44,15 @@ export default function TicketModal({
   onCreate,
   onUpdate,
 }: TicketModalProps) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<TicketStatus>('TODO');
-  const [priority, setPriority] = useState<TicketPriority>('MEDIUM');
-  const [assigneeId, setAssigneeId] = useState('');
+  const [title, setTitle] = useState(ticket?.title ?? '');
+  const [description, setDescription] = useState(ticket?.description ?? '');
+  const [status, setStatus] = useState<TicketStatus>(ticket?.status ?? 'TODO');
+  const [priority, setPriority] = useState<TicketPriority>(
+    ticket?.priority ?? 'MEDIUM',
+  );
+  const [assigneeId, setAssigneeId] = useState(ticket?.assignee?.id ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setTitle(ticket?.title ?? '');
-    setDescription(ticket?.description ?? '');
-    setStatus(ticket?.status ?? 'TODO');
-    setPriority(ticket?.priority ?? 'MEDIUM');
-    setAssigneeId(ticket?.assignee?.id ?? '');
-    setSaveError(null);
-  }, [ticket]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
