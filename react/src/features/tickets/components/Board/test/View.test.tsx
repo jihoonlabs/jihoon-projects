@@ -124,8 +124,8 @@ it('keeps the create modal open and shows the save error when creation fails', a
 
   expect(await screen.findByRole('alert')).toHaveTextContent('create failed');
   expect(screen.getByRole('dialog')).toBeInTheDocument();
+  expect(screen.getByLabelText('タイトル')).toHaveValue('New ticket');
 });
-
 
 it('keeps the edit modal open and shows the save error when editing fails', async () => {
   const ticket = api.toTicket(responseTicket);
