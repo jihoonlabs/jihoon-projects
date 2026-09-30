@@ -29,3 +29,11 @@ export interface CreateTicketInput {
   priority?: TicketPriority;
   assigneeId?: string | null;
 }
+
+export interface UpdateTicketInput {
+  title?: string;
+  description?: string | null;
+  status?: TicketStatus;
+  priority?: TicketPriority;
+  assigneeId?: string | null;
+}
