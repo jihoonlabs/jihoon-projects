@@ -18,15 +18,27 @@ import { useTicketStore } from '@/features/tickets/store/useTicketStore';
 import Header from '../Header';
 import Main from '../Main';
 import Card from '../Card';
+import TicketModal from '../TicketModal';
 import styles from './index.module.css';
 
 export function TicketBoardView() {
-  const { tickets, fetchTickets, updateStatus } = useTicketStore();
-  const currentUserId = useAuthStore((state) => state.user?.id ?? null);
+  const {
+    tickets,
+    error,
+    fetchTickets,
+    updateStatus,
+    addTicket,
+    updateTicket,
+    deleteTicket,
+  } = useTicketStore();
+  const currentUser = useAuthStore((state) => state.user);
+  const currentUserId = currentUser?.id ?? null;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [assigneeFilter, setAssigneeFilter] = useState('ALL');
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
 
   useEffect(() => {
     fetchTickets();
@@ -79,6 +91,21 @@ export function TicketBoardView() {
     updateStatus(activeId, newStatus);
   };
 
+  const openCreate = () => {
+    setEditingTicket(null);
+    setIsModalOpen(true);
+  };
+
+  const openEdit = (ticket: Ticket) => {
+    setEditingTicket(ticket);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (ticket: Ticket) => {
+    if (!window.confirm(`${ticket.issueKey ?? ticket.title} を削除しますか？`)) return;
+    await deleteTicket(ticket.id);
+  };
+
   return (
     <div className={styles.container}>
       <Header
@@ -86,7 +113,10 @@ export function TicketBoardView() {
         onSearchChange={setSearchQuery}
         assigneeFilter={assigneeFilter}
         onAssigneeChange={setAssigneeFilter}
+        onCreate={openCreate}
       />
+
+      {error && <p role="alert">{error}</p>}
 
       <DndContext
         sensors={sensors}
@@ -100,12 +130,26 @@ export function TicketBoardView() {
           searchQuery={searchQuery}
           assigneeFilter={assigneeFilter}
           currentUserId={currentUserId}
+          onStatusChange={updateStatus}
+          onEdit={openEdit}
+          onDelete={handleDelete}
         />
 
         <DragOverlay>
           {activeTicket ? <Card ticket={activeTicket} isOverlay /> : null}
         </DragOverlay>
       </DndContext>
+
+      {isModalOpen && (
+        <TicketModal
+          ticket={editingTicket}
+          currentUserId={currentUserId}
+          currentUserName={currentUser?.name}
+          onClose={() => setIsModalOpen(false)}
+          onCreate={addTicket}
+          onUpdate={updateTicket}
+        />
+      )}
     </div>
   );
 }
