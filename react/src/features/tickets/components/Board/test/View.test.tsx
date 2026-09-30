@@ -18,6 +18,7 @@ vi.mock('../../../api/ticketApi', async (importOriginal) => ({
   fetchTickets: vi.fn(),
   updateTicketStatus: vi.fn(),
   createTicket: vi.fn(),
+  updateTicket: vi.fn(),
 }));
 vi.mock('@dnd-kit/core', async (importOriginal) => {
   const original = await importOriginal<typeof import('@dnd-kit/core')>();
@@ -109,7 +110,6 @@ it('shows tickets assigned to the signed-in user in the ME filter', async () => 
   }
 });
 
-
 it('keeps the create modal open and shows the save error when creation fails', async () => {
   vi.mocked(api.fetchTickets).mockResolvedValue([]);
   vi.mocked(api.createTicket).mockRejectedValue(new Error('create failed'));
@@ -124,4 +124,24 @@ it('keeps the create modal open and shows the save error when creation fails', a
 
   expect(await screen.findByRole('alert')).toHaveTextContent('create failed');
   expect(screen.getByRole('dialog')).toBeInTheDocument();
+});
+
+
+it('keeps the edit modal open and shows the save error when editing fails', async () => {
+  const ticket = api.toTicket(responseTicket);
+  vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
+  vi.mocked(api.updateTicket).mockRejectedValue(new Error('update failed'));
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+
+  render(<TicketBoardView />);
+  await screen.findByText('First ticket');
+  fireEvent.click(screen.getByRole('button', { name: '編集' }));
+  fireEvent.change(screen.getByLabelText('タイトル'), {
+    target: { value: 'Updated ticket' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: '保存' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('update failed');
+  expect(screen.getByRole('dialog')).toBeInTheDocument();
+  expect(screen.getByLabelText('タイトル')).toHaveValue('Updated ticket');
 });
