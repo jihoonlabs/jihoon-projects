@@ -8,6 +8,7 @@ import type {
   TicketStatus,
   UpdateTicketInput,
 } from '@/features/tickets/types/ticket';
+import TicketComments from '../TicketComments';
 import styles from './index.module.css';
 
 const STATUSES: Array<{ value: TicketStatus; label: string }> = [
@@ -139,6 +140,7 @@ export default function TicketModal({
             </button>
           </div>
         </form>
+        {ticket && <TicketComments ticketId={ticket.id} currentUserId={currentUserId} />}
       </section>
     </div>
   );
