@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Tickets\TicketCommentController;
 use App\Http\Controllers\Tickets\TicketController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,4 +19,8 @@ Route::middleware([
     Route::get('/{ticket}', [TicketController::class, 'show']);
     Route::patch('/{ticket}', [TicketController::class, 'updateStatus']);
     Route::delete('/{ticket}', [TicketController::class, 'destroy']);
+    Route::get('/{ticket}/comments', [TicketCommentController::class, 'index']);
+    Route::post('/{ticket}/comments', [TicketCommentController::class, 'store']);
+    Route::patch('/{ticket}/comments/{comment}', [TicketCommentController::class, 'update']);
+    Route::delete('/{ticket}/comments/{comment}', [TicketCommentController::class, 'destroy']);
 });
