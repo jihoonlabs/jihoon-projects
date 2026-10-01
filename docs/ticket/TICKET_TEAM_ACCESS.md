@@ -40,6 +40,8 @@ Ticket をプロジェクト単位のアクセス境界で管理し、担当者�
 - Project 内の `leader` / `member` と `read` / `write` はグローバル権限から分離する。
 - 既存 Ticket はマイグレーション時に既定 Project `General` へ割り当てる。
 - Ticket の `project_id` は既存データのバックフィル後に必須とする。
+- 移行時点の既存 active User は `General` に `member` + `write` で登録し、既存 Ticket 機能へのアクセス互換性を維持する。
+- 移行後に作成される新規 User を `General` へ自動登録する仕様にはしない。
 
 ## 検証
 未実施。GitHub 上で Child branch の仕様を整理している段階であり、実装後に Laravel / React のテスト、型チェック、Lint、Build とブラウザー確認が必要。
