@@ -24,6 +24,24 @@ return new class extends Migration
             ->whereNull('project_id')
             ->update(['project_id' => $projectId]);
 
+        $members = DB::table('users')
+            ->where('status', 'active')
+            ->select('id')
+            ->get()
+            ->map(fn ($user) => [
+                'project_id' => $projectId,
+                'user_id' => $user->id,
+                'role' => 'member',
+                'permission' => 'write',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])
+            ->all();
+
+        if ($members !== []) {
+            DB::table('project_members')->insert($members);
+        }
+
         Schema::table('tickets', function (Blueprint $table) {
             $table->foreignId('project_id')->nullable(false)->change();
         });
