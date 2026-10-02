@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>営業用 人材分布レポート自動作成ツール</title>
+  
+  <!-- SheetJS (Excel Parser) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- PptxGenJS -->
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      max-width: 820px;
+      margin: 30px auto;
+      padding: 20px;
+      background-color: #f1f5f9;
+      color: #334155;
+    }
+    .container {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 32px;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+    }
+    h2 {
+      color: #0f172a;
+      font-size: 1.4rem;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 14px;
+      margin-top: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .tag-preview {
+      display: inline-block;
+      background: #64748b;
+      color: white;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .drop-zone {
+      border: 2px dashed #94a3b8;
+      border-radius: 10px;
+      padding: 32px 20px;
+      text-align: center;
+      background-color: #f8fafc;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .drop-zone:hover {
+      background-color: #f1f5f9;
+      border-color: #64748b;
+    }
+    .section-title {
+      font-weight: 700;
+      margin-top: 24px;
+      margin-bottom: 10px;
+      font-size: 0.95rem;
+      color: #1e293b;
+    }
+    textarea, select {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      box-sizing: border-box;
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+    .checkbox-container {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 14px;
+      max-height: 160px;
+      overflow-y: auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .checkbox-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #ffffff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      font-size: 0.86rem;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .checkbox-item:hover {
+      border-color: #64748b;
+    }
+    .opt-grid {
+      display: flex;
+      gap: 16px;
+    }
+    .opt-grid > div { flex: 1; }
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 28px;
+    }
+    button {
+      flex: 1;
+      padding: 15px;
+      border: none;
+      border-radius: 9px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 1.05rem;
+      transition: all 0.2s;
+    }
+    .btn-pptx {
+      background-color: #475569;
+      color: white;
+      box-shadow: 0 4px 12px rgba(71, 85, 105, 0.3);
+    }
+    .btn-pptx:hover {
+      background-color: #334155;
+      transform: translateY(-1px);
+    }
+    #status {
+      margin-top: 12px;
+      font-size: 0.88rem;
+      color: #334155;
+      font-weight: 600;
+    }
+    #chart-render-area {
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
+      width: 500px;
+      height: 500px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>
+      <span>📊 営業用 人材分布 レポート作成ツール</span>
+      <span class="tag-preview">v32 Bright Non-Overlapping Donut</span>
+    </h2>
+
+    <!-- 1. 파일 선택 -->
+    <div class="section-title">1. Excel / CSV ファイル選択 または 貼り付け</div>
+    <div id="drop-zone" class="drop-zone" onclick="document.getElementById('file-input').click()">
+      <span id="drop-text">📄 Excel (.xlsx, .xls) / CSV ファイルをドラッグ＆ドロップ<br>または クリックしてファイル選択</span>
+      <input type="file" id="file-input" style="display:none;" accept=".xlsx, .xls, .csv" onchange="handleFile(this.files[0])">
+    </div>
+
+    <div style="margin-top: 10px;">
+      <textarea id="paste-input" rows="3" placeholder="スプレッドシートの表データをここに直接貼り付け (Ctrl+V)"></textarea>
+      <button onclick="handlePaste()" style="margin-top:6px; padding:9px; background:#64748b; color:white; font-size:0.85rem; width:100%;">貼り付けデータを反映</button>
+    </div>
+
+    <div id="status"></div>
+
+    <!-- 2. 출력 항목 선택 -->
+    <div class="section-title">2. 出力したい項目を選択 (複数選択可能)</div>
+    <div id="checkbox-list" class="checkbox-container">
+      <span style="font-size:0.85rem; color:#94a3b8;">-- データ読込後に項目一覧が表示されます --</span>
+    </div>
+
+    <!-- 3. 그래프 형식 선택 -->
+    <div class="opt-grid">
+      <div>
+        <div class="section-title">3. グラフデザイン形式</div>
+        <select id="chart-type">
+          <option value="pie">⭕ 明るいトーン・文字2段配置ドーナツグラフ</option>
+          <option value="bar">📊 スリム＆モダン横棒グラフ (おすすめ)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 4. 출력 버튼 -->
+    <div class="btn-group">
+      <button class="btn-pptx" onclick="generatePPTX()">🚀 PPTX スライド出力</button>
+    </div>
+  </div>
+
+  <div id="chart-render-area">
+    <canvas id="exportCanvas" width="500" height="500"></canvas>
+  </div>
+
+  <script>
+    let rawData = [];
+    let headers = [];
+    let globalTotalMembers = 0;
+
+    const dropZone = document.getElementById('drop-zone');
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.background = '#e2e8f0'; });
+    dropZone.addEventListener('dragleave', () => { dropZone.style.background = '#f8fafc'; });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.background = '#f8fafc';
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+
+    function valClean(v) {
+      if (v === undefined || v === null) return "";
+      let s = String(v).trim();
+      if (s === "undefined" || s === "null") return "";
+      return s;
+    }
+
+    // Excel 파일 읽기
+    function handleFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        let parsed = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+        
+        rawData = parsed.filter(row => Object.values(row).some(v => valClean(v).length > 0));
+        globalTotalMembers = rawData.length;
+
+        if (rawData.length > 0) {
+          headers = Object.keys(rawData[0]);
+          renderCheckboxes();
+          document.getElementById('status').innerText = `✅ 読込完了: ${file.name} (総人員: ${globalTotalMembers}名基準)`;
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // 붙여넣기 데이터 읽기
+    function handlePaste() {
+      const text = document.getElementById('paste-input').value.trim();
+      if (!text) return;
+
+      const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+      if (lines.length < 2) return;
+
+      let isTab = lines[0].includes('\t');
+      headers = isTab ? lines[0].split('\t').map(h => h.trim()) : lines[0].split(/\s{2,}/).map(h => h.trim());
+
+      rawData = [];
+      for (let i = 1; i < lines.length; i++) {
+        let rowValues = isTab ? lines[i].split('\t') : lines[i].split(/\s{2,}/);
+        let obj = {};
+        let hasValue = false;
+        headers.forEach((h, idx) => {
+          let val = rowValues[idx] ? valClean(rowValues[idx]) : "";
+          obj[h] = val;
+          if (val) hasValue = true;
+        });
+        if (hasValue) rawData.push(obj);
+      }
+
+      globalTotalMembers = rawData.length;
+      renderCheckboxes();
+      document.getElementById('status').innerText = `✅ 貼り付けデータ適用完了 (総人員: ${globalTotalMembers}名基準)`;
+    }
+
+    function renderCheckboxes() {
+      const container = document.getElementById('checkbox-list');
+      container.innerHTML = '';
+      headers.forEach(h => {
+        const label = document.createElement('label');
+        label.className = 'checkbox-item';
+        label.innerHTML = `<input type="checkbox" value="${h}" checked> ${h}`;
+        container.appendChild(label);
+      });
+    }
+
+    function getSelectedItems() {
+      const checkboxes = document.querySelectorAll('#checkbox-list input[type="checkbox"]:checked');
+      return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    function formatValueLabel(val) {
+      let str = valClean(val);
+      if (!str) return "未入力";
+      if (!isNaN(str) && Number(str) > 40000 && Number(str) < 60000) {
+        let dateObj = XLSX.SSF.parse_date_code(Number(str));
+        if (dateObj) return `${dateObj.y}年${dateObj.m}月`;
+      }
+      return str;
+    }
+
+    function getAggregatedData(targetCol) {
+      let counts = {};
+      let total = globalTotalMembers || rawData.length;
+
+      rawData.forEach(row => {
+        let cleanItem = formatValueLabel(row[targetCol]);
+        if (cleanItem === "インフラ ") cleanItem = "インフラ";
+        counts[cleanItem] = (counts[cleanItem] || 0) + 1;
+      });
+
+      let sortedKeys = Object.keys(counts).sort((a, b) => {
+        if (a === "未入力") return 1;
+        if (b === "未入力") return -1;
+        return counts[b] - counts[a];
+      });
+
+      let sortedValues = sortedKeys.map(k => counts[k]);
+
+      return { labels: sortedKeys, values: sortedValues, total };
+    }
+
+    // 🎨 [밝은 톤 + 원형 겹침 방지 + 원 내부 2줄 가독성 최적화]
+    function renderCustomDonutCanvas(colName, labels, values, total) {
+      return new Promise((resolve) => {
+        const canvas = document.getElementById('exportCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        // 🌟 캔버스 크기(500x500)에 딱 맞추어 슬라이드 겹침 방지
+        const outerRadius = 210;
+        const innerRadius = 45; // 작은 구멍 크기 유지
+        let startAngle = -0.5 * Math.PI;
+
+        // 🎨 참고 이미지 스타일: 밝고 깔끔한 라이트 톤 색상 조합
+        const brightPalette = [
+          ['#D1D5DB', '#E5E7EB'], // 연한 회색 톤 1
+          ['#E2E8F0', '#F1F5F9'], // 연한 슬レート 톤 2
+          ['#CBD5E1', '#E2E8F0'], // 은은한 소프트 블루/그레이 톤 3
+          ['#94A3B8', '#CBD5E1'], // 포인트 미디엄 슬レート 4
+          ['#E5E7EB', '#F3F4F6'], // 페ール 그레이 5
+          ['#D1D5DB', '#F3F4F6']  // 라이트 그레이 6
+        ];
+
+        const sliceCount = labels.length;
+
+        for (let i = 0; i < sliceCount; i++) {
+          let val = values[i];
+          let label = labels[i];
+          let sliceAngle = (val / total) * 2 * Math.PI;
+          let endAngle = startAngle + sliceAngle;
+
+          let colors = (label === "未入力") ? ['#F1F5F9', '#F8FAFC'] : brightPalette[i % brightPalette.length];
+
+          let rad = startAngle + sliceAngle / 2;
+          let x1 = centerX + Math.cos(rad) * innerRadius;
+          let y1 = centerY + Math.sin(rad) * innerRadius;
+          let x2 = centerX + Math.cos(rad) * outerRadius;
+          let y2 = centerY + Math.sin(rad) * outerRadius;
+
+          let grad = ctx.createLinearGradient(x1, y1, x2, y2);
+          grad.addColorStop(0, colors[0]);
+          grad.addColorStop(1, colors[1]);
+
+          // 도넛 조각 그리기
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
+          ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true);
+          ctx.closePath();
+
+          ctx.fillStyle = grad;
+          ctx.fill();
+          
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 3.0;
+          ctx.stroke();
+
+          let pct = ((val / total) * 100).toFixed(1);
+          let midAngle = startAngle + sliceAngle / 2;
+
+          // 🌟 원 내부 텍스트 위치 계산 (중앙에서 약간 외곽 쪽으로)
+          let midR = (innerRadius + outerRadius) * 0.58;
+          let textX = centerX + Math.cos(midAngle) * midR;
+          let textY = centerY + Math.sin(midAngle) * midR;
+
+          ctx.save();
+          
+          // 글자가 밝은 배경에서도 잘 보이도록 어두운 슬레이트 색상 + 미세한 흰색/어두운 텍스트 그림자
+          ctx.fillStyle = '#1E293B'; 
+          ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
+          ctx.shadowBlur = 4;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          let displayLabel = label.length > 8 ? label.slice(0, 7) + '..' : label;
+
+          if (sliceAngle >= 0.12) {
+            // 🌟 2줄 배치 (1행: 제목 / 2행: 인원수 및 퍼센트)
+            ctx.font = 'bold 15px -apple-system, Meiryo, sans-serif';
+            ctx.fillText(displayLabel, textX, textY - 10);
+            
+            ctx.font = 'bold 14px Meiryo, sans-serif';
+            ctx.fillText(`${val}名 (${pct}%)`, textX, textY + 10);
+          } else if (sliceAngle >= 0.05) {
+            // 조각이 좁은 경우 1줄로 표시
+            ctx.font = 'bold 12px Meiryo, sans-serif';
+            ctx.fillText(`${displayLabel} ${pct}%`, textX, textY);
+          }
+          ctx.restore();
+
+          startAngle = endAngle;
+        }
+
+        // 중앙 작은 구멍 항목명 표시
+        ctx.fillStyle = '#334155';
+        ctx.font = 'bold 14px -apple-system, Meiryo, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        let displayCol = colName.length > 5 ? colName.slice(0, 4) + '..' : colName;
+        ctx.fillText(displayCol, centerX, centerY);
+
+        resolve(canvas.toDataURL('image/png'));
+      });
+    }
+
+    // 🚀 PPTX 생성
+    async function generatePPTX() {
+      if (!rawData.length) {
+        alert("データを先に読み込んでください。");
+        return;
+      }
+
+      const selectedCols = getSelectedItems();
+      if (!selectedCols.length) {
+        alert("出力したい項目を1つ以上選択してください。");
+        return;
+      }
+
+      const chartType = document.getElementById('chart-type').value;
+
+      let pptx = new PptxGenJS();
+
+      pptx.defineLayout({ name: 'WIDE_16_9', width: 13.333, height: 7.5 });
+      pptx.layout = 'WIDE_16_9';
+
+      const itemsPerPage = 3;
+      const slideWidth = 13.333;
+
+      for (let pageStart = 0; pageStart < selectedCols.length; pageStart += itemsPerPage) {
+        let pageCols = selectedCols.slice(pageStart, pageStart + itemsPerPage);
+        let countInSlide = pageCols.length;
+
+        let slide = pptx.addSlide();
+
+        // 헤더 요소를 참고 이미지 스타일로 연한 녹색/슬레이트 계열 적용
+        slide.addShape(pptx.ShapeType.rect, {
+          x: 0.8, y: 0.45, w: 1.5, h: 0.32,
+          fill: { color: '86EFAC' }
+        });
+        slide.addText("About Report", {
+          x: 0.8, y: 0.45, w: 1.5, h: 0.32,
+          fontSize: 10, bold: true, color: '15803D', align: 'center', valign: 'middle', fontFace: 'Meiryo'
+        });
+
+        slide.addText("人材スキル・業界の分布分析", {
+          x: 2.45, y: 0.45, w: 6.0, h: 0.32,
+          fontSize: 11, color: '64748B', valign: 'middle', fontFace: 'Meiryo'
+        });
+
+        slide.addText("豊富なデータで可能性を可視化する", {
+          x: 0.8, y: 0.85, w: 11.5, h: 0.6,
+          fontSize: 22, bold: true, color: '1E293B', fontFace: 'Meiryo'
+        });
+
+        slide.addText("一人ひとりのスキルや適性を活かした最適なマッチングをサポートします。", {
+          x: 0.8, y: 1.45, w: 11.5, h: 0.35,
+          fontSize: 12, color: '64748B', fontFace: 'Meiryo'
+        });
+
+        slide.addShape(pptx.ShapeType.line, {
+          x: 0.8, y: 1.9, w: 11.733, h: 0,
+          line: { color: 'E2E8F0', width: 1 }
+        });
+
+        // 🌟 슬라이드 내 나란히 균등 배치 좌표 설정
+        let colWidth = 3.6;
+        let xPositions = [];
+
+        if (countInSlide === 1) {
+          xPositions = [(slideWidth - colWidth) / 2];
+        } else if (countInSlide === 2) {
+          let margin = 1.2;
+          let totalWidth = slideWidth - (margin * 2);
+          let gap = (totalWidth - (colWidth * 2)) / 3;
+          xPositions = [margin + gap, margin + gap + colWidth + gap];
+        } else {
+          let margin = 0.8;
+          let totalWidth = slideWidth - (margin * 2);
+          let gap = (totalWidth - (colWidth * 3)) / 2;
+          xPositions = [margin, margin + colWidth + gap, margin + (colWidth + gap) * 2];
+        }
+
+        for (let i = 0; i < countInSlide; i++) {
+          let col = pageCols[i];
+          let colX = xPositions[i];
+
+          const { labels, values, total } = getAggregatedData(col);
+          if (labels.length === 0) continue;
+
+          // 타이틀 표시
+          slide.addText(`■ ${col}`, {
+            x: colX, y: 2.2, w: colWidth, h: 0.35,
+            fontSize: 13, bold: true, color: '0F172A', fontFace: 'Meiryo'
+          });
+
+          // Mode 1: 🌟 겹침 현상을 수정한 도넛 그래프 출력
+          if (chartType === 'pie') {
+            let imgDataUrl = await renderCustomDonutCanvas(col, labels, values, total);
+            slide.addImage({
+              data: imgDataUrl,
+              x: colX - 0.1,
+              y: 2.6,
+              w: 3.8,
+              h: 3.8
+            });
+          } 
+          // Mode 2: 슬림&모던 가로 막대 그래프
+          else {
+            let itemCount = labels.length;
+            let startY = 2.85; 
+            let availableHeight = 4.3;
+
+            let rowGap = availableHeight / Math.max(itemCount, 5);
+            let barHeight = Math.min(rowGap * 0.32, 0.15);
+            let fontSize = itemCount > 10 ? 8.5 : 9.5;
+
+            let maxBarWidth = 1.9;
+            let maxVal = Math.max(...values);
+
+            for (let j = 0; j < itemCount; j++) {
+              let label = labels[j];
+              let count = values[j];
+              let pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+              let currentY = startY + (j * rowGap);
+
+              let shortLabel = label.length > 16 ? label.slice(0, 15) + '…' : label;
+              
+              slide.addText(shortLabel, {
+                x: colX,
+                y: currentY - (rowGap * 0.42),
+                w: colWidth,
+                h: rowGap * 0.4,
+                fontSize: fontSize,
+                bold: true,
+                color: (label === "未入力") ? '94A3B8' : '334155',
+                fontFace: 'Meiryo'
+              });
+
+              slide.addShape(pptx.ShapeType.rect, {
+                x: colX,
+                y: currentY,
+                w: maxBarWidth,
+                h: barHeight,
+                fill: { color: 'F1F5F9' }
+              });
+
+              let fillWidth = (count / maxVal) * maxBarWidth;
+              fillWidth = Math.max(fillWidth, 0.05);
+
+              let barColor = '94A3B8';
+              if (label === "未入力") {
+                barColor = 'CBD5E1';
+              } else if (j === 0) {
+                barColor = '475569';
+              }
+
+              slide.addShape(pptx.ShapeType.rect, {
+                x: colX,
+                y: currentY,
+                w: fillWidth,
+                h: barHeight,
+                fill: { color: barColor }
+              });
+
+              slide.addText(`${count}名 (${pct}%)`, {
+                x: colX + maxBarWidth + 0.08,
+                y: currentY - 0.03,
+                w: 1.5,
+                h: barHeight + 0.06,
+                fontSize: fontSize,
+                bold: true,
+                color: (label === "未入力") ? '94A3B8' : '0F172A',
+                fontFace: 'Meiryo',
+                align: 'left',
+                valign: 'middle'
+              });
+            }
+          }
+        }
+      }
+
+      const fileNameType = chartType === 'pie' ? '円グラフ' : '棒グラフ';
+      await pptx.writeFile({ fileName: `人材分布レポート_${fileNameType}.pptx` });
+      document.getElementById('status').innerText = `🎉 出力完了: 人材分布レポート_${fileNameType}.pptx がダウンロードされました。`;
+    }
+  </script>
+</body>
+</html>
