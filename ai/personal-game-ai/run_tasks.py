@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 from ask_ai import ask_model
+from edit_loop import prepare_edit, run_edit
 from read_context import read_context
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -16,6 +17,7 @@ VALID_STATUSES = {
     "waiting_for_user",
     "response_saved",
     "syntax_passed",
+    "tests_passed",
     "failed",
 }
 
@@ -54,10 +56,15 @@ def load_tasks():
             prompt = task.get("prompt")
             if not isinstance(prompt, str) or not prompt.strip():
                 raise ValueError(f"요청이 없는 작업: {task_id}")
-            if task.get("kind") not in ("text", "python"):
+            if task.get("kind") not in ("text", "python", "edit"):
                 raise ValueError(
-                    f"kind는 text 또는 python이어야 합니다: {task_id}"
+                    f"kind는 text, python 또는 edit이어야 합니다: {task_id}"
                 )
+            if task["kind"] == "edit":
+                for key in ("target", "test_module"):
+                    value = task.get(key)
+                    if not isinstance(value, str) or not value.strip():
+                        raise ValueError(f"{key}가 없는 수정 작업: {task_id}")
 
         if status == "waiting_for_user":
             question = task.get("question")
@@ -67,32 +74,67 @@ def load_tasks():
     return tasks
 
 
-def run_tasks(model=ask_model):
-    tasks = load_tasks()
+def handle_edit(task, model):
+    result = run_edit(
+        task["target"],
+        task["prompt"],
+        task["test_module"],
+        model=model,
+    )
+    if not isinstance(result, dict):
+        raise ValueError("수정 실행 결과는 객체여야 합니다.")
 
-    # 지침과 대상 브랜치 확인에 실패하면 모델을 호출하지 않는다.
-    context = read_context()
-    OUTPUT_DIR.mkdir(exist_ok=True)
+    status = result.get("status")
+    if status not in ("tests_passed", "waiting_for_user", "failed"):
+        raise ValueError("잘못된 수정 실행 결과 상태입니다.")
 
+    output = result.get("output")
+    if not isinstance(output, str) or not output.strip():
+        raise ValueError("수정 실행 결과의 기록 경로가 없습니다.")
+
+    if status == "waiting_for_user":
+        question = result.get("question")
+        if not isinstance(question, str) or not question.strip():
+            raise ValueError("수정 실행 결과의 질문이 없습니다.")
+
+    task["status"] = status
+    task["output"] = output
+    for key in ("question", "error", "attempts"):
+        if key in result:
+            task[key] = result[key]
+
+
+def process_tasks(tasks, context, model):
     for number, task in enumerate(tasks, start=1):
+        if task["status"] != "pending":
+            continue
+
         task_id = task["id"]
-        status = task["status"]
-
-        if status == "waiting_for_user":
-            print(f"확인 필요 [{task_id}]: {task['question']}")
-            continue
-
-        if status == "running":
-            print(f"확인 필요 [{task_id}]: 이전 실행이 중단됐습니다.")
-            continue
-
-        if status != "pending":
-            continue
-
         print(f"작업 {task_id} 처리 중...", flush=True)
         task["status"] = "running"
-        task.pop("error", None)
+        for key in ("error", "question", "output", "code", "attempts"):
+            task.pop(key, None)
         save_tasks(tasks)
+
+        if task["kind"] == "edit":
+            # 編集中の例外は保存後に停止する。後続作業へ進まない。
+            try:
+                handle_edit(task, model)
+            except Exception as error:
+                task["status"] = "failed"
+                task["error"] = str(error)
+                save_tasks(tasks)
+                raise
+
+            save_tasks(tasks)
+            print(f"작업 {task_id}: {task['status']}")
+            if task.get("question"):
+                print("확인 필요:", task["question"])
+            if task.get("error"):
+                print("원인:", task["error"])
+            if task["status"] != "tests_passed":
+                return
+            continue
 
         prompt = (
             "아래 AGENTS.md와 현재 브랜치 문서를 작업 지침으로 따르세요.\n"
@@ -105,7 +147,7 @@ def run_tasks(model=ask_model):
             + task["prompt"]
         )
 
-        # 모델 실패는 기록하고 다음 독립 작업을 처리한다.
+        # 応答生成のモデル失敗は記録し、次の独立作業へ進む。
         try:
             answer = model(prompt)
             if not isinstance(answer, str) or not answer.strip():
@@ -117,7 +159,7 @@ def run_tasks(model=ask_model):
             print(f"작업 {task_id}: 실패 — {error}")
             continue
 
-        # 저장 오류가 발생하면 실행 전체를 중단한다.
+        # 保存エラーは一覧全体を停止する。
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         output_path = OUTPUT_DIR / f"runner_{number}_{stamp}.md"
         output_path.write_text(
@@ -140,16 +182,14 @@ def run_tasks(model=ask_model):
             )
             if len(blocks) != 1:
                 task["status"] = "failed"
-                task["error"] = (
-                    "Python 코드 블록이 정확히 하나여야 합니다."
-                )
+                task["error"] = "Python 코드 블록이 정확히 하나여야 합니다."
             else:
                 code = blocks[0].strip() + "\n"
                 code_path = output_path.with_suffix(".py")
                 code_path.write_text(code, encoding="utf-8")
                 task["code"] = str(code_path.relative_to(BASE_DIR))
 
-                # 생성 코드는 실행하지 않고 문법만 검사한다.
+                # Python応答は実行せず、構文だけを確認する。
                 try:
                     compile(code, str(code_path), "exec")
                 except SyntaxError as error:
@@ -163,7 +203,46 @@ def run_tasks(model=ask_model):
         if task.get("error"):
             print("원인:", task["error"])
 
-    print("작업 목록 처리 종료")
+
+def run_tasks(model=None):
+    model = ask_model if model is None else model
+    lock = BASE_DIR / ".run_tasks.lock"
+
+    try:
+        lock.open("x").close()
+    except FileExistsError:
+        raise RuntimeError(
+            "작업 목록이 실행 중이거나 이전 실행이 중단됐습니다. "
+            ".run_tasks.lock을 확인하세요."
+        )
+
+    try:
+        tasks = load_tasks()
+        context = read_context()
+
+        # 未解決の質問・中断作業がある場合は一覧全体を停止する。
+        for task in tasks:
+            if task["status"] == "waiting_for_user":
+                print(f"확인 필요 [{task['id']}]: {task['question']}")
+                return
+            if task["status"] == "running":
+                print(f"확인 필요 [{task['id']}]: 이전 실행이 중단됐습니다.")
+                return
+
+        # 変更前に全pending編集タスクの入力とGit状態を確認する。
+        for task in tasks:
+            if task["status"] == "pending" and task["kind"] == "edit":
+                prepare_edit(
+                    task["target"],
+                    task["prompt"],
+                    task["test_module"],
+                )
+
+        OUTPUT_DIR.mkdir(exist_ok=True)
+        process_tasks(tasks, context, model)
+        print("작업 목록 처리 종료")
+    finally:
+        lock.unlink()
 
 
 if __name__ == "__main__":

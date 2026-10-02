@@ -19,15 +19,19 @@ class RunnerTests(unittest.TestCase):
             ("TASKS_PATH", self.tasks_path),
             ("OUTPUT_DIR", self.root / "outputs"),
         ):
-            patcher = patch.object(run_tasks, name, value)
-            patcher.start()
-            self.addCleanup(patcher.stop)
+            self.mock(name, new=value)
 
-        patcher = patch.object(
-            run_tasks, "read_context", return_value="TEST_CONTEXT"
+        self.context = self.mock(
+            "read_context", return_value="TEST_CONTEXT"
         )
-        self.context = patcher.start()
+        self.prepare = self.mock("prepare_edit")
+        self.editor = self.mock("run_edit")
+
+    def mock(self, name, **kwargs):
+        patcher = patch.object(run_tasks, name, **kwargs)
+        result = patcher.start()
         self.addCleanup(patcher.stop)
+        return result
 
     def write_tasks(self, tasks):
         self.tasks_path.write_text(
@@ -38,12 +42,18 @@ class RunnerTests(unittest.TestCase):
         return json.loads(self.tasks_path.read_text(encoding="utf-8"))
 
     def task(self, task_id, kind="text"):
-        return {
+        task = {
             "id": task_id,
             "status": "pending",
             "kind": kind,
             "prompt": f"request-{task_id}",
         }
+        if kind == "edit":
+            task.update(
+                target="sandbox/clamp.py",
+                test_module="test_clamp",
+            )
+        return task
 
     def test_order_context_and_skip_completed(self):
         self.write_tasks([
@@ -79,15 +89,14 @@ class RunnerTests(unittest.TestCase):
             },
             {"id": "002", "status": "running"},
         ])
-
-        def model(prompt):
-            self.fail("보류 작업에서 모델을 호출했습니다.")
-
-        run_tasks.run_tasks(model)
+        run_tasks.run_tasks(self.block_model)
         self.assertEqual(
             [task["status"] for task in self.read_tasks()],
             ["waiting_for_user", "running"],
         )
+
+    def block_model(self, prompt):
+        self.fail("Model must not be called.")
 
     def test_model_failure_continues(self):
         self.write_tasks([self.task("001"), self.task("002")])
@@ -129,34 +138,143 @@ class RunnerTests(unittest.TestCase):
     def test_context_failure_blocks_model(self):
         self.write_tasks([self.task("001")])
         self.context.side_effect = RuntimeError("wrong branch")
-
-        def model(prompt):
-            self.fail("文脈確認の失敗後にモデルを呼びました。")
-
         with self.assertRaises(RuntimeError):
-            run_tasks.run_tasks(model)
+            run_tasks.run_tasks(self.block_model)
         self.assertEqual(self.read_tasks()[0]["status"], "pending")
 
     def test_save_failure_blocks_model(self):
         self.write_tasks([self.task("001")])
-
-        def model(prompt):
-            self.fail("저장 실패 후 모델을 호출했습니다.")
-
         with patch.object(
             run_tasks, "save_tasks", side_effect=OSError("disk failed")
         ):
             with self.assertRaises(OSError):
-                run_tasks.run_tasks(model)
+                run_tasks.run_tasks(self.block_model)
+        self.assertFalse((self.root / ".run_tasks.lock").exists())
 
     def test_duplicate_id_blocks_model(self):
         self.write_tasks([self.task("001"), self.task("001")])
-
-        def model(prompt):
-            self.fail("중복 id가 있는 목록을 실행했습니다.")
-
         with self.assertRaises(ValueError):
-            run_tasks.run_tasks(model)
+            run_tasks.run_tasks(self.block_model)
+
+    def test_edit_success_is_saved_and_not_repeated(self):
+        self.write_tasks([self.task("001", "edit")])
+        self.editor.return_value = {
+            "status": "tests_passed",
+            "output": "outputs/edit_example",
+            "attempts": 2,
+        }
+        model = self.block_model
+        run_tasks.run_tasks(model)
+        self.editor.assert_called_once_with(
+            "sandbox/clamp.py",
+            "request-001",
+            "test_clamp",
+            model=model,
+        )
+        task = self.read_tasks()[0]
+        self.assertEqual(task["status"], "tests_passed")
+        self.assertEqual(task["attempts"], 2)
+        self.assertEqual(task["output"], "outputs/edit_example")
+
+        run_tasks.run_tasks(model)
+        self.assertEqual(self.editor.call_count, 1)
+
+    def test_edit_question_stops_following_task(self):
+        self.write_tasks([
+            self.task("001", "edit"),
+            self.task("002"),
+        ])
+        self.editor.return_value = {
+            "status": "waiting_for_user",
+            "output": "outputs/edit_example",
+            "question": "Choose?",
+        }
+        run_tasks.run_tasks(self.block_model)
+        tasks = self.read_tasks()
+        self.assertEqual(tasks[0]["status"], "waiting_for_user")
+        self.assertEqual(tasks[0]["question"], "Choose?")
+        self.assertEqual(tasks[1]["status"], "pending")
+
+        run_tasks.run_tasks(self.block_model)
+        self.assertEqual(self.editor.call_count, 1)
+
+    def test_existing_question_blocks_entire_list(self):
+        self.write_tasks([
+            self.task("001"),
+            {
+                "id": "002",
+                "status": "waiting_for_user",
+                "question": "Choose?",
+            },
+        ])
+        run_tasks.run_tasks(self.block_model)
+        self.assertEqual(self.read_tasks()[0]["status"], "pending")
+
+    def test_existing_running_blocks_entire_list(self):
+        self.write_tasks([
+            self.task("001"),
+            {"id": "002", "status": "running"},
+        ])
+        run_tasks.run_tasks(self.block_model)
+        self.assertEqual(self.read_tasks()[0]["status"], "pending")
+
+    def test_git_failure_blocks_all_pending_tasks(self):
+        self.write_tasks([
+            self.task("001"),
+            self.task("002", "edit"),
+        ])
+        self.prepare.side_effect = RuntimeError("dirty target")
+        with self.assertRaises(RuntimeError):
+            run_tasks.run_tasks(self.block_model)
+        self.assertEqual(
+            [task["status"] for task in self.read_tasks()],
+            ["pending", "pending"],
+        )
+        self.editor.assert_not_called()
+
+    def test_edit_failure_stops_following_task(self):
+        self.write_tasks([
+            self.task("001", "edit"),
+            self.task("002"),
+        ])
+        self.editor.return_value = {
+            "status": "failed",
+            "output": "outputs/edit_example",
+            "error": "attempt limit",
+        }
+        run_tasks.run_tasks(self.block_model)
+        self.assertEqual(
+            [task["status"] for task in self.read_tasks()],
+            ["failed", "pending"],
+        )
+
+    def test_edit_exception_is_saved_and_stops(self):
+        self.write_tasks([
+            self.task("001", "edit"),
+            self.task("002"),
+        ])
+        self.editor.side_effect = RuntimeError("external change")
+        with self.assertRaises(RuntimeError):
+            run_tasks.run_tasks(self.block_model)
+        tasks = self.read_tasks()
+        self.assertEqual(tasks[0]["error"], "external change")
+        self.assertEqual(tasks[1]["status"], "pending")
+        self.assertFalse((self.root / ".run_tasks.lock").exists())
+
+    def test_existing_lock_is_preserved(self):
+        lock = self.root / ".run_tasks.lock"
+        lock.write_text("existing", encoding="utf-8")
+        with self.assertRaises(RuntimeError):
+            run_tasks.run_tasks(self.block_model)
+        self.assertEqual(lock.read_text(), "existing")
+
+    def test_missing_edit_configuration_is_rejected(self):
+        task = self.task("001", "edit")
+        del task["test_module"]
+        self.write_tasks([task])
+        with self.assertRaises(ValueError):
+            run_tasks.run_tasks(self.block_model)
+        self.editor.assert_not_called()
 
 
 if __name__ == "__main__":
