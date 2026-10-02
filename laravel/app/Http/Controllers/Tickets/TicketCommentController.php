@@ -12,8 +12,10 @@ use Illuminate\Http\Response;
 
 class TicketCommentController extends Controller
 {
-    public function index(Ticket $ticket): AnonymousResourceCollection
+    public function index(Request $request, Ticket $ticket): AnonymousResourceCollection
     {
+        $this->authorizeProjectRead($request, $ticket);
+
         return TicketCommentResource::collection(
             $ticket->comments()->with('user')->oldest()->get()
         );
@@ -21,6 +23,7 @@ class TicketCommentController extends Controller
 
     public function store(Request $request, Ticket $ticket): TicketCommentResource
     {
+        $this->authorizeProjectRead($request, $ticket);
         $validated = $this->validateBody($request);
 
         $comment = $ticket->comments()->make(['body' => $validated['body']]);
@@ -32,6 +35,7 @@ class TicketCommentController extends Controller
 
     public function update(Request $request, Ticket $ticket, TicketComment $comment): TicketCommentResource
     {
+        $this->authorizeProjectRead($request, $ticket);
         $this->ensureCommentBelongsToTicket($ticket, $comment);
         abort_unless($comment->user_id === $request->user()->id, 403);
 
@@ -44,12 +48,28 @@ class TicketCommentController extends Controller
 
     public function destroy(Request $request, Ticket $ticket, TicketComment $comment): Response
     {
+        $this->authorizeProjectRead($request, $ticket);
         $this->ensureCommentBelongsToTicket($ticket, $comment);
-        abort_unless($comment->user_id === $request->user()->id, 403);
+        abort_unless(
+            $comment->user_id === $request->user()->id || $request->user()->role === 'admin',
+            403
+        );
 
         $comment->delete();
 
         return response()->noContent();
+    }
+
+    private function authorizeProjectRead(Request $request, Ticket $ticket): void
+    {
+        if ($request->user()->role === 'admin') {
+            return;
+        }
+
+        abort_unless(
+            $ticket->project->members()->where('users.id', $request->user()->id)->exists(),
+            403
+        );
     }
 
     private function validateBody(Request $request): array
