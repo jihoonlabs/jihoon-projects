@@ -221,6 +221,15 @@ def run_edit(target_file, request, test_module, model=None):
                     question = proposal.get("question")
                     if not isinstance(question, str) or not question.strip():
                         raise ValueError("질문이 비어 있습니다.")
+
+                    # 再開時のGit検査を通せるよう、質問時だけ原本へ戻す。
+                    # 外部変更があれば復元せず停止する。
+                    check_unchanged()
+                    if current != original:
+                        target.write_bytes(original)
+                        current = original
+                    check_unchanged()
+                    check_git_files(target, test)
                     return finish(
                         "waiting_for_user",
                         question=question,

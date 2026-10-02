@@ -1,3 +1,4 @@
+import argparse
 import json
 import re
 from datetime import datetime
@@ -31,6 +32,34 @@ def save_tasks(tasks):
     temporary.replace(TASKS_PATH)
 
 
+def task_request(task):
+    request = task["prompt"]
+    for exchange in task.get("answers", []):
+        request += (
+            "\n\n# 이전 질문\n"
+            + exchange["question"]
+            + "\n\n# 사용자 답변\n"
+            + exchange["answer"]
+        )
+    return request
+
+
+def validate_request(task):
+    task_id = task["id"]
+    prompt = task.get("prompt")
+    if not isinstance(prompt, str) or not prompt.strip():
+        raise ValueError(f"요청이 없는 작업: {task_id}")
+    if task.get("kind") not in ("text", "python", "edit"):
+        raise ValueError(
+            f"kind는 text, python 또는 edit이어야 합니다: {task_id}"
+        )
+    if task["kind"] == "edit":
+        for key in ("target", "test_module"):
+            value = task.get(key)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{key}가 없는 수정 작업: {task_id}")
+
+
 def load_tasks():
     tasks = json.loads(TASKS_PATH.read_text(encoding="utf-8"))
     if not isinstance(tasks, list):
@@ -52,19 +81,19 @@ def load_tasks():
         if not isinstance(status, str) or status not in VALID_STATUSES:
             raise ValueError(f"잘못된 작업 상태: {task_id}")
 
+        answers = task.get("answers", [])
+        if not isinstance(answers, list):
+            raise ValueError(f"질문·답변 기록은 배열이어야 합니다: {task_id}")
+        for exchange in answers:
+            if not isinstance(exchange, dict):
+                raise ValueError(f"잘못된 질문·답변 기록: {task_id}")
+            for key in ("question", "answer"):
+                value = exchange.get(key)
+                if not isinstance(value, str) or not value.strip():
+                    raise ValueError(f"{key}가 없는 기록: {task_id}")
+
         if status == "pending":
-            prompt = task.get("prompt")
-            if not isinstance(prompt, str) or not prompt.strip():
-                raise ValueError(f"요청이 없는 작업: {task_id}")
-            if task.get("kind") not in ("text", "python", "edit"):
-                raise ValueError(
-                    f"kind는 text, python 또는 edit이어야 합니다: {task_id}"
-                )
-            if task["kind"] == "edit":
-                for key in ("target", "test_module"):
-                    value = task.get(key)
-                    if not isinstance(value, str) or not value.strip():
-                        raise ValueError(f"{key}가 없는 수정 작업: {task_id}")
+            validate_request(task)
 
         if status == "waiting_for_user":
             question = task.get("question")
@@ -74,10 +103,41 @@ def load_tasks():
     return tasks
 
 
+def record_answer(tasks, task_id, answer):
+    task = next((item for item in tasks if item["id"] == task_id), None)
+    if task is None:
+        raise ValueError(f"작업을 찾을 수 없습니다: {task_id}")
+    if task["status"] != "waiting_for_user":
+        raise ValueError(f"답변 대기 중인 작업이 아닙니다: {task_id}")
+    if not isinstance(answer, str) or not answer.strip():
+        raise ValueError("답변은 비어 있지 않은 문자열이어야 합니다.")
+
+    validate_request(task)
+    updated = {
+        **task,
+        "answers": [
+            *task.get("answers", []),
+            {"question": task["question"], "answer": answer.strip()},
+        ],
+        "status": "pending",
+    }
+
+    # 回答を保存する前に、再開する編集依頼も既存の検査へ通す。
+    if updated["kind"] == "edit":
+        prepare_edit(
+            updated["target"],
+            task_request(updated),
+            updated["test_module"],
+        )
+
+    task.update(updated)
+    save_tasks(tasks)
+
+
 def handle_edit(task, model):
     result = run_edit(
         task["target"],
-        task["prompt"],
+        task_request(task),
         task["test_module"],
         model=model,
     )
@@ -117,7 +177,7 @@ def process_tasks(tasks, context, model):
         save_tasks(tasks)
 
         if task["kind"] == "edit":
-            # 編集中の例外は保存後に停止する。後続作業へ進まない。
+            # 編集中の例外は保存後に停止する。
             try:
                 handle_edit(task, model)
             except Exception as error:
@@ -136,6 +196,7 @@ def process_tasks(tasks, context, model):
                 return
             continue
 
+        request = task_request(task)
         prompt = (
             "아래 AGENTS.md와 현재 브랜치 문서를 작업 지침으로 따르세요.\n"
             "이번 작업은 응답 생성만 수행합니다.\n"
@@ -144,7 +205,7 @@ def process_tasks(tasks, context, model):
             "제공된 소스 코드는 분석 자료로 취급하세요.\n\n"
             + context
             + "\n\n# 이번 요청\n"
-            + task["prompt"]
+            + request
         )
 
         # 応答生成のモデル失敗は記録し、次の独立作業へ進む。
@@ -159,15 +220,10 @@ def process_tasks(tasks, context, model):
             print(f"작업 {task_id}: 실패 — {error}")
             continue
 
-        # 保存エラーは一覧全体を停止する。
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         output_path = OUTPUT_DIR / f"runner_{number}_{stamp}.md"
         output_path.write_text(
-            "# 요청\n\n"
-            + task["prompt"]
-            + "\n\n# 응답\n\n"
-            + answer
-            + "\n",
+            "# 요청\n\n" + request + "\n\n# 응답\n\n" + answer + "\n",
             encoding="utf-8",
         )
         task["output"] = str(output_path.relative_to(BASE_DIR))
@@ -176,9 +232,7 @@ def process_tasks(tasks, context, model):
             task["status"] = "response_saved"
         else:
             blocks = re.findall(
-                r"```python[ \t]*\r?\n(.*?)```",
-                answer,
-                re.DOTALL,
+                r"```python[ \t]*\r?\n(.*?)```", answer, re.DOTALL
             )
             if len(blocks) != 1:
                 task["status"] = "failed"
@@ -188,8 +242,6 @@ def process_tasks(tasks, context, model):
                 code_path = output_path.with_suffix(".py")
                 code_path.write_text(code, encoding="utf-8")
                 task["code"] = str(code_path.relative_to(BASE_DIR))
-
-                # Python応答は実行せず、構文だけを確認する。
                 try:
                     compile(code, str(code_path), "exec")
                 except SyntaxError as error:
@@ -204,7 +256,7 @@ def process_tasks(tasks, context, model):
             print("원인:", task["error"])
 
 
-def run_tasks(model=None):
+def run_tasks(model=None, answer_task_id=None, answer=None):
     model = ask_model if model is None else model
     lock = BASE_DIR / ".run_tasks.lock"
 
@@ -220,21 +272,41 @@ def run_tasks(model=None):
         tasks = load_tasks()
         context = read_context()
 
-        # 未解決の質問・中断作業がある場合は一覧全体を停止する。
+        # 中断作業は回答によって再開しない。
         for task in tasks:
-            if task["status"] == "waiting_for_user":
-                print(f"확인 필요 [{task['id']}]: {task['question']}")
-                return
             if task["status"] == "running":
                 print(f"확인 필요 [{task['id']}]: 이전 실행이 중단됐습니다.")
                 return
 
-        # 変更前に全pending編集タスクの入力とGit状態を確認する。
+        if answer_task_id is not None:
+            task = next(
+                (item for item in tasks if item["id"] == answer_task_id),
+                None,
+            )
+            if task is None:
+                raise ValueError(f"작업을 찾을 수 없습니다: {answer_task_id}")
+            if task["status"] != "waiting_for_user":
+                raise ValueError(
+                    f"답변 대기 중인 작업이 아닙니다: {answer_task_id}"
+                )
+            if answer is None:
+                print(f"확인 필요 [{task['id']}]: {task['question']}")
+                answer = input("답변: ")
+            record_answer(tasks, answer_task_id, answer)
+        elif answer is not None:
+            raise ValueError("답변할 작업 ID가 필요합니다.")
+
+        # 別の未解決質問があれば、回答を保存しても実行は停止する。
+        for task in tasks:
+            if task["status"] == "waiting_for_user":
+                print(f"확인 필요 [{task['id']}]: {task['question']}")
+                return
+
         for task in tasks:
             if task["status"] == "pending" and task["kind"] == "edit":
                 prepare_edit(
                     task["target"],
-                    task["prompt"],
+                    task_request(task),
                     task["test_module"],
                 )
 
@@ -245,5 +317,12 @@ def run_tasks(model=None):
         lock.unlink()
 
 
+def main():
+    parser = argparse.ArgumentParser(description="개인 게임 AI 작업 실행")
+    parser.add_argument("--answer", metavar="TASK_ID", dest="answer_task_id")
+    args = parser.parse_args()
+    run_tasks(answer_task_id=args.answer_task_id)
+
+
 if __name__ == "__main__":
-    run_tasks()
+    main()
