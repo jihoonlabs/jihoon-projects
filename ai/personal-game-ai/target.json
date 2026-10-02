@@ -1,7 +1,7 @@
 {
   "repository_root": "../..",
-  "expected_branch": "feature/personal-game-ai",
-  "branch_document": "docs/personal-game-ai/EPIC.md",
+  "expected_branch": "feature/personal-game-ai-model-validation",
+  "branch_document": "docs/personal-game-ai/MODEL_VALIDATION.md",
   "code_files": [
     "ai/personal-game-ai/ask_ai.py",
     "ai/personal-game-ai/read_context.py"
