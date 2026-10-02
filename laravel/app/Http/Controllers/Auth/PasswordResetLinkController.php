@@ -29,7 +29,7 @@ class PasswordResetLinkController extends Controller
             $user->sendPasswordResetNotification($token);
         }
 
-        // 계정의 존재 여부와 상태를 외부 응답으로 노출하지 않는다.
+        // アカウントの存在有無やステータスを外部へ露出しない
         return response()->json([
             'message' => '入力されたメールアドレスが登録されている場合、パスワード再設定メールを送信しました。',
         ]);

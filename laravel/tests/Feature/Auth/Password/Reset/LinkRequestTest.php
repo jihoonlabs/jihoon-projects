@@ -14,14 +14,14 @@ class LinkRequestTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * 인증이 완료된 활성 이메일 계정에 비밀번호 재설정 메일을 보낼 수 있는지 확인한다.
+     * 認証済み・有効なユーザーにパスワード再設定メールが送信されることを確認
      */
     public function test_verified_active_email_user_can_request_password_reset_link(): void
     {
-        // 실제 메일을 발송하지 않고 알림 발송 여부만 검사한다.
+        // 実際のメール送信は行わず、通知の発行のみテスト
         Notification::fake();
 
-        // 비밀번호 로그인이 가능한 인증 완료·활성 사용자를 준비한다.
+        // ログイン可能な認証済み・有効なユーザーを作成
         $user = User::factory()->create([
             'email' => 'verified@example.com',
             'password' => Hash::make('Password123'),
@@ -44,7 +44,7 @@ class LinkRequestTest extends TestCase
     }
 
     /**
-     * 등록되지 않은 이메일도 계정 존재 여부를 알 수 없는 동일한 응답을 반환한다.
+     * 未登録のメールアドレスでも存在有無を特定できない同一のレスポンスを返すことを確認
      */
     public function test_password_reset_request_does_not_reveal_unregistered_email(): void
     {
@@ -62,7 +62,7 @@ class LinkRequestTest extends TestCase
     }
 
     /**
-     * 이메일 미인증 계정에는 비밀번호 재설정 메일을 보내지 않는다.
+     * メール未認証のユーザーには再設定メールを送信しないことを確認
      */
     public function test_password_reset_link_is_not_sent_to_unverified_user(): void
     {
@@ -86,7 +86,7 @@ class LinkRequestTest extends TestCase
     }
 
     /**
-     * 정지된 계정에는 비밀번호 재설정 메일을 보내지 않는다.
+     * 停止中のユーザーには再設定メールを送信しないことを確認
      */
     public function test_password_reset_link_is_not_sent_to_suspended_user(): void
     {
@@ -111,7 +111,7 @@ class LinkRequestTest extends TestCase
     }
 
     /**
-     * 비밀번호가 없는 계정에는 비밀번호 재설정 메일을 보내지 않는다.
+     * パスワード未設定(ソーシャルログイン専用)のユーザーには再設定メールを送信しないことを確認
      */
     public function test_password_reset_link_is_not_sent_to_user_without_password(): void
     {
@@ -136,20 +136,20 @@ class LinkRequestTest extends TestCase
     }
 
     /**
-     * 비밀번호 재설정 메일 요청 횟수가 제한되는지 확인한다.
+     * パスワード再設定のリクエスト制限(Rate Limit)が機能することを確認
      */
     public function test_password_reset_request_is_rate_limited(): void
     {
         Notification::fake();
 
-        // 허용된 3번의 요청은 정상 처리된다.
+        // 許容される3回のリクエストは正常処理
         for ($i = 0; $i < 3; $i++) {
             $this->postJson('/api/auth/forgot-password', [
                 'email' => 'unknown@example.com',
             ])->assertOk();
         }
 
-        // 같은 출처의 네 번째 요청은 거절된다.
+        // 4回目のリクエストはレート制限(429)で拒否
         $this->postJson('/api/auth/forgot-password', [
             'email' => 'unknown@example.com',
         ])->assertStatus(429);
@@ -158,7 +158,7 @@ class LinkRequestTest extends TestCase
     }
 
     /**
-     * 비밀번호 재설정 메일이 Next.js 재설정 화면을 가리키는지 확인한다.
+     * 再設定メールのURLがフロントエンドのURL構造に従っていることを確認
      */
     public function test_password_reset_notification_uses_frontend_url(): void
     {

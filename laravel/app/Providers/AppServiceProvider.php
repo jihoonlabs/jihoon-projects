@@ -10,17 +10,12 @@ use SocialiteProviders\Manager\SocialiteWasCalled;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
+    // フロントエンドのパスワード再設定URLを生成
     public function boot(): void
     {
         ResetPassword::createUrlUsing(
@@ -37,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
             }
         );
 
+        // SocialiteにLINEプロバイダーを追加
         Event::listen(function (SocialiteWasCalled $event) {
             $event->extendSocialite('line', LineProvider::class);
         });

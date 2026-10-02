@@ -36,7 +36,7 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        // メール認証が完了していないユーザーのログインを拒否する
+        // メール未認証ユーザーのログインを拒否
         if (! $user->hasVerifiedEmail()) {
             Auth::guard('web')->logout();
 
@@ -110,7 +110,7 @@ class AuthController extends Controller
             'password' => $validated['password'],
         ]);
 
-        // 入力されたメールアドレスの所有者であることを確認する
+        // メール所有権確認の通知送信
         $user->sendEmailVerificationNotification();
 
         return response()->json([

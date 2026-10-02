@@ -45,6 +45,7 @@ class TicketController extends Controller
                 'assignee_id' => $validated['assignee_id'] ?? null,
             ]);
 
+            // ID採番後に固有のissue_key(TICK-{id})を自動生成
             $ticket->update([
                 'issue_key' => 'TICK-'.$ticket->id,
             ]);

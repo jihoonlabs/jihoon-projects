@@ -1,13 +1,9 @@
 import { render, screen } from '@testing-library/react';
-
 import userEvent from '@testing-library/user-event';
-
 import { http, HttpResponse } from 'msw';
-
 import { describe, expect, it } from 'vitest';
 
 import { server } from '@/test/mocks/server';
-
 import { ForgotPasswordForm } from '../ForgotPasswordForm';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';

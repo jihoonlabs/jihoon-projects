@@ -5,8 +5,8 @@ import {
 } from 'react-redux';
 import type { RootState, AppDispatch } from './store';
 
-// dispatch 타입 지정
+// dispatch 
 export const useAppDispatch: () => AppDispatch = useDispatch;
 
-// state 타입 지정
+// state 
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;

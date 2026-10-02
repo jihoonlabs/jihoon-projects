@@ -2,11 +2,6 @@
 
 namespace Tests\Feature;
 
-/*
-| Notice 모델: DB에 직접 데이터 생성할 때 사용
-| RefreshDatabase: 테스트마다 DB를 초기화해서 깨끗한 상태 유지
-| TestCase: Laravel 테스트 기본 클래스
-*/
 use App\Models\Notice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

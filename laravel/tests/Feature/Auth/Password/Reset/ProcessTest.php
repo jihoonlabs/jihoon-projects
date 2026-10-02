@@ -13,9 +13,6 @@ class ProcessTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * 유효한 재설정 토큰으로 새 비밀번호를 저장할 수 있는지 확인한다.
-     */
     public function test_user_can_reset_password_with_valid_token(): void
     {
         $user = User::factory()->create([
@@ -46,9 +43,6 @@ class ProcessTest extends TestCase
         );
     }
 
-    /**
-     * 잘못된 재설정 토큰으로는 비밀번호를 변경할 수 없다.
-     */
     public function test_user_cannot_reset_password_with_invalid_token(): void
     {
         $user = User::factory()->create([
@@ -77,9 +71,6 @@ class ProcessTest extends TestCase
         );
     }
 
-    /**
-     * 이미 사용한 재설정 토큰은 다시 사용할 수 없다.
-     */
     public function test_password_reset_token_cannot_be_reused(): void
     {
         $user = User::factory()->create([
@@ -117,9 +108,6 @@ class ProcessTest extends TestCase
         );
     }
 
-    /**
-     * 토큰 발급 후 계정이 정지되면 비밀번호를 재설정할 수 없다.
-     */
     public function test_suspended_user_cannot_reset_password_with_issued_token(): void
     {
         $user = User::factory()->create([
@@ -159,9 +147,6 @@ class ProcessTest extends TestCase
         );
     }
 
-    /**
-     * 유효기간이 지난 토큰으로는 비밀번호를 재설정할 수 없다.
-     */
     public function test_user_cannot_reset_password_with_expired_token(): void
     {
         $user = User::factory()->create([
@@ -177,6 +162,7 @@ class ProcessTest extends TestCase
             'auth.passwords.users.expire'
         );
 
+        // トークンの有効期限(分)を検証するため時間を進める
         $this->travel($expirationMinutes + 1)->minutes();
 
         $this->postJson('/api/auth/reset-password', [
@@ -198,9 +184,6 @@ class ProcessTest extends TestCase
         );
     }
 
-    /**
-     * 비밀번호 재설정 시도 횟수가 제한되는지 확인한다.
-     */
     public function test_password_reset_is_rate_limited(): void
     {
         $user = User::factory()->create([
@@ -210,12 +193,11 @@ class ProcessTest extends TestCase
             'status' => 'active',
         ]);
 
-        // 다른 테스트의 요청 횟수와 겹치지 않도록 전용 IP를 사용한다.
+        // 他テストとリクエスト数が重複しないよう専用IPを指定
         $this->withServerVariables([
             'REMOTE_ADDR' => '203.0.113.10',
         ]);
 
-        // 잘못된 토큰이므로 컨트롤러는 422를 반환하지만 요청은 5회까지 허용된다.
         for ($i = 0; $i < 5; $i++) {
             $this->postJson('/api/auth/reset-password', [
                 'email' => $user->email,
@@ -225,7 +207,7 @@ class ProcessTest extends TestCase
             ])->assertStatus(422);
         }
 
-        // 같은 출처의 여섯 번째 요청은 Rate Limit에 의해 차단된다.
+        // 6回目のリクエストでレート制限(429)が発生することを確認
         $this->postJson('/api/auth/reset-password', [
             'email' => $user->email,
             'token' => 'invalid-token',
@@ -241,9 +223,6 @@ class ProcessTest extends TestCase
         );
     }
 
-    /**
-     * 비밀번호 재설정 후 해당 사용자의 기존 세션만 삭제한다.
-     */
     public function test_password_reset_invalidates_only_users_existing_sessions(): void
     {
         $user = User::factory()->create([

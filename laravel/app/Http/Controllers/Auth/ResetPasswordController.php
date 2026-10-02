@@ -53,7 +53,7 @@ class ResetPasswordController extends Controller
                     'remember_token' => Str::random(60),
                 ])->save();
 
-                // 비밀번호 재설정 후 기존 로그인 세션을 모두 종료한다.
+                // パスワード再設定後、既存のログインセッションをすべて終了する
                 DB::table('sessions')
                     ->where('user_id', $user->id)
                     ->delete();
