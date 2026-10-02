@@ -1,7 +1,7 @@
 {
   "repository_root": "../..",
-  "expected_branch": "feature/personal-game-ai-task-runner",
-  "branch_document": "docs/personal-game-ai/TASK_RUNNER.md",
+  "expected_branch": "feature/personal-game-ai",
+  "branch_document": "docs/personal-game-ai/EPIC.md",
   "code_files": [
     "ai/personal-game-ai/run_tasks.py"
   ],
