@@ -138,8 +138,8 @@
       position: absolute;
       left: -9999px;
       top: -9999px;
-      width: 500px;
-      height: 500px;
+      width: 800px;
+      height: 800px;
     }
   </style>
 </head>
@@ -148,7 +148,7 @@
   <div class="container">
     <h2>
       <span>📊 営業用 人材分布 レポート作成ツール</span>
-      <span class="tag-preview">v32 Bright Non-Overlapping Donut</span>
+      <span class="tag-preview">v36 Hybrid In/Out Donut</span>
     </h2>
 
     <!-- 1. 파일 선택 -->
@@ -176,7 +176,7 @@
       <div>
         <div class="section-title">3. グラフデザイン形式</div>
         <select id="chart-type">
-          <option value="pie">⭕ 明るいトーン・文字2段配置ドーナツグラフ</option>
+          <option value="pie">⭕ 明るいトーン・ハイブリッド(円内+引き出し線)ドーナツ</option>
           <option value="bar">📊 スリム＆モダン横棒グラフ (おすすめ)</option>
         </select>
       </div>
@@ -189,7 +189,7 @@
   </div>
 
   <div id="chart-render-area">
-    <canvas id="exportCanvas" width="500" height="500"></canvas>
+    <canvas id="exportCanvas" width="800" height="800"></canvas>
   </div>
 
   <script>
@@ -213,7 +213,6 @@
       return s;
     }
 
-    // Excel 파일 읽기
     function handleFile(file) {
       if (!file) return;
       const reader = new FileReader();
@@ -235,7 +234,6 @@
       reader.readAsArrayBuffer(file);
     }
 
-    // 붙여넣기 데이터 읽기
     function handlePaste() {
       const text = document.getElementById('paste-input').value.trim();
       if (!text) return;
@@ -311,7 +309,23 @@
       return { labels: sortedKeys, values: sortedValues, total };
     }
 
-    // 🎨 [밝은 톤 + 원형 겹침 방지 + 원 내부 2줄 가독성 최적화]
+    // Label split helper
+    function splitLabelToVerticalLines(label, maxCharsPerLine = 5) {
+      if (label.includes('/')) {
+        let parts = label.split('/');
+        return [parts[0] + '/', ...parts.slice(1)];
+      }
+      if (label.includes(' ')) {
+        return label.split(' ');
+      }
+      let lines = [];
+      for (let i = 0; i < label.length; i += maxCharsPerLine) {
+        lines.push(label.slice(i, i + maxCharsPerLine));
+      }
+      return lines;
+    }
+
+    // 🎨 [하이브리드 렌더링: 큰 조각은 원 안 세로 배치, 작은 조각만 바깥 인출]
     function renderCustomDonutCanvas(colName, labels, values, total) {
       return new Promise((resolve) => {
         const canvas = document.getElementById('exportCanvas');
@@ -322,23 +336,22 @@
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
         
-        // 🌟 캔버스 크기(500x500)에 딱 맞추어 슬라이드 겹침 방지
-        const outerRadius = 210;
-        const innerRadius = 45; // 작은 구멍 크기 유지
+        const outerRadius = 240;
+        const innerRadius = 55; // 구멍 크기 유지
         let startAngle = -0.5 * Math.PI;
 
-        // 🎨 참고 이미지 스타일: 밝고 깔끔한 라이트 톤 색상 조합
         const brightPalette = [
-          ['#D1D5DB', '#E5E7EB'], // 연한 회색 톤 1
-          ['#E2E8F0', '#F1F5F9'], // 연한 슬レート 톤 2
-          ['#CBD5E1', '#E2E8F0'], // 은은한 소프트 블루/그레이 톤 3
-          ['#94A3B8', '#CBD5E1'], // 포인트 미디엄 슬レート 4
-          ['#E5E7EB', '#F3F4F6'], // 페ール 그레이 5
-          ['#D1D5DB', '#F3F4F6']  // 라이트 그레이 6
+          ['#CBD5E1', '#E2E8F0'],
+          ['#E2E8F0', '#F1F5F9'],
+          ['#94A3B8', '#CBD5E1'],
+          ['#D1D5DB', '#E5E7EB'],
+          ['#E5E7EB', '#F3F4F6'],
+          ['#B0BEC5', '#D1D5DB']
         ];
 
         const sliceCount = labels.length;
 
+        // 1. 도넛 조각 그리기
         for (let i = 0; i < sliceCount; i++) {
           let val = values[i];
           let label = labels[i];
@@ -357,7 +370,6 @@
           grad.addColorStop(0, colors[0]);
           grad.addColorStop(1, colors[1]);
 
-          // 도넛 조각 그리기
           ctx.beginPath();
           ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
           ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true);
@@ -367,53 +379,122 @@
           ctx.fill();
           
           ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 3.0;
+          ctx.lineWidth = 3.5;
           ctx.stroke();
-
-          let pct = ((val / total) * 100).toFixed(1);
-          let midAngle = startAngle + sliceAngle / 2;
-
-          // 🌟 원 내부 텍스트 위치 계산 (중앙에서 약간 외곽 쪽으로)
-          let midR = (innerRadius + outerRadius) * 0.58;
-          let textX = centerX + Math.cos(midAngle) * midR;
-          let textY = centerY + Math.sin(midAngle) * midR;
-
-          ctx.save();
-          
-          // 글자가 밝은 배경에서도 잘 보이도록 어두운 슬레이트 색상 + 미세한 흰색/어두운 텍스트 그림자
-          ctx.fillStyle = '#1E293B'; 
-          ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
-          ctx.shadowBlur = 4;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-
-          let displayLabel = label.length > 8 ? label.slice(0, 7) + '..' : label;
-
-          if (sliceAngle >= 0.12) {
-            // 🌟 2줄 배치 (1행: 제목 / 2행: 인원수 및 퍼센트)
-            ctx.font = 'bold 15px -apple-system, Meiryo, sans-serif';
-            ctx.fillText(displayLabel, textX, textY - 10);
-            
-            ctx.font = 'bold 14px Meiryo, sans-serif';
-            ctx.fillText(`${val}名 (${pct}%)`, textX, textY + 10);
-          } else if (sliceAngle >= 0.05) {
-            // 조각이 좁은 경우 1줄로 표시
-            ctx.font = 'bold 12px Meiryo, sans-serif';
-            ctx.fillText(`${displayLabel} ${pct}%`, textX, textY);
-          }
-          ctx.restore();
 
           startAngle = endAngle;
         }
 
-        // 중앙 작은 구멍 항목명 표시
-        ctx.fillStyle = '#334155';
-        ctx.font = 'bold 14px -apple-system, Meiryo, sans-serif';
+        // 2. 텍스트 하이브리드 배치
+        startAngle = -0.5 * Math.PI;
+
+        for (let i = 0; i < sliceCount; i++) {
+          let val = values[i];
+          let label = labels[i];
+          let pctNum = (val / total) * 100;
+          let pct = pctNum.toFixed(1);
+          let sliceAngle = (val / total) * 2 * Math.PI;
+          let endAngle = startAngle + sliceAngle;
+          let midAngle = startAngle + sliceAngle / 2;
+
+          let displayLabel = label.length > 9 ? label.slice(0, 8) + '..' : label;
+
+          // 🌟 조건: 4.5% 이상이거나 부채꼴 각도가 충분할 때 -> 원 안에 세로 3~4줄로 안착!
+          if (pctNum >= 4.5) {
+            let midR = (innerRadius + outerRadius) * 0.58;
+            let textX = centerX + Math.cos(midAngle) * midR;
+            let textY = centerY + Math.sin(midAngle) * midR;
+
+            let labelLines = splitLabelToVerticalLines(displayLabel, 5);
+            let allLines = [...labelLines, `${val}名`, `(${pct}%)`];
+
+            let fontSize = sliceAngle < 0.25 ? 11 : 13.5;
+            let lineHeight = sliceAngle < 0.25 ? 13 : 15.5;
+
+            let totalHeight = allLines.length * lineHeight;
+            let startY = textY - (totalHeight / 2) + (lineHeight / 2);
+
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            allLines.forEach((lineText, lineIdx) => {
+              let currentY = startY + (lineIdx * lineHeight);
+
+              ctx.font = `bold ${fontSize}px Meiryo, sans-serif`;
+              ctx.strokeStyle = '#FFFFFF';
+              ctx.lineWidth = 3.5;
+              ctx.lineJoin = 'round';
+              ctx.strokeText(lineText, textX, currentY);
+
+              ctx.fillStyle = (lineIdx < labelLines.length) ? '#0F172A' : '#334155';
+              ctx.fillText(lineText, textX, currentY);
+            });
+
+            ctx.restore();
+          } 
+          // 🌟 조건: 4.5% 미만의 좁은 미세 조각 -> 밖으로 짧은 지시선 인출!
+          else {
+            let isRight = Math.cos(midAngle) >= 0;
+            
+            let lineStartR = outerRadius * 0.8;
+            let startX = centerX + Math.cos(midAngle) * lineStartR;
+            let startY = centerY + Math.sin(midAngle) * lineStartR;
+
+            let lineBreakR = outerRadius + 22;
+            let breakX = centerX + Math.cos(midAngle) * lineBreakR;
+            let breakY = centerY + Math.sin(midAngle) * lineBreakR;
+
+            let endX = breakX + (isRight ? 25 : -25);
+            let endY = breakY;
+
+            // 지시선 그리기
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(breakX, breakY);
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = '#64748B';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(startX, startY, 2.5, 0, 2 * Math.PI);
+            ctx.fillStyle = '#64748B';
+            ctx.fill();
+            ctx.restore();
+
+            // 바깥 텍스트 (1~2줄)
+            ctx.save();
+            ctx.textAlign = isRight ? 'left' : 'right';
+            ctx.textBaseline = 'middle';
+
+            let labelX = endX + (isRight ? 6 : -6);
+            
+            ctx.font = 'bold 12.5px Meiryo, sans-serif';
+            ctx.fillStyle = '#0F172A';
+            ctx.fillText(`${displayLabel}`, labelX, endY - 7);
+
+            ctx.font = 'bold 11.5px Meiryo, sans-serif';
+            ctx.fillStyle = '#475569';
+            ctx.fillText(`${val}名 (${pct}%)`, labelX, endY + 7);
+            
+            ctx.restore();
+          }
+
+          startAngle = endAngle;
+        }
+
+        // 중앙 구멍 타이틀
+        ctx.save();
+        ctx.fillStyle = '#0F172A';
+        ctx.font = 'bold 16px Meiryo, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
         let displayCol = colName.length > 5 ? colName.slice(0, 4) + '..' : colName;
         ctx.fillText(displayCol, centerX, centerY);
+        ctx.restore();
 
         resolve(canvas.toDataURL('image/png'));
       });
@@ -448,7 +529,7 @@
 
         let slide = pptx.addSlide();
 
-        // 헤더 요소를 참고 이미지 스타일로 연한 녹색/슬레이트 계열 적용
+        // 헤더
         slide.addShape(pptx.ShapeType.rect, {
           x: 0.8, y: 0.45, w: 1.5, h: 0.32,
           fill: { color: '86EFAC' }
@@ -478,7 +559,7 @@
           line: { color: 'E2E8F0', width: 1 }
         });
 
-        // 🌟 슬라이드 내 나란히 균등 배치 좌표 설정
+        // 🌟 슬라이드 균등 배치
         let colWidth = 3.6;
         let xPositions = [];
 
@@ -503,24 +584,24 @@
           const { labels, values, total } = getAggregatedData(col);
           if (labels.length === 0) continue;
 
-          // 타이틀 표시
+          // 타이틀
           slide.addText(`■ ${col}`, {
             x: colX, y: 2.2, w: colWidth, h: 0.35,
             fontSize: 13, bold: true, color: '0F172A', fontFace: 'Meiryo'
           });
 
-          // Mode 1: 🌟 겹침 현상을 수정한 도넛 그래프 출력
+          // Mode 1: 도넛 그래프 (하이브리드)
           if (chartType === 'pie') {
             let imgDataUrl = await renderCustomDonutCanvas(col, labels, values, total);
             slide.addImage({
               data: imgDataUrl,
-              x: colX - 0.1,
-              y: 2.6,
-              w: 3.8,
-              h: 3.8
+              x: colX - 0.4,
+              y: 2.4,
+              w: 4.4,
+              h: 4.4
             });
           } 
-          // Mode 2: 슬림&모던 가로 막대 그래프
+          // Mode 2: 가로 막대 그래프
           else {
             let itemCount = labels.length;
             let startY = 2.85; 
