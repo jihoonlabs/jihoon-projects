@@ -1,9 +1,10 @@
 {
   "repository_root": "../..",
-  "expected_branch": "feature/personal-game-ai",
-  "branch_document": "docs/personal-game-ai/EPIC.md",
+  "expected_branch": "feature/personal-game-ai-edit-test-loop",
+  "branch_document": "docs/personal-game-ai/EDIT_TEST_LOOP.md",
   "code_files": [
-    "ai/personal-game-ai/run_tasks.py"
+    "ai/personal-game-ai/ask_ai.py",
+    "ai/personal-game-ai/read_context.py"
   ],
   "max_context_chars": 12000
 }
