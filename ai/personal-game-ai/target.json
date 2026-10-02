@@ -1,0 +1,9 @@
+{
+  "repository_root": "../..",
+  "expected_branch": "feature/personal-game-ai-context-config",
+  "branch_document": "docs/personal-game-ai/CONTEXT_CONFIG.md",
+  "code_files": [
+    "ai/personal-game-ai/read_context.py"
+  ],
+  "max_context_chars": 12000
+}
