@@ -1,7 +1,7 @@
 {
   "repository_root": "../..",
-  "expected_branch": "feature/personal-game-ai-resume",
-  "branch_document": "docs/personal-game-ai/RESUME.md",
+  "expected_branch": "feature/personal-game-ai",
+  "branch_document": "docs/personal-game-ai/EPIC.md",
   "code_files": [
     "ai/personal-game-ai/ask_ai.py",
     "ai/personal-game-ai/read_context.py"
