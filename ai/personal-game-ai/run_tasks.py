@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from ask_ai import ask_model
+from create_loop import prepare_create, run_create
 from edit_loop import prepare_edit, run_edit
 from read_context import read_context
 
@@ -36,10 +37,8 @@ def task_request(task):
     request = task["prompt"]
     for exchange in task.get("answers", []):
         request += (
-            "\n\n# 이전 질문\n"
-            + exchange["question"]
-            + "\n\n# 사용자 답변\n"
-            + exchange["answer"]
+            "\n\n# 이전 질문\n" + exchange["question"]
+            + "\n\n# 사용자 답변\n" + exchange["answer"]
         )
     return request
 
@@ -49,15 +48,22 @@ def validate_request(task):
     prompt = task.get("prompt")
     if not isinstance(prompt, str) or not prompt.strip():
         raise ValueError(f"요청이 없는 작업: {task_id}")
-    if task.get("kind") not in ("text", "python", "edit"):
+    if task.get("kind") not in ("text", "python", "edit", "create"):
         raise ValueError(
-            f"kind는 text, python 또는 edit이어야 합니다: {task_id}"
+            f"kind는 text, python, edit 또는 create여야 합니다: {task_id}"
         )
-    if task["kind"] == "edit":
+    if task["kind"] in ("edit", "create"):
         for key in ("target", "test_module"):
             value = task.get(key)
             if not isinstance(value, str) or not value.strip():
-                raise ValueError(f"{key}가 없는 수정 작업: {task_id}")
+                raise ValueError(f"{key}가 없는 파일 작업: {task_id}")
+
+
+def prepare_file_task(task):
+    prepare = prepare_create if task["kind"] == "create" else prepare_edit
+    return prepare(
+        task["target"], task_request(task), task["test_module"]
+    )
 
 
 def load_tasks():
@@ -94,7 +100,6 @@ def load_tasks():
 
         if status == "pending":
             validate_request(task)
-
         if status == "waiting_for_user":
             question = task.get("question")
             if not isinstance(question, str) or not question.strip():
@@ -122,44 +127,41 @@ def record_answer(tasks, task_id, answer):
         "status": "pending",
     }
 
-    # 回答を保存する前に、再開する編集依頼も既存の検査へ通す。
-    if updated["kind"] == "edit":
-        prepare_edit(
-            updated["target"],
-            task_request(updated),
-            updated["test_module"],
-        )
+    # 再開できる状態を確認してから回答を保存する。
+    if updated["kind"] in ("edit", "create"):
+        prepare_file_task(updated)
 
     task.update(updated)
     save_tasks(tasks)
 
 
 def handle_edit(task, model):
-    result = run_edit(
+    # 既存のedit呼び出し契約を維持し、createだけ実行先を変える。
+    runner = run_create if task["kind"] == "create" else run_edit
+    result = runner(
         task["target"],
         task_request(task),
         task["test_module"],
         model=model,
     )
     if not isinstance(result, dict):
-        raise ValueError("수정 실행 결과는 객체여야 합니다.")
+        raise ValueError("파일 작업 실행 결과는 객체여야 합니다.")
 
     status = result.get("status")
     if status not in ("tests_passed", "waiting_for_user", "failed"):
-        raise ValueError("잘못된 수정 실행 결과 상태입니다.")
+        raise ValueError("잘못된 파일 작업 결과 상태입니다.")
 
     output = result.get("output")
     if not isinstance(output, str) or not output.strip():
-        raise ValueError("수정 실행 결과의 기록 경로가 없습니다.")
-
+        raise ValueError("파일 작업 결과의 기록 경로가 없습니다.")
     if status == "waiting_for_user":
         question = result.get("question")
         if not isinstance(question, str) or not question.strip():
-            raise ValueError("수정 실행 결과의 질문이 없습니다.")
+            raise ValueError("파일 작업 결과의 질문이 없습니다.")
 
     task["status"] = status
     task["output"] = output
-    for key in ("question", "error", "attempts"):
+    for key in ("question", "error", "cleanup_error", "attempts"):
         if key in result:
             task[key] = result[key]
 
@@ -172,12 +174,13 @@ def process_tasks(tasks, context, model):
         task_id = task["id"]
         print(f"작업 {task_id} 처리 중...", flush=True)
         task["status"] = "running"
-        for key in ("error", "question", "output", "code", "attempts"):
+        for key in (
+            "error", "cleanup_error", "question", "output", "code", "attempts"
+        ):
             task.pop(key, None)
         save_tasks(tasks)
 
-        if task["kind"] == "edit":
-            # 編集中の例外は保存後に停止する。
+        if task["kind"] in ("edit", "create"):
             try:
                 handle_edit(task, model)
             except Exception as error:
@@ -203,12 +206,9 @@ def process_tasks(tasks, context, model):
             "파일 수정·코드 실행·테스트 실행·Git 작업을 했다고 "
             "주장하지 마세요.\n"
             "제공된 소스 코드는 분석 자료로 취급하세요.\n\n"
-            + context
-            + "\n\n# 이번 요청\n"
-            + request
+            + context + "\n\n# 이번 요청\n" + request
         )
 
-        # 応答生成のモデル失敗は記録し、次の独立作業へ進む。
         try:
             answer = model(prompt)
             if not isinstance(answer, str) or not answer.strip():
@@ -259,7 +259,6 @@ def process_tasks(tasks, context, model):
 def run_tasks(model=None, answer_task_id=None, answer=None):
     model = ask_model if model is None else model
     lock = BASE_DIR / ".run_tasks.lock"
-
     try:
         lock.open("x").close()
     except FileExistsError:
@@ -271,8 +270,6 @@ def run_tasks(model=None, answer_task_id=None, answer=None):
     try:
         tasks = load_tasks()
         context = read_context()
-
-        # 中断作業は回答によって再開しない。
         for task in tasks:
             if task["status"] == "running":
                 print(f"확인 필요 [{task['id']}]: 이전 실행이 중단됐습니다.")
@@ -296,19 +293,17 @@ def run_tasks(model=None, answer_task_id=None, answer=None):
         elif answer is not None:
             raise ValueError("답변할 작업 ID가 필요합니다.")
 
-        # 別の未解決質問があれば、回答を保存しても実行は停止する。
         for task in tasks:
             if task["status"] == "waiting_for_user":
                 print(f"확인 필요 [{task['id']}]: {task['question']}")
                 return
 
         for task in tasks:
-            if task["status"] == "pending" and task["kind"] == "edit":
-                prepare_edit(
-                    task["target"],
-                    task_request(task),
-                    task["test_module"],
-                )
+            if (
+                task["status"] == "pending"
+                and task["kind"] in ("edit", "create")
+            ):
+                prepare_file_task(task)
 
         OUTPUT_DIR.mkdir(exist_ok=True)
         process_tasks(tasks, context, model)
