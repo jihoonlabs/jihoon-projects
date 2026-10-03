@@ -9,6 +9,7 @@ from read_context import git_output, read_context
 
 BASE_DIR = Path(__file__).resolve().parent
 SANDBOX = BASE_DIR / "sandbox"
+GAME_DIR = BASE_DIR.parent.parent / "micropython" / "street_rpg"
 MAX_ATTEMPTS = 3
 
 DEFAULT_REQUEST = (
@@ -16,6 +17,28 @@ DEFAULT_REQUEST = (
     "범위 밖이면 가까운 경곗값, 범위 안이면 원래 값을 반환합니다. "
     "minimum <= maximum을 가정합니다."
 )
+
+
+def check_directory(directory):
+    if directory == SANDBOX:
+        anchor = BASE_DIR
+    elif directory == GAME_DIR:
+        anchor = BASE_DIR.parent.parent
+    else:
+        raise ValueError("허용되지 않은 검사 폴더입니다.")
+
+    # OS側のリンクは対象外とし、プロジェクト内の経路だけを検査する。
+    relative = directory.relative_to(anchor)
+    current = anchor
+    if current.is_symlink():
+        raise ValueError("프로젝트 경로에 심볼릭 링크를 사용할 수 없습니다.")
+    for part in relative.parts:
+        current = current / part
+        if current.is_symlink():
+            raise ValueError("대상 폴더에 심볼릭 링크를 사용할 수 없습니다.")
+
+    if not directory.is_dir():
+        raise ValueError("검사 폴더가 없습니다.")
 
 
 def resolve_files(target_file, test_module):
@@ -31,28 +54,33 @@ def resolve_files(target_file, test_module):
         relative.is_absolute()
         or ".." in relative.parts
         or len(relative.parts) != 2
-        or relative.parts[0] != "sandbox"
+        or relative.parts[0] not in ("sandbox", "game")
         or relative.suffix != ".py"
     ):
-        raise ValueError("대상은 sandbox 바로 아래의 Python 파일이어야 합니다.")
+        raise ValueError(
+            "대상은 sandbox/파일.py 또는 game/파일.py여야 합니다."
+        )
 
-    target = BASE_DIR / relative
-    test = SANDBOX / (test_module + ".py")
+    directory = SANDBOX if relative.parts[0] == "sandbox" else GAME_DIR
+    target = directory / relative.name
+    test = directory / (test_module + ".py")
 
     if target == test or target.name.startswith("test_"):
         raise ValueError("테스트 파일을 수정 대상으로 지정할 수 없습니다.")
 
-    # 親ディレクトリのリンクも拒否する。
-    for path in (SANDBOX, target, test):
+    check_directory(directory)
+    for path in (target, test):
         if path.is_symlink():
-            raise ValueError("sandbox와 시험 파일에 심볼릭 링크를 사용할 수 없습니다.")
+            raise ValueError(
+                "대상 파일과 테스트에 심볼릭 링크를 사용할 수 없습니다."
+            )
 
     if not target.is_file() or not test.is_file():
         raise ValueError("수정 대상과 고정 테스트 파일이 필요합니다.")
-    if target.resolve().parent != SANDBOX.resolve():
-        raise ValueError("수정 대상이 sandbox 밖에 있습니다.")
-    if test.resolve().parent != SANDBOX.resolve():
-        raise ValueError("테스트가 sandbox 밖에 있습니다.")
+    if target.resolve().parent != directory.resolve():
+        raise ValueError("수정 대상이 허용 폴더 밖에 있습니다.")
+    if test.resolve().parent != directory.resolve():
+        raise ValueError("테스트가 허용 폴더 밖에 있습니다.")
 
     return target, test
 
@@ -83,7 +111,7 @@ def check_git_files(target, test):
 
 def prepare_edit(target_file, request, test_module):
     if not isinstance(request, str) or not request.strip():
-        raise ValueError("編集依頼が必要です.")
+        raise ValueError("編集依頼が必要です。")
     if len(request) > 4000:
         raise ValueError("編集依頼は4000文字以内にしてください。")
 
@@ -92,7 +120,10 @@ def prepare_edit(target_file, request, test_module):
     return target, test
 
 
-def run_test(log_path, test_module="test_clamp"):
+def run_test(log_path, test_module="test_clamp", work_dir=None):
+    directory = SANDBOX if work_dir is None else Path(work_dir)
+    check_directory(directory)
+
     name = "game-ai-test-" + uuid.uuid4().hex
     command = [
         "docker", "run", "--rm",
@@ -106,7 +137,7 @@ def run_test(log_path, test_module="test_clamp"):
         "--pids-limit", "64",
         "--user", "65534:65534",
         "--mount",
-        f"type=bind,source={SANDBOX},target=/work,readonly",
+        f"type=bind,source={directory.resolve()},target=/work,readonly",
         "--workdir", "/work",
         "python:3.11-slim",
         "python", "-B", "-m", "unittest", "-v", test_module,
@@ -174,7 +205,7 @@ def run_edit(target_file, request, test_module, model=None):
                 target_file, test_module
             )
             if resolved_target != target or resolved_test != test:
-                raise RuntimeError("시험 파일 경로가 변경됐습니다.")
+                raise RuntimeError("대상 또는 테스트 경로가 변경됐습니다.")
             if target.read_bytes() != current:
                 raise RuntimeError("수정 대상이 외부에서 변경됐습니다.")
             if test.read_bytes() != fixed_test:
@@ -222,8 +253,7 @@ def run_edit(target_file, request, test_module, model=None):
                     if not isinstance(question, str) or not question.strip():
                         raise ValueError("질문이 비어 있습니다.")
 
-                    # 再開時のGit検査を通せるよう、質問時だけ原本へ戻す。
-                    # 外部変更があれば復元せず停止する。
+                    # 質問時は原本へ戻す。外部変更があれば復元しない。
                     check_unchanged()
                     if current != original:
                         target.write_bytes(original)
@@ -253,9 +283,18 @@ def run_edit(target_file, request, test_module, model=None):
             target.write_bytes(candidate)
             current = candidate
 
-            passed, feedback = run_test(
-                output / f"test_{attempt}.txt", test_module
-            )
+            # sandboxの既存呼び出し契約は維持する。
+            if Path(target_file).parts[0] == "sandbox":
+                passed, feedback = run_test(
+                    output / f"test_{attempt}.txt", test_module
+                )
+            else:
+                passed, feedback = run_test(
+                    output / f"test_{attempt}.txt",
+                    test_module,
+                    work_dir=target.parent,
+                )
+
             check_unchanged()
             print(feedback)
             if passed:
