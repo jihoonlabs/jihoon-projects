@@ -5,11 +5,13 @@ from datetime import datetime
 from pathlib import Path
 
 from ask_ai import ask_model
-from read_context import git_output, read_context
+from read_context import CONFIG_PATH, git_output, read_context
 
 BASE_DIR = Path(__file__).resolve().parent
 SANDBOX = BASE_DIR / "sandbox"
-GAME_DIR = BASE_DIR.parent.parent / "micropython" / "street_rpg"
+
+# テストでは一時ディレクトリへ差し替える。本番は設定から取得する。
+GAME_DIR = None
 MAX_ATTEMPTS = 3
 
 DEFAULT_REQUEST = (
@@ -19,13 +21,51 @@ DEFAULT_REQUEST = (
 )
 
 
+def game_location():
+    if GAME_DIR is not None:
+        return Path(GAME_DIR), BASE_DIR.parent.parent
+
+    config_path = Path(CONFIG_PATH).resolve()
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    if not isinstance(config, dict):
+        raise ValueError("설정은 JSON 객체여야 합니다.")
+
+    root_value = config.get("repository_root")
+    if not isinstance(root_value, str) or not root_value.strip():
+        raise ValueError("repository_root 설정이 필요합니다.")
+    root = (config_path.parent / root_value).resolve()
+    actual_root = Path(
+        git_output(root, "rev-parse", "--show-toplevel")
+    ).resolve()
+    if root != actual_root:
+        raise ValueError("repository_root는 저장소 최상단이어야 합니다.")
+
+    value = config.get("edit_directory")
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(
+            "게임 수정은 edit_directory를 명시한 설정에서만 허용합니다."
+        )
+    relative = Path(value)
+    if relative.is_absolute() or ".." in relative.parts or not relative.parts:
+        raise ValueError("edit_directory는 저장소 내부 상대 경로여야 합니다.")
+
+    directory = root / relative
+    if directory.resolve() == root:
+        raise ValueError("저장소 최상단을 수정 폴더로 지정할 수 없습니다.")
+    if root not in directory.resolve().parents:
+        raise ValueError("게임 수정 폴더가 저장소 밖에 있습니다.")
+
+    return directory, root
+
+
 def check_directory(directory):
+    directory = Path(directory)
     if directory == SANDBOX:
         anchor = BASE_DIR
-    elif directory == GAME_DIR:
-        anchor = BASE_DIR.parent.parent
     else:
-        raise ValueError("허용되지 않은 검사 폴더입니다.")
+        allowed, anchor = game_location()
+        if directory != allowed:
+            raise ValueError("허용되지 않은 검사 폴더입니다.")
 
     # OS側のリンクは対象外とし、プロジェクト内の経路だけを検査する。
     relative = directory.relative_to(anchor)
@@ -36,7 +76,6 @@ def check_directory(directory):
         current = current / part
         if current.is_symlink():
             raise ValueError("대상 폴더에 심볼릭 링크를 사용할 수 없습니다.")
-
     if not directory.is_dir():
         raise ValueError("검사 폴더가 없습니다.")
 
@@ -61,10 +100,13 @@ def resolve_files(target_file, test_module):
             "대상은 sandbox/파일.py 또는 game/파일.py여야 합니다."
         )
 
-    directory = SANDBOX if relative.parts[0] == "sandbox" else GAME_DIR
+    if relative.parts[0] == "sandbox":
+        directory = SANDBOX
+    else:
+        directory, _ = game_location()
+
     target = directory / relative.name
     test = directory / (test_module + ".py")
-
     if target == test or target.name.startswith("test_"):
         raise ValueError("테스트 파일을 수정 대상으로 지정할 수 없습니다.")
 
@@ -74,7 +116,6 @@ def resolve_files(target_file, test_module):
             raise ValueError(
                 "대상 파일과 테스트에 심볼릭 링크를 사용할 수 없습니다."
             )
-
     if not target.is_file() or not test.is_file():
         raise ValueError("수정 대상과 고정 테스트 파일이 필요합니다.")
     if target.resolve().parent != directory.resolve():
@@ -86,22 +127,17 @@ def resolve_files(target_file, test_module):
 
 
 def check_git_files(target, test):
+    # ツールの配置場所ではなく、編集対象のGitリポジトリを検査する。
     root = Path(
-        git_output(BASE_DIR, "rev-parse", "--show-toplevel")
+        git_output(target.parent, "rev-parse", "--show-toplevel")
     ).resolve()
 
     for path in (target, test):
         relative = path.resolve().relative_to(root).as_posix()
-
-        # untracked・ignoredファイルは編集対象にしない。
         git_output(root, "ls-files", "--error-unmatch", "--", relative)
         status = git_output(
-            root,
-            "status",
-            "--porcelain=v1",
-            "--untracked-files=all",
-            "--",
-            relative,
+            root, "status", "--porcelain=v1",
+            "--untracked-files=all", "--", relative,
         )
         if status:
             raise RuntimeError(
@@ -114,7 +150,6 @@ def prepare_edit(target_file, request, test_module):
         raise ValueError("編集依頼が必要です。")
     if len(request) > 4000:
         raise ValueError("編集依頼は4000文字以内にしてください。")
-
     target, test = resolve_files(target_file, test_module)
     check_git_files(target, test)
     return target, test
@@ -123,7 +158,6 @@ def prepare_edit(target_file, request, test_module):
 def run_test(log_path, test_module="test_clamp", work_dir=None):
     directory = SANDBOX if work_dir is None else Path(work_dir)
     check_directory(directory)
-
     name = "game-ai-test-" + uuid.uuid4().hex
     command = [
         "docker", "run", "--rm",
@@ -142,23 +176,17 @@ def run_test(log_path, test_module="test_clamp", work_dir=None):
         "python:3.11-slim",
         "python", "-B", "-m", "unittest", "-v", test_module,
     ]
-
-    # 出力は保存し、モデルへ渡すフィードバックだけを制限する。
     try:
         with log_path.open("w", encoding="utf-8") as log:
             result = subprocess.run(
-                command,
-                stdout=log,
-                stderr=subprocess.STDOUT,
-                timeout=30,
+                command, stdout=log, stderr=subprocess.STDOUT, timeout=30,
             )
         feedback = log_path.read_text(encoding="utf-8")[-6000:]
         return result.returncode == 0, feedback
     except subprocess.TimeoutExpired:
         subprocess.run(
             ["docker", "rm", "-f", name],
-            capture_output=True,
-            timeout=10,
+            capture_output=True, timeout=10,
         )
         raise RuntimeError("테스트가 30초를 초과해 중단됐습니다.")
 
@@ -167,7 +195,6 @@ def run_edit(target_file, request, test_module, model=None):
     context = read_context()
     target, test = prepare_edit(target_file, request, test_module)
     model = ask_model if model is None else model
-
     lock = BASE_DIR / ".edit_loop.lock"
     try:
         lock.open("x").close()
@@ -178,7 +205,6 @@ def run_edit(target_file, request, test_module, model=None):
         )
 
     try:
-        # ロック取得後にも既存変更を確認する。
         target, test = prepare_edit(target_file, request, test_module)
         original = target.read_bytes()
         fixed_test = test.read_bytes()
@@ -214,13 +240,11 @@ def run_edit(target_file, request, test_module, model=None):
                 raise RuntimeError("브랜치 또는 작업 문맥이 변경됐습니다.")
 
         feedback = "아직 검사하지 않았습니다."
-
         for attempt in range(1, MAX_ATTEMPTS + 1):
             check_unchanged()
             prompt = (
                 context
-                + "\n\n# 수정 요청\n"
-                + request
+                + "\n\n# 수정 요청\n" + request
                 + "\n\n파일·네트워크·프로세스 접근은 필요하지 않습니다.\n"
                 "실제로 수정하거나 테스트했다고 주장하지 마세요.\n"
                 "고정 테스트를 변경하는 대신 지정된 함수를 구현하세요.\n"
@@ -228,12 +252,9 @@ def run_edit(target_file, request, test_module, model=None):
                 '구현할 수 있으면 {"action":"edit","code":"전체 Python 코드"}\n'
                 '사용자 결정이 필요하면 {"action":"question",'
                 '"question":"한국어 질문"}\n'
-                "\n현재 코드:\n"
-                + current.decode("utf-8")
-                + "\n이전 검사 결과:\n"
-                + feedback
+                "\n현재 코드:\n" + current.decode("utf-8")
+                + "\n이전 검사 결과:\n" + feedback
             )
-
             print(f"AI 수정 시도 {attempt}/{MAX_ATTEMPTS}", flush=True)
             answer = model(prompt)
             if not isinstance(answer, str) or not answer.strip():
@@ -247,13 +268,10 @@ def run_edit(target_file, request, test_module, model=None):
                 proposal = json.loads(answer)
                 if not isinstance(proposal, dict):
                     raise ValueError("JSON 객체가 필요합니다.")
-
                 if proposal.get("action") == "question":
                     question = proposal.get("question")
                     if not isinstance(question, str) or not question.strip():
                         raise ValueError("질문이 비어 있습니다.")
-
-                    # 質問時は原本へ戻す。外部変更があれば復元しない。
                     check_unchanged()
                     if current != original:
                         target.write_bytes(original)
@@ -262,10 +280,8 @@ def run_edit(target_file, request, test_module, model=None):
                     check_git_files(target, test)
                     return finish(
                         "waiting_for_user",
-                        question=question,
-                        attempts=attempt,
+                        question=question, attempts=attempt,
                     )
-
                 if proposal.get("action") != "edit":
                     raise ValueError("action은 edit 또는 question이어야 합니다.")
                 code = proposal.get("code")
@@ -283,7 +299,6 @@ def run_edit(target_file, request, test_module, model=None):
             target.write_bytes(candidate)
             current = candidate
 
-            # sandboxの既存呼び出し契約は維持する。
             if Path(target_file).parts[0] == "sandbox":
                 passed, feedback = run_test(
                     output / f"test_{attempt}.txt", test_module
@@ -291,10 +306,8 @@ def run_edit(target_file, request, test_module, model=None):
             else:
                 passed, feedback = run_test(
                     output / f"test_{attempt}.txt",
-                    test_module,
-                    work_dir=target.parent,
+                    test_module, work_dir=target.parent,
                 )
-
             check_unchanged()
             print(feedback)
             if passed:
@@ -310,11 +323,7 @@ def run_edit(target_file, request, test_module, model=None):
 
 
 def main():
-    result = run_edit(
-        "sandbox/clamp.py",
-        DEFAULT_REQUEST,
-        "test_clamp",
-    )
+    result = run_edit("sandbox/clamp.py", DEFAULT_REQUEST, "test_clamp")
     print("결과:", result["status"])
     if result.get("question"):
         print("확인 필요:", result["question"])
