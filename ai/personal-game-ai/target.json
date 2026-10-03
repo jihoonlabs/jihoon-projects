@@ -1,7 +1,7 @@
 {
   "repository_root": "../..",
-  "expected_branch": "feature/personal-game-ai-task-dependencies",
-  "branch_document": "docs/personal-game-ai/TASK_DEPENDENCIES.md",
+  "expected_branch": "feature/personal-game-ai",
+  "branch_document": "docs/personal-game-ai/EPIC.md",
   "code_files": [],
   "max_context_chars": 12000
 }
