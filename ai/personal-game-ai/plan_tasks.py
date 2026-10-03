@@ -7,6 +7,7 @@ from ask_ai import ask_model
 from create_loop import prepare_create
 from edit_loop import prepare_edit
 from read_context import read_context
+from task_dependencies import order_tasks
 
 BASE_DIR = Path(__file__).resolve().parent
 MAX_TASKS = 8
@@ -61,11 +62,12 @@ def validate_plan(proposal, allowed, goal):
     seen_ids = set()
     used = set()
     tasks = []
+    required = {"id", "kind", "target", "test_module", "prompt"}
 
     for item in items:
-        if not isinstance(item, dict) or set(item) != {
-            "id", "kind", "target", "test_module", "prompt"
-        }:
+        if not isinstance(item, dict):
+            raise ValueError("작업은 JSON 객체여야 합니다.")
+        if set(item) not in (required, required | {"depends_on"}):
             raise ValueError("작업 필드가 잘못됐습니다.")
         task_id = item["id"]
         if (
@@ -84,7 +86,6 @@ def validate_plan(proposal, allowed, goal):
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("작업 요청이 비어 있습니다.")
 
-        # 실행 요청에도 승인된 원래 목표를 보존한다.
         request = (
             "# 승인된 목표\n" + goal
             + "\n\n# 이번 작업\n" + prompt
@@ -95,7 +96,7 @@ def validate_plan(proposal, allowed, goal):
         used.add(values)
         tasks.append({**item, "prompt": request, "status": "pending"})
 
-    # 계획 작업이 다른 작업의 고정 테스트를 수정하지 못하게 한다.
+    tasks = order_tasks(tasks)
     paths = []
     for task in tasks:
         prepare = prepare_create if task["kind"] == "create" else prepare_edit
@@ -145,15 +146,19 @@ def generate_plan(goal, allowed, model=None):
             + "\n\n# 승인된 목표\n" + goal
             + "\n\n# 허용 작업\n"
             + json.dumps(allowed, ensure_ascii=False)
-            + "\n\n허용 대상마다 작업 하나를 만들고 실행 순서로 배열하세요. "
+            + "\n\n허용 대상마다 작업 하나를 만드세요. "
             "대상·kind·test_module은 그대로 사용하세요. "
             "목표 밖의 기능이나 명령을 추가하지 마세요. "
-            "각 요청에 필요한 구현 조건을 구체적으로 적으세요. "
+            "각 요청에 구현 조건과 다른 모듈을 사용할 인터페이스를 적으세요. "
+            "다른 작업의 결과가 필요하면 depends_on에 그 작업 ID를 넣으세요. "
+            "독립 작업은 depends_on을 빈 배열로 지정하세요. "
+            "없는 ID·자기 참조·순환 의존성은 금지합니다. "
             "파일 수정·실행·검사를 했다고 주장하지 마세요. "
             "Markdown 없이 다음 형태의 JSON 객체만 반환하세요:\n"
             '{"tasks":[{"id":"001","kind":"edit",'
             '"target":"sandbox/example.py",'
-            '"test_module":"test_example","prompt":"구현 요청"}]}\n'
+            '"test_module":"test_example","prompt":"구현 요청",'
+            '"depends_on":[]}]}\n'
             "# 이전 계획 검사 결과\n" + feedback
         )
         print(f"AI 계획 시도 {attempt}/{MAX_ATTEMPTS}", flush=True)
