@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 import design_plan
+import generation_profile
 from ask_ai import ask_model
 from read_context import read_context
 
@@ -220,6 +221,7 @@ def generate_tests(path, model=None):
                 "request": envelope["request"],
                 "design": envelope["design"],
             }, ensure_ascii=False)
+            + generation_profile.test_prompt(envelope["request"]["area"])
             + "\nPython 표준 unittest로 테스트 후보를 작성하세요. "
             "구현 코드는 작성하지 마세요. "
             "import unittest와 설계 대상 모듈의 직접 import를 사용하세요. "
