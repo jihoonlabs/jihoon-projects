@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 import edit_loop
+import generation_profile
 from ask_ai import ask_model
 from read_context import read_context
 from task_dependencies import order_tasks
@@ -286,6 +287,7 @@ def generate_design(
             context + "\n\n# 설계 입력\n"
             + json.dumps(request, ensure_ascii=False)
             + "\n기존 파일명:\n" + json.dumps(initial_names)
+            + generation_profile.design_prompt(area)
             + "\n새 Python 모듈의 파일 구성·함수 계약·검사를 제안하세요. "
             "필수 조건은 변경하지 말고 R1 등의 ID로 검사에 연결하세요. "
             "함수 객체의 필드는 name, parameters, behavior만 허용합니다. "
