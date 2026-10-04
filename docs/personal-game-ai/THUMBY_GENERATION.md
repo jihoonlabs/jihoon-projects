@@ -22,7 +22,9 @@
 - 승인·확정·테스트 Git 준비에서 멈추고 같은 요청으로 재개한다.
 - game 영역은 설정의 edit_directory 바로 아래 파일을 취급한다.
 - 게임 실행은 도구의 Git 제외 복사본과 게임 Child 설정을 사용하는 기존 계약이 있다.
-- 실제 새 게임 제작 연결과 원격 테스트 실행은 아직 미검증이다.
+- Child 설정의 expected_branch와 branch_document를 현재 브랜치·이 문서에 맞췄다.
+- 분리된 임시 Git 검사 환경에서 read_context.py의 브랜치·경로·문맥 검사 통과(2417자)를 확인했다. 실제 Mac 전체 회귀를 실행한 것은 아니다.
+- 실제 새 게임 제작 연결은 아직 미구현이다.
 - 이전 워크플로 기록은 문맥 변경 전 이력으로 보존한다.
 
 ## 검증·제한
@@ -31,6 +33,13 @@
 - 실제 Ollama·Docker·기기 검증과 모의 검사를 구분해 기록한다.
 - GitHub 연결만으로 집의 Ollama가 원격 실행되지는 않는다.
 
+## 공식 API 확인
+- 출처: https://thumby.us/API/Get-Started/ 및 https://thumby.us/API/Link/
+- 일반 Thumby는 import thumby를 사용한다.
+- 좌우 입력: thumby.buttonL.pressed(), thumby.buttonR.pressed().
+- 표시: display.fill, drawFilledRectangle, drawText, update. 속도 설정은 display.setFPS.
+- 기기 실행 어댑터는 무한 루프를 import 시 실행하지 않도록 검사 가능한 함수와 실제 진입을 구분한다.
+
 ## 다음 작업
-- 이 Child의 설정과 기존 플랫폼 브랜치 상태를 확인한다.
-- 공식 API와 생성·실행기 계약을 확인해 최소 제작 연결을 구현한다.
+- 기존 생성기·의존성 전달·Docker 검사 계약을 읽고 게임 규칙과 표시 어댑터의 검사 방식을 연결한다.
+- 원격에 feature/thumby는 확인되지 않았다. 기존 플랫폼 분리 계약을 바꾸거나 새 게임 브랜치를 생성하기 전에 실제 기준을 확정한다.
