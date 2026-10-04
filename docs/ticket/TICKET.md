@@ -1,29 +1,33 @@
 # Ticket Epic
 
 ## 目的と範囲
-
-Laravel API と React による Jira 形式の Ticket ボードを提供する。Epic の基準ブランチは `feature/ticket`。Ticket CRUD、ボード操作、コメント機能を統合する。
+Laravel APIとReactによるProject単位のTicketボード。Epicは `feature/ticket`。
 
 ## 確定事項
-
-- Laravel API の応答は snake_case とし、React は API 応答型と画面モデルを分離して API 境界で変換する。
-- `position` はクライアント側の並び替えに使用する。永続化は未実装。
-- コメント作成者は Sanctum のログインユーザーから決定し、他ユーザーのコメント編集・削除はサーバーで拒否する。
-- Ticket 担当者の全ユーザー検索、管理機能、カード順序の DB 永続化は本範囲外。
+- APIはsnake_case、ReactはAPI境界で画面モデルへ変換する。
+- global roleはuser/admin、Project roleはleader/member、permissionはread/write。
+- readは閲覧とコメント、writeはTicket CRUD・状態・担当者変更。leader/adminはメンバー管理、Project CRUDはadminのみ。
+- コメント編集は投稿者のみ。削除は投稿者またはadmin。
+- 担当者は同一Projectメンバーのみ。既存Ticketと移行時active userはGeneralへ移行し、新規userは自動参加しない。
+- positionはクライアント内のみ。DB/API永続化は未実装。
 
 ## 現在の実装
-
-- Laravel: Ticket の一覧・詳細・作成・更新・状態変更・削除 API と、コメントの一覧・作成・更新・削除 API。
-- React: Ticket ボード、検索・担当者フィルター、DnD と手動状態変更、作成・編集・削除 UI、コメント UI。
-- Ticket API の snake_case/camelCase 変換、楽観更新の失敗時復元、コメントの認証・所有者検査を実装。
+- Ticket CRUD、検索・担当者フィルター、DnDによる列移動、手動状態変更、コメント。
+- Project選択、メンバー管理、read/write別UIとサーバー権限境界。
+- Sanctum/CSRF、APIモデル変換、楽観更新失敗時の復元。
+- Project Access Childを2026-10-05にfast-forward統合。統合先は `767e3f6af6071192fc3ef828650eb78f418147c1`。main統合・Child削除は未実施。
 
 ## 検証状態
+- 家のCodexで実装commit `129145e` を検証：Laravel 97 tests / 431 assertions、React 124 tests、Pint、TypeScript、ESLint、production build通過。
+- 家の一時SQLite/Chrome環境でProject切替、leaderのメンバー管理、Ticket CRUD・状態・担当者、コメント、read制限を確認。
+- 今回の遠隔統合は検証済みChildと同じコードへfast-forward。ローカルGitで統合可能性とdiff --checkを確認。
+- 遠隔環境にはPHPがなく、Laravel全テスト・ブラウザー検証の再実行は未実施。共有/本番DB migrationとdeployも未検証。
 
-- Laravel の `api/*` CSRF 例外を削除し、stateful Sanctum API でも通常の CSRF 検証を適用する。
-- 回帰テストで有効な CSRF トークン付き状態変更が成功し、トークンなしの状態変更が `419` で拒否されることを確認。
-- Laravel 全テスト 85件（361 assertions）、React 全テスト 112件、TypeScript、ESLint、Pint、production build が通過。
-- Chrome Headless 154 でログイン後、Ticket 一覧・作成・編集・状態変更・再読み込み後の保持・削除、コメント作成・編集・削除を確認。最後に Ticket が0件であることを確認。
-
-## 次の作業
-
-1. 公開済みチェックポイントを基準に次のTicket作業範囲を定め、必要に応じて `feature/ticket` からChild branchを作成する。
+## 次の作業と設計判断
+次の候補はカード順序のDB/API永続化。実装前に以下を確定する。
+- 保存単位：Project・statusごとに全員共有する順序を推奨。個人別順序は別設計となる。
+- 最初の範囲：列移動・新規作成時の末尾順序保存のみ、または同一列内DnD並び替えまで実装。
+- 同時更新：トランザクションで直列化して最後の操作を反映、またはversionで古い操作を409拒否して再取得。
+- 検索/担当者フィルター中の並び替えは非表示カードを保持する必要がある。初版ではフィルター中の並び替えを無効にする案。
+コード確認：Board/ViewのhandleDragEndは状態だけを更新し、storeは同じstatusへの移動を無視する。同一列内の任意順序変更は現在未実装。Laravel一覧はid昇順。
+新設計確定後にEpicからChildを作成する。Activity/HistoryはV1後の候補。
