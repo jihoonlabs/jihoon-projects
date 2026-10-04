@@ -283,6 +283,10 @@ def generate_design(
             + "\n기존 파일명:\n" + json.dumps(initial_names)
             + "\n새 Python 모듈의 파일 구성·함수 계약·검사를 제안하세요. "
             "필수 조건은 변경하지 말고 R1 등의 ID로 검사에 연결하세요. "
+            "함수 객체의 필드는 name, parameters, behavior만 허용합니다. "
+            "함수 객체에 depends_on 등 추가 필드를 넣지 마세요. "
+            "depends_on은 파일 객체에만 두며 다른 파일의 ID만 참조합니다. "
+            "함수 호출과 재사용 조건은 behavior에 설명하세요. "
             "기존 파일이나 원작 콘텐츠를 복사하지 마세요. "
             "파일 생성·실행·검사를 수행했다고 주장하지 마세요. "
             "Markdown 없이 다음 형태의 JSON만 반환하세요:\n"

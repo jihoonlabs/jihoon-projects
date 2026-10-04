@@ -231,9 +231,41 @@ def generate_tests(path, model=None):
             "파일·네트워크·프로세스 접근은 필요하지 않습니다. "
             "파일을 만들거나 테스트를 실행했다고 주장하지 마세요. "
             "Markdown 없이 JSON만 반환하세요:\n"
-            '{"files":[{"id":"001","filename":"test_module.py",'
-            '"code":"전체 Python 테스트 코드",'
-            '"covers":[{"check":1,"method":"test_case_1"}]}]}\n'
+            "설계 파일마다 별도 테스트 파일 하나를 반환하세요. "
+            "여러 모듈의 테스트를 한 파일에 합치지 마세요. "
+            "테스트 안에 설계 함수나 구현 코드를 정의하지 마세요. "
+            "아래 code에 제시한 import를 유지하고 실제 대상 함수를 검사하세요. "
+            "아래 틀의 id·filename·검사 번호를 그대로 유지하세요. "
+            "code에는 해당 모듈의 전체 테스트 코드를 넣고 "
+            "covers의 method에는 실제 메서드 이름을 넣으세요. "
+            "응답 첫 문자는 {, 마지막 문자는 }여야 합니다. "
+            "백틱·설명·Markdown 코드 블록을 붙이지 마세요.\n"
+            + json.dumps({
+                "files": [
+                    {
+                        "id": item["id"],
+                        "filename": "test_" + item["filename"],
+                        "code": (
+                            "import unittest\nfrom "
+                            + Path(item["filename"]).stem
+                            + " import "
+                            + ", ".join(
+                                function["name"]
+                                for function in item["functions"]
+                            )
+                            + "\n\n"
+                            + "# 이 import를 유지하고 unittest.TestCase와 "
+                            + "검사 메서드를 작성하세요. 구현 함수는 작성 금지."
+                        ),
+                        "covers": [
+                            {"check": number, "method": f"test_case_{number}"}
+                            for number in range(1, len(item["checks"]) + 1)
+                        ],
+                    }
+                    for item in envelope["design"]["files"]
+                ]
+            }, ensure_ascii=False)
+            + "\n"
             "# 이전 구조 검사\n" + feedback
         )
         print(f"AI 테스트 제안 시도 {attempt}/3", flush=True)
