@@ -1,0 +1,56 @@
+import json
+from pathlib import Path
+
+from read_context import CONFIG_PATH
+
+SUPPORTED_PROFILES = {"thumby"}
+
+
+def current_profile(config_path=None):
+    path = Path(CONFIG_PATH if config_path is None else config_path)
+    config = json.loads(path.read_text(encoding="utf-8"))
+    profile = config.get("generation_profile")
+    if profile is None:
+        return None
+    if profile not in SUPPORTED_PROFILES:
+        raise ValueError("지원하지 않는 생성 프로필입니다: " + str(profile))
+    return profile
+
+
+def design_prompt(area):
+    if area != "game" or current_profile() != "thumby":
+        return ""
+    return (
+        "\n# 일반 Thumby 생성 계약\n"
+        "게임 규칙과 기기 입출력·표시 어댑터를 서로 다른 모듈로 분리하세요. "
+        "게임 규칙 모듈은 thumby를 import하지 않고 CPython에서 검사 가능해야 합니다. "
+        "기기 어댑터만 import thumby를 사용하며 buttonL/buttonR 입력과 "
+        "display.fill, drawFilledRectangle, drawText, update, setFPS를 필요한 범위에서 사용하세요. "
+        "어댑터 import만으로 무한 게임 루프를 시작하지 말고 실제 진입 함수를 분리하세요. "
+        "Thumby Color API와 추측한 API는 사용하지 마세요. "
+    )
+
+
+def test_prompt(area):
+    if area != "game" or current_profile() != "thumby":
+        return ""
+    return (
+        "\n# 일반 Thumby 테스트 계약\n"
+        "순수 게임 규칙은 실제 thumby 모듈 없이 검사하세요. "
+        "기기 어댑터 테스트가 thumby를 필요로 하면 import 전에 sys.modules에 "
+        "가짜 thumby를 주입하거나 unittest.mock으로 대체해 CPython에서 검사 가능하게 하세요. "
+        "좌우 이동 경계·장애물 충돌·점수·재시작 조건을 설계 checks에 따라 직접 assertion으로 확인하세요. "
+        "어댑터 import가 무한 루프를 시작하지 않는 구조를 유지하세요. "
+    )
+
+
+def implementation_prompt(area, filename):
+    if area != "game" or current_profile() != "thumby":
+        return ""
+    return (
+        "\n# 일반 Thumby 구현 계약\n"
+        "승인 설계의 역할 분리를 유지하세요. 규칙 모듈에는 thumby 의존성을 넣지 말고, "
+        "기기 어댑터에서만 공식 일반 Thumby API를 사용하세요. "
+        "import 시 게임 루프를 자동 실행하지 마세요. "
+        f"현재 구현 대상은 {filename} 하나뿐입니다. "
+    )
