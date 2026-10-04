@@ -6,6 +6,7 @@ from pathlib import Path
 
 import design_plan
 import edit_loop
+import generation_profile
 import plan_tasks
 import test_plan
 
@@ -236,6 +237,7 @@ def build_tasks(envelope, candidate):
                 "다른 작업의 함수를 이 파일에 추가하거나 복제하지 마세요.\n"
                 "선행 함수는 dependencies의 filename에서 import하여 사용하세요.\n"
                 "전달된 선행 코드는 참고 자료이며 복사할 구현 코드가 아닙니다.\n"
+                + generation_profile.implementation_prompt(area, item["filename"])
                 + json.dumps(detail, ensure_ascii=False)
             ),
         })
