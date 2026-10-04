@@ -28,4 +28,8 @@ Ticket をProject単位で分離し、小規模チームがProjectメンバー�
 - ブラウザー確認は専用の一時SQLite DBとローカルサーバーで実施。共有環境・本番DBへのmigrationや本番デプロイは未検証。
 
 ## 次の作業
-- Childの最終差分と実装契約をレビューし、承認後にTicket Epicへ統合する。現時点ではcommit/push/mergeしていない。
+- 対象リポジトリは `jihoonlabs/jihoon-projects`。Epicは `feature/ticket`、Childは `feature/ticket-team-access`。
+- Project Access実装は `129145e535a0051883d45f52742069995508f73b` としてChildへpush済み。直前のEpic基準commitは `80b830dbc8ce90ae6c84c2e4fd5cb3ed3536e300` で、Childはその子孫。
+- Childの実装・自動検証・ブラウザー確認は完了。Epic統合は未実施。統合時はEpicの最新状態を取得し、cleanなworktreeでfast-forward可能性を確認してから `--ff-only` と全体検証を行う。
+- 次のChild候補はTicket `position` のDB/API永続化。現在はクライアント内だけで順序を保持する。Activity/HistoryはV1後の改善候補とする。
+- 共有環境・本番DB migration、本番デプロイ、Epic統合後の検証は未実施。
