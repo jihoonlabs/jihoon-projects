@@ -134,7 +134,12 @@ def validate_design(proposal, requirements, area):
             covered.add(requirement)
 
     if covered != required_ids:
-        raise ValueError("모든 필수 조건에 검사 제안이 필요합니다.")
+        missing = ", ".join(sorted(required_ids - covered))
+        raise ValueError(
+            "검사에 연결되지 않은 필수 조건 ID: " + missing
+            + ". 해당 조건도 checks의 별도 사례로 작성하세요. "
+            "함수 구성 조건은 모듈에 정의된 함수 이름 목록 검사로 표현할 수 있습니다."
+        )
     return {"files": order_tasks(files)}
 
 
