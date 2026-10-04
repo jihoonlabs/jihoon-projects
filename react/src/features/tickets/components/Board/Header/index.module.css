@@ -13,6 +13,7 @@
   display: flex;
   align-items: center;
   gap: 1.5rem;
+  flex-wrap: wrap;
 }
 
 .title {
@@ -26,6 +27,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .searchInput {
@@ -67,4 +69,10 @@
 
 .createBtn:hover {
   background-color: #0065ff;
+}
+
+.rightSection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }

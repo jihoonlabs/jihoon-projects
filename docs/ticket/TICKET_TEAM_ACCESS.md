@@ -1,47 +1,31 @@
 # Ticket Project Access
 
-## 目的
-Ticket をプロジェクト単位のアクセス境界で管理し、担当者・コメント・メンバー管理を実運用に近い権限モデルで利用できるようにする。
+## 目的と範囲
+Ticket をProject単位で分離し、小規模チームがProjectメンバー、権限、担当者、コメントを安全に扱えるようにする。このChildではLaravelのProject/Member APIとTicket権限境界、およびReactのProject選択・メンバー管理・権限別ボード操作を実装する。
 
-## 確定した要件
-- アプリ管理者がプロジェクト全体を管理する。
-- プロジェクトリーダーは自身のプロジェクトのメンバーを追加・管理できる。
-- 1ユーザーは複数プロジェクトへ所属でき、プロジェクトごとに役割と権限を持てる。
-- プロジェクトメンバーは `leader` または `member` の役割を持つ。
-- Ticket 操作権限はプロジェクトごとに `read` または `write` とする。
-- `read` 以上の権限を持つユーザーだけがプロジェクトを参照できる。
-- `read` はプロジェクト内の Ticket 一覧・詳細の閲覧とコメント投稿を許可する。
-- `write` は `read` に加えて Ticket の作成・編集・削除、担当者変更、ステータス変更を許可する。
-- コメントの編集は投稿者本人だけが行える。
-- コメントの削除は投稿者本人またはアプリ管理者が行える。
-- アプリ管理者でも他ユーザーのコメント本文は編集しない。
-- 退職・利用停止ユーザーの既存の業務記録やコメントは自動削除しない。
-- Ticket は1つのプロジェクトに所属する。
-- Ticket の担当者は、その Ticket が属するプロジェクトのメンバーから1名を選択し、未割り当ても許可する。
+## 確定した権限・UX
+- アプリ権限は `user` / `admin`、Project内の役割は `leader` / `member`、Ticket権限は `read` / `write` として分離する。
+- adminは全Projectを扱える。Project leaderは所属Projectのメンバーを追加・変更・削除できる。
+- readはProject内Ticketの閲覧とコメント投稿、writeはそれに加えてTicket作成・編集・削除・担当者変更・状態変更ができる。
+- コメントは投稿者のみ編集でき、投稿者またはadminが削除できる。
+- Board上部のProject選択で表示Ticketを切り替える。leader/adminにはメンバー管理ダイアログを表示し、readメンバーはTicket詳細とコメントを利用できるが、Ticket変更操作は表示しない。
+- Ticketの担当者は選択Projectのメンバーに限り、未割り当ても許可する。
+- 既存Ticketは `General` Projectへ移行する。移行時点でactiveだった利用者のみ `General` の `member/write` とし、新規利用者は自動参加させない。
 
-## 現在の実装
-- Ticket は `assignee_id` で User と関連している。
-- Ticket API は現在、任意の既存 User を担当者に指定できる。
-- Ticket API は `auth:sanctum` と `active.user` のみで保護され、プロジェクト単位のアクセス制御は未実装。
-- コメントの編集・削除は現在、投稿者本人に限定されている。
-
-## この Child の範囲
-1. Project と Project Member のデータモデルおよび権限境界を追加する。
-2. Ticket を Project に所属させる。
-3. Project の参照を `read` 以上のメンバーに限定する。
-4. Ticket の変更操作を `write` 権限で制御する。
-5. Project Leader に自身のプロジェクトのメンバー管理を許可する。
-6. 担当者を同一 Project のメンバーに限定する。
-7. コメントの所有者ルールとアプリ管理者の削除権限を適用する。
-8. 必要な Laravel / React の契約とテストを追加する。
-
-## グローバル権限と移行方針
-- アプリ全体の権限は `users.role` で管理し、`user` / `admin` を使用する。
-- Project 内の `leader` / `member` と `read` / `write` はグローバル権限から分離する。
-- 既存 Ticket はマイグレーション時に既定 Project `General` へ割り当てる。
-- Ticket の `project_id` は既存データのバックフィル後に必須とする。
-- 移行時点の既存 active User は `General` に `member` + `write` で登録し、既存 Ticket 機能へのアクセス互換性を維持する。
-- 移行後に作成される新規 User を `General` へ自動登録する仕様にはしない。
+## 実装状態
+- `users.role`、`projects`、`project_members` と必須 `tickets.project_id`、既存Ticketの `General` へのバックフィル、User/Project/TicketのEloquent関係を実装。
+- Project CRUDはadmin限定。メンバー一覧はProjectメンバーに公開し、leader/adminがメンバーの追加・役割/権限変更・削除を行える。
+- TicketとコメントAPIにProject membership/read/write境界を適用し、担当者を同一Projectメンバーに限定。
+- React API境界でLaravelのsnake_case `project_id` を `projectId` に変換。Ticket作成時に選択Project IDを送信。
+- Boardは許可されたProjectとそのTicketを切り替え、Projectメンバーを担当者候補に表示。leader/admin用メンバー管理ダイアログ、read/write別Ticket操作、adminのコメント削除を実装。
+- `/api/auth/me` とログイン/登録レスポンスに `role` を含め、admin UI権限判定に利用。
 
 ## 検証
-未実施。GitHub 上で Child branch の仕様を整理している段階であり、実装後に Laravel / React のテスト、型チェック、Lint、Build とブラウザー確認が必要。
+- Laravel全テスト: 97件、431 assertions 通過。Pint通過。
+- React全テスト: 124件通過。TypeScript (`tsc --noEmit`)、ESLint、production build通過。
+- Chrome Headlessの実ブラウザーで認証、Project一覧/切替、leaderによるメンバー追加・役割/権限変更、選択Projectのメンバーを担当者にしたTicket作成、Ticket編集/状態変更/削除、コメント作成/編集/削除を確認。
+- readメンバーでもブラウザーで許可ProjectとTicket詳細を参照でき、Ticket変更・メンバー管理操作が表示されず、コメント投稿が可能なことを確認。
+- ブラウザー確認は専用の一時SQLite DBとローカルサーバーで実施。共有環境・本番DBへのmigrationや本番デプロイは未検証。
+
+## 次の作業
+- Childの最終差分と実装契約をレビューし、承認後にTicket Epicへ統合する。現時点ではcommit/push/mergeしていない。

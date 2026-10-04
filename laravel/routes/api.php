@@ -29,3 +29,8 @@ Route::prefix('auth')->group(
 Route::prefix('tickets')->group(
     base_path('routes/api/tickets.php')
 );
+
+// /api/projects/*
+Route::prefix('projects')->group(
+    base_path('routes/api/projects.php')
+);

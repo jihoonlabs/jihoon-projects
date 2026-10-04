@@ -16,6 +16,7 @@ interface ColumnProps {
   onStatusChange?: (id: string, status: TicketStatus) => void;
   onEdit?: (ticket: Ticket) => void;
   onDelete?: (ticket: Ticket) => void;
+  canWrite?: boolean;
 }
 
 export default function Column({
@@ -24,6 +25,7 @@ export default function Column({
   onStatusChange,
   onEdit,
   onDelete,
+  canWrite,
 }: ColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
@@ -47,6 +49,7 @@ export default function Column({
               onStatusChange={onStatusChange}
               onEdit={onEdit}
               onDelete={onDelete}
+              canWrite={canWrite}
             />
           ))}
         </div>

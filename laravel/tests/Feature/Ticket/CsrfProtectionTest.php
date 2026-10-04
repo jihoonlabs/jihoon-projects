@@ -6,6 +6,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Feature\Ticket\Concerns\UsesGeneralProject;
 use Tests\TestCase;
 
 class EnforceCsrfTokenDuringTests extends ValidateCsrfToken
@@ -19,6 +20,7 @@ class EnforceCsrfTokenDuringTests extends ValidateCsrfToken
 class CsrfProtectionTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesGeneralProject;
 
     protected function setUp(): void
     {
@@ -30,6 +32,7 @@ class CsrfProtectionTest extends TestCase
 
         $user = User::factory()->create(['status' => 'active']);
         $this->actingAs($user);
+        $this->addToGeneralProject($user);
     }
 
     public function test_ticket_status_update_accepts_a_valid_csrf_token(): void

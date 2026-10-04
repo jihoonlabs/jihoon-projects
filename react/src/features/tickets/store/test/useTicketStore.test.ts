@@ -56,7 +56,7 @@ describe('Ticket state and client order', () => {
     vi.mocked(api.deleteTicket).mockReturnValue(request.promise);
     const remove = state().deleteTicket('1');
     vi.mocked(api.createTicket).mockResolvedValue(ticket('2'));
-    await state().addTicket({ title: 'New' });
+    await state().addTicket({ projectId: '1', title: 'New' });
     request.reject(new Error('DELETE failed'));
     await remove;
     const ordered = [...state().tickets].sort(
@@ -69,7 +69,7 @@ describe('Ticket state and client order', () => {
     useTicketStore.setState({ tickets: [ticket('1')] });
     const request = deferred<Ticket>();
     vi.mocked(api.createTicket).mockReturnValue(request.promise);
-    const create = state().addTicket({ title: 'New' });
+    const create = state().addTicket({ projectId: '1', title: 'New' });
     vi.mocked(api.fetchTickets).mockResolvedValue([ticket('1'), ticket('2')]);
     await state().fetchTickets();
     request.resolve(ticket('2'));
@@ -107,7 +107,7 @@ describe('Ticket state and client order', () => {
       tickets: [ticket('1', 4), ticket('2', 90, 'DONE')],
     });
     vi.mocked(api.createTicket).mockResolvedValue(ticket('3'));
-    await state().addTicket({ title: 'New' });
+    await state().addTicket({ projectId: '1', title: 'New' });
     expect(state().tickets.at(-1)).toMatchObject({ id: '3', position: 5 });
     expect(state().isLoading).toBe(false);
   });
@@ -208,7 +208,7 @@ describe('Ticket state and client order', () => {
     const action = state().deleteTicket('1');
     expect(state().tickets).toEqual([]);
     vi.mocked(api.createTicket).mockResolvedValue(ticket('2'));
-    await state().addTicket({ title: 'New' });
+    await state().addTicket({ projectId: '1', title: 'New' });
     request.reject(new Error('DELETE failed'));
     await action;
     expect(
@@ -277,7 +277,7 @@ describe('Ticket state and client order', () => {
     vi.mocked(api.updateTicketStatus).mockReturnValue(request.promise);
     const move = state().updateStatus('1', 'DONE');
     vi.mocked(api.createTicket).mockResolvedValue(ticket('2'));
-    await state().addTicket({ title: 'New' });
+    await state().addTicket({ projectId: '1', title: 'New' });
     request.reject(new Error('move failed'));
     await move;
     const ordered = [...state().tickets].sort(
@@ -293,7 +293,7 @@ describe('Ticket state and client order', () => {
     vi.mocked(api.fetchTickets).mockRejectedValue(new Error('fetch failed'));
     await state().fetchTickets();
     vi.mocked(api.createTicket).mockRejectedValue(new Error('create failed'));
-    await expect(state().addTicket({ title: 'New' })).rejects.toThrow(
+    await expect(state().addTicket({ projectId: '1', title: 'New' })).rejects.toThrow(
       'create failed',
     );
     expect(state().tickets).toEqual([ticket('1', 4)]);

@@ -1,6 +1,7 @@
 'use client';
 
 import styles from './index.module.css';
+import type { Project } from '@/features/tickets/types/project';
 
 interface HeaderProps {
   searchQuery: string;
@@ -8,6 +9,12 @@ interface HeaderProps {
   assigneeFilter: string;
   onAssigneeChange: (value: string) => void;
   onCreate: () => void;
+  projects: Project[];
+  selectedProjectId: string;
+  onProjectChange: (projectId: string) => void;
+  canWrite: boolean;
+  canManageMembers: boolean;
+  onManageMembers: () => void;
 }
 
 export default function Header({
@@ -16,11 +23,21 @@ export default function Header({
   assigneeFilter,
   onAssigneeChange,
   onCreate,
+  projects,
+  selectedProjectId,
+  onProjectChange,
+  canWrite,
+  canManageMembers,
+  onManageMembers,
 }: HeaderProps) {
   return (
     <header className={styles.container}>
       <div className={styles.leftSection}>
         <h1 className={styles.title}>チケットボード</h1>
+
+        <select aria-label="プロジェクト" className={styles.selectFilter} value={selectedProjectId} onChange={(event) => onProjectChange(event.target.value)} disabled={projects.length === 0}>
+          {projects.length === 0 ? <option value="">利用可能なプロジェクトがありません</option> : projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+        </select>
 
         <div className={styles.filterGroup}>
           <input
@@ -45,9 +62,10 @@ export default function Header({
       </div>
 
       <div className={styles.rightSection}>
-        <button type="button" className={styles.createBtn} onClick={onCreate}>
+        {canManageMembers && <button type="button" onClick={onManageMembers}>メンバー管理</button>}
+        {canWrite && <button type="button" className={styles.createBtn} onClick={onCreate}>
           + チケット作成
-        </button>
+        </button>}
       </div>
     </header>
   );

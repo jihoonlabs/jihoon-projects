@@ -2,6 +2,7 @@ import type { TicketResponse } from '../ticketApi';
 
 export const responseTicket: TicketResponse = {
   id: '1',
+  project_id: '1',
   issue_key: 'TICK-1',
   title: 'First ticket',
   description: null,

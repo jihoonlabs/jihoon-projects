@@ -11,6 +11,7 @@ interface MainProps {
   onStatusChange?: (id: string, status: TicketStatus) => void;
   onEdit?: (ticket: Ticket) => void;
   onDelete?: (ticket: Ticket) => void;
+  canWrite?: boolean;
 }
 
 export default function Main({
@@ -21,6 +22,7 @@ export default function Main({
   onStatusChange,
   onEdit,
   onDelete,
+  canWrite = true,
 }: MainProps) {
   const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch =
@@ -53,6 +55,7 @@ export default function Main({
             onStatusChange={onStatusChange}
             onEdit={onEdit}
             onDelete={onDelete}
+            canWrite={canWrite}
           />
         );
       })}

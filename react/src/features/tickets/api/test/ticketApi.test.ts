@@ -16,9 +16,15 @@ const url = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 describe('Ticket API boundary', () => {
   it.each(['not-an-id', '', '0', '1.5'])(
+    'rejects invalid project ID %j',
+    async (projectId) => {
+      await expect(createTicket({ projectId, title: 'New' })).rejects.toThrow('プロジェクトID');
+    },
+  );
+  it.each(['not-an-id', '', '0', '1.5'])(
     'rejects invalid assignee ID %j rather than sending null',
     async (assigneeId) => {
-      await expect(createTicket({ title: 'New', assigneeId })).rejects.toThrow(
+      await expect(createTicket({ projectId: '1', title: 'New', assigneeId })).rejects.toThrow(
         '担当者ID',
       );
     },
@@ -26,6 +32,7 @@ describe('Ticket API boundary', () => {
   it('maps snake_case, nullable fields, and numeric assignee IDs', () => {
     expect(toTicket(responseTicket, 12)).toEqual({
       id: '1',
+      projectId: '1',
       issueKey: 'TICK-1',
       title: 'First ticket',
       description: null,
@@ -92,6 +99,7 @@ describe('Ticket API boundary', () => {
         expect(request.credentials).toBe('include');
         expect(request.headers.get('X-XSRF-TOKEN')).toBe('test-csrf-token');
         expect(await request.json()).toEqual({
+          project_id: 1,
           title: 'New',
           description: null,
           assignee_id: 7,
@@ -103,7 +111,7 @@ describe('Ticket API boundary', () => {
       }),
     );
     expect(
-      await createTicket({ title: 'New', description: null, assigneeId: '7' }),
+      await createTicket({ projectId: '1', title: 'New', description: null, assigneeId: '7' }),
     ).toMatchObject({ title: 'New', issueKey: 'TICK-1' });
   });
   it('sends editable ticket fields through PATCH', async () => {

@@ -33,6 +33,7 @@ class RegisterTest extends TestCase
             ->assertJsonPath('user.name', 'test')
             ->assertJsonPath('user.email', 'test@example.com')
             ->assertJsonPath('user.status', 'active')
+            ->assertJsonPath('user.role', 'user')
             ->assertJsonStructure([
                 'message',
                 'user' => [
@@ -40,6 +41,7 @@ class RegisterTest extends TestCase
                     'name',
                     'email',
                     'status',
+                    'role',
                     'createdAt',
                 ],
             ]);

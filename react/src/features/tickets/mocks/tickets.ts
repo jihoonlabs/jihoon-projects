@@ -19,6 +19,7 @@ export const INITIAL_COLUMNS: ColumnConfig[] = [
 export const MOCK_TICKETS: Ticket[] = [
   {
     id: '1',
+    projectId: '1',
     issueKey: 'KAN-101',
     title: '認証セッションクッキーの処理改善',
     description: 'CSRFトークンの未反映問題の解決およびテスト作成',
@@ -31,6 +32,7 @@ export const MOCK_TICKETS: Ticket[] = [
   },
   {
     id: '2',
+    projectId: '1',
     issueKey: 'KAN-102',
     title: 'JiraスタイルのカンバンボードUIレイアウト実装',
     description: '5段階のカラムおよびカードコンポーネントのマークアップ',
@@ -43,6 +45,7 @@ export const MOCK_TICKETS: Ticket[] = [
   },
   {
     id: '3',
+    projectId: '1',
     assignee: null,
     issueKey: 'KAN-103',
     title: 'ドラッグ＆ドロップライブラリの検討と連携',
@@ -55,6 +58,7 @@ export const MOCK_TICKETS: Ticket[] = [
   },
   {
     id: '4',
+    projectId: '1',
     assignee: null,
     issueKey: 'KAN-104',
     title: 'チケット詳細モーダルコンポーネントの設計',
@@ -67,6 +71,7 @@ export const MOCK_TICKETS: Ticket[] = [
   },
   {
     id: '5',
+    projectId: '1',
     issueKey: 'KAN-105',
     title: 'コードレビューとリファクタリング',
     description: 'Boardコンポーネントのディレクトリ構造の最適化',

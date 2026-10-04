@@ -19,6 +19,9 @@ import Header from '../Header';
 import Main from '../Main';
 import Card from '../Card';
 import TicketModal from '../TicketModal';
+import ProjectMembersDialog from '../ProjectMembersDialog';
+import { fetchProjects, fetchProjectMembers } from '@/features/tickets/api/projectApi';
+import type { Project, ProjectMember } from '@/features/tickets/types/project';
 import styles from './index.module.css';
 
 export function TicketBoardView() {
@@ -39,10 +42,46 @@ export function TicketBoardView() {
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
+  const [membersProjectId, setMembersProjectId] = useState('');
+  const [projectError, setProjectError] = useState<string | null>(null);
+  const [managingMembers, setManagingMembers] = useState(false);
 
   useEffect(() => {
     fetchTickets();
   }, [fetchTickets]);
+
+  useEffect(() => {
+    let active = true;
+    fetchProjects()
+      .then((items) => {
+        if (!active) return;
+        setProjects(items);
+        setSelectedProjectId((current) => current && items.some((item) => item.id === current) ? current : items[0]?.id ?? '');
+      })
+      .catch((reason) => { if (active) setProjectError(reason instanceof Error ? reason.message : 'プロジェクトを取得できませんでした。'); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    let active = true;
+    fetchProjectMembers(selectedProjectId)
+      .then((items) => { if (active) { setProjectMembers(items); setMembersProjectId(selectedProjectId); setProjectError(null); } })
+      .catch((reason) => { if (active) setProjectError(reason instanceof Error ? reason.message : 'メンバーを取得できませんでした。'); });
+    return () => { active = false; };
+  }, [selectedProjectId]);
+
+  const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? null;
+  const currentMembership = membersProjectId === selectedProjectId
+    ? projectMembers.find((member) => member.id === String(currentUserId))
+    : undefined;
+  const isAdmin = currentUser?.role === 'admin';
+  const canWrite = isAdmin || currentMembership?.permission === 'write';
+  const canManageMembers = isAdmin || currentMembership?.role === 'leader';
+  const projectTickets = tickets.filter((ticket) => ticket.projectId === selectedProjectId);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -54,7 +93,7 @@ export function TicketBoardView() {
 
   const handleDragStart = (event: DragStartEvent) => {
     const activeId = String(event.active.id);
-    const found = tickets.find((t) => t.id === activeId);
+    const found = projectTickets.find((t) => t.id === activeId);
     if (found) setActiveTicket(found);
   };
 
@@ -66,12 +105,12 @@ export function TicketBoardView() {
     const { active, over } = event;
     setActiveTicket(null);
 
-    if (!over) return;
+    if (!canWrite || !over) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
 
-    const draggedTicket = tickets.find((t) => String(t.id) === activeId);
+    const draggedTicket = projectTickets.find((t) => String(t.id) === activeId);
     if (!draggedTicket) return;
 
     const isOverColumn = INITIAL_COLUMNS.some((col) => col.id === overId);
@@ -80,7 +119,7 @@ export function TicketBoardView() {
     if (isOverColumn) {
       newStatus = overId as TicketStatus;
     } else {
-      const overTicket = tickets.find((t) => String(t.id) === overId);
+      const overTicket = projectTickets.find((t) => String(t.id) === overId);
       if (overTicket) {
         newStatus = overTicket.status;
       } else return;
@@ -114,9 +153,16 @@ export function TicketBoardView() {
         assigneeFilter={assigneeFilter}
         onAssigneeChange={setAssigneeFilter}
         onCreate={openCreate}
+        projects={projects}
+        selectedProjectId={selectedProjectId}
+        onProjectChange={setSelectedProjectId}
+        canWrite={canWrite}
+        canManageMembers={canManageMembers}
+        onManageMembers={() => setManagingMembers(true)}
       />
 
-      {error && <p role="alert">{error}</p>}
+      {(error || projectError) && <p role="alert">{error || projectError}</p>}
+      {projects.length === 0 && !projectError && <p>利用可能なプロジェクトがありません。</p>}
 
       <DndContext
         sensors={sensors}
@@ -126,17 +172,18 @@ export function TicketBoardView() {
         onDragCancel={handleDragCancel}
       >
         <Main
-          tickets={tickets}
+          tickets={projectTickets}
           searchQuery={searchQuery}
           assigneeFilter={assigneeFilter}
           currentUserId={currentUserId}
           onStatusChange={updateStatus}
           onEdit={openEdit}
           onDelete={handleDelete}
+          canWrite={canWrite}
         />
 
         <DragOverlay>
-          {activeTicket ? <Card ticket={activeTicket} isOverlay /> : null}
+          {activeTicket && canWrite ? <Card ticket={activeTicket} isOverlay canWrite /> : null}
         </DragOverlay>
       </DndContext>
 
@@ -145,10 +192,24 @@ export function TicketBoardView() {
           key={editingTicket?.id ?? 'create'}
           ticket={editingTicket}
           currentUserId={currentUserId}
-          currentUserName={currentUser?.name}
+          currentUserRole={currentUser?.role}
+          projectId={editingTicket?.projectId ?? selectedProjectId}
+          projectMembers={membersProjectId === selectedProjectId ? projectMembers : []}
+          readOnly={!canWrite}
           onClose={() => setIsModalOpen(false)}
           onCreate={addTicket}
           onUpdate={updateTicket}
+        />
+      )}
+      {managingMembers && selectedProject && (
+        <ProjectMembersDialog
+          project={selectedProject}
+          onClose={() => {
+            setManagingMembers(false);
+            void fetchProjectMembers(selectedProject.id)
+              .then(setProjectMembers)
+              .catch((reason) => setProjectError(reason instanceof Error ? reason.message : 'メンバーを取得できませんでした。'));
+          }}
         />
       )}
     </div>

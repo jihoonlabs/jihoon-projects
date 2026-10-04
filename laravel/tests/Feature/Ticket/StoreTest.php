@@ -2,13 +2,18 @@
 
 namespace Tests\Feature\Ticket;
 
+use App\Models\Project;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Feature\Ticket\Concerns\UsesGeneralProject;
 use Tests\TestCase;
 
 class StoreTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesGeneralProject;
+
+    protected Project $project;
 
     protected function setUp(): void
     {
@@ -19,11 +24,13 @@ class StoreTest extends TestCase
         ]);
 
         $this->actingAs($user);
+        $this->project = $this->addToGeneralProject($user);
     }
 
     public function test_チケットを作成できる(): void
     {
         $response = $this->postJson('/api/tickets', [
+            'project_id' => $this->project->id,
             'title' => 'テストチケット',
             'description' => 'テスト用の説明',
             'status' => 'TODO',
@@ -50,6 +57,7 @@ class StoreTest extends TestCase
     public function test_タイトルは必須(): void
     {
         $response = $this->postJson('/api/tickets', [
+            'project_id' => $this->project->id,
             'description' => 'テスト用の説明',
             'status' => 'TODO',
             'priority' => 'MEDIUM',
@@ -66,6 +74,7 @@ class StoreTest extends TestCase
     public function test_不正な優先度は指定できない(): void
     {
         $response = $this->postJson('/api/tickets', [
+            'project_id' => $this->project->id,
             'title' => 'テストチケット',
             'description' => 'テスト用の説明',
             'status' => 'TODO',
@@ -83,6 +92,7 @@ class StoreTest extends TestCase
     public function test_ステータスと優先度を省略した場合はデフォルト値で作成される(): void
     {
         $response = $this->postJson('/api/tickets', [
+            'project_id' => $this->project->id,
             'title' => 'テストチケット',
         ]);
 

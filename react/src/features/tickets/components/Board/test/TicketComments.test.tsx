@@ -39,6 +39,17 @@ it('shows edit and delete actions only for the signed-in author', async () => {
   expect(otherComment.querySelectorAll('button')).toHaveLength(0);
 });
 
+it('allows an application admin to delete another user\'s comment without editing it', async () => {
+  vi.mocked(api.deleteTicketComment).mockResolvedValue();
+  render(<TicketComments ticketId="1" currentUserId={7} currentUserRole="admin" />);
+
+  const otherComment = (await screen.findByText('other comment')).closest('li')!;
+  expect(otherComment.querySelectorAll('button')).toHaveLength(1);
+  fireEvent.click(otherComment.querySelector('button')!);
+  await waitFor(() => expect(api.deleteTicketComment).toHaveBeenCalledWith('1', '11'));
+  expect(screen.queryByText('other comment')).not.toBeInTheDocument();
+});
+
 it('creates a trimmed comment and appends the server response', async () => {
   vi.mocked(api.createTicketComment).mockResolvedValue({
     ...mine,

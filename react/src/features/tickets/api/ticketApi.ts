@@ -12,6 +12,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 // Transport contract: Laravel Resource envelopes contain snake_case fields.
 export interface TicketResponse {
   id: string;
+  project_id: string;
   issue_key: string | null;
   title: string;
   description: string | null;
@@ -25,6 +26,7 @@ export interface TicketResponse {
 export function toTicket(data: TicketResponse, position = 0): Ticket {
   return {
     id: String(data.id),
+    projectId: String(data.project_id),
     issueKey: data.issue_key,
     title: data.title,
     description: data.description,
@@ -83,6 +85,10 @@ export async function fetchTicket(id: string): Promise<Ticket> {
 }
 
 export async function createTicket(input: CreateTicketInput): Promise<Ticket> {
+  const projectId = Number(input.projectId);
+  if (!Number.isSafeInteger(projectId) || projectId <= 0) {
+    throw new Error('プロジェクトIDが不正です。');
+  }
   const assigneeId = input.assigneeId == null ? null : Number(input.assigneeId);
   if (
     assigneeId !== null &&
@@ -96,6 +102,7 @@ export async function createTicket(input: CreateTicketInput): Promise<Ticket> {
         method: 'POST',
         body: JSON.stringify({
           title: input.title,
+          project_id: projectId,
           description: input.description,
           status: input.status,
           priority: input.priority,

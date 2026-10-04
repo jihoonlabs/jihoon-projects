@@ -11,6 +11,7 @@ export interface UserSummary {
 
 export interface Ticket {
   id: string;
+  projectId: string;
   issueKey: string | null;
   title: string;
   description: string | null;
@@ -23,6 +24,7 @@ export interface Ticket {
 }
 
 export interface CreateTicketInput {
+  projectId: string;
   title: string;
   description?: string | null;
   status?: TicketStatus;

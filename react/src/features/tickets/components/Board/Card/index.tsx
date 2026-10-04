@@ -11,6 +11,7 @@ interface CardProps {
   onStatusChange?: (id: string, status: TicketStatus) => void;
   onEdit?: (ticket: Ticket) => void;
   onDelete?: (ticket: Ticket) => void;
+  canWrite?: boolean;
 }
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -31,9 +32,10 @@ export default function Card({
   onStatusChange,
   onEdit,
   onDelete,
+  canWrite = true,
 }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: ticket.id });
+    useSortable({ id: ticket.id, disabled: !canWrite });
 
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -56,7 +58,7 @@ export default function Card({
           className={styles.controls}
           onPointerDown={(event) => event.stopPropagation()}
         >
-          <select
+          {canWrite && <select
             aria-label={`${ticket.title} のステータス`}
             value={ticket.status}
             onChange={(event) =>
@@ -66,9 +68,9 @@ export default function Card({
             {Object.entries(STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}
-          </select>
-          <button type="button" onClick={() => onEdit?.(ticket)}>編集</button>
-          <button type="button" onClick={() => onDelete?.(ticket)}>削除</button>
+          </select>}
+          <button type="button" onClick={() => onEdit?.(ticket)}>{canWrite ? '編集' : '詳細'}</button>
+          {canWrite && <button type="button" onClick={() => onDelete?.(ticket)}>削除</button>}
         </div>
       )}
 
