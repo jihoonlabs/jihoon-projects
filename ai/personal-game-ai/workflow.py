@@ -173,6 +173,42 @@ def generate_candidate(state, model):
         BASE_DIR / state["design"], model=revised_model
     )
 
+
+def connect_reviewed_design(state, state_path, path):
+    if state["stage"] != "review_design":
+        raise ValueError("설계 검토 단계에서만 수정 설계를 연결할 수 있습니다.")
+    source, data, envelope = design_plan.read_design(path)
+    expected_request = {
+        "goal": state["request"]["goal"],
+        "requirements": {
+            f"R{number}": value
+            for number, value in enumerate(state["request"]["requirements"], 1)
+        },
+        "area": state["request"]["area"],
+    }
+    revision = envelope.get("revision", {})
+    if (
+        envelope["request"] != expected_request
+        or envelope["context"] != state["context"]
+        or revision.get("source") != state["design"]
+        or revision.get("source_sha256") != state["design_sha256"]
+    ):
+        raise RuntimeError("현재 설계의 목표·문맥·수정 이력과 다릅니다.")
+    approval = source.with_name("approval.json")
+    if approval.exists() or approval.is_symlink():
+        raise ValueError("아직 승인하지 않은 수정 설계만 연결할 수 있습니다.")
+    check_protected(state)
+    if source.read_bytes() != data:
+        raise RuntimeError("연결 중 수정 설계가 변경됐습니다.")
+    history = state_path.parent / ("design_before_" + uuid.uuid4().hex + ".json")
+    with history.open("x", encoding="utf-8") as stream:
+        stream.write(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+    state["previous_design"] = state["design"]
+    state["design"] = str(source.relative_to(BASE_DIR))
+    state["design_sha256"] = digest(data)
+    protect(state, [source])
+    write_state(state_path, state)
+
 def advance(state, state_path, model, approve, confirm, answer_id, answer, feedback=None):
     def save():
         write_state(state_path, state)
@@ -371,17 +407,17 @@ def summarize(state, folder):
 
 def run_workflow(
     request_path, *, model=None, approve=None, confirm=None,
-    answer_id=None, answer=None, retry=False, feedback=None,
+    answer_id=None, answer=None, retry=False, feedback=None, review_design=None,
 ):
     if feedback is not None and (
         not isinstance(feedback, str) or not feedback.strip()
         or len(feedback) > 4000
     ):
         raise ValueError("테스트 피드백은 1~4000자여야 합니다.")
-    if sum(value is not None for value in (approve, confirm, answer_id, feedback)) > 1:
+    if sum(value is not None for value in (approve, confirm, answer_id, feedback, review_design)) > 1:
         raise ValueError("한 번에 승인·확정·답변 중 하나만 지정하세요.")
     if retry and any(
-        value is not None for value in (approve, confirm, answer_id, answer, feedback)
+        value is not None for value in (approve, confirm, answer_id, answer, feedback, review_design)
     ):
         raise ValueError("--retry는 다른 승인·답변 옵션과 함께 사용할 수 없습니다.")
     path, data, request = load_request(request_path)
@@ -467,6 +503,8 @@ def run_workflow(
         try:
             with log.open("x", encoding="utf-8") as stream:
                 with contextlib.redirect_stdout(stream), contextlib.redirect_stderr(stream):
+                    if review_design is not None:
+                        connect_reviewed_design(state, state_path, review_design)
                     advance(
                         state, state_path, guarded_model,
                         approve, confirm, answer_id, answer, feedback,
@@ -498,6 +536,7 @@ def main():
     action.add_argument("--answer", dest="answer_id")
     action.add_argument("--retry", action="store_true")
     action.add_argument("--test-feedback", type=Path)
+    action.add_argument("--review-design", type=Path)
     parser.add_argument("--answer-text")
     args = parser.parse_args()
     if (args.answer_id is None) != (args.answer_text is None):
@@ -513,7 +552,7 @@ def main():
         args.request, approve=args.approve_design,
         confirm=args.confirm_tests,
         answer_id=args.answer_id, answer=args.answer_text,
-        retry=args.retry, feedback=feedback,
+        retry=args.retry, feedback=feedback, review_design=args.review_design,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     if "error" in result:
