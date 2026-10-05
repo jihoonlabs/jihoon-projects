@@ -10,6 +10,7 @@ import design_plan
 import edit_loop
 import execute_plan
 import implementation_link
+import run_tasks
 import test_plan
 
 BASE_DIR = Path(__file__).resolve().parent
