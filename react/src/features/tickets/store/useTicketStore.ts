@@ -8,6 +8,12 @@ interface TicketState {
   error: string | null;
   fetchTickets: () => Promise<void>;
   updateStatus: (id: string, status: TicketStatus) => Promise<void>;
+  moveTicket: (
+    id: string,
+    status: TicketStatus,
+    position: number,
+    boardVersion: number,
+  ) => Promise<number>;
   addTicket: (ticket: CreateTicketInput) => Promise<void>;
   updateTicket: (id: string, input: UpdateTicketInput) => Promise<void>;
   deleteTicket: (id: string) => Promise<void>;
@@ -146,6 +152,44 @@ export const useTicketStore = create<TicketState>((set, get) => {
         } finally {
           revision += 1;
           reserved.delete(id);
+        }
+      }),
+    moveTicket: (id, status, position, boardVersion) =>
+      write(id, async () => {
+        const before = get().tickets;
+        const moving = before.find((ticket) => ticket.id === id);
+        if (!moving) return boardVersion;
+
+        revision += 1;
+        set({ error: null });
+        const without = before.filter((ticket) => ticket.id !== id);
+        const target = without
+          .filter((ticket) => ticket.status === status)
+          .sort((a, b) => a.position - b.position);
+        const insertAt = Math.min(position, target.length);
+        target.splice(insertAt, 0, { ...moving, status });
+        const positions = new Map(target.map((ticket, index) => [ticket.id, index]));
+        set({
+          tickets: without.map((ticket) =>
+            positions.has(ticket.id)
+              ? { ...ticket, position: positions.get(ticket.id)! }
+              : ticket,
+          ).concat({ ...moving, status, position: insertAt }),
+        });
+
+        try {
+          const result = await api.moveTicket(id, status, position, boardVersion);
+          await get().fetchTickets();
+          return result.boardVersion;
+        } catch (error) {
+          set({ tickets: before });
+          fail(error);
+          if (error instanceof api.TicketApiError && error.status === 409) {
+            await get().fetchTickets();
+          }
+          throw error;
+        } finally {
+          revision += 1;
         }
       }),
     addTicket: async (input) => {
