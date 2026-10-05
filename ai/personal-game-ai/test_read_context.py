@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from read_context import CONFIG_PATH, read_context
@@ -26,6 +27,41 @@ class ContextTests(unittest.TestCase):
     def test_wrong_branch(self):
         with self.assertRaises(RuntimeError):
             self.run_config(expected_branch="test/intentionally-wrong")
+
+    def test_child_branch_is_allowed_by_ancestry(self):
+        real_run = __import__("subprocess").run
+
+        def run_with_child(command, *args, **kwargs):
+            if command[:3] == ["git", "branch", "--show-current"]:
+                return __import__("subprocess").CompletedProcess(
+                    command, 0, stdout="feature/personal-game-ai-child\n", stderr=""
+                )
+            if command[:3] == ["git", "merge-base", "--is-ancestor"]:
+                return __import__("subprocess").CompletedProcess(
+                    command, 0, stdout="", stderr=""
+                )
+            return real_run(command, *args, **kwargs)
+
+        with patch("read_context.subprocess.run", side_effect=run_with_child):
+            self.assertIn("--- AGENTS.md ---", self.run_config())
+
+    def test_unrelated_branch_is_rejected_by_ancestry(self):
+        real_run = __import__("subprocess").run
+
+        def run_with_unrelated_branch(command, *args, **kwargs):
+            if command[:3] == ["git", "branch", "--show-current"]:
+                return __import__("subprocess").CompletedProcess(
+                    command, 0, stdout="feature/unrelated\n", stderr=""
+                )
+            if command[:3] == ["git", "merge-base", "--is-ancestor"]:
+                return __import__("subprocess").CompletedProcess(
+                    command, 1, stdout="", stderr=""
+                )
+            return real_run(command, *args, **kwargs)
+
+        with patch("read_context.subprocess.run", side_effect=run_with_unrelated_branch):
+            with self.assertRaises(RuntimeError):
+                self.run_config()
 
     def test_missing_file(self):
         with self.assertRaises(FileNotFoundError):
