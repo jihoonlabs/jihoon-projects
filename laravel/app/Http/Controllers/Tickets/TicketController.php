@@ -104,9 +104,7 @@ class TicketController extends Controller
             $this->validateAssignee($ticket->project, $validated['assignee_id']);
         }
 
-        $statusChanged = isset($validated['status']) && $validated['status'] !== $ticket->status;
-
-        if (! $statusChanged) {
+        if (! array_key_exists('status', $validated)) {
             $ticket->update($validated);
 
             return new TicketResource($ticket->load(['project:id,name', 'assignee:id,name']));
@@ -114,6 +112,14 @@ class TicketController extends Controller
 
         DB::transaction(function () use ($ticket, $validated) {
             $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
+            $ticket->refresh();
+
+            if ($validated['status'] === $ticket->status) {
+                $ticket->update($validated);
+
+                return;
+            }
+
             $sourceStatus = $ticket->status;
             $newPosition = ((int) (Ticket::query()
                 ->where('project_id', $project->id)
@@ -193,6 +199,7 @@ class TicketController extends Controller
 
         DB::transaction(function () use ($ticket) {
             $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
+            $ticket->refresh();
             $status = $ticket->status;
 
             $ticket->delete();
