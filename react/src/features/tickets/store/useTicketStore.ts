@@ -19,33 +19,6 @@ interface TicketState {
   deleteTicket: (id: string) => Promise<void>;
 }
 
-function endPosition(tickets: Ticket[], status: TicketStatus): number {
-  return tickets.reduce(
-    (end, ticket) =>
-      ticket.status === status ? Math.max(end, ticket.position + 1) : end,
-    0,
-  );
-}
-
-// Preserve local order on refresh; new tickets or remote column moves go last.
-function mergeTickets(incoming: Ticket[], current: Ticket[]): Ticket[] {
-  const existing = new Map(current.map((ticket) => [ticket.id, ticket]));
-  const retained = incoming.flatMap((ticket) => {
-    const old = existing.get(ticket.id);
-    return old && old.status === ticket.status
-      ? [{ ...ticket, position: old.position }]
-      : [];
-  });
-  return incoming.map((ticket) => {
-    const old = existing.get(ticket.id);
-    if (old && old.status === ticket.status)
-      return { ...ticket, position: old.position };
-    const next = { ...ticket, position: endPosition(retained, ticket.status) };
-    retained.push(next);
-    return next;
-  });
-}
-
 export const useTicketStore = create<TicketState>((set, get) => {
   let revision = 0;
   let fetchSequence = 0;
@@ -53,10 +26,8 @@ export const useTicketStore = create<TicketState>((set, get) => {
   let creating = 0;
   let refreshNeeded = false;
   const pending = new Map<string, Promise<unknown>>();
-  // Reserve rollback positions while an optimistic move/delete is in flight.
+  // Reserve rollback values while an optimistic write is in flight.
   const reserved = new Map<string, Ticket>();
-  const nextPosition = (status: TicketStatus) =>
-    endPosition([...get().tickets, ...reserved.values()], status);
   const refreshWhenIdle = async () => {
     if (refreshNeeded && pending.size === 0 && creating === 0) {
       refreshNeeded = false;
@@ -107,7 +78,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
           pending.size === 0 &&
           creating === 0
         ) {
-          set({ tickets: mergeTickets(incoming, get().tickets) });
+          set({ tickets: incoming });
           refreshNeeded = false;
         } else if (sequence === fetchSequence) {
           refreshNeeded = true;
@@ -125,20 +96,12 @@ export const useTicketStore = create<TicketState>((set, get) => {
         if (!before || before.status === status) return;
         revision += 1;
         reserved.set(id, before);
-        const position = nextPosition(status);
-        set((state) => ({
-          error: null,
-          tickets: state.tickets.map((ticket) =>
-            ticket.id === id ? { ...ticket, status, position } : ticket,
-          ),
-        }));
+        set({ error: null });
         try {
           const updated = await api.updateTicketStatus(id, status);
           set((state) => ({
             tickets: state.tickets.map((ticket) =>
-              ticket.id === id
-                ? { ...updated, position: ticket.position }
-                : ticket,
+              ticket.id === id ? updated : ticket,
             ),
           }));
         } catch (error) {
@@ -199,10 +162,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
       try {
         const ticket = await api.createTicket(input);
         set((state) => ({
-          tickets: [
-            ...state.tickets,
-            { ...ticket, position: nextPosition(ticket.status) },
-          ],
+          tickets: [...state.tickets, ticket],
         }));
       } catch (error) {
         fail(error);
@@ -224,9 +184,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
           const updated = await api.updateTicket(id, input);
           set((state) => ({
             tickets: state.tickets.map((ticket) =>
-              ticket.id === id
-                ? { ...updated, position: ticket.status === updated.status ? ticket.position : nextPosition(updated.status) }
-                : ticket,
+              ticket.id === id ? updated : ticket,
             ),
           }));
         } catch (error) {
