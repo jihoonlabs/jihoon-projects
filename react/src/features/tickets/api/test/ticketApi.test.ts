@@ -6,6 +6,7 @@ import {
   deleteTicket,
   fetchTicket,
   fetchTickets,
+  moveTicket,
   toTicket,
   updateTicket,
   updateTicketStatus,
@@ -30,7 +31,7 @@ describe('Ticket API boundary', () => {
     },
   );
   it('maps snake_case, nullable fields, and numeric assignee IDs', () => {
-    expect(toTicket(responseTicket, 12)).toEqual({
+    expect(toTicket({ ...responseTicket, position: 12 })).toEqual({
       id: '1',
       projectId: '1',
       issueKey: 'TICK-1',
@@ -63,7 +64,7 @@ describe('Ticket API boundary', () => {
       http.get(`${url}/api/tickets`, ({ request }) => {
         expect(request.credentials).toBe('include');
         return HttpResponse.json({
-          data: [responseTicket, { ...responseTicket, id: '2' }],
+          data: [responseTicket, { ...responseTicket, id: '2', position: 1 }],
         });
       }),
     );
@@ -169,6 +170,38 @@ describe('Ticket API boundary', () => {
       ),
     );
     await expect(deleteTicket('1')).resolves.toBeUndefined();
+  });
+  it('sends a versioned move and maps the authoritative board version', async () => {
+    server.use(
+      http.patch(`${url}/api/tickets/1/move`, async ({ request }) => {
+        expect(request.headers.get('X-XSRF-TOKEN')).toBe('test-csrf-token');
+        expect(await request.json()).toEqual({
+          status: 'IN_PROGRESS',
+          position: 2,
+          board_version: 4,
+        });
+        return HttpResponse.json({
+          data: { ...responseTicket, status: 'IN_PROGRESS', position: 2 },
+          board_version: 5,
+        });
+      }),
+    );
+
+    await expect(moveTicket('1', 'IN_PROGRESS', 2, 4)).resolves.toEqual({
+      ticket: toTicket({ ...responseTicket, status: 'IN_PROGRESS', position: 2 }),
+      boardVersion: 5,
+    });
+  });
+  it('preserves a stale board conflict as a 409 API error', async () => {
+    server.use(
+      http.patch(`${url}/api/tickets/1/move`, () =>
+        HttpResponse.json({ message: 'stale' }, { status: 409 }),
+      ),
+    );
+
+    await expect(moveTicket('1', 'DONE', 0, 4)).rejects.toMatchObject({
+      status: 409,
+    });
   });
   it.each([401, 403, 422, 500])('rejects HTTP %s', async (status) => {
     server.use(

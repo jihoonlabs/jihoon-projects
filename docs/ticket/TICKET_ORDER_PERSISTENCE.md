@@ -27,13 +27,12 @@ Ticketボードのカード順序をDB/APIへ永続化する。対象ブラン�
 
 ## 検証状態
 - Epicとの差分はカード順序永続化関連ファイルのみで、ChildはEpicよりahead、behindなしを確認済み。
-- Laravel/Reactの実行テスト、TypeScript、ESLint、production build、ブラウザー動作確認は未実施。
+- Laravel: `APP_KEY`を一時環境変数で指定して全103テストが成功。
+- React: 全128テストが成功。TypeScript (`pnpm exec tsc --noEmit`)、ESLint (`pnpm lint`)、production build (`pnpm build`) も成功。
+- ブラウザー確認は未実施。この環境ではブラウザー自動化ツールとChrome/Chromium実行ファイルを確認できず、Child worktreeにLaravelの`.env`もないため、認証済みの実ブラウザー操作を開始できなかった。
 - main/Epicへの統合は未実施。
 
 ## 未完了と次の作業
 - このChildではカード順序永続化だけを扱い、他のTicket機能や別Childの詳細は持ち込まない。
-- React既存テストへの型・fixture影響を確認し、必要なテストを追加・修正する。
-- Laravel BoardOrderTestを含む関連テストを実行する。
-- TypeScript、ESLint、production buildを実行する。
-- 同一列DnD、列間DnD、409後の再取得、フィルター中DnD無効、手動ステータス変更をブラウザーで確認する。
+- ブラウザーを利用できる環境でログイン後、同一列DnD、列間DnD、409後の再取得、フィルター中DnD無効、手動ステータス変更を確認する。
 - 全検証後に最終diffを確認し、Epic統合可否を判断する。
