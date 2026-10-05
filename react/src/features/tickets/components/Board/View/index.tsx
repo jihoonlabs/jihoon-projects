@@ -150,12 +150,14 @@ export function TicketBoardView() {
     if (!newStatus) return;
 
     const targetTickets = projectTickets
-      .filter((ticket) => ticket.status === newStatus && ticket.id !== activeId)
+      .filter((ticket) => ticket.status === newStatus)
       .sort((a, b) => a.position - b.position);
-    const position = overTicket
-      ? Math.max(0, targetTickets.findIndex((ticket) => ticket.id === overTicket.id))
-      : targetTickets.length;
-    const targetPosition = position < 0 ? targetTickets.length : position;
+    const overPosition = overTicket
+      ? targetTickets.findIndex((ticket) => ticket.id === overTicket.id)
+      : -1;
+    const targetPosition = overPosition >= 0
+      ? overPosition
+      : targetTickets.filter((ticket) => ticket.id !== activeId).length;
 
     try {
       const boardVersion = await moveTicket(
