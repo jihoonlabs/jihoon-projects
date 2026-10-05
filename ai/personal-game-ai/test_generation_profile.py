@@ -38,6 +38,13 @@ class GenerationProfileTests(unittest.TestCase):
                 generation_profile.implementation_prompt("sandbox", "game.py"), ""
             )
 
+    def test_missing_profile_is_disabled(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        path = Path(temporary.name) / "target.json"
+        path.write_text("{}", encoding="utf-8")
+        self.assertIsNone(generation_profile.current_profile(path))
+
     def test_unknown_profile_is_rejected(self):
         with self.assertRaises(ValueError):
             generation_profile.current_profile(self.config("unknown"))
