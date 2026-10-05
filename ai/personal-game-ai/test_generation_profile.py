@@ -96,6 +96,18 @@ class GenerationProfileTests(unittest.TestCase):
         with patch.object(generation_profile, "current_profile", return_value=None):
             generation_profile.validate_code("game", code)
 
+    def test_thumby_code_rejects_import_alias(self):
+        code = "import thumby as device\n"
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_code("game", code)
+
+    def test_thumby_code_rejects_from_import(self):
+        code = "from thumby import display\n"
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_code("game", code)
+
     def test_thumby_code_rejects_color_from_import(self):
         code = "from thumbyColor import display\n"
         with patch.object(generation_profile, "current_profile", return_value="thumby"):
