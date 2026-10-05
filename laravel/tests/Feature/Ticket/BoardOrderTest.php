@@ -119,7 +119,7 @@ class BoardOrderTest extends TestCase
             'status' => 'IN_PROGRESS',
             'position' => 0,
             'board_version' => 1,
-        ])->assertConflict();
+        ])->assertStatus(409);
 
         $this->assertDatabaseHas('tickets', [
             'id' => $ticket->id,
