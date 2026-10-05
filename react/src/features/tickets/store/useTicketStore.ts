@@ -139,13 +139,13 @@ export const useTicketStore = create<TicketState>((set, get) => {
 
         try {
           const result = await api.moveTicket(id, status, position, boardVersion);
-          await get().fetchTickets();
+          refreshNeeded = true;
           return result.boardVersion;
         } catch (error) {
           set({ tickets: before });
           fail(error);
           if (error instanceof api.TicketApiError && error.status === 409) {
-            await get().fetchTickets();
+            refreshNeeded = true;
           }
           throw error;
         } finally {
