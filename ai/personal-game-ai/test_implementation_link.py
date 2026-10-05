@@ -134,6 +134,25 @@ class ImplementationLinkTests(unittest.TestCase):
         self.assertIn("최대 체력을 넘지 않게 회복한다", tasks[0]["prompt"])
         self.assertFalse((self.directory / "health.py").exists())
 
+    def test_generation_profile_prompt_is_included_in_plan(self):
+        (self.directory / "test_health.py").write_text(self.code)
+        self.envelope["request"]["area"] = "game"
+        captured = {}
+
+        def validate(proposal, allowed, goal):
+            captured["goal"] = goal
+            return proposal["tasks"]
+
+        with patch.object(link.edit_loop, "check_git_files"), patch.object(
+            link.plan_tasks, "validate_plan", side_effect=validate
+        ), patch.object(
+            link.generation_profile,
+            "implementation_prompt",
+            return_value="PROFILE IMPLEMENTATION",
+        ):
+            link.create_plan(self.path, "sha")
+        self.assertIn("PROFILE IMPLEMENTATION", captured["goal"])
+
     def test_wrong_digest_is_rejected_before_confirmation_read(self):
         # 실제 읽기 함수로 SHA 검사 경로를 확인한다.
         reader = self.reader.side_effect
