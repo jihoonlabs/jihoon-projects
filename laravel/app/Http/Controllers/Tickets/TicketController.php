@@ -160,7 +160,7 @@ class TicketController extends Controller
             $sourceIds = Ticket::query()
                 ->where('project_id', $project->id)
                 ->where('status', $sourceStatus)
-                ->whereKeyNot($ticket->id)
+                ->where('id', '!=', $ticket->id)
                 ->orderBy('position')
                 ->orderBy('id')
                 ->pluck('id')
