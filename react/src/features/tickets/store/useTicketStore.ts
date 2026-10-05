@@ -52,7 +52,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
   let loading = 0;
   let creating = 0;
   let refreshNeeded = false;
-  const pending = new Map<string, Promise<void>>();
+  const pending = new Map<string, Promise<unknown>>();
   // Reserve rollback positions while an optimistic move/delete is in flight.
   const reserved = new Map<string, Ticket>();
   const nextPosition = (status: TicketStatus) =>
@@ -80,7 +80,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
     });
 
   // Serialize writes to the same ticket; unrelated tickets can still progress.
-  const write = (id: string, operation: () => Promise<void>): Promise<void> => {
+  const write = <T>(id: string, operation: () => Promise<T>): Promise<T> => {
     const previous = pending.get(id);
     const request = previous ? previous.then(operation) : operation();
     pending.set(id, request);
