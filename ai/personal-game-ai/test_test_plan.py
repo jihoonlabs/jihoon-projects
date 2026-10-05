@@ -118,6 +118,16 @@ class TestPlanTests(unittest.TestCase):
             self.generate(model)
         model.assert_not_called()
 
+    def test_generation_profile_prompt_is_included(self):
+        model = Mock(return_value=json.dumps(self.proposal))
+        with patch.object(
+            test_plan.generation_profile,
+            "test_prompt",
+            return_value="PROFILE TEST",
+        ):
+            self.generate(model)
+        self.assertIn("PROFILE TEST", model.call_args.args[0])
+
     def test_invalid_response_retries(self):
         model = Mock(side_effect=["invalid", json.dumps(self.proposal)])
         self.assertTrue(self.generate(model).is_file())
