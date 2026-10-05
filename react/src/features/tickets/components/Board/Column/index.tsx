@@ -17,6 +17,7 @@ interface ColumnProps {
   onEdit?: (ticket: Ticket) => void;
   onDelete?: (ticket: Ticket) => void;
   canWrite?: boolean;
+  canDrag?: boolean;
 }
 
 export default function Column({
@@ -26,6 +27,7 @@ export default function Column({
   onEdit,
   onDelete,
   canWrite,
+  canDrag,
 }: ColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
@@ -50,6 +52,7 @@ export default function Column({
               onEdit={onEdit}
               onDelete={onDelete}
               canWrite={canWrite}
+              canDrag={canDrag}
             />
           ))}
         </div>
