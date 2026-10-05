@@ -205,3 +205,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Branch-local personal AI instructions; distributed outside Git.
+/docs/personal-game-ai/CONTEXT_LOCAL.md

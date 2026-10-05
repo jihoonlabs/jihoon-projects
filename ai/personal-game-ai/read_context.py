@@ -52,6 +52,28 @@ def read_context(config_path=CONFIG_PATH):
     if document.suffix.lower() != ".md" or document.parts[:1] != ("docs",):
         raise ValueError("브랜치 문서는 docs/ 아래의 MD여야 합니다.")
 
+    policy = config.get("branch_document_policy", "legacy")
+    if policy not in ("legacy", "local"):
+        raise ValueError("branch_document_policy는 legacy 또는 local이어야 합니다.")
+    if policy == "local":
+        if document.parts[:2] != ("docs", "personal-game-ai"):
+            raise ValueError("로컬 문서는 docs/personal-game-ai/ 아래여야 합니다.")
+        if document.is_absolute() or ".." in document.parts:
+            raise ValueError("로컬 문서 경로가 잘못됐습니다.")
+        document_path = root / document
+        if document_path.is_symlink() or root not in document_path.resolve().parents:
+            raise ValueError("로컬 문서 경로가 저장소 밖을 가리킵니다.")
+        if git_output(root, "ls-files", "--", document.as_posix()):
+            raise RuntimeError("브랜치 전용 로컬 MD는 Git 추적 대상일 수 없습니다.")
+        ignored = subprocess.run(
+            ["git", "check-ignore", "--no-index", "--", document.as_posix()],
+            cwd=root, capture_output=True, text=True, timeout=10,
+        )
+        if ignored.returncode == 1:
+            raise RuntimeError("브랜치 전용 로컬 MD의 Git 제외 설정이 필요합니다.")
+        if ignored.returncode != 0:
+            raise RuntimeError("로컬 MD의 Git 제외 상태를 확인하지 못했습니다.")
+
     files = ["AGENTS.md", config["branch_document"]] + code_files
     sections = []
     seen = set()
@@ -77,6 +99,11 @@ def read_context(config_path=CONFIG_PATH):
             raise ValueError(f"파일 분량 초과: {relative_path}")
 
         content = path.read_text(encoding="utf-8")
+        if policy == "local" and relative_path == config["branch_document"]:
+            # Git 밖의 파일은 브랜치 전환으로 교체되지 않으므로 소속을 검사한다.
+            marker = f"<!-- personal-game-ai-branch: {branch} -->"
+            if not content.splitlines() or content.splitlines()[0] != marker:
+                raise RuntimeError("로컬 MD의 브랜치 소속이 현재 브랜치와 다릅니다.")
         section = f"--- {relative_path} ---\n{content}"
         total += len(section) + (2 if sections else 0)
         if total > limit:

@@ -1,7 +1,8 @@
 {
   "repository_root": "../..",
-  "expected_branch": "feature/personal-game-ai",
-  "branch_document": "docs/personal-game-ai/EPIC.md",
+  "expected_branch": "feature/personal-game-ai-context-local",
+  "branch_document": "docs/personal-game-ai/CONTEXT_LOCAL.md",
+  "branch_document_policy": "local",
   "code_files": [],
   "max_context_chars": 12000
 }
