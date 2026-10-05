@@ -5,6 +5,8 @@ from pathlib import Path
 from read_context import CONFIG_PATH
 
 SUPPORTED_PROFILES = {"thumby"}
+THUMBY_ALLOWED_ROOTS = {"buttonL", "buttonR", "display"}
+THUMBY_ALLOWED_DISPLAY = {"fill", "drawFilledRectangle", "drawText", "update", "setFPS"}
 
 
 def current_profile(config_path=None):
@@ -70,6 +72,24 @@ def validate_code(area, code):
             continue
         if any(name == "thumbyColor" or name.startswith("thumbyColor.") for name in names):
             raise ValueError("일반 Thumby 생성에서 Thumby Color 모듈을 사용할 수 없습니다.")
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Attribute):
+            continue
+        chain = []
+        current = node
+        while isinstance(current, ast.Attribute):
+            chain.append(current.attr)
+            current = current.value
+        if not isinstance(current, ast.Name) or current.id != "thumby":
+            continue
+        chain.reverse()
+        if not chain or chain[0] not in THUMBY_ALLOWED_ROOTS:
+            raise ValueError("확인하지 않은 일반 Thumby API를 사용할 수 없습니다.")
+        if chain[0] == "display" and (
+            len(chain) < 2 or chain[1] not in THUMBY_ALLOWED_DISPLAY
+        ):
+            raise ValueError("확인하지 않은 Thumby display API를 사용할 수 없습니다.")
 
     for node in tree.body:
         if isinstance(node, ast.While) and isinstance(node.test, ast.Constant) and node.test.value is True:
