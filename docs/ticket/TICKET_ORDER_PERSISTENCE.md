@@ -20,7 +20,9 @@ Ticketボードのカード順序をDB/APIへ永続化する。対象ブラン�
 - move APIと同一列・列間の再採番、409競合処理を実装。
 - React API境界をサーバーpositionへ変更し、move APIを追加。
 - BoardのDnDを永続化APIへ接続し、フィルター中のDnD無効化を実装。
-- Laravel BoardOrderTestを追加。
+- Laravel BoardOrderTestを追加し、削除後の再採番とboard_version更新も対象化。
+- Project lock取得後にTicketを再取得し、並行更新時も最新statusを基準に処理する。
+- Reactはサーバーpositionを正とし、順序変更後はwrite完了後に一度だけ再取得して同期する。
 
 ## 検証状態
 - Epicとの差分はカード順序永続化関連ファイルのみで、ChildはEpicよりahead、behindなしを確認済み。
@@ -28,6 +30,7 @@ Ticketボードのカード順序をDB/APIへ永続化する。対象ブラン�
 - main/Epicへの統合は未実施。
 
 ## 未完了と次の作業
+- このChildではカード順序永続化だけを扱い、他のTicket機能や別Childの詳細は持ち込まない。
 - React既存テストへの型・fixture影響を確認し、必要なテストを追加・修正する。
 - Laravel BoardOrderTestを含む関連テストを実行する。
 - TypeScript、ESLint、production buildを実行する。
