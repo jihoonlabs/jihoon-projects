@@ -1,5 +1,6 @@
 import json
 import unittest
+from unittest.mock import patch
 
 import create_loop
 import edit_loop
@@ -58,6 +59,26 @@ class CreateLoopTests(unittest.TestCase):
         prompt = self.model.call_args_list[1].args[0]
         self.assertIn("FAILED: wrong value", prompt)
         self.assertIn("value = 0", prompt)
+
+    def test_profile_validation_feedback_reaches_next_attempt(self):
+        self.model.side_effect = [
+            self.proposal("import thumbyColor\n"),
+            self.proposal("value = 1\n"),
+        ]
+        self.runner.return_value = (True, "passed")
+
+        with patch(
+            "create_loop.generation_profile.validate_code",
+            side_effect=[ValueError("Thumby Color is not allowed"), None],
+        ) as validator:
+            result = self.run_create()
+
+        self.assertEqual(result["status"], "tests_passed")
+        self.assertEqual(result["attempts"], 2)
+        self.assertEqual(validator.call_count, 2)
+        prompt = self.model.call_args_list[1].args[0]
+        self.assertIn("Thumby Color is not allowed", prompt)
+        self.runner.assert_called_once()
 
     def test_question_before_creation_leaves_no_file(self):
         self.model.return_value = json.dumps({
