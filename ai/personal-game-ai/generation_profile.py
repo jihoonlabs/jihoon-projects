@@ -86,10 +86,18 @@ def validate_code(area, code):
         chain.reverse()
         if not chain or chain[0] not in THUMBY_ALLOWED_ROOTS:
             raise ValueError("확인하지 않은 일반 Thumby API를 사용할 수 없습니다.")
-        if chain[0] == "display" and (
-            len(chain) < 2 or chain[1] not in THUMBY_ALLOWED_DISPLAY
+        if (
+            chain[0] == "display"
+            and len(chain) >= 2
+            and chain[1] not in THUMBY_ALLOWED_DISPLAY
         ):
             raise ValueError("확인하지 않은 Thumby display API를 사용할 수 없습니다.")
+        if (
+            chain[0] in {"buttonL", "buttonR"}
+            and len(chain) >= 2
+            and chain[1] != "pressed"
+        ):
+            raise ValueError("확인하지 않은 Thumby button API를 사용할 수 없습니다.")
 
     for node in tree.body:
         if isinstance(node, ast.While) and isinstance(node.test, ast.Constant) and node.test.value is True:
