@@ -21,16 +21,19 @@ def append_run_event(task_id, status):
         raise ValueError("로그 작업 ID가 필요합니다.")
     if status not in VALID_STATUSES:
         raise ValueError("로그 작업 상태가 잘못됐습니다.")
-    RUN_LOG_PATH.parent.mkdir(exist_ok=True)
     record = {
         "timestamp": datetime.now().astimezone().isoformat(timespec="seconds"),
         "task_id": task_id,
         "status": status,
     }
-    with RUN_LOG_PATH.open("a", encoding="utf-8") as stream:
-        stream.write(json.dumps(record, ensure_ascii=False) + "\n")
-        stream.flush()
-        os.fsync(stream.fileno())
+    try:
+        RUN_LOG_PATH.parent.mkdir(exist_ok=True)
+        with RUN_LOG_PATH.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(record, ensure_ascii=False) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+    except OSError as error:
+        print(f"실행 로그 기록 실패: {error}", flush=True)
 
 
 VALID_STATUSES = {
