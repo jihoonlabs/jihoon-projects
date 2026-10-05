@@ -18,6 +18,7 @@ class RunnerTests(unittest.TestCase):
             ("BASE_DIR", self.root),
             ("TASKS_PATH", self.tasks_path),
             ("OUTPUT_DIR", self.root / "outputs"),
+            ("RUN_LOG_PATH", self.root / "outputs" / "run_events.jsonl"),
         ):
             self.mock(name, new=value)
 
@@ -54,6 +55,46 @@ class RunnerTests(unittest.TestCase):
                 test_module="test_clamp",
             )
         return task
+
+    def read_events(self):
+        path = self.root / "outputs" / "run_events.jsonl"
+        if not path.exists():
+            return []
+        return [
+            json.loads(line)
+            for line in path.read_text(encoding="utf-8").splitlines()
+        ]
+
+    def test_run_events_are_append_only_and_minimal(self):
+        self.write_tasks([self.task("001")])
+        run_tasks.run_tasks(lambda prompt: "answer")
+        first = self.read_events()
+        self.assertEqual(
+            [(item["task_id"], item["status"]) for item in first],
+            [("001", "running"), ("001", "response_saved")],
+        )
+        self.assertEqual(
+            set(first[0]), {"timestamp", "task_id", "status"}
+        )
+
+        self.write_tasks([self.task("002")])
+        run_tasks.run_tasks(lambda prompt: "answer")
+        second = self.read_events()
+        self.assertEqual(first, second[:2])
+        self.assertEqual(
+            [(item["task_id"], item["status"]) for item in second[2:]],
+            [("002", "running"), ("002", "response_saved")],
+        )
+
+    def test_failed_task_records_failure(self):
+        self.write_tasks([self.task("001")])
+        run_tasks.run_tasks(
+            lambda prompt: (_ for _ in ()).throw(RuntimeError("failed"))
+        )
+        self.assertEqual(
+            [(item["task_id"], item["status"]) for item in self.read_events()],
+            [("001", "running"), ("001", "failed")],
+        )
 
     def test_order_context_and_skip_completed(self):
         self.write_tasks([
