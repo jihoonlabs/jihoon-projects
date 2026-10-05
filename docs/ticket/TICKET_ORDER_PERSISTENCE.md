@@ -2,6 +2,7 @@
 
 ## 目的と範囲
 Ticketボードのカード順序をDB/APIへ永続化する。対象ブランチは `feature/ticket-order-persistence`。
+このMDはChild専用の作業コンテキストであり、Epicへはmergeせず、完了時に必要な確定結果だけをEpic MDへ反映する。
 
 ## 確定事項
 - 順序はProject・status単位で全ユーザー共有とする。
