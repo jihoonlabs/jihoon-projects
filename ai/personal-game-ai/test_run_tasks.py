@@ -86,6 +86,16 @@ class RunnerTests(unittest.TestCase):
             [("002", "running"), ("002", "response_saved")],
         )
 
+    def test_run_log_failure_does_not_block_task(self):
+        self.write_tasks([self.task("001")])
+        with patch.object(
+            run_tasks.Path, "open", side_effect=OSError("log disk failed")
+        ):
+            run_tasks.process_tasks(
+                self.read_tasks(), "TEST_CONTEXT", lambda prompt: "answer"
+            )
+        self.assertEqual(self.read_tasks()[0]["status"], "response_saved")
+
     def test_failed_task_records_failure(self):
         self.write_tasks([self.task("001")])
         run_tasks.run_tasks(
