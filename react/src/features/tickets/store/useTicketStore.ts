@@ -99,6 +99,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
         set({ error: null });
         try {
           const updated = await api.updateTicketStatus(id, status);
+          refreshNeeded = true;
           set((state) => ({
             tickets: state.tickets.map((ticket) =>
               ticket.id === id ? updated : ticket,
