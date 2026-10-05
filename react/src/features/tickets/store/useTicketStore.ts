@@ -184,6 +184,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
         set({ error: null });
         try {
           const updated = await api.updateTicket(id, input);
+          if (updated.status !== before.status) refreshNeeded = true;
           set((state) => ({
             tickets: state.tickets.map((ticket) =>
               ticket.id === id ? updated : ticket,
