@@ -26,8 +26,6 @@ export const useTicketStore = create<TicketState>((set, get) => {
   let creating = 0;
   let refreshNeeded = false;
   const pending = new Map<string, Promise<unknown>>();
-  // Reserve rollback values while an optimistic write is in flight.
-  const reserved = new Map<string, Ticket>();
   const refreshWhenIdle = async () => {
     if (refreshNeeded && pending.size === 0 && creating === 0) {
       refreshNeeded = false;
@@ -95,7 +93,6 @@ export const useTicketStore = create<TicketState>((set, get) => {
         const before = get().tickets.find((ticket) => ticket.id === id);
         if (!before || before.status === status) return;
         revision += 1;
-        reserved.set(id, before);
         set({ error: null });
         try {
           const updated = await api.updateTicketStatus(id, status);
@@ -115,7 +112,6 @@ export const useTicketStore = create<TicketState>((set, get) => {
           fail(error);
         } finally {
           revision += 1;
-          reserved.delete(id);
         }
       }),
     moveTicket: (id, status, position, boardVersion) =>
@@ -202,7 +198,6 @@ export const useTicketStore = create<TicketState>((set, get) => {
         const before = get().tickets.find((ticket) => ticket.id === id);
         if (!before) return;
         revision += 1;
-        reserved.set(id, before);
         set((state) => ({
           error: null,
           tickets: state.tickets.filter((ticket) => ticket.id !== id),
@@ -215,7 +210,6 @@ export const useTicketStore = create<TicketState>((set, get) => {
           fail(error);
         } finally {
           revision += 1;
-          reserved.delete(id);
         }
       }),
   };
