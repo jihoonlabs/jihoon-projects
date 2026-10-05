@@ -1,3 +1,4 @@
+import ast
 import json
 from pathlib import Path
 
@@ -54,3 +55,22 @@ def implementation_prompt(area, filename):
         "import 시 게임 루프를 자동 실행하지 마세요. "
         f"현재 구현 대상은 {filename} 하나뿐입니다. "
     )
+
+
+def validate_code(area, code):
+    if area != "game" or current_profile() != "thumby":
+        return
+    tree = ast.parse(code)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names = [item.name for item in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            names = [node.module or ""]
+        else:
+            continue
+        if any(name == "thumbyColor" or name.startswith("thumbyColor.") for name in names):
+            raise ValueError("일반 Thumby 생성에서 Thumby Color 모듈을 사용할 수 없습니다.")
+
+    for node in tree.body:
+        if isinstance(node, ast.While) and isinstance(node.test, ast.Constant) and node.test.value is True:
+            raise ValueError("모듈 최상위의 무한 루프는 사용할 수 없습니다.")
