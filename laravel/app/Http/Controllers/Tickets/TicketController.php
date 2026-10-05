@@ -55,10 +55,10 @@ class TicketController extends Controller
         $ticket = DB::transaction(function () use ($validated) {
             $project = Project::query()->lockForUpdate()->findOrFail($validated['project_id']);
             $status = $validated['status'] ?? 'TODO';
-            $position = (int) Ticket::query()
+            $position = ((int) (Ticket::query()
                 ->where('project_id', $project->id)
                 ->where('status', $status)
-                ->max('position') + 1;
+                ->max('position') ?? -1)) + 1;
 
             $ticket = Ticket::create([
                 'project_id' => $project->id,
@@ -115,10 +115,10 @@ class TicketController extends Controller
         DB::transaction(function () use ($ticket, $validated) {
             $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
             $sourceStatus = $ticket->status;
-            $newPosition = (int) Ticket::query()
+            $newPosition = ((int) (Ticket::query()
                 ->where('project_id', $project->id)
                 ->where('status', $validated['status'])
-                ->max('position') + 1;
+                ->max('position') ?? -1)) + 1;
 
             $ticket->update([...$validated, 'position' => $newPosition]);
             $this->compactColumn($project->id, $sourceStatus);
@@ -222,7 +222,7 @@ class TicketController extends Controller
     private function writePositions(array $ticketIds): void
     {
         foreach ($ticketIds as $position => $ticketId) {
-            Ticket::query()->whereKey($ticketId)->update(['position' => $position]);
+            DB::table('tickets')->where('id', $ticketId)->update(['position' => $position]);
         }
     }
 
