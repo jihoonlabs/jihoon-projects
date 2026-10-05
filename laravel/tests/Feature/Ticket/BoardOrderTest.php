@@ -150,4 +150,41 @@ class BoardOrderTest extends TestCase
 
         $this->assertSame(1, $this->project->refresh()->board_version);
     }
+    public function test_削除すると列順が詰め直されboard_versionが更新される(): void
+    {
+        $first = Ticket::factory()->create([
+            'project_id' => $this->project->id,
+            'status' => 'TODO',
+            'position' => 0,
+        ]);
+        $deleted = Ticket::factory()->create([
+            'project_id' => $this->project->id,
+            'status' => 'TODO',
+            'position' => 1,
+        ]);
+        $last = Ticket::factory()->create([
+            'project_id' => $this->project->id,
+            'status' => 'TODO',
+            'position' => 2,
+        ]);
+
+        $this->deleteJson("/api/tickets/{$deleted->id}")->assertOk();
+
+        $this->assertDatabaseMissing('tickets', ['id' => $deleted->id]);
+        $this->assertSame(
+            [$first->id, $last->id],
+            Ticket::query()
+                ->where('project_id', $this->project->id)
+                ->where('status', 'TODO')
+                ->orderBy('position')
+                ->pluck('id')
+                ->all()
+        );
+        $this->assertDatabaseHas('tickets', [
+            'id' => $last->id,
+            'position' => 1,
+        ]);
+        $this->assertSame(1, $this->project->refresh()->board_version);
+    }
+
 }
