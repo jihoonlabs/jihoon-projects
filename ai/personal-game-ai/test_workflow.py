@@ -358,5 +358,110 @@ class WorkflowTests(unittest.TestCase):
 
 
 
+    def test_execution_summary_reports_current_work(self):
+        path = self.root / "tasks.json"
+        path.write_text(json.dumps([
+            {"id": "001", "status": "tests_passed"},
+            {"id": "002", "status": "running"},
+            {"id": "003", "status": "pending"},
+        ]))
+        with patch.object(
+            workflow.execute_plan, "resolve_plan", return_value=path
+        ):
+            result = workflow.execution_summary(path)
+        self.assertEqual(result["total"], 3)
+        self.assertEqual(result["counts"]["tests_passed"], 1)
+        self.assertEqual(result["counts"]["running"], 1)
+        self.assertEqual(
+            result["current"], [{"id": "002", "status": "running"}]
+        )
+
+    def test_summary_marks_interrupted_execution_recoverable(self):
+        path = self.root / "tasks.json"
+        path.write_text(json.dumps([
+            {"id": "001", "status": "running"},
+            {"id": "002", "status": "pending"},
+        ]))
+        state = {"stage": "execute", "plan": "tasks.json"}
+        with patch.object(
+            workflow.execute_plan, "resolve_plan", return_value=path
+        ):
+            result = workflow.summarize(state, self.root)
+        self.assertEqual(result["execution"], "blocked")
+        self.assertTrue(result["recovery_available"])
+        self.assertEqual(result["next"], "--recover")
+
+    def test_recovery_validates_before_resetting_running_task(self):
+        path = self.root / "tasks.json"
+        task = {
+            "id": "001", "kind": "edit", "target": "sandbox/health.py",
+            "test_module": "test_health", "prompt": "heal",
+            "depends_on": [], "status": "running",
+        }
+        path.write_text(json.dumps([task]))
+        state = {
+            "stage": "execute",
+            "plan": "tasks.json",
+            "plan_contract": [{
+                key: task.get(key, [] if key == "depends_on" else None)
+                for key in (
+                    "id", "kind", "target", "test_module",
+                    "prompt", "depends_on"
+                )
+            }],
+        }
+        with patch.object(
+            workflow, "installed_tests", return_value=[]
+        ), patch.object(
+            workflow.execute_plan, "resolve_plan", return_value=path
+        ), patch.object(
+            workflow.run_tasks, "prepare_file_task"
+        ) as prepare:
+            recovered = workflow.recover_interrupted_plan(state)
+        prepare.assert_called_once()
+        self.assertEqual(recovered, ["001"])
+        self.assertEqual(json.loads(path.read_text())[0]["status"], "pending")
+
+    def test_recovery_gate_failure_preserves_running_state(self):
+        path = self.root / "tasks.json"
+        task = {
+            "id": "001", "kind": "edit", "target": "sandbox/health.py",
+            "test_module": "test_health", "prompt": "heal",
+            "depends_on": [], "status": "running",
+        }
+        path.write_text(json.dumps([task]))
+        state = {
+            "stage": "execute",
+            "plan": "tasks.json",
+            "plan_contract": [{
+                key: task.get(key, [] if key == "depends_on" else None)
+                for key in (
+                    "id", "kind", "target", "test_module",
+                    "prompt", "depends_on"
+                )
+            }],
+        }
+        with patch.object(
+            workflow, "installed_tests", return_value=[]
+        ), patch.object(
+            workflow.execute_plan, "resolve_plan", return_value=path
+        ), patch.object(
+            workflow.run_tasks, "prepare_file_task",
+            side_effect=RuntimeError("dirty target"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "dirty target"):
+                workflow.recover_interrupted_plan(state)
+        self.assertEqual(json.loads(path.read_text())[0]["status"], "running")
+
+    def test_recovery_rejects_leftover_inner_lock(self):
+        path = self.root / "tasks.json"
+        path.write_text(json.dumps([{"id": "001", "status": "running"}]))
+        (self.root / ".run_tasks.lock").write_text("stale")
+        state = {"stage": "execute", "plan": "tasks.json"}
+        with patch.object(workflow, "installed_tests", return_value=[]):
+            with self.assertRaisesRegex(RuntimeError, "잠금"):
+                workflow.recover_interrupted_plan(state)
+
+
 if __name__ == "__main__":
     unittest.main()
