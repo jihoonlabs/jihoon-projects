@@ -43,5 +43,22 @@ class GenerationProfileTests(unittest.TestCase):
             generation_profile.current_profile(self.config("unknown"))
 
 
+    def test_thumby_code_rejects_color_import(self):
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_code("game", "import thumbyColor\n")
+
+    def test_thumby_code_rejects_top_level_infinite_loop(self):
+        code = "def run():\n    while True:\n        break\n\nwhile True:\n    break\n"
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_code("game", code)
+
+    def test_thumby_code_allows_loop_inside_entry_function(self):
+        code = "import thumby\n\ndef run():\n    while True:\n        break\n"
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            generation_profile.validate_code("game", code)
+
+
 if __name__ == "__main__":
     unittest.main()
