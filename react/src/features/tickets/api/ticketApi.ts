@@ -47,9 +47,19 @@ export function toTicket(data: TicketResponse): Ticket {
   };
 }
 
+export class TicketApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = 'TicketApiError';
+  }
+}
+
 async function resource<T>(response: Response): Promise<T> {
   if (!response.ok)
-    throw new Error(`チケット操作に失敗しました (${response.status})`);
+    throw new TicketApiError(`チケット操作に失敗しました (${response.status})`, response.status);
   const result = await response.json();
   if (
     !result ||
@@ -198,10 +208,10 @@ export async function moveTicket(
   });
 
   if (response.status === 409) {
-    throw new Error('ボードが更新されています。最新の状態を再取得します。');
+    throw new TicketApiError('ボードが更新されています。最新の状態を再取得します。', 409);
   }
   if (!response.ok) {
-    throw new Error(`チケットの移動に失敗しました (${response.status})`);
+    throw new TicketApiError(`チケットの移動に失敗しました (${response.status})`, response.status);
   }
 
   const result = await response.json();
