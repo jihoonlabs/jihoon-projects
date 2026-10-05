@@ -86,5 +86,22 @@ class GenerationProfileTests(unittest.TestCase):
             generation_profile.validate_code("game", code)
 
 
+    def test_sandbox_code_is_not_restricted_by_thumby_profile(self):
+        code = "import thumbyColor\n\nwhile True:\n    break\n"
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            generation_profile.validate_code("sandbox", code)
+
+    def test_game_code_without_profile_is_not_restricted(self):
+        code = "import thumbyColor\n\nwhile True:\n    break\n"
+        with patch.object(generation_profile, "current_profile", return_value=None):
+            generation_profile.validate_code("game", code)
+
+    def test_thumby_code_rejects_color_from_import(self):
+        code = "from thumbyColor import display\n"
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_code("game", code)
+
+
 if __name__ == "__main__":
     unittest.main()
