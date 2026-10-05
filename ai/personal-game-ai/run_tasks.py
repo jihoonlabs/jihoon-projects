@@ -1,6 +1,7 @@
 import argparse
 import json
 import re
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -12,6 +13,25 @@ from read_context import read_context
 BASE_DIR = Path(__file__).resolve().parent
 TASKS_PATH = BASE_DIR / "runner_tasks.json"
 OUTPUT_DIR = BASE_DIR / "outputs"
+RUN_LOG_PATH = OUTPUT_DIR / "run_events.jsonl"
+
+
+def append_run_event(task_id, status):
+    if not isinstance(task_id, str) or not task_id.strip():
+        raise ValueError("로그 작업 ID가 필요합니다.")
+    if status not in VALID_STATUSES:
+        raise ValueError("로그 작업 상태가 잘못됐습니다.")
+    RUN_LOG_PATH.parent.mkdir(exist_ok=True)
+    record = {
+        "timestamp": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "task_id": task_id,
+        "status": status,
+    }
+    with RUN_LOG_PATH.open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(record, ensure_ascii=False) + "\n")
+        stream.flush()
+        os.fsync(stream.fileno())
+
 
 VALID_STATUSES = {
     "pending",
@@ -179,6 +199,7 @@ def process_tasks(tasks, context, model):
         ):
             task.pop(key, None)
         save_tasks(tasks)
+        append_run_event(task_id, "running")
 
         if task["kind"] in ("edit", "create"):
             try:
@@ -187,9 +208,11 @@ def process_tasks(tasks, context, model):
                 task["status"] = "failed"
                 task["error"] = str(error)
                 save_tasks(tasks)
+                append_run_event(task_id, "failed")
                 raise
 
             save_tasks(tasks)
+            append_run_event(task_id, task["status"])
             print(f"작업 {task_id}: {task['status']}")
             if task.get("question"):
                 print("확인 필요:", task["question"])
@@ -251,6 +274,7 @@ def process_tasks(tasks, context, model):
                     task["status"] = "syntax_passed"
 
         save_tasks(tasks)
+        append_run_event(task_id, task["status"])
         print(f"작업 {task_id}: {task['status']}")
         if task.get("error"):
             print("원인:", task["error"])
