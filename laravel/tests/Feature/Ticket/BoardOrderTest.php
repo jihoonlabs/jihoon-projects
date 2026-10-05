@@ -113,7 +113,7 @@ class BoardOrderTest extends TestCase
             'status' => 'TODO',
             'position' => 0,
         ]);
-        $this->project->update(['board_version' => 2]);
+        $this->project->forceFill(['board_version' => 2])->save();
 
         $this->patchJson("/api/tickets/{$ticket->id}/move", [
             'status' => 'IN_PROGRESS',
