@@ -43,10 +43,22 @@ def read_context(config_path=CONFIG_PATH):
         raise ValueError("repository_root는 저장소 최상단이어야 합니다.")
 
     branch = git_output(root, "branch", "--show-current")
-    if branch != config["expected_branch"]:
-        raise RuntimeError(
-            f"브랜치 불일치: 예상 {config['expected_branch']}, 실제 {branch}"
+    expected_branch = config["expected_branch"]
+    if branch != expected_branch:
+        # Child는 이름이 아니라 실제 Git ancestry로 Epic 소속을 검증한다.
+        child_check = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", expected_branch, "HEAD"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
+        if child_check.returncode == 1:
+            raise RuntimeError(
+                f"브랜치 불일치: 예상 {expected_branch} 또는 그 Child, 실제 {branch}"
+            )
+        if child_check.returncode != 0:
+            raise RuntimeError("브랜치 ancestry를 확인하지 못했습니다.")
 
     document = Path(config["branch_document"])
     if document.suffix.lower() != ".md" or document.parts[:1] != ("docs",):
