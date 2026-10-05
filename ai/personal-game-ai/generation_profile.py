@@ -72,6 +72,12 @@ def validate_code(area, code):
             continue
         if any(name == "thumbyColor" or name.startswith("thumbyColor.") for name in names):
             raise ValueError("일반 Thumby 생성에서 Thumby Color 모듈을 사용할 수 없습니다.")
+        if isinstance(node, ast.Import):
+            for item in node.names:
+                if item.name == "thumby" and item.asname is not None:
+                    raise ValueError("일반 Thumby는 import thumby 형태로 사용해야 합니다.")
+        elif node.module == "thumby":
+            raise ValueError("일반 Thumby는 import thumby 형태로 사용해야 합니다.")
 
     for node in ast.walk(tree):
         if not isinstance(node, ast.Attribute):
