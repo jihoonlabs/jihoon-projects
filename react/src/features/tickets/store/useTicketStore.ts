@@ -162,6 +162,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
       startLoading();
       try {
         const ticket = await api.createTicket(input);
+        refreshNeeded = true;
         set((state) => ({
           tickets: [...state.tickets, ticket],
         }));
@@ -207,6 +208,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
         }));
         try {
           await api.deleteTicket(id);
+          refreshNeeded = true;
         } catch (error) {
           set((state) => ({ tickets: [...state.tickets, before] }));
           fail(error);
