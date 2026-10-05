@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 import edit_loop
+import generation_profile
 
 
 def resolve_create_files(target_file, test_module):
@@ -239,6 +240,9 @@ def run_create(target_file, request, test_module, model=None):
                     if not isinstance(code, str) or not code.strip():
                         raise ValueError("코드가 비어 있습니다.")
                     compile(code, str(target), "exec")
+                    generation_profile.validate_code(
+                        Path(target_file).parts[0], code
+                    )
                 except (ValueError, SyntaxError) as error:
                     feedback = f"응답 형식 또는 문법 오류: {error}"
                     print(feedback)
