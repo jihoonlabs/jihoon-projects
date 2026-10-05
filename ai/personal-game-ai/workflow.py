@@ -154,6 +154,40 @@ def plan_status(path):
 
 
 
+def recover_interrupted_plan(state):
+    if state["stage"] != "execute":
+        raise ValueError("구현 실행 단계에서만 중단 작업을 복구할 수 있습니다.")
+    if installed_tests(state):
+        raise RuntimeError("고정 테스트에 Git 변경이 있습니다.")
+
+    for name in (".edit_loop.lock", ".run_tasks.lock"):
+        lock = BASE_DIR / name
+        if lock.exists() or lock.is_symlink():
+            raise RuntimeError("파일 작업 잠금이 남아 있어 복구하지 않습니다.")
+
+    path = execute_plan.resolve_plan(BASE_DIR / state["plan"])
+    verify_plan(state)
+    tasks = json.loads(path.read_text(encoding="utf-8"))
+    running = [task for task in tasks if task.get("status") == "running"]
+    if not running:
+        raise ValueError("복구할 중단 작업이 없습니다.")
+
+    for task in running:
+        run_tasks.validate_request(task)
+        run_tasks.prepare_file_task(task)
+
+    for task in running:
+        task["status"] = "pending"
+        for key in (
+            "error", "cleanup_error", "question",
+            "output", "attempts", "artifact",
+        ):
+            task.pop(key, None)
+    write_state(path, tasks)
+    state["details"] = []
+    return [task["id"] for task in running]
+
+
 def generate_candidate(state, model):
     feedback = state.get("test_feedback")
     if feedback is None:
@@ -370,6 +404,24 @@ def advance(state, state_path, model, approve, confirm, answer_id, answer, feedb
         )
 
 
+def execution_summary(path):
+    path = execute_plan.resolve_plan(path)
+    tasks = json.loads(path.read_text(encoding="utf-8"))
+    counts = {}
+    for task in tasks:
+        status = task.get("status", "unknown")
+        counts[status] = counts.get(status, 0) + 1
+    return {
+        "total": len(tasks),
+        "counts": counts,
+        "current": [
+            {"id": task.get("id"), "status": task.get("status")}
+            for task in tasks
+            if task.get("status") in ("running", "waiting_for_user", "failed")
+        ],
+    }
+
+
 def summarize(state, folder):
     result = {
         "stage": state["stage"],
@@ -395,11 +447,23 @@ def summarize(state, folder):
             if pending else "같은 명령으로 구현 실행"
         )
     elif state["stage"] == "execute":
-        status, details = plan_status(BASE_DIR / state["plan"])
+        plan = BASE_DIR / state["plan"]
+        status, details = plan_status(plan)
         result["execution"] = status
+        result["execution_summary"] = execution_summary(plan)
         result["details"] = details
         if status == "waiting_for_user":
             result["next"] = "--answer <작업 ID> --answer-text <답변>"
+        elif status == "blocked":
+            interrupted = any(
+                item.get("status") == "running" for item in details
+            )
+            result["recovery_available"] = interrupted
+            result["next"] = (
+                "--recover"
+                if interrupted
+                else "실패 원인을 확인하세요. 자동 재시도하지 않습니다."
+            )
     elif state["stage"] == "completed":
         result["next"] = "결과물을 확인하세요. 구현 코드는 자동 커밋하지 않습니다."
     return result
@@ -407,7 +471,8 @@ def summarize(state, folder):
 
 def run_workflow(
     request_path, *, model=None, approve=None, confirm=None,
-    answer_id=None, answer=None, retry=False, feedback=None, review_design=None,
+    answer_id=None, answer=None, retry=False, recover=False,
+    feedback=None, review_design=None,
 ):
     if feedback is not None and (
         not isinstance(feedback, str) or not feedback.strip()
@@ -420,6 +485,15 @@ def run_workflow(
         value is not None for value in (approve, confirm, answer_id, answer, feedback, review_design)
     ):
         raise ValueError("--retry는 다른 승인·답변 옵션과 함께 사용할 수 없습니다.")
+    if recover and (
+        retry or any(
+            value is not None
+            for value in (
+                approve, confirm, answer_id, answer, feedback, review_design
+            )
+        )
+    ):
+        raise ValueError("--recover는 다른 승인·답변 옵션과 함께 사용할 수 없습니다.")
     path, data, request = load_request(request_path)
     context = edit_loop.read_context()
     output = BASE_DIR / "outputs"
@@ -483,6 +557,11 @@ def run_workflow(
                 state["stage"] = "review_design"
                 approve = state["design_sha256"]
             write_state(state_path, state)
+        if recover:
+            recovered = recover_interrupted_plan(state)
+            write_state(state_path, state)
+        else:
+            recovered = None
         log = folder / ("log_" + uuid.uuid4().hex + ".txt")
 
         def guard():
@@ -521,6 +600,8 @@ def run_workflow(
                 stream.write("\n워크플로 오류: " + str(error) + "\n")
             return result
         result = summarize(state, folder)
+        if recovered is not None:
+            result["recovered"] = recovered
         result["log"] = str(log)
         return result
     finally:
@@ -535,6 +616,7 @@ def main():
     action.add_argument("--confirm-tests")
     action.add_argument("--answer", dest="answer_id")
     action.add_argument("--retry", action="store_true")
+    action.add_argument("--recover", action="store_true")
     action.add_argument("--test-feedback", type=Path)
     action.add_argument("--review-design", type=Path)
     parser.add_argument("--answer-text")
@@ -552,7 +634,8 @@ def main():
         args.request, approve=args.approve_design,
         confirm=args.confirm_tests,
         answer_id=args.answer_id, answer=args.answer_text,
-        retry=args.retry, feedback=feedback, review_design=args.review_design,
+        retry=args.retry, recover=args.recover,
+        feedback=feedback, review_design=args.review_design,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     if "error" in result:
