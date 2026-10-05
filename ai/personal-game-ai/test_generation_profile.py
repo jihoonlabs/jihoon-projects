@@ -66,6 +66,12 @@ class GenerationProfileTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 generation_profile.validate_code("game", code)
 
+    def test_thumby_code_rejects_unverified_button_api(self):
+        code = "import thumby\n\ndef read():\n    return thumby.buttonL.justPressed()\n"
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_code("game", code)
+
     def test_thumby_code_allows_verified_first_game_api(self):
         code = (
             "import thumby\n\ndef draw():\n"
