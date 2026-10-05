@@ -24,15 +24,21 @@ Ticketボードのカード順序をDB/APIへ永続化する。対象ブラン�
 - Laravel BoardOrderTestを追加し、削除後の再採番とboard_version更新も対象化。
 - Project lock取得後にTicketを再取得し、並行更新時も最新statusを基準に処理する。
 - Reactはサーバーpositionを正とし、順序変更後はwrite完了後に一度だけ再取得して同期する。
+- TicketSeederはProject IDをTicketへ設定し、activeユーザーをGeneral Projectのメンバーとして登録する。
 
 ## 検証状態
 - Epicとの差分はカード順序永続化関連ファイルのみで、ChildはEpicよりahead、behindなしを確認済み。
-- Laravel: `APP_KEY`を一時環境変数で指定して全103テストが成功。
-- React: 全128テストが成功。TypeScript (`pnpm exec tsc --noEmit`)、ESLint (`pnpm lint`)、production build (`pnpm build`) も成功。
-- ブラウザー確認は未実施。この環境ではブラウザー自動化ツールとChrome/Chromium実行ファイルを確認できず、Child worktreeにLaravelの`.env`もないため、認証済みの実ブラウザー操作を開始できなかった。
+- Laravel: `APP_KEY`を一時環境変数で指定して全103テストが成功。PintとPHP syntax checkも成功。
+- `migrate:fresh --seed`を新しい一時SQLite DBで実行し、TicketSeederが成功することを確認。
+- React: 全128テストが成功。TypeScript (`pnpm exec tsc --noEmit`)、ESLint (`pnpm lint`)、production build (`pnpm build --webpack`) も成功。
+- Chromeの一時プロフィールと一時SQLite DBでログイン後のブラウザー確認を実施。DB/API/アカウント設定は一時領域に限定し、既存`.env`とDBは使用していない。
+- 同一列DnDと列間DnDが成功し、どちらもページ再読み込み後に順序が維持された。
+- 別のブラウザーAPI更新でversionを進めた後、古いversionを使う実UIのDnDが409となり、最新Ticket一覧を再取得してサーバー上の順序を表示した。
+- 検索中と担当者フィルター中はカードが`aria-disabled=true`となり、DnD API要求が発生しないことを確認。
+- 検索中の手動ステータス変更はAPI 200とTicket再取得で成功。
+- writeメンバーはボード操作ができ、readメンバーには作成・メンバー管理・ステータス変更UIが表示されず、詳細はread-only。readメンバーの直接move API要求も403で拒否された。
 - main/Epicへの統合は未実施。
 
 ## 未完了と次の作業
 - このChildではカード順序永続化だけを扱い、他のTicket機能や別Childの詳細は持ち込まない。
-- ブラウザーを利用できる環境でログイン後、同一列DnD、列間DnD、409後の再取得、フィルター中DnD無効、手動ステータス変更を確認する。
-- 全検証後に最終diffを確認し、Epic統合可否を判断する。
+- 最終diffを確認し、`feature/ticket`へfast-forward統合してEpic全体を検証する。

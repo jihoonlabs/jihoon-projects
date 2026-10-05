@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Project;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -15,6 +16,14 @@ class TicketSeeder extends Seeder
             ['email' => 'jihoon@example.com'],
             ['name' => 'パク・ジフン', 'password' => bcrypt('password')]
         );
+        $project = Project::firstOrCreate(['name' => 'General']);
+        $members = User::where('status', 'active')
+            ->pluck('id')
+            ->mapWithKeys(fn ($id) => [
+                $id => ['role' => 'member', 'permission' => 'write'],
+            ])
+            ->all();
+        $project->members()->syncWithoutDetaching($members);
 
         $tickets = [
             [
@@ -62,7 +71,7 @@ class TicketSeeder extends Seeder
         foreach ($tickets as $ticketData) {
             Ticket::updateOrCreate(
                 ['issue_key' => $ticketData['issue_key']],
-                $ticketData
+                [...$ticketData, 'project_id' => $project->id]
             );
         }
     }
