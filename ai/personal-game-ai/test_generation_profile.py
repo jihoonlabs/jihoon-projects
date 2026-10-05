@@ -60,5 +60,25 @@ class GenerationProfileTests(unittest.TestCase):
             generation_profile.validate_code("game", code)
 
 
+    def test_thumby_code_rejects_unverified_api(self):
+        code = "import thumby\n\ndef draw():\n    thumby.display.blit(None, 0, 0)\n"
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_code("game", code)
+
+    def test_thumby_code_allows_verified_first_game_api(self):
+        code = (
+            "import thumby\n\ndef draw():\n"
+            "    if thumby.buttonL.pressed() or thumby.buttonR.pressed():\n"
+            "        thumby.display.fill(0)\n"
+            "        thumby.display.drawFilledRectangle(0, 0, 2, 2, 1)\n"
+            "        thumby.display.drawText('1', 0, 0, 1)\n"
+            "        thumby.display.update()\n"
+            "        thumby.display.setFPS(30)\n"
+        )
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            generation_profile.validate_code("game", code)
+
+
 if __name__ == "__main__":
     unittest.main()
