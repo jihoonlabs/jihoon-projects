@@ -139,6 +139,16 @@ class DesignPlanTests(unittest.TestCase):
             [item["id"] for item in result["files"]], ["001", "002"]
         )
 
+    def test_generation_profile_prompt_is_included(self):
+        model = Mock(return_value=json.dumps(self.proposal))
+        with patch.object(
+            design_plan.generation_profile,
+            "design_prompt",
+            return_value="PROFILE DESIGN",
+        ):
+            self.generate(model)
+        self.assertIn("PROFILE DESIGN", model.call_args.args[0])
+
     def test_invalid_json_retries(self):
         model = Mock(side_effect=["invalid", json.dumps(self.proposal)])
         self.assertTrue(self.generate(model).is_file())
