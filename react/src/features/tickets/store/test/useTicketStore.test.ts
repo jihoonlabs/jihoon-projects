@@ -9,6 +9,7 @@ vi.mock('../../api/ticketApi', async (importOriginal) => ({
   fetchTickets: vi.fn(),
   createTicket: vi.fn(),
   updateTicketStatus: vi.fn(),
+  moveTicket: vi.fn(),
   updateTicket: vi.fn(),
   deleteTicket: vi.fn(),
 }));
@@ -16,7 +17,7 @@ const ticket = (
   id: string,
   position = 0,
   status: Ticket['status'] = 'TODO',
-): Ticket => ({ ...api.toTicket(responseTicket, position), id, status });
+): Ticket => ({ ...api.toTicket({ ...responseTicket, position }), id, status });
 const state = () => useTicketStore.getState();
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -30,10 +31,11 @@ function deferred<T>() {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(api.fetchTickets).mockImplementation(async () => state().tickets);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 });
 
-describe('Ticket state and client order', () => {
+describe('Ticket state and persisted order', () => {
   it('revalidates discarded GETs after a write and includes unrelated server tickets', async () => {
     useTicketStore.setState({ tickets: [ticket('1')] });
     const request = deferred<Ticket>();
@@ -55,7 +57,7 @@ describe('Ticket state and client order', () => {
     const request = deferred<void>();
     vi.mocked(api.deleteTicket).mockReturnValue(request.promise);
     const remove = state().deleteTicket('1');
-    vi.mocked(api.createTicket).mockResolvedValue(ticket('2'));
+    vi.mocked(api.createTicket).mockResolvedValue(ticket('2', 1));
     await state().addTicket({ projectId: '1', title: 'New' });
     request.reject(new Error('DELETE failed'));
     await remove;
@@ -76,17 +78,18 @@ describe('Ticket state and client order', () => {
     await create;
     expect(state().tickets.map((t) => t.id)).toEqual(['1', '2']);
   });
-  it('initializes order, retains existing positions on refresh, and appends new arrivals', async () => {
+  it('uses server positions as the source of truth on refresh', async () => {
     vi.mocked(api.fetchTickets).mockResolvedValue([
-      ticket('1'),
-      ticket('2'),
-      ticket('3'),
+      ticket('1', 0),
+      ticket('2', 1),
+      ticket('3', 2),
     ]);
     await state().fetchTickets();
     expect(state().tickets.map((t) => t.position)).toEqual([0, 1, 2]);
     useTicketStore.setState({ tickets: [ticket('1', 4), ticket('2', 1)] });
+    vi.mocked(api.fetchTickets).mockResolvedValue([ticket('1', 2), ticket('2', 3), ticket('3', 1)]);
     await state().fetchTickets();
-    expect(state().tickets.map((t) => t.position)).toEqual([4, 1, 5]);
+    expect(state().tickets.map((t) => t.position)).toEqual([2, 3, 1]);
   });
   it('appends remote column changes and removes server-deleted tickets', async () => {
     useTicketStore.setState({
@@ -94,32 +97,60 @@ describe('Ticket state and client order', () => {
     });
     vi.mocked(api.fetchTickets).mockResolvedValue([
       ticket('1', 0, 'DONE'),
-      ticket('2', 0, 'DONE'),
+      ticket('2', 1, 'DONE'),
     ]);
     await state().fetchTickets();
-    expect(state().tickets.map((t) => [t.id, t.position])).toEqual([
-      ['1', 8],
-      ['2', 7],
-    ]);
+    expect(state().tickets.map((t) => [t.id, t.position])).toEqual([['1', 0], ['2', 1]]);
   });
   it('appends created tickets to their column', async () => {
     useTicketStore.setState({
       tickets: [ticket('1', 4), ticket('2', 90, 'DONE')],
     });
-    vi.mocked(api.createTicket).mockResolvedValue(ticket('3'));
+    vi.mocked(api.createTicket).mockResolvedValue(ticket('3', 5));
     await state().addTicket({ projectId: '1', title: 'New' });
     expect(state().tickets.at(-1)).toMatchObject({ id: '3', position: 5 });
     expect(state().isLoading).toBe(false);
   });
-  it('optimistically moves to the end and reconciles server data without losing position', async () => {
+  it('persists a drag move and adopts the server reordering', async () => {
+    useTicketStore.setState({ tickets: [ticket('1', 0), ticket('2', 1)] });
+    const serverOrder = [ticket('2', 0, 'DONE'), ticket('1', 1, 'DONE')];
+    vi.mocked(api.moveTicket).mockResolvedValue({
+      ticket: serverOrder[1],
+      boardVersion: 5,
+    });
+    vi.mocked(api.fetchTickets).mockResolvedValue(serverOrder);
+
+    await expect(state().moveTicket('1', 'DONE', 1, 4)).resolves.toBe(5);
+
+    expect(api.moveTicket).toHaveBeenCalledWith('1', 'DONE', 1, 4);
+    expect(state().tickets.map(({ id, status, position }) => [id, status, position])).toEqual([
+      ['2', 'DONE', 0],
+      ['1', 'DONE', 1],
+    ]);
+    expect(api.fetchTickets).toHaveBeenCalledTimes(1);
+  });
+  it('re-fetches the board after a stale-version move conflict', async () => {
+    const freshTickets = [ticket('1', 2), ticket('2', 0, 'DONE')];
+    useTicketStore.setState({ tickets: [ticket('1', 0), ticket('2', 1)] });
+    vi.mocked(api.moveTicket).mockRejectedValue(new api.TicketApiError('stale', 409));
+    vi.mocked(api.fetchTickets).mockResolvedValue(freshTickets);
+
+    await expect(state().moveTicket('1', 'DONE', 1, 4)).rejects.toMatchObject({
+      status: 409,
+    });
+
+    expect(api.fetchTickets).toHaveBeenCalledTimes(1);
+    expect(state().tickets).toEqual(freshTickets);
+  });
+  it('uses the server response for a manual status change', async () => {
     useTicketStore.setState({
       tickets: [ticket('1', 3), ticket('2', 8, 'DONE')],
     });
     const request = deferred<Ticket>();
     vi.mocked(api.updateTicketStatus).mockReturnValue(request.promise);
     const action = state().updateStatus('1', 'DONE');
-    expect(state().tickets[0]).toMatchObject({ status: 'DONE', position: 9 });
-    request.resolve({ ...ticket('1', 0, 'DONE'), updatedAt: 'server-date' });
+    expect(state().tickets[0]).toMatchObject({ status: 'TODO', position: 3 });
+    request.resolve({ ...ticket('1', 9, 'DONE'), updatedAt: 'server-date' });
     await action;
     expect(state().tickets[0]).toMatchObject({
       position: 9,
@@ -137,8 +168,7 @@ describe('Ticket state and client order', () => {
     request.reject(new Error('PATCH failed'));
     await first;
     expect(state().tickets[0]).toMatchObject({ status: 'TODO', position: 3 });
-    expect(state().tickets[1]).toMatchObject({ status: 'DONE', position: 1 });
-    expect(state().error).toBe('PATCH failed');
+    expect(state().tickets[1]).toMatchObject({ status: 'DONE', position: 0 });
   });
   it('serializes same-ticket updates and restores the last confirmed state on failure', async () => {
     useTicketStore.setState({ tickets: [ticket('1')] });
@@ -156,7 +186,7 @@ describe('Ticket state and client order', () => {
   it('applies server-confirmed ticket edits and keeps the current position', async () => {
     useTicketStore.setState({ tickets: [ticket('1', 4)] });
     vi.mocked(api.updateTicket).mockResolvedValue({
-      ...ticket('1'),
+      ...ticket('1', 4),
       title: 'Updated',
       priority: 'HIGH',
     });
@@ -174,11 +204,11 @@ describe('Ticket state and client order', () => {
     });
   });
 
-  it('moves an edited ticket to the end of its new column', async () => {
+  it('uses the server position when an edit changes status', async () => {
     useTicketStore.setState({
       tickets: [ticket('1', 4), ticket('2', 8, 'DONE')],
     });
-    vi.mocked(api.updateTicket).mockResolvedValue(ticket('1', 0, 'DONE'));
+    vi.mocked(api.updateTicket).mockResolvedValue(ticket('1', 9, 'DONE'));
 
     await state().updateTicket('1', { status: 'DONE' });
 
@@ -207,7 +237,7 @@ describe('Ticket state and client order', () => {
     vi.mocked(api.deleteTicket).mockReturnValue(request.promise);
     const action = state().deleteTicket('1');
     expect(state().tickets).toEqual([]);
-    vi.mocked(api.createTicket).mockResolvedValue(ticket('2'));
+    vi.mocked(api.createTicket).mockResolvedValue(ticket('2', 1));
     await state().addTicket({ projectId: '1', title: 'New' });
     request.reject(new Error('DELETE failed'));
     await action;
@@ -276,7 +306,7 @@ describe('Ticket state and client order', () => {
     const request = deferred<Ticket>();
     vi.mocked(api.updateTicketStatus).mockReturnValue(request.promise);
     const move = state().updateStatus('1', 'DONE');
-    vi.mocked(api.createTicket).mockResolvedValue(ticket('2'));
+    vi.mocked(api.createTicket).mockResolvedValue(ticket('2', 1));
     await state().addTicket({ projectId: '1', title: 'New' });
     request.reject(new Error('move failed'));
     await move;

@@ -48,8 +48,8 @@ it('renders null issue keys safely and searches actual ticket numbers', () => {
 
 it('renders each column in client position order without mutating input', () => {
   const tickets = [
-    toTicket({ ...responseTicket, title: 'Last' }, 10),
-    toTicket({ ...responseTicket, id: '2', title: 'First' }, 2),
+    toTicket({ ...responseTicket, title: 'Last', position: 10 }),
+    toTicket({ ...responseTicket, id: '2', title: 'First', position: 2 }),
   ];
   render(
     <Main

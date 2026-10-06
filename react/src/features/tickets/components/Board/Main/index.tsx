@@ -12,6 +12,7 @@ interface MainProps {
   onEdit?: (ticket: Ticket) => void;
   onDelete?: (ticket: Ticket) => void;
   canWrite?: boolean;
+  canDrag?: boolean;
 }
 
 export default function Main({
@@ -23,6 +24,7 @@ export default function Main({
   onEdit,
   onDelete,
   canWrite = true,
+  canDrag = canWrite,
 }: MainProps) {
   const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch =
@@ -56,6 +58,7 @@ export default function Main({
             onEdit={onEdit}
             onDelete={onDelete}
             canWrite={canWrite}
+            canDrag={canDrag}
           />
         );
       })}

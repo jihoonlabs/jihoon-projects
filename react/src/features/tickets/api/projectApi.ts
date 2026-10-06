@@ -6,6 +6,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 interface ProjectResponse {
   id: string | number;
   name: string;
+  board_version: number;
 }
 
 interface ProjectMemberResponse {
@@ -32,7 +33,11 @@ export async function fetchProjects(): Promise<Project[]> {
     headers: { Accept: 'application/json' },
   }));
   if (!Array.isArray(data)) throw new Error('プロジェクト一覧の応答形式が不正です。');
-  return data.map(({ id, name }) => ({ id: String(id), name }));
+  return data.map(({ id, name, board_version }) => ({
+    id: String(id),
+    name,
+    boardVersion: board_version,
+  }));
 }
 
 export async function fetchProjectMembers(projectId: string): Promise<ProjectMember[]> {
