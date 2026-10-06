@@ -1,29 +1,21 @@
-# AGENTS改善 WORK
+# AGENTS review WORK
 
 ## Goal
-実作業と最新のcoding agent運用知見から、AGENTS.mdの改善候補を安全に蓄積・検証する。
+AI開発を速くするために規則を増やすのではなく、失敗コストが高い箇所だけをguardrailとして残す。
 
-## Scope
-- 実作業で発見した摩擦・失敗・不足ルールの記録
-- 最新トレンド・公式ガイド・研究との比較
-- WORK/MANUAL運用の改善
-- 分割作業の統合品質改善
+## Repository findings
+- Epic/Child分割は1作業の責任を狭め、実装時のコンテキストを減らす点で有効。
+- 一方、Child branchが多いため個別テスト成功だけでは親での統合品質を保証できない。共有境界と代表フローの統合検証が必要。
+- Ticket Epicのように現在仕様・実装・検証・次作業を1文書へ圧縮する形は再開コンテキストとして有効。過去MDを常時読む必要はない。
+- v2は方向性は良いが、AGENTS改善サイクル自体を恒常ルール化しており、通常作業に不要なmeta-contextが残る。
+- 「不確実なら確認」は広すぎると停止を増やす。安全に既存パターンを踏襲できる判断はAIに委ね、仕様・契約・破壊的操作だけを承認境界にする。
 
-## Current priorities
-- 分業したChild同士の契約・依存関係・接続点を統合前に確認する。
-- merge成功だけでなく、統合後の相互作用と回帰を検証する。
-- AGENTSは必要最小限のguardrailとnavigationを中心に保つ。
-- コンテキストは固定的に禁止するのではなく、必要性に基づいて追加調査する方向を継続検討する。
+## Candidate decisions
+- 維持: 1責任、必要時だけ追加探索、dirty state保護、検証事実の厳密化。
+- 強化: Childの出力契約と統合担当のshared-boundary検証。
+- 縮約: テストは全再実行固定ではなく、近いテストから影響範囲へ段階的に拡大。
+- 削除: 通常AGENTSからAGENTS自身の改善サイクル、トレンド調査義務、進行中Ticket固有のrollout情報。
+- 明確化: 質問は安全に継続不能な場合だけ。既存パターンで可逆な判断は自律実行。
 
-## Update checkpoint
-作業が一区切りした時だけ改善点を確認する。
-改善候補がなければ何も追加せず次の作業へ進む。
-
-## Application policy
-AGENTS.mdの実変更はユーザー承認が必要。
-承認済みルールも進行中作業へ遡及適用せず、原則として次に開始する作業から適用する。
-
-## Current rollout
-2026-10-07: v2候補作成。
-現在進行中のTicket作業には適用しない。
-Ticket作業終了後に開始する次のブランチからの適用候補とする。
+## External comparison
+2026-10-07時点のOpenAI Codex/GitHub Copilot/公開AGENTS事例を比較した。共通して有用なのは、永続的なrepository guidance、局所的な規約、正しいbuild/test手順、必要範囲へのcontext限定である。公開事例の長い規約をそのまま移植せず、このrepositoryで実際に事故コストが高いGit安全性とChild統合を優先した。
