@@ -31,8 +31,22 @@ class ContextTests(unittest.TestCase):
         self.assertNotIn("--- docs/personal-game-ai/personal-game-ai.md ---", context)
 
     def test_branch_document_is_derived_from_current_branch(self):
-        with self.assertRaises(FileNotFoundError):
-            self.run_config(expected_branch="feature/personal-game-ai-missing-context")
+        real_run = __import__("subprocess").run
+
+        def run_with_missing_context_branch(command, *args, **kwargs):
+            if command[:3] == ["git", "branch", "--show-current"]:
+                return __import__("subprocess").CompletedProcess(
+                    command, 0, stdout="feature/personal-game-ai-missing-context\n", stderr=""
+                )
+            if command[:3] == ["git", "merge-base", "--is-ancestor"]:
+                return __import__("subprocess").CompletedProcess(
+                    command, 0, stdout="", stderr=""
+                )
+            return real_run(command, *args, **kwargs)
+
+        with patch("read_context.subprocess.run", side_effect=run_with_missing_context_branch):
+            with self.assertRaises(FileNotFoundError):
+                self.run_config()
 
     def test_wrong_branch(self):
         with self.assertRaises(RuntimeError):
@@ -44,7 +58,7 @@ class ContextTests(unittest.TestCase):
         def run_with_child(command, *args, **kwargs):
             if command[:3] == ["git", "branch", "--show-current"]:
                 return __import__("subprocess").CompletedProcess(
-                    command, 0, stdout="feature/personal-game-ai-child\n", stderr=""
+                    command, 0, stdout="feature/personal-game-ai-context-router\n", stderr=""
                 )
             if command[:3] == ["git", "merge-base", "--is-ancestor"]:
                 return __import__("subprocess").CompletedProcess(
