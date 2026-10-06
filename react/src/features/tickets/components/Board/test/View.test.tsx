@@ -19,6 +19,7 @@ vi.mock('../../../api/ticketApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../api/ticketApi')>()),
   fetchTickets: vi.fn(),
   updateTicketStatus: vi.fn(),
+  moveTicket: vi.fn(),
   createTicket: vi.fn(),
   updateTicket: vi.fn(),
 }));
@@ -29,7 +30,7 @@ vi.mock('../../../api/ticketCommentApi', () => ({
   deleteTicketComment: vi.fn(),
 }));
 vi.mock('@/features/tickets/api/projectApi', () => ({
-  fetchProjects: vi.fn().mockResolvedValue([{ id: '1', name: 'General' }]),
+  fetchProjects: vi.fn().mockResolvedValue([{ id: '1', name: 'General', boardVersion: 3 }]),
   fetchProjectMembers: vi.fn().mockResolvedValue([{ id: '7', name: 'Tester', email: 'tester@example.com', role: 'member', permission: 'write' }]),
   addProjectMember: vi.fn(),
   updateProjectMember: vi.fn(),
@@ -64,37 +65,22 @@ vi.mock('@dnd-kit/core', async (importOriginal) => {
 });
 
 beforeEach(() => {
-  vi.mocked(projectApi.fetchProjects).mockResolvedValue([{ id: '1', name: 'General' }]);
+  vi.mocked(projectApi.fetchProjects).mockResolvedValue([{ id: '1', name: 'General', boardVersion: 3 }]);
   vi.mocked(projectApi.fetchProjectMembers).mockResolvedValue([{ id: '7', name: 'Tester', email: 'tester@example.com', role: 'member', permission: 'write' }]);
   useAuthStore.setState({ user: { id: 7, name: 'Tester', email: 'tester@example.com', status: 'active', role: 'user', createdAt: '2026-09-24T00:00:00.000000Z' }, isAuthenticated: true });
 });
 
-it('keeps the final DONE drop while DONE and IN_REVIEW requests are queued', async () => {
+it('persists a board drop with the selected project version', async () => {
   const ticket = api.toTicket(responseTicket);
-  let resolve!: (value: typeof ticket) => void;
-  const first = new Promise<typeof ticket>((yes) => {
-    resolve = yes;
-  });
   vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
-  vi.mocked(api.updateTicketStatus)
-    .mockReturnValueOnce(first)
-    .mockImplementation(async (_id, status) => ({ ...ticket, status }));
+  vi.mocked(api.moveTicket).mockResolvedValue({ ticket, boardVersion: 4 });
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
   render(<TicketBoardView />);
   await waitFor(() =>
     expect(useTicketStore.getState().tickets).toHaveLength(1),
   );
   fireEvent.click(screen.getByText('drop DONE'));
-  fireEvent.click(screen.getByText('drop IN_REVIEW'));
-  fireEvent.click(screen.getByText('drop DONE'));
-  await act(async () => {
-    resolve({ ...ticket, status: 'DONE' });
-  });
-  await waitFor(() => expect(api.updateTicketStatus).toHaveBeenCalledTimes(3));
-  expect(
-    vi.mocked(api.updateTicketStatus).mock.calls.map((call) => call[1]),
-  ).toEqual(['DONE', 'IN_REVIEW', 'DONE']);
-  expect(useTicketStore.getState().tickets[0].status).toBe('DONE');
+  await waitFor(() => expect(api.moveTicket).toHaveBeenCalledWith('1', 'DONE', 0, 3));
 });
 
 it('shows tickets assigned to the signed-in user in the ME filter', async () => {
@@ -150,7 +136,7 @@ it('exposes accessible names for search and assignee filters', async () => {
 it('filters tickets by the selected project', async () => {
   const otherProjectTicket = api.toTicket({ ...responseTicket, id: '2', project_id: '2', title: 'Other project ticket' });
   vi.mocked(api.fetchTickets).mockResolvedValue([api.toTicket(responseTicket), otherProjectTicket]);
-  vi.mocked(projectApi.fetchProjects).mockResolvedValue([{ id: '1', name: 'General' }, { id: '2', name: 'Design' }]);
+  vi.mocked(projectApi.fetchProjects).mockResolvedValue([{ id: '1', name: 'General', boardVersion: 3 }, { id: '2', name: 'Design', boardVersion: 3 }]);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
   render(<TicketBoardView />);

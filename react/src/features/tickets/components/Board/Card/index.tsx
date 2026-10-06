@@ -12,6 +12,7 @@ interface CardProps {
   onEdit?: (ticket: Ticket) => void;
   onDelete?: (ticket: Ticket) => void;
   canWrite?: boolean;
+  canDrag?: boolean;
 }
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -33,9 +34,10 @@ export default function Card({
   onEdit,
   onDelete,
   canWrite = true,
+  canDrag = canWrite,
 }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: ticket.id, disabled: !canWrite });
+    useSortable({ id: ticket.id, disabled: !canDrag });
 
   const style = {
     transform: CSS.Translate.toString(transform),

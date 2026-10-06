@@ -8,10 +8,10 @@ const url = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 describe('Project API boundary', () => {
   it('maps accessible Project and member resources to string IDs', async () => {
     server.use(
-      http.get(`${url}/api/projects`, () => HttpResponse.json({ data: [{ id: 4, name: 'Product' }] })),
+      http.get(`${url}/api/projects`, () => HttpResponse.json({ data: [{ id: 4, name: 'Product', board_version: 3 }] })),
       http.get(`${url}/api/projects/4/members`, () => HttpResponse.json({ data: [{ id: 7, name: 'Aki', email: 'aki@example.com', role: 'leader', permission: 'read' }] })),
     );
-    await expect(fetchProjects()).resolves.toEqual([{ id: '4', name: 'Product' }]);
+    await expect(fetchProjects()).resolves.toEqual([{ id: '4', name: 'Product', boardVersion: 3 }]);
     await expect(fetchProjectMembers('4')).resolves.toEqual([{ id: '7', name: 'Aki', email: 'aki@example.com', role: 'leader', permission: 'read' }]);
   });
 

@@ -8,36 +8,15 @@ interface TicketState {
   error: string | null;
   fetchTickets: () => Promise<void>;
   updateStatus: (id: string, status: TicketStatus) => Promise<void>;
+  moveTicket: (
+    id: string,
+    status: TicketStatus,
+    position: number,
+    boardVersion: number,
+  ) => Promise<number>;
   addTicket: (ticket: CreateTicketInput) => Promise<void>;
   updateTicket: (id: string, input: UpdateTicketInput) => Promise<void>;
   deleteTicket: (id: string) => Promise<void>;
-}
-
-function endPosition(tickets: Ticket[], status: TicketStatus): number {
-  return tickets.reduce(
-    (end, ticket) =>
-      ticket.status === status ? Math.max(end, ticket.position + 1) : end,
-    0,
-  );
-}
-
-// Preserve local order on refresh; new tickets or remote column moves go last.
-function mergeTickets(incoming: Ticket[], current: Ticket[]): Ticket[] {
-  const existing = new Map(current.map((ticket) => [ticket.id, ticket]));
-  const retained = incoming.flatMap((ticket) => {
-    const old = existing.get(ticket.id);
-    return old && old.status === ticket.status
-      ? [{ ...ticket, position: old.position }]
-      : [];
-  });
-  return incoming.map((ticket) => {
-    const old = existing.get(ticket.id);
-    if (old && old.status === ticket.status)
-      return { ...ticket, position: old.position };
-    const next = { ...ticket, position: endPosition(retained, ticket.status) };
-    retained.push(next);
-    return next;
-  });
 }
 
 export const useTicketStore = create<TicketState>((set, get) => {
@@ -46,11 +25,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
   let loading = 0;
   let creating = 0;
   let refreshNeeded = false;
-  const pending = new Map<string, Promise<void>>();
-  // Reserve rollback positions while an optimistic move/delete is in flight.
-  const reserved = new Map<string, Ticket>();
-  const nextPosition = (status: TicketStatus) =>
-    endPosition([...get().tickets, ...reserved.values()], status);
+  const pending = new Map<string, Promise<unknown>>();
   const refreshWhenIdle = async () => {
     if (refreshNeeded && pending.size === 0 && creating === 0) {
       refreshNeeded = false;
@@ -74,7 +49,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
     });
 
   // Serialize writes to the same ticket; unrelated tickets can still progress.
-  const write = (id: string, operation: () => Promise<void>): Promise<void> => {
+  const write = <T>(id: string, operation: () => Promise<T>): Promise<T> => {
     const previous = pending.get(id);
     const request = previous ? previous.then(operation) : operation();
     pending.set(id, request);
@@ -101,7 +76,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
           pending.size === 0 &&
           creating === 0
         ) {
-          set({ tickets: mergeTickets(incoming, get().tickets) });
+          set({ tickets: incoming });
           refreshNeeded = false;
         } else if (sequence === fetchSequence) {
           refreshNeeded = true;
@@ -118,21 +93,13 @@ export const useTicketStore = create<TicketState>((set, get) => {
         const before = get().tickets.find((ticket) => ticket.id === id);
         if (!before || before.status === status) return;
         revision += 1;
-        reserved.set(id, before);
-        const position = nextPosition(status);
-        set((state) => ({
-          error: null,
-          tickets: state.tickets.map((ticket) =>
-            ticket.id === id ? { ...ticket, status, position } : ticket,
-          ),
-        }));
+        set({ error: null });
         try {
           const updated = await api.updateTicketStatus(id, status);
+          refreshNeeded = true;
           set((state) => ({
             tickets: state.tickets.map((ticket) =>
-              ticket.id === id
-                ? { ...updated, position: ticket.position }
-                : ticket,
+              ticket.id === id ? updated : ticket,
             ),
           }));
         } catch (error) {
@@ -145,7 +112,44 @@ export const useTicketStore = create<TicketState>((set, get) => {
           fail(error);
         } finally {
           revision += 1;
-          reserved.delete(id);
+        }
+      }),
+    moveTicket: (id, status, position, boardVersion) =>
+      write(id, async () => {
+        const before = get().tickets;
+        const moving = before.find((ticket) => ticket.id === id);
+        if (!moving) return boardVersion;
+
+        revision += 1;
+        set({ error: null });
+        const without = before.filter((ticket) => ticket.id !== id);
+        const target = without
+          .filter((ticket) => ticket.status === status)
+          .sort((a, b) => a.position - b.position);
+        const insertAt = Math.min(position, target.length);
+        target.splice(insertAt, 0, { ...moving, status });
+        const positions = new Map(target.map((ticket, index) => [ticket.id, index]));
+        set({
+          tickets: without.map((ticket) =>
+            positions.has(ticket.id)
+              ? { ...ticket, position: positions.get(ticket.id)! }
+              : ticket,
+          ).concat({ ...moving, status, position: insertAt }),
+        });
+
+        try {
+          const result = await api.moveTicket(id, status, position, boardVersion);
+          refreshNeeded = true;
+          return result.boardVersion;
+        } catch (error) {
+          set({ tickets: before });
+          fail(error);
+          if (error instanceof api.TicketApiError && error.status === 409) {
+            refreshNeeded = true;
+          }
+          throw error;
+        } finally {
+          revision += 1;
         }
       }),
     addTicket: async (input) => {
@@ -154,11 +158,9 @@ export const useTicketStore = create<TicketState>((set, get) => {
       startLoading();
       try {
         const ticket = await api.createTicket(input);
+        refreshNeeded = true;
         set((state) => ({
-          tickets: [
-            ...state.tickets,
-            { ...ticket, position: nextPosition(ticket.status) },
-          ],
+          tickets: [...state.tickets, ticket],
         }));
       } catch (error) {
         fail(error);
@@ -178,11 +180,10 @@ export const useTicketStore = create<TicketState>((set, get) => {
         set({ error: null });
         try {
           const updated = await api.updateTicket(id, input);
+          if (input.status !== undefined) refreshNeeded = true;
           set((state) => ({
             tickets: state.tickets.map((ticket) =>
-              ticket.id === id
-                ? { ...updated, position: ticket.status === updated.status ? ticket.position : nextPosition(updated.status) }
-                : ticket,
+              ticket.id === id ? updated : ticket,
             ),
           }));
         } catch (error) {
@@ -197,19 +198,18 @@ export const useTicketStore = create<TicketState>((set, get) => {
         const before = get().tickets.find((ticket) => ticket.id === id);
         if (!before) return;
         revision += 1;
-        reserved.set(id, before);
         set((state) => ({
           error: null,
           tickets: state.tickets.filter((ticket) => ticket.id !== id),
         }));
         try {
           await api.deleteTicket(id);
+          refreshNeeded = true;
         } catch (error) {
           set((state) => ({ tickets: [...state.tickets, before] }));
           fail(error);
         } finally {
           revision += 1;
-          reserved.delete(id);
         }
       }),
   };

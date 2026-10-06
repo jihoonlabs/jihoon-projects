@@ -30,6 +30,7 @@ export function TicketBoardView() {
     error,
     fetchTickets,
     updateStatus,
+    moveTicket,
     addTicket,
     updateTicket,
     deleteTicket,
@@ -82,6 +83,35 @@ export function TicketBoardView() {
   const canWrite = isAdmin || currentMembership?.permission === 'write';
   const canManageMembers = isAdmin || currentMembership?.role === 'leader';
   const projectTickets = tickets.filter((ticket) => ticket.projectId === selectedProjectId);
+  const canDrag = canWrite && searchQuery.trim() === '' && assigneeFilter === 'ALL';
+
+  const refreshProjects = async () => {
+    const items = await fetchProjects();
+    setProjects(items);
+    setSelectedProjectId((current) =>
+      current && items.some((item) => item.id === current)
+        ? current
+        : items[0]?.id ?? '',
+    );
+  };
+
+  const handleStatusChange = async (id: string, status: TicketStatus) => {
+    await updateStatus(id, status);
+    await refreshProjects();
+  };
+
+  const handleCreate = async (input: Parameters<typeof addTicket>[0]) => {
+    await addTicket(input);
+    await refreshProjects();
+  };
+
+  const handleUpdate = async (
+    id: string,
+    input: Parameters<typeof updateTicket>[1],
+  ) => {
+    await updateTicket(id, input);
+    await refreshProjects();
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -101,33 +131,51 @@ export function TicketBoardView() {
     setActiveTicket(null);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTicket(null);
 
-    if (!canWrite || !over) return;
+    if (!canDrag || !over || !selectedProject) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
-
-    const draggedTicket = projectTickets.find((t) => String(t.id) === activeId);
+    const draggedTicket = projectTickets.find((ticket) => ticket.id === activeId);
     if (!draggedTicket) return;
 
-    const isOverColumn = INITIAL_COLUMNS.some((col) => col.id === overId);
-    let newStatus: TicketStatus = draggedTicket.status;
+    const overTicket = projectTickets.find((ticket) => ticket.id === overId);
+    const isOverColumn = INITIAL_COLUMNS.some((column) => column.id === overId);
+    const newStatus = isOverColumn
+      ? (overId as TicketStatus)
+      : overTicket?.status;
+    if (!newStatus) return;
 
-    if (isOverColumn) {
-      newStatus = overId as TicketStatus;
-    } else {
-      const overTicket = projectTickets.find((t) => String(t.id) === overId);
-      if (overTicket) {
-        newStatus = overTicket.status;
-      } else return;
+    const targetTickets = projectTickets
+      .filter((ticket) => ticket.status === newStatus)
+      .sort((a, b) => a.position - b.position);
+    const overPosition = overTicket
+      ? targetTickets.findIndex((ticket) => ticket.id === overTicket.id)
+      : -1;
+    const targetPosition = overPosition >= 0
+      ? overPosition
+      : targetTickets.filter((ticket) => ticket.id !== activeId).length;
+
+    try {
+      const boardVersion = await moveTicket(
+        activeId,
+        newStatus,
+        targetPosition,
+        selectedProject.boardVersion,
+      );
+      setProjects((items) =>
+        items.map((project) =>
+          project.id === selectedProject.id
+            ? { ...project, boardVersion }
+            : project,
+        ),
+      );
+    } catch {
+      await refreshProjects();
     }
-
-    // The displayed status can lag queued writes. Let the store compare the
-    // requested status when its turn executes, so the final drop is not lost.
-    updateStatus(activeId, newStatus);
   };
 
   const openCreate = () => {
@@ -143,6 +191,7 @@ export function TicketBoardView() {
   const handleDelete = async (ticket: Ticket) => {
     if (!window.confirm(`${ticket.issueKey ?? ticket.title} を削除しますか？`)) return;
     await deleteTicket(ticket.id);
+    await refreshProjects();
   };
 
   return (
@@ -176,14 +225,15 @@ export function TicketBoardView() {
           searchQuery={searchQuery}
           assigneeFilter={assigneeFilter}
           currentUserId={currentUserId}
-          onStatusChange={updateStatus}
+          onStatusChange={handleStatusChange}
           onEdit={openEdit}
           onDelete={handleDelete}
           canWrite={canWrite}
+          canDrag={canDrag}
         />
 
         <DragOverlay>
-          {activeTicket && canWrite ? <Card ticket={activeTicket} isOverlay canWrite /> : null}
+          {activeTicket && canDrag ? <Card ticket={activeTicket} isOverlay canWrite canDrag /> : null}
         </DragOverlay>
       </DndContext>
 
@@ -197,8 +247,8 @@ export function TicketBoardView() {
           projectMembers={membersProjectId === selectedProjectId ? projectMembers : []}
           readOnly={!canWrite}
           onClose={() => setIsModalOpen(false)}
-          onCreate={addTicket}
-          onUpdate={updateTicket}
+          onCreate={handleCreate}
+          onUpdate={handleUpdate}
         />
       )}
       {managingMembers && selectedProject && (

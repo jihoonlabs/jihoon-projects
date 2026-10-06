@@ -7,6 +7,7 @@ export const responseTicket: TicketResponse = {
   title: 'First ticket',
   description: null,
   status: 'TODO',
+  position: 0,
   priority: 'MEDIUM',
   assignee: { id: 7, name: 'Tester', avatar_url: null },
   created_at: '2026-09-24T00:00:00.000000Z',
