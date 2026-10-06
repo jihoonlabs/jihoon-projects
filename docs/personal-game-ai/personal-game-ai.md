@@ -9,6 +9,7 @@
 - 컨텍스트 구조 정상화 — feature/personal-game-ai-context-router — 진행 중
 - 중단 실행 복구 — feature/personal-game-ai-run-recovery — 재정렬·검증 필요
 - 실행 이벤트 로그 — feature/personal-game-ai-run-log — 재정렬·검증 필요
+- 검증된 게임 경험 학습 — 담당 브랜치 미정 — 대기
 
 ## 다음 기준
 - 각 구현 브랜치는 하나의 명확한 책임만 가진다.
