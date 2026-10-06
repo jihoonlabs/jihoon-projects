@@ -22,7 +22,17 @@ class ContextTests(unittest.TestCase):
             return read_context(path)
 
     def test_normal(self):
-        self.assertIn("--- AGENTS.md ---", self.run_config())
+        context = self.run_config()
+        self.assertIn("--- AGENTS.md ---", context)
+        self.assertIn(
+            "--- docs/personal-game-ai/personal-game-ai-context-router.md ---",
+            context,
+        )
+        self.assertNotIn("--- docs/personal-game-ai/personal-game-ai.md ---", context)
+
+    def test_branch_document_is_derived_from_current_branch(self):
+        with self.assertRaises(FileNotFoundError):
+            self.run_config(expected_branch="feature/personal-game-ai-missing-context")
 
     def test_wrong_branch(self):
         with self.assertRaises(RuntimeError):
@@ -78,6 +88,10 @@ class ContextTests(unittest.TestCase):
     def test_extra_document(self):
         with self.assertRaises(ValueError):
             self.run_config(code_files=["docs/personal-game-ai/EPIC.md"])
+
+    def test_invalid_project(self):
+        with self.assertRaises(ValueError):
+            self.run_config(project="../personal-game-ai")
 
     def test_duplicate(self):
         with self.assertRaises(ValueError):
