@@ -1,29 +1,19 @@
-# AGENTS改善 WORK
+# AGENTS独立候補 WORK
 
-## Goal
-実作業と最新のcoding agent運用知見から、AGENTS.mdの改善候補を安全に蓄積・検証する。
+## 目標と境界
+v2を基準に、停止条件を実際の承認境界へ絞り、Childの統合と検証をcommitに結び付ける。変更対象はAGENTSとこのWORK、MANUALだけ。アプリコード、main、v2、Ticket各branchは変更しない。
 
-## Scope
-- 実作業で発見した摩擦・失敗・不足ルールの記録
-- 最新トレンド・公式ガイド・研究との比較
-- WORK/MANUAL運用の改善
-- 分割作業の統合品質改善
+## 基準
+- repository: `jihoonlabs/jihoon-projects`
+- base: `docs/agents-v2` / `66a70de5ba5a68605b26695d2d568cb2d64ea68a`
+- review: `review/agents-v2-autonomy-evidence-20261007-2315`
+- 実態確認: baseのコード・テスト・履歴と、取得時のTicket Epic `8a9823503b91f79590653b400111bac0adc6f1dd`、順序保存統合 `28770195e96a0a504dd2d40c85a044dff5fe1502`。他AIのreview内容は参照しない。
 
-## Current priorities
-- 分業したChild同士の契約・依存関係・接続点を統合前に確認する。
-- merge成功だけでなく、統合後の相互作用と回帰を検証する。
-- AGENTSは必要最小限のguardrailとnavigationを中心に保つ。
-- コンテキストは固定的に禁止するのではなく、必要性に基づいて追加調査する方向を継続検討する。
+## 完了条件と検証
+- 3文書の役割を分離し、日常作業の必須読込・承認・検証を必要範囲に絞る。
+- 実態と採否理由、外部の比較資料は [MANUAL](MANUAL.md) に集約する。
+- 文書差分、相対リンク、競合マーカー、承認境界、Child引渡し・統合の整合性を確認する。文書のみの変更なのでアプリテストは実行しない。
+- baseからこのreviewへの3ファイルだけのcommitを作り、同branchへpushして一致を確認する。
 
-## Update checkpoint
-作業が一区切りした時だけ改善点を確認する。
-改善候補がなければ何も追加せず次の作業へ進む。
-
-## Application policy
-AGENTS.mdの実変更はユーザー承認が必要。
-承認済みルールも進行中作業へ遡及適用せず、原則として次に開始する作業から適用する。
-
-## Current rollout
-2026-10-07: v2候補作成。
-現在進行中のTicket作業には適用しない。
-Ticket作業終了後に開始する次のブランチからの適用候補とする。
+## 現在状態
+独立候補の作成と文書検証は完了。commit/push後のSHAはGitを参照する。候補の運用効果は未検証で、採用は別判断。採用された規則は次に開始する作業から使い、進行中Ticket作業へ遡及しない。
