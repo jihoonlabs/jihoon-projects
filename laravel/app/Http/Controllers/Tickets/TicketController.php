@@ -224,7 +224,7 @@ class TicketController extends Controller
     }
 
     /**
-     * @param array<int, int> $ticketIds
+     * @param  array<int, int>  $ticketIds
      */
     private function writePositions(array $ticketIds): void
     {

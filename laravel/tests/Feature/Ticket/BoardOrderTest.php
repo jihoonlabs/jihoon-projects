@@ -150,6 +150,7 @@ class BoardOrderTest extends TestCase
 
         $this->assertSame(1, $this->project->refresh()->board_version);
     }
+
     public function test_削除すると列順が詰め直されboard_versionが更新される(): void
     {
         $first = Ticket::factory()->create([
@@ -186,5 +187,4 @@ class BoardOrderTest extends TestCase
         ]);
         $this->assertSame(1, $this->project->refresh()->board_version);
     }
-
 }

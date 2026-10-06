@@ -32,3 +32,10 @@
 - 検証結果をこのMDへ必要最小限で記録する。
 - この統合ブランチへcommit/pushする。
 - `feature/ticket` へのmergeはユーザー承認なしに行わない。
+
+## 検証結果 (2026-10-06)
+- **Merge Conflict**: 解消済み (`AGENTS.md` の競合を統合ブランチ基準で解消)
+- **Laravel Backend Tests**: PASS (46 tests, 220 assertions)
+- **Laravel Pint**: PASS (100 files checked/fixed)
+- **React Frontend Tests**: PASS (22 test files, 128 tests)
+- **ESLint & Build**: PASS (Next.js production build succeeded)
