@@ -50,6 +50,7 @@ export default function Card({
       ref={setNodeRef}
       style={style}
       {...attributes}
+      aria-disabled={undefined}
       {...listeners}
       className={`${styles.card} ${isOverlay ? styles.overlayCard : ''}`}
     >

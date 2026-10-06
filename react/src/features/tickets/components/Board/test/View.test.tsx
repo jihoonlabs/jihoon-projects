@@ -120,6 +120,30 @@ it('shows tickets assigned to the signed-in user in the ME filter', async () => 
   }
 });
 
+it('allows manual status changes while search disables dragging', async () => {
+  const ticket = api.toTicket(responseTicket);
+  vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
+  vi.mocked(api.updateTicketStatus).mockResolvedValue({ ...ticket, status: 'DONE' });
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+
+  render(<TicketBoardView />);
+  expect(await screen.findByText('First ticket')).toBeInTheDocument();
+  fireEvent.change(screen.getByRole('textbox', { name: 'チケット検索' }), {
+    target: { value: 'First ticket' },
+  });
+
+  const card = screen.getByText('First ticket').closest('[aria-roledescription="sortable"]');
+  expect(card).not.toHaveAttribute('aria-disabled', 'true');
+
+  const status = screen.getByRole('combobox', { name: 'First ticket のステータス' });
+  expect(status).toBeEnabled();
+  fireEvent.change(status, { target: { value: 'DONE' } });
+
+  await waitFor(() =>
+    expect(api.updateTicketStatus).toHaveBeenCalledWith('1', 'DONE'),
+  );
+});
+
 it('exposes accessible names for search and assignee filters', async () => {
   vi.mocked(api.fetchTickets).mockResolvedValue([]);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
@@ -153,6 +177,8 @@ it('keeps read members read-only while allowing Ticket details and comments', as
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
   render(<TicketBoardView />);
+  const ticketTitle = await screen.findByText('First ticket');
+  expect(ticketTitle.closest('[aria-roledescription="sortable"]')).not.toHaveAttribute('aria-disabled', 'true');
   expect(await screen.findByRole('button', { name: '詳細' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '+ チケット作成' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'メンバー管理' })).not.toBeInTheDocument();
