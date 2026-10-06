@@ -9,7 +9,7 @@ Laravel APIとReactによるProject単位のTicketボード。Epicは `feature/t
 |---|---|---|
 | Ticketボード基盤 | `feature/ticket` | 実装済み |
 | Projectアクセス・権限 | `feature/ticket-project-access` | 統合済み |
-| カード順序永続化 | `feature/ticket-order-persistence` | Child検証済み / Epic統合待ち |
+| カード順序永続化 | `feature/ticket-order-persistence` | 統合済み |
 | Activity / History | 未定 | V1後候補 |
 
 新機能はここに担当ブランチを追加してから、そのブランチで詳細を管理する。1作業単位より大きい機能は担当ブランチ側でさらに分割する。
