@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>営業用 人材分布レポート自動作成ツール</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      max-width: 840px;
+      margin: 30px auto;
+      padding: 20px;
+      background-color: #f1f5f9;
+      color: #334155;
+    }
+    .container {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 32px;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+    }
+    h2 {
+      color: #0f172a;
+      font-size: 1.4rem;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 14px;
+      margin-top: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .tag-preview {
+      display: inline-block;
+      background: #2563eb;
+      color: white;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .drop-zone {
+      border: 2px dashed #94a3b8;
+      border-radius: 10px;
+      padding: 32px 20px;
+      text-align: center;
+      background-color: #f8fafc;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .drop-zone:hover { background-color: #f1f5f9; border-color: #2563eb; }
+    .section-title {
+      font-weight: 700;
+      margin-top: 24px;
+      margin-bottom: 10px;
+      font-size: 0.95rem;
+      color: #1e293b;
+    }
+    textarea, select, input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      box-sizing: border-box;
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+    .checkbox-container {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 14px;
+      max-height: 180px;
+      overflow-y: auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .checkbox-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #ffffff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      font-size: 0.86rem;
+      cursor: pointer;
+    }
+    .checkbox-item:hover { border-color: #2563eb; }
+    .checkbox-item.custom-item {
+      background: #eff6ff;
+      border-color: #93c5fd;
+      color: #1d4ed8;
+      font-weight: bold;
+    }
+    .custom-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 18px;
+      margin-top: 12px;
+    }
+    .custom-card-title {
+      font-size: 0.92rem;
+      font-weight: bold;
+      color: #1e293b;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: bold;
+      color: #475569;
+      margin-bottom: 4px;
+    }
+    .default-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: bold;
+      font-size: 0.92rem;
+      color: #0f172a;
+      cursor: pointer;
+      user-select: none;
+    }
+    .input-range-group, .color-picker-wrapper { display: flex; align-items: center; gap: 8px; }
+    input[type="color"] {
+      -webkit-appearance: none;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      cursor: pointer;
+      background: transparent;
+    }
+    input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+    input[type="color"]::-webkit-color-swatch { border: 1px solid #cbd5e1; border-radius: 8px; }
+    .opt-grid { display: flex; gap: 16px; }
+    .opt-grid > div { flex: 1; }
+    .btn-group { display: flex; gap: 12px; margin-top: 28px; }
+    button {
+      flex: 1;
+      padding: 15px;
+      border: none;
+      border-radius: 9px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 1.05rem;
+      transition: all 0.2s;
+    }
+    .btn-small {
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      background: #e2e8f0;
+      color: #334155;
+      border-radius: 4px;
+      cursor: pointer;
+      border: none;
+      font-weight: bold;
+    }
+    .btn-small:hover { background: #cbd5e1; }
+    .btn-pptx { background-color: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+    .btn-pptx:hover { background-color: #1d4ed8; transform: translateY(-1px); }
+    #status { margin-top: 12px; font-size: 0.88rem; color: #1e293b; font-weight: 600; }
+    #chart-render-area { position: absolute; left: -9999px; top: -9999px; width: 1000px; height: 1000px; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>
+      <span>📊 営業用 人材分布 レポート作成ツール</span>
+      <span class="tag-preview">v58 Selected Items 100% Recalculation</span>
+    </h2>
+
+    <div class="section-title">1. Excel / CSV ファイル選択 または 貼り付け</div>
+    <div id="drop-zone" class="drop-zone" onclick="document.getElementById('file-input').click()">
+      <span id="drop-text">📄 Excel (.xlsx, .xls) / CSV ファイルをドラッグ＆ドロップ<br>または クリックしてファイル選択</span>
+      <input type="file" id="file-input" style="display:none;" accept=".xlsx, .xls, .csv" onchange="handleFile(this.files[0])">
+    </div>
+
+    <div style="margin-top: 10px;">
+      <textarea id="paste-input" rows="3" placeholder="スプレッドシートの表データをここに直接貼り付け (Ctrl+V)"></textarea>
+      <button onclick="handlePaste()" style="margin-top:6px; padding:9px; background:#475569; color:white; font-size:0.85rem; width:100%;">貼り付けデータを反映</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div class="section-title">2. 出力したい項目を選択 (複数選択可能)</div>
+    <div id="checkbox-list" class="checkbox-container">
+      <span style="font-size:0.85rem; color:#94a3b8;">-- データ読込後に項目一覧が表示されます --</span>
+    </div>
+
+    <!-- カスタム抽出グラフ設定カード -->
+    <div id="custom-extract-card" class="custom-card" style="display:none;">
+      <div class="custom-card-title">
+        <span>⚙ カスタム抽出グラフの設定 (選択項目のみで100%計算)</span>
+        <div>
+          <button type="button" class="btn-small" onclick="selectAllCustomItems(true)">全選択</button>
+          <button type="button" class="btn-small" onclick="selectAllCustomItems(false)">全解除</button>
+        </div>
+      </div>
+
+      <div class="grid-2col">
+        <div class="form-group">
+          <label>対象カラム選択</label>
+          <select id="custom-target-col" onchange="renderCustomKeywords()"></select>
+        </div>
+        <div class="form-group">
+          <label>グラフタイトル</label>
+          <input type="text" id="custom-chart-title" value="特定技術・カテゴリ分布">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>並び順 (時計回りの配置順)</label>
+        <select id="custom-sort-mode" onchange="renderCustomKeywords()">
+          <option value="count" selected>人数/割合順 (多い順)</option>
+          <option value="name">項目名順 (昇順)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>抽出したいデータ項目を選択 (チェックを入れた項目のみで100%として再計算されます)</label>
+        <div id="custom-keywords-list" class="checkbox-container" style="max-height: 160px; background: #ffffff;">
+          <!-- JSで動的生成 -->
+        </div>
+      </div>
+    </div>
+
+    <div class="opt-grid">
+      <div>
+        <div class="section-title">3. 1スライドの配置数</div>
+        <select id="items-per-page" onchange="updateScaleRanges()">
+          <option value="3" selected>3個配置 (標準・バランス重視)</option>
+          <option value="2">2個配置 (ゆったり・大きめ)</option>
+          <option value="1">1個配置 (特大・1項目強調)</option>
+        </select>
+      </div>
+
+      <div>
+        <div class="section-title">4. グラフデザイン形式を選択</div>
+        <select id="chart-type" onchange="updateScaleRanges()">
+          <option value="pie" selected>⭕ ビビッドカラー・円サイズ極大化ドーナツ</option>
+          <option value="bar">📊 スリム＆モダン横棒グラフ (おすすめ)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-title">5. デザイン詳細設定</div>
+    <div class="custom-card">
+      <label class="default-toggle">
+        <input type="checkbox" id="use-default-style" checked onchange="toggleCustomPanel()">
+        <span>✨ 標準ビビッドカラーを使用 (チェック解除で手動カラー調整)</span>
+      </label>
+
+      <div id="custom-panel" class="grid-2col" style="display:none; margin-top:14px; padding-top:14px; border-top:1px dashed #cbd5e1;">
+        <div>
+          <label id="size-label" style="font-size: 0.82rem; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
+            ⭕ 円の直径・サイズ (150 ~ 400px)
+          </label>
+          <div class="input-range-group">
+            <input type="range" id="size-slider" min="150" max="400" value="360" oninput="document.getElementById('size-num').value = this.value">
+            <input type="number" id="size-num" min="150" max="400" value="360" style="width: 80px;" oninput="document.getElementById('size-slider').value = this.value">
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size: 0.82rem; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
+            🎨 メインテーマカラー選択
+          </label>
+          <div class="color-picker-wrapper">
+            <input type="color" id="custom-color-picker" value="#2563eb" oninput="document.getElementById('color-code-display').innerText = this.value.toUpperCase()">
+            <span id="color-code-display" style="font-size: 0.85rem; font-weight: 600; color: #64748b;">#2563EB</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn-pptx" onclick="generatePPTX()">🚀 PPTX スライド出力</button>
+    </div>
+  </div>
+
+  <div id="chart-render-area">
+    <canvas id="exportCanvas" width="1000" height="1000"></canvas>
+  </div>
+
+  <script>
+    let rawData = [], headers = [], globalTotalMembers = 0;
+
+    const COLOR_PALETTE = [
+      ['#3B82F6', '#60A5FA'], // Blue
+      ['#8B5CF6', '#A78BFA'], // Purple
+      ['#EC4899', '#F472B6'], // Pink
+      ['#10B981', '#34D399'], // Emerald
+      ['#F59E0B', '#FBBF24'], // Amber
+      ['#06B6D4', '#22D3EE'], // Cyan
+      ['#6366F1', '#818CF8'], // Indigo
+      ['#F97316', '#FB923C']  // Orange
+    ];
+
+    const valClean = v => (v === undefined || v === null) ? "" : String(v).trim().replace(/^(undefined|null)$/, "");
+
+    const dropZone = document.getElementById('drop-zone');
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.background = '#e2e8f0'; });
+    dropZone.addEventListener('dragleave', () => { dropZone.style.background = '#f8fafc'; });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.background = '#f8fafc';
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+
+    function applyParsedData(parsed, nameInfo) {
+      rawData = parsed.filter(row => Object.values(row).some(v => valClean(v).length > 0));
+      globalTotalMembers = rawData.length;
+      if (rawData.length > 0) {
+        headers = Object.keys(rawData[0]);
+        renderCheckboxes();
+        populateCustomColDropdown();
+        document.getElementById('status').innerText = `✅ ${nameInfo} (総人員: ${globalTotalMembers}名基準)`;
+      }
+    }
+
+    function handleFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        applyParsedData(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" }), `読込完了: ${file.name}`);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function handlePaste() {
+      const text = document.getElementById('paste-input').value.trim();
+      if (!text) return;
+      const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+      if (lines.length < 2) return;
+
+      const isTab = lines[0].includes('\t');
+      headers = (isTab ? lines[0].split('\t') : lines[0].split(/\s{2,}/)).map(h => h.trim());
+      
+      const parsed = lines.slice(1).map(line => {
+        const vals = isTab ? line.split('\t') : line.split(/\s{2,}/);
+        let obj = {};
+        headers.forEach((h, idx) => obj[h] = valClean(vals[idx]));
+        return obj;
+      });
+      applyParsedData(parsed, "貼り付けデータ適用完了");
+    }
+
+    function renderCheckboxes() {
+      const container = document.getElementById('checkbox-list');
+      let html = headers.map(h => `<label class="checkbox-item"><input type="checkbox" value="${h}" checked> ${h}</label>`).join('');
+      html += `<label class="checkbox-item custom-item"><input type="checkbox" id="chk-custom-extract" value="__CUSTOM_EXTRACT__" onchange="toggleCustomExtractPanel()"> ➕ カスタム抽出グラフを追加</label>`;
+      container.innerHTML = html;
+    }
+
+    function populateCustomColDropdown() {
+      const sel = document.getElementById('custom-target-col');
+      sel.innerHTML = headers.map(h => `<option value="${h}">${h}</option>`).join('');
+      renderCustomKeywords();
+    }
+
+    // チェック状態が変わるたびにリアルタイムでパーセンテージ(100%基準)を再計算して更新
+    function updateCustomPercentages() {
+      const col = document.getElementById('custom-target-col').value;
+      if (!col || !rawData.length) return;
+
+      const checkedBoxes = Array.from(document.querySelectorAll('.custom-kw-chk:checked'));
+      const selectedKeys = checkedBoxes.map(cb => cb.value);
+
+      let counts = {};
+      rawData.forEach(row => {
+        let val = formatValueLabel(row[col]);
+        counts[val] = (counts[val] || 0) + 1;
+      });
+
+      // チェックされた項目のみの合計人数（母体）
+      let selectedTotal = selectedKeys.reduce((sum, key) => sum + (counts[key] || 0), 0);
+
+      document.querySelectorAll('.custom-kw-item').forEach(item => {
+        const chk = item.querySelector('.custom-kw-chk');
+        const badge = item.querySelector('.pct-badge');
+        const key = chk.value;
+        const cnt = counts[key] || 0;
+
+        if (chk.checked && selectedTotal > 0) {
+          let pct = ((cnt / selectedTotal) * 100).toFixed(1);
+          badge.innerText = `(${cnt}名 / ${pct}%)`;
+          badge.style.color = '#2563eb';
+        } else {
+          badge.innerText = `(${cnt}名 / 除外)`;
+          badge.style.color = '#94a3b8';
+        }
+      });
+    }
+
+    function renderCustomKeywords() {
+      const col = document.getElementById('custom-target-col').value;
+      const sortMode = document.getElementById('custom-sort-mode').value;
+      const listContainer = document.getElementById('custom-keywords-list');
+      
+      if (!col || !rawData.length) {
+        listContainer.innerHTML = '<span style="font-size:0.8rem; color:#94a3b8;">データがありません</span>';
+        return;
+      }
+
+      let counts = {};
+      rawData.forEach(row => {
+        let val = formatValueLabel(row[col]);
+        counts[val] = (counts[val] || 0) + 1;
+      });
+
+      let keys = Object.keys(counts);
+
+      keys.sort((a, b) => {
+        if (a === "未入力") return 1;
+        if (b === "未入力") return -1;
+
+        if (sortMode === 'name') {
+          return a.localeCompare(b, 'ja', { numeric: true });
+        }
+        return counts[b] - counts[a];
+      });
+
+      listContainer.innerHTML = keys.map((key) => {
+        let isChecked = key !== "未入力";
+        return `<label class="checkbox-item custom-kw-item">
+                  <input type="checkbox" class="custom-kw-chk" value="${key}" ${isChecked ? 'checked' : ''} onchange="updateCustomPercentages()">
+                  <span>${key}</span>
+                  <span class="pct-badge" style="font-size:0.75rem; font-weight:bold;"></span>
+                </label>`;
+      }).join('');
+
+      document.getElementById('custom-chart-title').value = `${col} (抽出分布)`;
+      updateCustomPercentages();
+    }
+
+    function selectAllCustomItems(flag) {
+      document.querySelectorAll('.custom-kw-chk').forEach(chk => chk.checked = flag);
+      updateCustomPercentages();
+    }
+
+    function toggleCustomExtractPanel() {
+      const chk = document.getElementById('chk-custom-extract');
+      document.getElementById('custom-extract-card').style.display = chk && chk.checked ? 'block' : 'none';
+    }
+
+    function updateScaleRanges() {
+      const itemsPerPage = parseInt(document.getElementById('items-per-page').value, 10);
+      const isPie = document.getElementById('chart-type').value === 'pie';
+      
+      let minVal = isPie ? 150 : 100;
+      let maxVal = 400;
+      let defaultVal = 360;
+
+      if (itemsPerPage === 1) {
+        maxVal = 600; defaultVal = 500;
+      } else if (itemsPerPage === 2) {
+        maxVal = 480; defaultVal = isPie ? 420 : 350;
+      } else {
+        maxVal = 400; defaultVal = isPie ? 360 : 190;
+      }
+
+      const slider = document.getElementById('size-slider');
+      const numInput = document.getElementById('size-num');
+
+      document.getElementById('size-label').innerText = isPie ? `⭕ 円の直径・サイズ (${minVal} ~ ${maxVal}px)` : `📊 棒の最大幅・長さを調整 (${minVal} ~ ${maxVal}px)`;
+      slider.min = minVal; slider.max = maxVal; slider.value = defaultVal;
+      numInput.min = minVal; numInput.max = maxVal; numInput.value = slider.value;
+
+      toggleCustomPanel();
+    }
+
+    function toggleCustomPanel() {
+      document.getElementById('custom-panel').style.display = document.getElementById('use-default-style').checked ? 'none' : 'grid';
+    }
+
+    function formatValueLabel(val) {
+      let str = valClean(val);
+      if (!str) return "未入力";
+      if (!isNaN(str) && Number(str) > 40000 && Number(str) < 60000) {
+        let d = XLSX.SSF.parse_date_code(Number(str));
+        if (d) return `${d.y}年${d.m}月`;
+      }
+      return str;
+    }
+
+    function getAggregatedData(targetCol) {
+      if (targetCol === "__CUSTOM_EXTRACT__") {
+        return getCustomExtractedData();
+      }
+
+      let counts = {}, total = globalTotalMembers || rawData.length;
+      rawData.forEach(row => {
+        let cleanItem = formatValueLabel(row[targetCol]);
+        if (cleanItem === "インフラ ") cleanItem = "インフラ";
+        counts[cleanItem] = (counts[cleanItem] || 0) + 1;
+      });
+
+      let sortedKeys = Object.keys(counts).sort((a, b) => (a === "未入力") ? 1 : (b === "未入力") ? -1 : counts[b] - counts[a]);
+      return { labels: sortedKeys, values: sortedKeys.map(k => counts[k]), total };
+    }
+
+    // チェックされた項目のみの合計人数を母体(100%)としてデータ抽出
+    function getCustomExtractedData() {
+      const col = document.getElementById('custom-target-col').value;
+      const selectedChks = Array.from(document.querySelectorAll('.custom-kw-chk:checked')).map(cb => cb.value);
+
+      let counts = {};
+      selectedChks.forEach(kw => counts[kw] = 0);
+
+      rawData.forEach(row => {
+        let val = formatValueLabel(row[col]);
+        if (counts.hasOwnProperty(val)) {
+          counts[val]++;
+        }
+      });
+
+      let labels = selectedChks;
+      let values = labels.map(k => counts[k]);
+      
+      // チェックした項目の合計人数を母体（100%）に設定
+      let total = values.reduce((a, b) => a + b, 0);
+
+      return { labels, values, total };
+    }
+
+    function adjustColorBrightness(hex, percent) {
+      let num = parseInt(hex.replace('#',''), 16), amt = Math.round(2.55 * percent);
+      let R = Math.min(255, Math.max(0, (num >> 16) + amt));
+      let G = Math.min(255, Math.max(0, (num >> 8 & 0x00FF) + amt));
+      let B = Math.min(255, Math.max(0, (num & 0x0000FF) + amt));
+      return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+    }
+
+    function renderCustomDonutCanvas(colName, labels, values, total, isDefault, itemsPerPage) {
+      return new Promise((resolve) => {
+        const canvas = document.getElementById('exportCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const centerX = canvas.width / 2, centerY = canvas.height / 2;
+        const defaultRadius = itemsPerPage === 1 ? 480 : (itemsPerPage === 2 ? 420 : 360);
+        const outerRadius = isDefault ? defaultRadius : parseInt(document.getElementById('size-num').value, 10);
+        const innerRadius = Math.round(outerRadius * 0.22);
+        
+        let paletteGradients = isDefault ? COLOR_PALETTE : (() => {
+          let c = document.getElementById('custom-color-picker').value;
+          return [ [c, adjustColorBrightness(c, 20)], [adjustColorBrightness(c, -15), c], [adjustColorBrightness(c, 15), adjustColorBrightness(c, 35)] ];
+        })();
+
+        let startAngle = -Math.PI / 3;
+
+        labels.forEach((label, i) => {
+          let sliceAngle = total > 0 ? (values[i] / total) * 2 * Math.PI : 0;
+          let endAngle = startAngle + sliceAngle;
+          let colors = (label === "未入力" || label === "その他") ? ['#CBD5E1', '#E2E8F0'] : paletteGradients[i % paletteGradients.length];
+          let rad = startAngle + sliceAngle / 2;
+
+          let grad = ctx.createLinearGradient(
+            centerX + Math.cos(rad) * innerRadius, centerY + Math.sin(rad) * innerRadius,
+            centerX + Math.cos(rad) * outerRadius, centerY + Math.sin(rad) * outerRadius
+          );
+          grad.addColorStop(0, colors[0]); grad.addColorStop(1, colors[1]);
+
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
+          ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true);
+          ctx.closePath();
+          ctx.fillStyle = grad; ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4.0; ctx.stroke();
+          startAngle = endAngle;
+        });
+
+        startAngle = -Math.PI / 3;
+        let leftCallouts = [], rightCallouts = [];
+
+        labels.forEach((label, i) => {
+          let val = values[i], pctNum = total > 0 ? (val / total) * 100 : 0, pct = pctNum.toFixed(1);
+          let sliceAngle = total > 0 ? (val / total) * 2 * Math.PI : 0, midAngle = startAngle + sliceAngle / 2;
+          let displayLabel = label.length > 10 ? label.slice(0, 9) + '..' : label;
+
+          if (pctNum >= 4.5) {
+            let midR = (innerRadius + outerRadius) * 0.58;
+            let textX = centerX + Math.cos(midAngle) * midR, textY = centerY + Math.sin(midAngle) * midR;
+            ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.font = 'bold 20px -apple-system, Meiryo, sans-serif'; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 4.5;
+            ctx.strokeText(displayLabel, textX, textY - 14); ctx.fillStyle = '#0F172A'; ctx.fillText(displayLabel, textX, textY - 14);
+            ctx.font = 'bold 18px Meiryo, sans-serif'; ctx.strokeText(`${val}名 (${pct}%)`, textX, textY + 14);
+            ctx.fillStyle = '#1E293B'; ctx.fillText(`${val}名 (${pct}%)`, textX, textY + 14);
+            ctx.restore();
+          } else {
+            let isRight = Math.cos(midAngle) >= 0;
+            let item = {
+              displayLabel, val, pct,
+              startX: centerX + Math.cos(midAngle) * outerRadius * 0.88, startY: centerY + Math.sin(midAngle) * outerRadius * 0.88,
+              breakX: centerX + Math.cos(midAngle) * (outerRadius + 22), breakY: centerY + Math.sin(midAngle) * (outerRadius + 22),
+              targetY: centerY + Math.sin(midAngle) * (outerRadius + 22)
+            };
+            (isRight ? rightCallouts : leftCallouts).push(item);
+          }
+          startAngle += sliceAngle;
+        });
+
+        const spreadY = items => {
+          items.sort((a, b) => a.targetY - b.targetY);
+          for (let i = 1; i < items.length; i++) {
+            if (items[i].targetY - items[i - 1].targetY < 32) items[i].targetY = items[i - 1].targetY + 32;
+          }
+        };
+        spreadY(leftCallouts); spreadY(rightCallouts);
+
+        const drawCallouts = (items, isRight) => {
+          items.forEach(item => {
+            let endX = item.breakX + (isRight ? 25 : -25), labelX = endX + (isRight ? 6 : -6);
+            ctx.save(); ctx.beginPath(); ctx.moveTo(item.startX, item.startY); ctx.lineTo(item.breakX, item.targetY); ctx.lineTo(endX, item.targetY);
+            ctx.strokeStyle = '#64748B'; ctx.lineWidth = 2.0; ctx.stroke();
+            ctx.beginPath(); ctx.arc(item.startX, item.startY, 3.0, 0, 2 * Math.PI); ctx.fillStyle = '#64748B'; ctx.fill();
+
+            ctx.textAlign = isRight ? 'left' : 'right'; ctx.textBaseline = 'middle';
+            let textStr = `${item.displayLabel} ${item.val}名 (${item.pct}%)`;
+            ctx.font = 'bold 15px Meiryo, sans-serif'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4.0;
+            ctx.strokeText(textStr, labelX, item.targetY); ctx.fillStyle = '#0F172A'; ctx.fillText(textStr, labelX, item.targetY);
+            ctx.restore();
+          });
+        };
+        drawCallouts(leftCallouts, false); drawCallouts(rightCallouts, true);
+
+        let titleText = (colName === "__CUSTOM_EXTRACT__") ? document.getElementById('custom-chart-title').value : colName;
+        ctx.fillStyle = '#0f172a'; ctx.font = 'bold 22px -apple-system, Meiryo, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(titleText.length > 6 ? titleText.slice(0, 5) + '..' : titleText, centerX, centerY);
+        resolve(canvas.toDataURL('image/png'));
+      });
+    }
+
+    async function generatePPTX() {
+      const selectedCols = Array.from(document.querySelectorAll('#checkbox-list input[type="checkbox"]:checked')).map(cb => cb.value);
+      if (!rawData.length || !selectedCols.length) {
+        alert(!rawData.length ? "データを先に読み込んでください。" : "出力したい項目を1つ以上選択してください。");
+        return;
+      }
+
+      const chartType = document.getElementById('chart-type').value;
+      const isDefault = document.getElementById('use-default-style').checked;
+      const itemsPerPage = parseInt(document.getElementById('items-per-page').value, 10);
+
+      let pptx = new PptxGenJS();
+      pptx.defineLayout({ name: 'WIDE_16_9', width: 13.333, height: 7.5 }); pptx.layout = 'WIDE_16_9';
+
+      for (let pageStart = 0; pageStart < selectedCols.length; pageStart += itemsPerPage) {
+        let pageCols = selectedCols.slice(pageStart, pageStart + itemsPerPage), countInSlide = pageCols.length, slide = pptx.addSlide();
+
+        slide.addShape(pptx.ShapeType.rect, { x: 0.8, y: 0.45, w: 1.5, h: 0.32, fill: { color: '3B82F6' } });
+        slide.addText("About Report", { x: 0.8, y: 0.45, w: 1.5, h: 0.32, fontSize: 10, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', fontFace: 'Meiryo' });
+        slide.addText("人材スキル・業界の分布分析", { x: 2.45, y: 0.45, w: 6.0, h: 0.32, fontSize: 11, color: '64748B', valign: 'middle', fontFace: 'Meiryo' });
+        slide.addText("豊富なデータで可能性を可視化する", { x: 0.8, y: 0.85, w: 11.5, h: 0.6, fontSize: 22, bold: true, color: '1E293B', fontFace: 'Meiryo' });
+        slide.addText("一人ひとりのスキルや適性を活かした最適なマッチングをサポートします。", { x: 0.8, y: 1.45, w: 11.5, h: 0.35, fontSize: 12, color: '64748B', fontFace: 'Meiryo' });
+        slide.addShape(pptx.ShapeType.line, { x: 0.8, y: 1.9, w: 11.733, h: 0, line: { color: 'E2E8F0', width: 1 } });
+
+        let colWidth = itemsPerPage === 1 ? 7.0 : (itemsPerPage === 2 ? 5.2 : 3.6);
+        let xPositions = itemsPerPage === 1 ? [(13.333 - colWidth) / 2] :
+                         (itemsPerPage === 2 ? [1.0, 1.0 + colWidth + (13.333 - 2.0 - colWidth * 2)] : [0.8, 0.8 + colWidth + (11.733 - colWidth * 3) / 2, 0.8 + (colWidth + (11.733 - colWidth * 3) / 2) * 2]);
+
+        for (let i = 0; i < countInSlide; i++) {
+          let col = pageCols[i], colX = xPositions[i];
+          const { labels, values, total } = getAggregatedData(col);
+          if (!labels.length) continue;
+
+          let displayTitle = (col === "__CUSTOM_EXTRACT__") ? document.getElementById('custom-chart-title').value : col;
+          slide.addText(`■ ${displayTitle}`, { x: colX, y: 2.1, w: colWidth, h: 0.35, fontSize: 13, bold: true, color: '0F172A', fontFace: 'Meiryo' });
+
+          if (chartType === 'pie') {
+            let imgDataUrl = await renderCustomDonutCanvas(col, labels, values, total, isDefault, itemsPerPage);
+            let imgSize = itemsPerPage === 1 ? 5.2 : (itemsPerPage === 2 ? 4.9 : 4.7);
+            slide.addImage({ data: imgDataUrl, x: colX + (colWidth - imgSize) / 2, y: 2.25, w: imgSize, h: imgSize });
+          } else {
+            let itemCount = labels.length, startY = 2.85, rowGap = 4.3 / Math.max(itemCount, 5), barHeight = Math.min(rowGap * 0.32, 0.15);
+            let defaultBarWidth = itemsPerPage === 1 ? 5.0 : (itemsPerPage === 2 ? 3.5 : 1.9);
+            let userLength = parseInt(document.getElementById('size-num').value, 10);
+            let maxBarWidth = isDefault ? defaultBarWidth : (userLength / 100);
+            let maxVal = Math.max(...values, 1);
+
+            labels.forEach((label, j) => {
+              let count = values[j], pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0, currentY = startY + (j * rowGap);
+              let barColor = isDefault ? COLOR_PALETTE[j % COLOR_PALETTE.length][0].replace('#', '') : document.getElementById('custom-color-picker').value.replace('#', '');
+
+              slide.addText(label.length > 20 ? label.slice(0, 19) + '…' : label, {
+                x: colX, y: currentY - (rowGap * 0.42), w: colWidth, h: rowGap * 0.4,
+                fontSize: itemCount > 10 ? 8.5 : 9.5, bold: true, color: (label === "未入力" || label === "その他") ? '94A3B8' : '334155', fontFace: 'Meiryo'
+              });
+              slide.addShape(pptx.ShapeType.rect, { x: colX, y: currentY, w: maxBarWidth, h: barHeight, fill: { color: 'F1F5F9' } });
+              slide.addShape(pptx.ShapeType.rect, { x: colX, y: currentY, w: Math.max((count / maxVal) * maxBarWidth, 0.05), h: barHeight, fill: { color: barColor } });
+              slide.addText(`${count}名 (${pct}%)`, {
+                x: colX + maxBarWidth + 0.08, y: currentY - 0.03, w: 1.5, h: barHeight + 0.06,
+                fontSize: itemCount > 10 ? 8.5 : 9.5, bold: true, color: (label === "未入力" || label === "その他") ? '94A3B8' : '0F172A', fontFace: 'Meiryo', align: 'left', valign: 'middle'
+              });
+            });
+          }
+        }
+      }
+
+      const fileNameType = chartType === 'pie' ? '円グラフ' : '棒グラフ';
+      await pptx.writeFile({ fileName: `人材分布レポート_${fileNameType}.pptx` });
+      document.getElementById('status').innerText = `🎉 出力完了: 人材分布レポート_${fileNameType}.pptx がダウンロードされました。`;
+    }
+  </script>
+</body>
+</html>

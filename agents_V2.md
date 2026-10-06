@@ -1,38 +1,39 @@
-# 🤖 AGENTS.md (System Operating Rules)
+# AI作業ルール (AI Working Rules - Integrated Standard)
 
-## 1. Context & Scope Control
-* **Primary Context:** Work ONLY with `AGENTS.md` and the single current branch-dedicated document (`docs/<feature>/...`).
-* **Isolation:** DO NOT include parent Epics, sibling Childs, or other feature MDs in the context automatically.
-* **Style Learning:** Infer code style and conventions from existing code in the repository. Do not waste context on standard formatting rules.
+## 1. 基準 (Basic Principles)
+- この規約はAIが少ないコンテキストで迷わず安全に自律作業するための最優先ルールとする。
+- 現在のブランチ、git status、AGENTS.md、現在のブランチ専用MD、必要な対象コードを確認する。
+- 1作業単位は1つの明確な責任に限定し、確定方針の実装・テスト・明らかな不具合修正は自律的に進める。
+- 新設計・構成・UX・範囲変更、または複数の妥当案・違和感・矛盾・不確実性がある判断は、選択肢・影響・推奨案を示してユーザーへ質問する。推測で進めない。
+- ブランチ不一致、文書と実装の矛盾、競合、想定外のGit状態は停止して報告する。
+- 同一のビルド・テストエラーに対して自律修正を3回試みても解決しない場合、ループを防止するため作業を停止し、試行内容とエラーログをユーザーへ報告する。
 
-## 2. Pre-Execution Verification
-* **Check Environment First:** Inspect current branch, `git status`, feature MD, and actual codebase before editing.
-* **Abort Conditions:**
-  * If the current branch does not match the target scope, STOP and report.
-  * If there is an unresolved discrepancy between docs and codebase, STOP and report.
+## 2. 分割とRouter (Separation & Routing)
+- 現在の作業を1作業単位で実装・検証できるなら、そのブランチで完結する。
+- 大きい、または独立した責任が複数あるなら、現在のMDには機能名・担当ブランチ・状態（未着手 / 進行中 / Blocked / 完了）だけをRouterとして残し、担当ブランチへ移る。
+- 移動先でも同じ基準を再帰的に適用する。階層名や深さは固定しない。
+- 詳細仕様・実装・検証状態は実装担当ブランチが所有し、親MDへ重複させない。
 
-## 3. Execution & Approval Guardrails (HITL)
-* **Pre-Change Summary:** Briefly explain WHAT will be changed and WHY before writing code.
-* **Autonomous Scope:** Proceed autonomously for confirmed plans, refactoring, tests, and clear bug fixes.
-* **Approval Required:** STOP and request user approval with options and impacts before making structural changes (New architecture, new UX, design changes, or scope shifts).
-* **Minimal Scope:** Implement minimal necessary changes. Avoid unnecessary abstractions or adding new dependencies.
+## 3. コンテキストとMD (Context & Documentation)
+- 作業ブランチの専用MDは原則 `docs/<project>/` 配下に置き、ファイル名はブランチ名から `feature/` 等の種別prefixを除いた名前とする（例: `feature/ticket-order-persistence` → `docs/ticket/ticket-order-persistence.md`）。同一project内は原則1階層に置く。
+- 原則AGENTS.md、現在のブランチ専用MD、必要な対象コードだけを使い、親・兄弟・過去作業を自動で持ち込まない。
+- Git・コード・テストを正とする。専用MDには現在の判断と再開に必要な情報だけを残し、履歴やコードから取得できる情報を蓄積しない。
 
-## 4. Testing & Quality Assurance
-* **Verification Loop:** Run relevant tests, type checks, and Linter immediately after implementation.
-* **Failure Handling:** If verification fails, analyze, fix, and re-verify. If blocked by external constraints, STOP and report.
-* **Strict Honesty:** NEVER document or report untested code as verified, or incomplete features as completed.
+## 4. 検証と統合 (Verification & Integration)
+- 各実装ブランチで関連テストと必要な型・Lint・build・syntax等を実行し、失敗は修正して再検証する。
+- テスト環境が未構築、または実行不能な場合は、勝手に成功とみなさず、ユーザーへ手動検証を依頼・報告する。
+- 検証済みの下位ブランチだけを直上の親へ統合する。統合後は下位の関連テストを再実行し、親範囲の統合・回帰・必要な全体検証も行う。この手順を上位へ再帰的に繰り返す。
+- 未実行は未検証であり完了扱いしない。完了前に最終diffとgit statusを確認する。
 
-## 5. Git & Branch Management
-* **Branch Structure:** Strictly follow `main → Epic → Child`.
-  * Merge Child into Epic only after implementation and verification are complete.
-  * Merge Epic into main only after full integration testing.
-* **No Unauthorized Git Actions:** NEVER create branches, merge, commit, or push beyond the explicit work scope.
-* **State Protection:** NEVER delete, overwrite, or `git reset` existing uncommitted changes or untracked files. If conflicts occur, STOP and report.
+## 5. Gitと報告 (Git & Change Management)
+- 現在の作業責任に直接必要なファイルだけを変更する。範囲外ファイルの変更が必要なら、変更せず理由と対象をユーザーへ報告する。
+- 作業中に発生した一時ファイルやビルド成果物（.log、dist等）はGit追跡対象に含めず、指定のソースコードおよびMDファイル以外はコミットに含めない。
+- 他の作業主体が変更中のファイル、および既存のdirty/untrackedファイルは、現在の作業に必要でも明示承認なしに変更しない。
+- 承認範囲外のbranch操作・merge・commit・push・worktree作成は禁止する。既存変更とuntrackedを勝手に削除・上書き・stash・resetしない。
+- Router MDは次へ進むための道標として機能名・担当ブランチ・状態と必要最小限の統合情報だけを保持する。
+- 検証済み・未検証・未完成を区別し、進捗を実態より先行させない。
+- AGENTS.mdは全プロジェクト・全階層・全AI作業に優先し、下位から上書き・回避・弱体化しない。変更はユーザーの明示承認時のみ行う。
 
-## 6. Documentation & Summarization
-* **Doc Placement:** Feature MDs reside under `docs/<feature>/`. Each Epic and Child has exactly ONE dedicated MD.
-* **Upstream Sync:** Upon Child completion, summarize ONLY finalized outcomes into the Epic MD. DO NOT pass detailed work logs to the next Child.
-* **Comments & Language:**
-  * Leave concise comments ONLY for non-intuitive business rules or complex logic.
-  * DO NOT introduce new Korean text in developer comments or documentation within the Web Portfolio.
-  * Keep existing English as-is; write natural Japanese for required documentation.
+## 6. 言語とコメント (Language & Comments)
+- 非自明な分岐・業務規則・処理には短いコメントを残し、自明な説明は省く。
+- Webポートフォリオの開発者向けコメント/文書に新たな韓国語を使わない。既存英語は不要に変更せず、日本語化する文章は自然な日本語にする。
