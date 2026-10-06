@@ -44,3 +44,11 @@
 - **React Frontend Tests**: PASS (22 test files, 128 tests)
 - **ESLint & Build**: PASS (Next.js production build succeeded)
 - **TICKET_ORDER_PERSISTENCE.md**: ステータス更新完了
+## 次の作業
+- 自動・静的検証は完了済み。次はブラウザ回帰確認だけを行う。
+- 会社環境でブラウザ確認が可能なら、このブランチのまま実施する。環境準備の負担が大きい場合は無理に進めず未検証として残す。
+- 重点確認: Project切替、read/write権限、assignee制約、コメント権限、カード順序保存と再読込、stale board_version、検索・担当者フィルタ中のDnD無効化。
+- 実施した項目と結果だけをこのMDへ追記し、未実施項目を成功扱いしない。
+- 問題が見つかった場合、明らかな既存仕様内の不具合は修正→関連テスト→再確認まで行う。仕様判断が必要なら停止して報告する。
+- ブラウザ確認後、このブランチへcommit/pushする。
+- `feature/ticket` への最終mergeとV1完了判断はユーザー承認後に行う。
