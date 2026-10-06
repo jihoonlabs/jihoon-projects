@@ -23,7 +23,7 @@ def read_context(config_path=CONFIG_PATH):
     if not isinstance(config, dict):
         raise ValueError("설정은 JSON 객체여야 합니다.")
 
-    for key in ("repository_root", "expected_branch", "branch_document"):
+    for key in ("repository_root", "expected_branch"):
         if not isinstance(config.get(key), str) or not config[key].strip():
             raise ValueError(f"유효한 문자열이 필요합니다: {key}")
 
@@ -60,7 +60,12 @@ def read_context(config_path=CONFIG_PATH):
         if child_check.returncode != 0:
             raise RuntimeError("브랜치 ancestry를 확인하지 못했습니다.")
 
-    document = Path(config["branch_document"])
+    project = config.get("project", "personal-game-ai")
+    if not isinstance(project, str) or not project.strip() or "/" in project:
+        raise ValueError("project는 유효한 단일 경로 이름이어야 합니다.")
+
+    branch_name = branch.split("/", 1)[1] if "/" in branch else branch
+    document = Path("docs") / project / f"{branch_name}.md"
     if document.suffix.lower() != ".md" or document.parts[:1] != ("docs",):
         raise ValueError("브랜치 문서는 docs/ 아래의 MD여야 합니다.")
 
@@ -86,7 +91,7 @@ def read_context(config_path=CONFIG_PATH):
         if ignored.returncode != 0:
             raise RuntimeError("로컬 MD의 Git 제외 상태를 확인하지 못했습니다.")
 
-    files = ["AGENTS.md", config["branch_document"]] + code_files
+    files = ["AGENTS.md", document.as_posix()] + code_files
     sections = []
     seen = set()
     total = 0
@@ -111,7 +116,7 @@ def read_context(config_path=CONFIG_PATH):
             raise ValueError(f"파일 분량 초과: {relative_path}")
 
         content = path.read_text(encoding="utf-8")
-        if policy == "local" and relative_path == config["branch_document"]:
+        if policy == "local" and relative_path == document.as_posix():
             # Git 밖의 파일은 브랜치 전환으로 교체되지 않으므로 소속을 검사한다.
             marker = f"<!-- personal-game-ai-branch: {branch} -->"
             if not content.splitlines() or content.splitlines()[0] != marker:
