@@ -36,3 +36,11 @@
 - 検証結果をこのMDへ必要最小限で記録する。
 - この統合ブランチへcommit/pushする。
 - `feature/ticket` または `main` へのmergeはユーザー承認なしに行わない。
+
+## 検証結果 (2026-10-06)
+- **Merge Status**: `main` から `feature/ticket-v1-integration` への merge 完了（コンフリクトなし）
+- **Laravel Backend Tests**: PASS (103 tests, 456 assertions)
+- **Laravel Pint**: PASS (100 files checked)
+- **React Frontend Tests**: PASS (22 test files, 128 tests)
+- **ESLint & Build**: PASS (Next.js production build succeeded)
+- **TICKET_ORDER_PERSISTENCE.md**: ステータス更新完了
