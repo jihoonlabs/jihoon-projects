@@ -8,7 +8,8 @@
 - Project Access Child `feature/ticket-team-access`、カード順序保存 Child `feature/ticket-order-persistence`、Project別Ticket key Child `feature/ticket-project-key` を統合済み。
 - Project key統合の採用Child SHA: `2ab0ea4e2a64fa7207de799669aeab7b03574935`。
 - V1にはTicketカードの表示・DnD回帰修正と回帰テスト、および統合検証記録を含む。
-- ローカルEpicは `origin/feature/ticket` の最新を含む。AGENTS.mdは `origin/main` の承認済み規則に一致。
+- Epicは `f18cfd70aac6e3cebf2db2752ad7f615aaa4e929` までpush済み。2026-10-08のリモート確認でも同じHEAD。AGENTS.mdは確認時の `origin/main` の承認済み規則に一致。
+- 最新mainへの統合準備は完了。対象SHA、統合範囲、今回の検証と未検証事項は `TICKET_MAIN_INTEGRATION.md`、ユーザー向け要約は `TICKET_MANUAL.md` を参照。
 
 ## V1に含む範囲
 - SanctumログインとTicket画面保護。
@@ -25,7 +26,7 @@
 - MySQL上のmigrationは未検証。SQLite migrationと既存データのkey backfillはテスト済み。
 
 ## 次の作業
-- 最終diffを確認し、このEpic変更をcommit/pushする。main統合とChild削除は別途扱う。
+- 承認後に対象refsを再確認し、mainへ統合する。main merge/pushとブランチ削除は未実行・未承認。MySQL migrationと今回の実ブラウザー再検証は未検証として維持する。
 
 ## 今後の候補
 - Activity / HistoryはV1完了後に再評価する。
