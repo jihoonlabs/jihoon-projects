@@ -15,6 +15,7 @@
 - 기존 변경·untracked·산출물·stash를 보존한다.
 - MD는 현재 계약과 상태 중심으로 유지하며 경과를 append하지 않는다.
 - 진행 중 인수인계는 이 작업 MD에 현재 상태로 유지하고, MANUAL은 완료/통합 시 사용자가 이유·결과·구현·검증·제약을 짧게 확인하는 보고로만 갱신한다.
+- 로컬 workflow 실행 전/종료 후에는 이 MD를 최신화하되, 승인된 workflow 기록을 재개하는 도중에는 MD를 수정하지 않는다. MD를 바꾸면 context fingerprint가 달라져 기존 승인/실행 기록을 재사용하지 않는 것이 정상이며, 계약 변경이 필요할 때만 의도적으로 수정하고 새 workflow를 시작한다.
 - AGENTS 변경과 MD 추적·전달 방식 변경은 별도 결정이다.
 - 원격 작업은 이 Child 범위에 한정한다. main 통합·브랜치 삭제는 하지 않는다.
 - 도구와 플랫폼→게임 Epic→게임 Child의 분리 계약을 유지한다.
@@ -80,13 +81,14 @@
 
 - 현재 작업은 이 Child에서 계속한다. main 통합·merge/rebase·브랜치 삭제는 아직 하지 않는다.
 - main과 Git history는 diverged 상태지만 main 쪽 차이는 AGENTS/docs/agent 문서뿐이며 Personal Game AI 코드는 충돌하지 않는다. 현재 Child AGENTS와 main AGENTS의 차이는 MANUAL 기록 방침 한 줄뿐이다. AGENTS는 임의 수정하지 않고, 사용자가 방금 확정한 최신 MANUAL 운용(짧은 사용자용 완료 보고)은 현재 작업부터 따른다.
-- 최근 동작 변경 기준 commit: `00df2229f0f6d6936bf817c94838e96e88f4a479`.
+- 최근 동작 변경 기준 commit: `670f143ab22b6f6a02886572700afd5623eb7b26`.
 - 현재 생성 계약:
   - `ThumbyDodge.py`가 폴더명 엔트리이자 기기 어댑터다.
   - 엔트리 함수 계약에는 실제 런타임 진입 함수 외에 CPython에서 1회 호출하고 끝나는 유한 adapter/helper를 둬 fixed test가 무한 루프 없이 어댑터 동작을 검사할 수 있게 한다.
   - 최소 한 순수 규칙 모듈을 별도로 두고, 그 모듈은 `thumby`를 import하지 않는다.
   - 엔트리는 CPython import-safe이며 MicroPython runtime guard에서 진입 함수를 직접 호출한다.
   - 런처/runtime guard 요구의 fixed unittest는 CPython import-safe 동작을 검사하고, MicroPython guard 존재·직접 호출은 구현 단계 generation profile AST gate가 맡는다.
+  - 엔트리 fixed test의 fake-module 계약은 `import sys` 후 `sys.modules['thumby']`에 None이 아닌 fake를 직접 넣고 엔트리를 import하는 순서 하나로 통일한다. profile 테스트 지침은 generic mock 지침 뒤에 적용한다.
   - 엔트리 구현 prompt에는 실제 `/Games/ThumbyDodge` sibling 경로를 전달한다.
   - `execute_plan`이 통과한 선행 task의 artifact를 재검증하고 실제 검증 코드를 후속 task에 전달한다.
   - dependent request 4000자 제한은 유지한다. generation profile 지침이 붙는 구현 task만 자기 checks가 담당하는 requirement로 축소하고, 기존 non-profile 흐름은 전체 requirements 전달 계약을 유지한다.
