@@ -210,6 +210,8 @@ class GenerationProfileTests(unittest.TestCase):
         self.assertIn("엔트리이자 기기 어댑터", prompt)
         self.assertIn("sys.path", prompt)
         self.assertIn("/Games/ThumbyDodge", prompt)
+        self.assertIn("MicroPython 조건 안에서만", prompt)
+        self.assertIn("CPython import의 sys.path는 바꾸지", prompt)
         self.assertNotIn("<게임폴더명>", prompt)
         self.assertIn("sys.implementation.name", prompt)
         self.assertIn("Thumby 런처 import", prompt)

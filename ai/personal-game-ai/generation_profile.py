@@ -201,6 +201,7 @@ def implementation_prompt(area, filename):
         role = (
             "이 파일은 폴더명 엔트리이자 기기 어댑터입니다. 공식 일반 Thumby API만 사용하세요. "
             f"MicroPython에서 sibling 규칙 모듈을 import하기 전에 sys.path에 /Games/{game_name}을 추가하세요. "
+            "이 기기 경로 추가는 MicroPython 조건 안에서만 수행해 CPython import의 sys.path는 바꾸지 마세요. "
             "CPython import에서는 게임 루프를 시작하지 말고, "
             "sys.implementation.name == 'micropython'일 때 승인 설계에서 런타임 진입 역할인 함수를 직접 호출해 "
             "Thumby 런처 import에서 실제 게임을 시작하세요. 유한 adapter/helper만 한 번 호출하고 끝내면 안 됩니다. "
