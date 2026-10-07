@@ -79,7 +79,7 @@
 ## 다음 작업자 handoff
 
 - 현재 작업은 이 Child에서 계속한다. main 통합·merge/rebase·브랜치 삭제는 아직 하지 않는다.
-- main과 Git history는 diverged 상태지만 main 쪽 차이는 AGENTS/docs/agent 문서뿐이며 Personal Game AI 코드는 충돌하지 않는다. Child의 AGENTS 내용은 현재 main v2.1과 동일하다.
+- main과 Git history는 diverged 상태지만 main 쪽 차이는 AGENTS/docs/agent 문서뿐이며 Personal Game AI 코드는 충돌하지 않는다. 현재 Child AGENTS와 main AGENTS의 차이는 MANUAL 기록 방침 한 줄뿐이다. AGENTS는 임의 수정하지 않고, 사용자가 방금 확정한 최신 MANUAL 운용(짧은 사용자용 완료 보고)은 현재 작업부터 따른다.
 - 최근 동작 변경 기준 commit: `00df2229f0f6d6936bf817c94838e96e88f4a479`.
 - 현재 생성 계약:
   - `ThumbyDodge.py`가 폴더명 엔트리이자 기기 어댑터다.
