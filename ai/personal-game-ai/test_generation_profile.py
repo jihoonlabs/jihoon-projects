@@ -177,6 +177,8 @@ class GenerationProfileTests(unittest.TestCase):
             prompt = generation_profile.implementation_prompt("game", "ThumbyDodge.py")
         self.assertIn("CPython import", prompt)
         self.assertIn("폴더명 엔트리 파일만 기기 어댑터", prompt)
+        self.assertIn("sys.path", prompt)
+        self.assertIn("/Games/<게임폴더명>", prompt)
         self.assertIn("sys.implementation.name", prompt)
         self.assertIn("Thumby 런처 import", prompt)
         self.assertIn("MicroPython", prompt)
