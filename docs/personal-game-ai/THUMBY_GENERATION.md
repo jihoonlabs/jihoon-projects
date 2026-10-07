@@ -81,7 +81,7 @@
 
 - 현재 작업은 이 Child에서 계속한다. main 통합·merge/rebase·브랜치 삭제는 아직 하지 않는다.
 - main과 Git history는 diverged 상태지만 main 쪽 차이는 AGENTS/docs/agent 문서뿐이며 Personal Game AI 코드는 충돌하지 않는다. 현재 Child AGENTS와 main AGENTS의 차이는 MANUAL 기록 방침 한 줄뿐이다. AGENTS는 임의 수정하지 않고, 사용자가 방금 확정한 최신 MANUAL 운용(짧은 사용자용 완료 보고)은 현재 작업부터 따른다.
-- 최근 동작 변경 기준 commit: `670f143ab22b6f6a02886572700afd5623eb7b26`.
+- 최근 동작 변경 기준 commit: `11f019c6b8331d379566bd1eef397d180781dbda`.
 - 현재 생성 계약:
   - `ThumbyDodge.py`가 폴더명 엔트리이자 기기 어댑터다.
   - 엔트리 함수 계약에는 실제 런타임 진입 함수 외에 CPython에서 1회 호출하고 끝나는 유한 adapter/helper를 둬 fixed test가 무한 루프 없이 어댑터 동작을 검사할 수 있게 한다.
@@ -90,6 +90,7 @@
   - 런처/runtime guard 요구의 fixed unittest는 CPython import-safe 동작을 검사하고, MicroPython guard 존재·직접 호출은 구현 단계 generation profile AST gate가 맡는다.
   - 엔트리 fixed test의 fake-module 계약은 `import sys` 후 `sys.modules['thumby']`에 None이 아닌 fake를 직접 넣고 엔트리를 import하는 순서 하나로 통일한다. profile 테스트 지침은 generic mock 지침 뒤에 적용한다.
   - 엔트리 구현 prompt에는 실제 `/Games/ThumbyDodge` sibling 경로를 전달한다.
+  - 해당 `sys.path` 추가는 MicroPython 조건 안에서만 수행하도록 안내해 CPython import의 경로 상태를 바꾸지 않는다.
   - `execute_plan`이 통과한 선행 task의 artifact를 재검증하고 실제 검증 코드를 후속 task에 전달한다.
   - dependent request 4000자 제한은 유지한다. generation profile 지침이 붙는 구현 task만 자기 checks가 담당하는 requirement로 축소하고, 기존 non-profile 흐름은 전체 requirements 전달 계약을 유지한다.
   - 요청/작업 문맥이 바뀌면 과거 승인 기록을 재사용하지 않고 새 workflow 기록을 만든다.
@@ -97,6 +98,7 @@
   - 공식 TinyCircuits 런처가 `/Games/<폴더>/<폴더>.py`를 import하는 구조와 현재 엔트리 계약이 일치한다.
   - 기존 GitHub Actions/check 실행 경로는 없다. 이 Child에서 CI를 새로 만들지 않는다.
   - legacy workflow 기록 symlink는 state를 읽기 전에 거부하도록 기존 신뢰 경계를 유지한다.
+- 현재 추가 구간(`0fa2110d...` 이후)은 Personal Game AI 코드·테스트·작업 MD 7파일만 변경했다. 새 CI나 범위 밖 파일은 추가하지 않았다.
 - 아직 미검증:
   - 최신 단위 테스트와 전체 unittest.
   - Docker 검사.
