@@ -239,14 +239,14 @@ def _validate_entry_start(tree):
         if isinstance(node, ast.If) and _is_micropython_guard(node.test)
     ]
     start_names = {
-        child.func.id
+        statement.value.func.id
         for node in guards
         for statement in node.body
-        for child in ast.walk(statement)
         if (
-            isinstance(child, ast.Call)
-            and isinstance(child.func, ast.Name)
-            and child.func.id in defined
+            isinstance(statement, ast.Expr)
+            and isinstance(statement.value, ast.Call)
+            and isinstance(statement.value.func, ast.Name)
+            and statement.value.func.id in defined
         )
     }
     if not sys_import or not start_names:
