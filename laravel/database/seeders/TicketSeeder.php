@@ -75,6 +75,6 @@ class TicketSeeder extends Seeder
             );
         }
 
-        $project->update(['next_ticket_number' => count($tickets) + 1]);
+        $project->forceFill(['next_ticket_number' => count($tickets) + 1])->save();
     }
 }
