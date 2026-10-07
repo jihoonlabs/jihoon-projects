@@ -175,6 +175,7 @@ def test_prompt(area):
         "폴더명 엔트리의 기기 어댑터 테스트는 대상 모듈 import 전에 sys.modules에 "
         "가짜 thumby를 주입하거나 unittest.mock으로 대체해 CPython에서 검사 가능하게 하세요. "
         "좌우 이동 경계·장애물 충돌·점수·재시작 조건을 설계 checks에 따라 직접 assertion으로 확인하세요. "
+        "승인 설계의 functions에 없는 새 production 함수·클래스·상수 계약을 테스트에서 만들지 마세요. "
         "CPython 테스트에서 엔트리를 import해도 게임 루프가 시작되지 않는 구조를 유지하고, "
         "실제 무한 진입 함수를 테스트에서 직접 호출하지 말고 import 안전성과 유한 helper 동작을 검사하세요. "
     )
