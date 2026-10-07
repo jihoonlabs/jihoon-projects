@@ -222,11 +222,6 @@ def build_tasks(envelope, candidate):
                         for source in envelope["design"]["files"]
                         if source["id"] == dependency
                     ),
-                    "functions": next(
-                        source["functions"]
-                        for source in envelope["design"]["files"]
-                        if source["id"] == dependency
-                    ),
                 }
                 for dependency in item["depends_on"]
             ],
@@ -241,7 +236,7 @@ def build_tasks(envelope, candidate):
                 "최상위 함수는 아래 functions에 지정된 것만 정의하세요.\n"
                 "다른 작업의 함수를 이 파일에 추가하거나 복제하지 마세요.\n"
                 "선행 함수는 dependencies의 filename에서 import하여 사용하세요.\n"
-                "dependencies의 functions는 승인된 선행 함수 계약이며 이름·인자·동작을 그대로 따르세요.\n"
+                "전달된 선행 코드는 참고 자료이며 복사할 구현 코드가 아닙니다.\n"
                 + generation_profile.implementation_prompt(area, item["filename"])
                 + json.dumps(detail, ensure_ascii=False)
             ),

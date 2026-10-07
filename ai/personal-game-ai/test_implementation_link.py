@@ -134,53 +134,6 @@ class ImplementationLinkTests(unittest.TestCase):
         self.assertIn("최대 체력을 넘지 않게 회복한다", tasks[0]["prompt"])
         self.assertFalse((self.directory / "health.py").exists())
 
-    def test_dependency_function_contract_is_included_in_plan(self):
-        dependency = copy.deepcopy(self.envelope["design"]["files"][0])
-        entry = {
-            "id": "002",
-            "filename": "screen.py",
-            "functions": [{
-                "name": "render",
-                "parameters": ["hp"],
-                "behavior": "heal 결과를 표시한다",
-            }],
-            "checks": [{
-                "requirement": "R1",
-                "case": "render(8)",
-                "expected": "표시한다",
-            }],
-            "depends_on": ["001"],
-        }
-        self.envelope["design"]["files"] = [dependency, entry]
-        entry_code = (
-            "import unittest\n"
-            "from screen import render\n"
-            "class Tests(unittest.TestCase):\n"
-            "    def test_render(self):\n"
-            "        self.assertIsNone(render(8))\n"
-        )
-        self.candidate["files"].append({
-            "id": "002",
-            "filename": "test_screen.py",
-            "code": entry_code,
-            "covers": [{"check": 1, "method": "test_render"}],
-        })
-        (self.directory / "test_health.py").write_text(self.code)
-        (self.directory / "test_screen.py").write_text(entry_code)
-
-        with patch.object(link.edit_loop, "check_git_files"), patch.object(
-            link.plan_tasks, "validate_plan",
-            side_effect=lambda proposal, allowed, goal: proposal["tasks"],
-        ):
-            path = link.create_plan(self.path, "sha")
-
-        tasks = json.loads(path.read_text())
-        entry_prompt = tasks[1]["prompt"]
-        self.assertIn('"filename": "health.py"', entry_prompt)
-        self.assertIn('"name": "heal"', entry_prompt)
-        self.assertIn('"parameters": ["hp", "amount", "maximum"]', entry_prompt)
-        self.assertIn("승인된 선행 함수 계약", entry_prompt)
-
     def test_generation_profile_prompt_is_included_in_plan(self):
         (self.directory / "test_health.py").write_text(self.code)
         self.envelope["request"]["area"] = "game"
