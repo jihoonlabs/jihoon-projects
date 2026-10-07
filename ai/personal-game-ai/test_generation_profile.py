@@ -22,6 +22,7 @@ class GenerationProfileTests(unittest.TestCase):
         with patch.object(generation_profile, "CONFIG_PATH", self.config()):
             prompt = generation_profile.design_prompt("game")
         self.assertIn("게임 규칙", prompt)
+        self.assertIn("엔트리 파일이 기기 어댑터 역할", prompt)
         self.assertIn("MicroPython", prompt)
         self.assertIn("import thumby", prompt)
         self.assertIn("게임 폴더와 정확히 같은 이름", prompt)
@@ -201,6 +202,15 @@ class GenerationProfileTests(unittest.TestCase):
         ):
             with self.assertRaises(ValueError):
                 generation_profile.validate_code("game", code, "ThumbyDodge.py")
+
+    def test_non_entry_code_rejects_thumby_import(self):
+        code = "import thumby\n\ndef read_input():\n    return thumby.buttonL.pressed()\n"
+        with patch.object(
+            generation_profile, "CONFIG_PATH",
+            self.config(edit_directory="micropython/ThumbyDodge"),
+        ):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_code("game", code, "device.py")
 
     def test_non_entry_code_does_not_require_micropython_start_guard(self):
         code = "def step():\n    return 1\n"

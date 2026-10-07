@@ -28,7 +28,8 @@ def design_prompt(area):
         "게임 규칙과 기기 입출력·표시 어댑터를 서로 다른 모듈로 분리하세요. "
         "게임 규칙 모듈은 thumby를 import하지 않고 CPython에서 검사 가능해야 합니다. "
         "실행 대상은 Thumby MicroPython이므로 CPython 전용 모듈·기능에 의존하지 마세요. "
-        "기기 어댑터만 import thumby를 사용하며 buttonL/buttonR 입력과 "
+        "게임 폴더와 같은 이름의 엔트리 파일이 기기 어댑터 역할을 함께 맡고, "
+        "그 엔트리 파일만 import thumby를 사용하세요. buttonL/buttonR 입력과 "
         "display.fill, drawFilledRectangle, drawText, update, setFPS를 필요한 범위에서 사용하세요. "
         "실기에서 실행할 엔트리 Python 파일은 게임 폴더와 정확히 같은 이름으로 설계하세요. "
         "실제 진입 함수를 분리하고 CPython 테스트 import에서는 게임 루프를 시작하지 마세요. "
@@ -257,7 +258,8 @@ def validate_code(area, code, filename=None):
     if area != "game" or current_profile() != "thumby":
         return
     tree = ast.parse(code)
-    if filename is not None and filename == _entry_filename():
+    entry_filename = _entry_filename() if filename is not None else None
+    if filename is not None and filename == entry_filename:
         _validate_entry_start(tree)
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -268,6 +270,12 @@ def validate_code(area, code, filename=None):
             continue
         if any(name == "thumbyColor" or name.startswith("thumbyColor.") for name in names):
             raise ValueError("일반 Thumby 생성에서 Thumby Color 모듈을 사용할 수 없습니다.")
+        if (
+            filename is not None
+            and filename != entry_filename
+            and any(name == "thumby" or name.startswith("thumby.") for name in names)
+        ):
+            raise ValueError("일반 Thumby에서는 폴더명 엔트리 파일만 thumby를 import할 수 있습니다.")
         if isinstance(node, ast.Import):
             for item in node.names:
                 if item.name == "thumby" and item.asname is not None:
