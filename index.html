@@ -187,10 +187,10 @@
     }
     .btn-small:hover { background: #cbd5e1; }
     .output-order-list { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
-    .output-order-item { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #cbd5e1; border-radius: 7px; padding: 8px 10px; }
+    .output-order-item { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #cbd5e1; border-radius: 7px; padding: 8px 10px; cursor: pointer; }
+    .output-order-item:hover { border-color: #2563eb; }
     .output-order-item .order-number { width: 24px; font-weight: bold; color: #2563eb; text-align: center; }
     .output-order-item .order-name { flex: 1; font-size: 0.86rem; font-weight: 600; }
-    .output-order-item button { flex: 0 0 auto; padding: 4px 9px; font-size: 0.75rem; }
     .custom-extract-card { position: relative; }
     .btn-pptx { background-color: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
     .btn-pptx:hover { background-color: #1d4ed8; transform: translateY(-1px); }
@@ -231,7 +231,10 @@
 
     <div id="output-order-section" style="display:none;">
       <div class="section-title">詳細設定: グラフ出力順</div>
-      <div style="font-size:0.8rem; color:#64748b;">カスタムグラフ使用時のみ、通常グラフを含めてPPTXの出力順を変更できます。</div>
+      <div style="font-size:0.8rem; color:#64748b;">カスタムグラフ使用時のみ、通常グラフを含めてPPTXの出力順を変更できます。順番を選び直す場合は、下のボタンを押してから希望順にチェックしてください。</div>
+      <div style="margin-top:8px;">
+        <button type="button" class="btn-small" onclick="resetOutputOrderSelection()">順番を選び直す</button>
+      </div>
       <div id="output-order-list" class="output-order-list"></div>
     </div>
 
@@ -297,6 +300,8 @@
     let rawData = [], headers = [], globalTotalMembers = 0;
     let customCharts = [];
     let outputOrder = [];
+    let outputOrderClickOrder = [];
+    let isOutputOrderReordering = false;
     let customChartSequence = 0;
     const naturalCollator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
 
@@ -318,6 +323,8 @@
         headers = Object.keys(rawData[0]);
         customCharts = [];
         outputOrder = [];
+        outputOrderClickOrder = [];
+        isOutputOrderReordering = false;
         customChartSequence = 0;
         document.getElementById('custom-charts-container').innerHTML = '';
         renderCheckboxes();
@@ -375,7 +382,7 @@
         return;
       }
       const id = `custom-${++customChartSequence}`;
-      customCharts.push({ id, column: headers[0], title: `${headers[0]} (抽出分布)`, sortMode: 'click', selectedKeys: [], clickOrder: [] });
+      customCharts.unshift({ id, column: headers[0], title: `${headers[0]} (抽出分布)`, sortMode: 'click', selectedKeys: [], clickOrder: [] });
       initializeCustomSelection(id);
       renderAllCustomCharts();
       syncOutputOrder();
@@ -385,9 +392,13 @@
       customCharts = customCharts.filter(chart => chart.id !== id);
       outputOrder = outputOrder.filter(item => item.id !== id);
 
+      outputOrderClickOrder = outputOrderClickOrder.filter(itemId => itemId !== id);
+
       if (!customCharts.length) {
         customChartSequence = 0;
         outputOrder = [];
+        outputOrderClickOrder = [];
+        isOutputOrderReordering = false;
       }
 
       renderAllCustomCharts();
@@ -554,6 +565,7 @@
       const selectedColumns = Array.from(document.querySelectorAll('.normal-chart-chk:checked')).map(cb => cb.value);
       const activeIds = new Set([...selectedColumns.map(col => `normal:${col}`), ...customCharts.map(chart => chart.id)]);
       outputOrder = outputOrder.filter(item => activeIds.has(item.id));
+      outputOrderClickOrder = outputOrderClickOrder.filter(id => activeIds.has(id));
 
       selectedColumns.forEach(column => {
         const id = `normal:${column}`;
@@ -562,14 +574,36 @@
       customCharts.forEach(chart => {
         if (!outputOrder.some(item => item.id === chart.id)) outputOrder.push({ id: chart.id, type: 'custom', customId: chart.id });
       });
+
+      if (customCharts.length && !isOutputOrderReordering) {
+        outputOrderClickOrder = outputOrder.map(item => item.id);
+      }
+
       renderOutputOrder();
     }
 
-    function moveOutputItem(id, direction) {
-      const index = outputOrder.findIndex(item => item.id === id);
-      const next = index + direction;
-      if (index < 0 || next < 0 || next >= outputOrder.length) return;
-      [outputOrder[index], outputOrder[next]] = [outputOrder[next], outputOrder[index]];
+    function resetOutputOrderSelection() {
+      outputOrderClickOrder = [];
+      isOutputOrderReordering = true;
+      renderOutputOrder();
+    }
+
+    function handleOutputOrderClick(id, checked) {
+      if (checked) {
+        outputOrderClickOrder = outputOrderClickOrder.filter(itemId => itemId !== id);
+        outputOrderClickOrder.push(id);
+      } else {
+        outputOrderClickOrder = outputOrderClickOrder.filter(itemId => itemId !== id);
+      }
+
+      const byId = new Map(outputOrder.map(item => [item.id, item]));
+      const ordered = outputOrderClickOrder.map(itemId => byId.get(itemId)).filter(Boolean);
+      const remaining = outputOrder.filter(item => !outputOrderClickOrder.includes(item.id));
+      outputOrder = [...ordered, ...remaining];
+
+      if (outputOrderClickOrder.length === outputOrder.length) {
+        isOutputOrderReordering = false;
+      }
       renderOutputOrder();
     }
 
@@ -580,15 +614,17 @@
         container.innerHTML = '<span style="font-size:0.8rem; color:#94a3b8;">出力するグラフを選択してください。</span>';
         return;
       }
-      container.innerHTML = outputOrder.map((item, index) => {
+      container.innerHTML = outputOrder.map(item => {
         const chart = item.type === 'custom' ? getCustomChart(item.customId) : null;
         const name = item.type === 'custom' ? `カスタム: ${chart?.title || '名称未設定'}` : item.column;
-        return `<div class="output-order-item">
-          <span class="order-number">${index + 1}</span>
+        const selectedIndex = outputOrderClickOrder.indexOf(item.id);
+        const checked = selectedIndex >= 0;
+        const order = checked ? selectedIndex + 1 : null;
+        return `<label class="output-order-item">
+          <span class="order-number">${order ? order + '.' : ''}</span>
+          <input type="checkbox" ${checked ? 'checked' : ''} onchange="handleOutputOrderClick('${item.id}', this.checked)">
           <span class="order-name">${escapeHtml(name)}</span>
-          <button type="button" class="btn-small" onclick="moveOutputItem('${item.id}', -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
-          <button type="button" class="btn-small" onclick="moveOutputItem('${item.id}', 1)" ${index === outputOrder.length - 1 ? 'disabled' : ''}>↓</button>
-        </div>`;
+        </label>`;
       }).join('');
     }
 
