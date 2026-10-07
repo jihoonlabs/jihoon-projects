@@ -32,7 +32,8 @@ def design_prompt(area):
         "그 엔트리 파일만 import thumby를 사용하세요. buttonL/buttonR 입력과 "
         "display.fill, drawFilledRectangle, drawText, update, setFPS를 필요한 범위에서 사용하세요. "
         "실기에서 실행할 엔트리 Python 파일은 게임 폴더와 정확히 같은 이름으로 설계하세요. "
-        "실제 진입 함수를 분리하고 CPython 테스트 import에서는 게임 루프를 시작하지 마세요. "
+        "실제 무한 진입 함수와 별도로 CPython 테스트에서 한 번 호출하고 끝나는 유한 adapter/helper 함수를 설계하고, "
+        "CPython 테스트 import에서는 게임 루프를 시작하지 마세요. "
         "일반 Thumby 런처는 엔트리 모듈을 import하므로 엔트리 파일은 "
         "sys.implementation.name == 'micropython'일 때 진입 함수를 호출해 게임을 시작하세요. "
         "Thumby Color API와 추측한 API는 사용하지 마세요. "
@@ -62,6 +63,12 @@ def validate_design(area, files, directory):
     }
     if not pure_ids:
         raise ValueError("일반 Thumby 게임은 엔트리와 분리된 순수 규칙 모듈이 필요합니다.")
+    functions = entry_item.get("functions")
+    if not isinstance(functions, list) or len(functions) < 2:
+        raise ValueError(
+            "일반 Thumby 엔트리는 무한 진입 함수와 별도의 유한 adapter/helper 함수가 필요합니다."
+        )
+
     dependencies = entry_item.get("depends_on")
     if (
         not isinstance(dependencies, list)

@@ -23,6 +23,7 @@ class GenerationProfileTests(unittest.TestCase):
             prompt = generation_profile.design_prompt("game")
         self.assertIn("게임 규칙", prompt)
         self.assertIn("엔트리 파일이 기기 어댑터 역할", prompt)
+        self.assertIn("유한 adapter/helper", prompt)
         self.assertIn("MicroPython", prompt)
         self.assertIn("import thumby", prompt)
         self.assertIn("게임 폴더와 정확히 같은 이름", prompt)
@@ -43,8 +44,8 @@ class GenerationProfileTests(unittest.TestCase):
             "id": "001", "filename": "ThumbyDodge.py", "depends_on": []
         }]
         disconnected = [
-            {"id": "001", "filename": "rules.py", "depends_on": []},
-            {"id": "002", "filename": "ThumbyDodge.py", "depends_on": []},
+            {"id": "001", "filename": "rules.py", "functions": [{"name": "step"}], "depends_on": []},
+            {"id": "002", "filename": "ThumbyDodge.py", "functions": [{"name": "frame"}, {"name": "run"}], "depends_on": []},
         ]
         with patch.object(generation_profile, "current_profile", return_value="thumby"):
             for files in (entry_only, disconnected):
@@ -54,10 +55,28 @@ class GenerationProfileTests(unittest.TestCase):
                             "game", files, Path("/tmp/ThumbyDodge")
                         )
 
+    def test_thumby_design_requires_finite_entry_helper(self):
+        files = [
+            {"id": "001", "filename": "rules.py", "functions": [{"name": "step"}], "depends_on": []},
+            {
+                "id": "002", "filename": "ThumbyDodge.py",
+                "functions": [{"name": "run"}], "depends_on": ["001"],
+            },
+        ]
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_design(
+                    "game", files, Path("/tmp/ThumbyDodge")
+                )
+
     def test_thumby_design_accepts_entry_depending_on_rules(self):
         files = [
-            {"id": "001", "filename": "rules.py", "depends_on": []},
-            {"id": "002", "filename": "ThumbyDodge.py", "depends_on": ["001"]},
+            {"id": "001", "filename": "rules.py", "functions": [{"name": "step"}], "depends_on": []},
+            {
+                "id": "002", "filename": "ThumbyDodge.py",
+                "functions": [{"name": "frame"}, {"name": "run"}],
+                "depends_on": ["001"],
+            },
         ]
         with patch.object(generation_profile, "current_profile", return_value="thumby"):
             generation_profile.validate_design(
