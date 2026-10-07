@@ -55,6 +55,7 @@ class TicketController extends Controller
         $ticket = DB::transaction(function () use ($validated) {
             $project = Project::query()->lockForUpdate()->findOrFail($validated['project_id']);
             $status = $validated['status'] ?? 'TODO';
+            $ticketNumber = (int) $project->next_ticket_number;
             $position = ((int) (Ticket::query()
                 ->where('project_id', $project->id)
                 ->where('status', $status)
@@ -62,6 +63,7 @@ class TicketController extends Controller
 
             $ticket = Ticket::create([
                 'project_id' => $project->id,
+                'issue_key' => sprintf('%s-%02d', $project->project_key, $ticketNumber),
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? null,
                 'status' => $status,
@@ -70,7 +72,7 @@ class TicketController extends Controller
                 'assignee_id' => $validated['assignee_id'] ?? null,
             ]);
 
-            $ticket->update(['issue_key' => 'TICK-'.$ticket->id]);
+            $project->increment('next_ticket_number');
             $project->increment('board_version');
 
             return $ticket;
