@@ -22,6 +22,7 @@ class GenerationProfileTests(unittest.TestCase):
         self.assertIn("import thumby", prompt)
         self.assertIn("게임 폴더와 정확히 같은 이름", prompt)
         self.assertIn("무한 게임 루프", prompt)
+        self.assertIn("실제 게임이 시작", prompt)
         self.assertIn("Thumby Color", prompt)
 
     def test_thumby_design_requires_folder_named_entry(self):
@@ -81,6 +82,12 @@ class GenerationProfileTests(unittest.TestCase):
         code = "import thumby\n\ndef run():\n    while True:\n        break\n"
         with patch.object(generation_profile, "current_profile", return_value="thumby"):
             generation_profile.validate_code("game", code)
+
+    def test_thumby_implementation_prompt_requires_script_start(self):
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            prompt = generation_profile.implementation_prompt("game", "ThumbyDodge.py")
+        self.assertIn("import 시 게임 루프를 자동 실행하지", prompt)
+        self.assertIn("게임 스크립트로 실행할 때는 실제 게임을 시작", prompt)
 
 
     def test_thumby_code_rejects_unverified_api(self):

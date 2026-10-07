@@ -30,7 +30,7 @@ def design_prompt(area):
         "기기 어댑터만 import thumby를 사용하며 buttonL/buttonR 입력과 "
         "display.fill, drawFilledRectangle, drawText, update, setFPS를 필요한 범위에서 사용하세요. "
         "실기에서 실행할 엔트리 Python 파일은 게임 폴더와 정확히 같은 이름으로 설계하세요. "
-        "어댑터 import만으로 무한 게임 루프를 시작하지 말고 실제 진입 함수를 분리하세요. "
+        "어댑터 import만으로 무한 게임 루프를 시작하지 말고 실제 진입 함수를 분리하세요. 엔트리 파일을 게임 스크립트로 실행하면 그 진입 함수가 호출되어 실제 게임이 시작되어야 합니다. "
         "Thumby Color API와 추측한 API는 사용하지 마세요. "
     )
 
@@ -63,7 +63,7 @@ def implementation_prompt(area, filename):
         "\n# 일반 Thumby 구현 계약\n"
         "승인 설계의 역할 분리를 유지하세요. 규칙 모듈에는 thumby 의존성을 넣지 말고, "
         "기기 어댑터에서만 공식 일반 Thumby API를 사용하세요. "
-        "import 시 게임 루프를 자동 실행하지 마세요. "
+        "import 시 게임 루프를 자동 실행하지 말고, 엔트리 파일을 게임 스크립트로 실행할 때는 실제 게임을 시작하세요. "
         f"현재 구현 대상은 {filename} 하나뿐입니다. "
     )
 

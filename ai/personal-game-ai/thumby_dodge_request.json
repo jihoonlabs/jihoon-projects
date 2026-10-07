@@ -8,7 +8,8 @@
     "After a collision, enter a game-over state and allow restart by pressing the left and right buttons together.",
     "Use only the verified monochrome Thumby APIs allowed by the thumby generation profile.",
     "Do not start an infinite game loop when a module is imported.",
-    "Use ThumbyDodge.py as the playable device entry file so the main Python filename exactly matches the ThumbyDodge game folder name."
+    "Use ThumbyDodge.py as the playable device entry file so the main Python filename exactly matches the ThumbyDodge game folder name.",
+    "When ThumbyDodge.py is executed as the game script, start the playable game loop while keeping imports side-effect safe."
   ],
   "area": "game"
 }
