@@ -206,6 +206,8 @@ class GenerationProfileTests(unittest.TestCase):
         self.assertNotIn("<게임폴더명>", prompt)
         self.assertIn("sys.implementation.name", prompt)
         self.assertIn("Thumby 런처 import", prompt)
+        self.assertIn("런타임 진입 역할", prompt)
+        self.assertIn("helper만 한 번 호출하고 끝내면 안", prompt)
         self.assertIn("MicroPython", prompt)
 
     def test_thumby_rules_implementation_prompt_stays_device_free(self):
