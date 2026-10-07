@@ -243,6 +243,7 @@ def process_tasks(tasks, context, model):
             task["status"] = "failed"
             task["error"] = str(error)
             save_tasks(tasks)
+            append_run_event(task_id, "failed")
             print(f"작업 {task_id}: 실패 — {error}")
             continue
 
