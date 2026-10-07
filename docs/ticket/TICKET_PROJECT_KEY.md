@@ -19,7 +19,7 @@
 - 関連Laravel/React検証が成功する。
 
 ## Handoff
-- 状態: 実装完了、実行検証待ち
-- 採用SHA: この文書更新commit
-- 検証: Project key生成、Project別連番、既存データbackfillの自動テストを追加。実行環境がないため未実行。
-- 残る制約・未検証事項: Laravel test/Pintを実行し、migrationのSQLite/MySQL互換と既存Ticket回帰を確認する。
+- 状態: Project key、Project別採番、Seederの既存キー維持と再実行時のカウンター維持を実装済み。
+- 検証: 専用SQLite DBへの全migrationとseedが成功。既存データのkey backfillを含むLaravel全109テスト、React全129テスト、TypeScript、ESLint、production build、変更PHPのPintが成功。Chromeで2 Projectを作成し、Alpha `JKZ-01` / `JKZ-02`、Beta `OSZ-01` のカード表示とProject名変更後のkey維持を確認。Seederの既存Ticket、再seed、削除後の番号非再利用も回帰テスト済み。
+- 制約: 全体Pintは既存の `ProjectManagementTest.php` と `StoreTest.php` のフォーマット差分で失敗。今回変更したPHPファイルには問題なし。MySQL上でのmigrationは未検証。
+- 次の作業: 最終diffを確認し、このChildの変更を承認済みの手順で親Epicへ統合する。
