@@ -20,6 +20,7 @@ class GenerationProfileTests(unittest.TestCase):
             prompt = generation_profile.design_prompt("game")
         self.assertIn("게임 규칙", prompt)
         self.assertIn("import thumby", prompt)
+        self.assertIn("게임 폴더와 정확히 같은 이름", prompt)
         self.assertIn("무한 게임 루프", prompt)
         self.assertIn("Thumby Color", prompt)
 

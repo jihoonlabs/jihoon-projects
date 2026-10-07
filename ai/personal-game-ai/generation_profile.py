@@ -29,6 +29,7 @@ def design_prompt(area):
         "게임 규칙 모듈은 thumby를 import하지 않고 CPython에서 검사 가능해야 합니다. "
         "기기 어댑터만 import thumby를 사용하며 buttonL/buttonR 입력과 "
         "display.fill, drawFilledRectangle, drawText, update, setFPS를 필요한 범위에서 사용하세요. "
+        "실기에서 실행할 엔트리 Python 파일은 게임 폴더와 정확히 같은 이름으로 설계하세요. "
         "어댑터 import만으로 무한 게임 루프를 시작하지 말고 실제 진입 함수를 분리하세요. "
         "Thumby Color API와 추측한 API는 사용하지 마세요. "
     )

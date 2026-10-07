@@ -7,7 +7,8 @@
     "Increase the score when the player successfully avoids an obstacle.",
     "After a collision, enter a game-over state and allow restart by pressing the left and right buttons together.",
     "Use only the verified monochrome Thumby APIs allowed by the thumby generation profile.",
-    "Do not start an infinite game loop when a module is imported."
+    "Do not start an infinite game loop when a module is imported.",
+    "Use ThumbyDodge.py as the playable device entry file so the main Python filename exactly matches the ThumbyDodge game folder name."
   ],
   "area": "game"
 }
