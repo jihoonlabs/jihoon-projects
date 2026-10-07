@@ -221,7 +221,6 @@ def generate_tests(path, model=None):
                 "request": envelope["request"],
                 "design": envelope["design"],
             }, ensure_ascii=False)
-            + generation_profile.test_prompt(envelope["request"]["area"])
             + "\nPython 표준 unittest로 테스트 후보를 작성하세요. "
             "구현 코드는 작성하지 마세요. "
             "import unittest와 설계 대상 모듈의 직접 import를 사용하세요. "
@@ -247,7 +246,8 @@ def generate_tests(path, model=None):
             "설계 파일마다 별도 테스트 파일 하나를 반환하세요. "
             "여러 모듈의 테스트를 한 파일에 합치지 마세요. "
             "테스트 안에 설계 함수나 구현 코드를 정의하지 마세요. "
-            "아래 code에 제시한 import를 유지하고 실제 대상 함수를 검사하세요. "
+            + generation_profile.test_prompt(envelope["request"]["area"])
+            + "아래 code에 제시한 import를 유지하고 실제 대상 함수를 검사하세요. "
             "아래 틀의 id·filename·검사 번호를 그대로 유지하세요. "
             "code에는 해당 모듈의 전체 테스트 코드를 넣고 "
             "covers의 method에는 실제 메서드 이름을 넣으세요. "

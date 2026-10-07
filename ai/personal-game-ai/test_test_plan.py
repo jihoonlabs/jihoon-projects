@@ -130,6 +130,20 @@ class TestPlanTests(unittest.TestCase):
         self.assertEqual(args[2], self.envelope["design"])
         self.assertEqual(len(args), 3)
 
+    def test_generation_profile_prompt_follows_generic_mock_guidance(self):
+        model = Mock(return_value=json.dumps(self.proposal))
+        with patch.object(
+            test_plan.generation_profile,
+            "test_prompt",
+            return_value="PROFILE TEST CONTRACT",
+        ):
+            self.generate(model)
+        prompt = model.call_args.args[0]
+        self.assertLess(
+            prompt.index("unittest.mock의 patch"),
+            prompt.index("PROFILE TEST CONTRACT"),
+        )
+
     def test_generation_profile_prompt_is_included(self):
         model = Mock(return_value=json.dumps(self.proposal))
         with patch.object(
