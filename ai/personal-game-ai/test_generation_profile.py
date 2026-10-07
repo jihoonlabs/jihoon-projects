@@ -174,16 +174,31 @@ class GenerationProfileTests(unittest.TestCase):
         with patch.object(generation_profile, "current_profile", return_value="thumby"):
             generation_profile.validate_code("game", code)
 
-    def test_thumby_implementation_prompt_requires_script_start(self):
-        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+    def test_thumby_entry_implementation_prompt_uses_exact_game_path(self):
+        with patch.object(
+            generation_profile, "CONFIG_PATH",
+            self.config(edit_directory="micropython/ThumbyDodge"),
+        ):
             prompt = generation_profile.implementation_prompt("game", "ThumbyDodge.py")
         self.assertIn("CPython import", prompt)
-        self.assertIn("폴더명 엔트리 파일만 기기 어댑터", prompt)
+        self.assertIn("엔트리이자 기기 어댑터", prompt)
         self.assertIn("sys.path", prompt)
-        self.assertIn("/Games/<게임폴더명>", prompt)
+        self.assertIn("/Games/ThumbyDodge", prompt)
+        self.assertNotIn("<게임폴더명>", prompt)
         self.assertIn("sys.implementation.name", prompt)
         self.assertIn("Thumby 런처 import", prompt)
         self.assertIn("MicroPython", prompt)
+
+    def test_thumby_rules_implementation_prompt_stays_device_free(self):
+        with patch.object(
+            generation_profile, "CONFIG_PATH",
+            self.config(edit_directory="micropython/ThumbyDodge"),
+        ):
+            prompt = generation_profile.implementation_prompt("game", "rules.py")
+        self.assertIn("순수 게임 규칙 모듈", prompt)
+        self.assertIn("thumby를 import하거나 기기 경로를 설정하지", prompt)
+        self.assertNotIn("/Games/ThumbyDodge", prompt)
+        self.assertNotIn("sys.implementation.name", prompt)
 
 
     def test_thumby_code_without_filename_keeps_legacy_validation(self):

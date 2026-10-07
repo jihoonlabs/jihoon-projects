@@ -184,16 +184,26 @@ def test_prompt(area):
 def implementation_prompt(area, filename):
     if area != "game" or current_profile() != "thumby":
         return ""
+    entry = _entry_filename()
+    if filename == entry:
+        game_name = Path(entry).stem
+        role = (
+            "이 파일은 폴더명 엔트리이자 기기 어댑터입니다. 공식 일반 Thumby API만 사용하세요. "
+            f"MicroPython에서 sibling 규칙 모듈을 import하기 전에 sys.path에 /Games/{game_name}을 추가하세요. "
+            "CPython import에서는 게임 루프를 시작하지 말고, "
+            "sys.implementation.name == 'micropython'일 때 진입 함수를 직접 호출해 "
+            "Thumby 런처 import에서 실제 게임을 시작하세요. "
+        )
+    else:
+        role = (
+            "이 파일은 순수 게임 규칙 모듈입니다. thumby를 import하거나 기기 경로를 설정하지 마세요. "
+        )
     return (
         "\n# 일반 Thumby 구현 계약\n"
-        "승인 설계의 역할 분리를 유지하세요. 규칙 모듈에는 thumby 의존성을 넣지 말고, "
-        "폴더명 엔트리 파일만 기기 어댑터 역할로 공식 일반 Thumby API를 사용하세요. "
-        "Thumby MicroPython에서 실행할 수 있도록 CPython 전용 모듈·기능을 사용하지 마세요. "
-        "폴더명 엔트리는 MicroPython에서 sibling 규칙 모듈을 import하기 전에 "
-        "sys.path에 /Games/<게임폴더명>을 추가하세요. CPython import에서는 게임 루프를 시작하지 마세요. 엔트리 파일은 "
-        "sys.implementation.name == 'micropython'일 때 진입 함수를 호출해 "
-        "Thumby 런처 import에서 실제 게임을 시작하세요. "
-        f"현재 구현 대상은 {filename} 하나뿐입니다. "
+        "승인 설계의 역할 분리를 유지하세요. "
+        + role
+        + "Thumby MicroPython에서 실행할 수 있도록 CPython 전용 모듈·기능을 사용하지 마세요. "
+        + f"현재 구현 대상은 {filename} 하나뿐입니다. "
     )
 
 
