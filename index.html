@@ -231,7 +231,7 @@
 
     <div id="output-order-section" style="display:none;">
       <div class="section-title">詳細設定: グラフ出力順</div>
-      <div style="font-size:0.8rem; color:#64748b;">カスタムグラフ使用時のみ、通常グラフを含めてPPTXの出力順を変更できます。順番を選び直す場合は、下のボタンを押してから希望順にチェックしてください。</div>
+      <div style="font-size:0.8rem; color:#64748b;">カスタムグラフ使用時のみ、通常グラフを含めてPPTXの出力順を変更できます。下のボタンを押してから、希望する順番に項目をクリックしてください。</div>
       <div style="margin-top:8px;">
         <button type="button" class="btn-small" onclick="resetOutputOrderSelection()">順番を選び直す</button>
       </div>
@@ -382,7 +382,7 @@
         return;
       }
       const id = `custom-${++customChartSequence}`;
-      customCharts.unshift({ id, column: headers[0], title: `${headers[0]} (抽出分布)`, sortMode: 'click', selectedKeys: [], clickOrder: [] });
+      customCharts.unshift({ id, column: headers[0], title: `${headers[0]} (抽出分布)`, selectedKeys: [], clickOrder: [] });
       initializeCustomSelection(id);
       renderAllCustomCharts();
       syncOutputOrder();
@@ -440,14 +440,7 @@
             <input type="text" class="custom-chart-title" value="${escapeHtml(chart.title)}" oninput="updateCustomTitle('${id}', this.value)">
           </div>
         </div>
-        <div class="form-group">
-          <label>並び順 (時計回りの配置順)</label>
-          <select class="custom-sort-mode" onchange="changeCustomSortMode('${id}', this.value)">
-            <option value="click" ${chart.sortMode === 'click' ? 'selected' : ''}>👈 選択した順番</option>
-            <option value="count" ${chart.sortMode === 'count' ? 'selected' : ''}>人数/割合順 (多い順)</option>
-            <option value="name" ${chart.sortMode === 'name' ? 'selected' : ''}>項目名順 (自然順)</option>
-          </select>
-        </div>
+        <div style="font-size:0.8rem; color:#64748b; margin-bottom:10px;">選択した順番でPPTXに配置されます。</div>
         <div style="display:flex; gap:6px; margin-bottom:8px;">
           <button type="button" class="btn-small" onclick="selectAllCustomItems('${id}', true)">全選択</button>
           <button type="button" class="btn-small" onclick="selectAllCustomItems('${id}', false)">全解除</button>
@@ -487,13 +480,6 @@
       renderOutputOrder();
     }
 
-    function changeCustomSortMode(id, sortMode) {
-      const chart = getCustomChart(id);
-      if (!chart) return;
-      chart.sortMode = sortMode;
-      refreshCustomChartUI(id);
-    }
-
     function getCustomCounts(col) {
       const counts = {};
       rawData.forEach(row => {
@@ -503,10 +489,8 @@
       return counts;
     }
 
-    function getOrderedCustomKeys(chart, counts) {
-      if (chart.sortMode === 'click') return chart.clickOrder.filter(key => chart.selectedKeys.includes(key));
-      if (chart.sortMode === 'count') return [...chart.selectedKeys].sort((a, b) => (counts[b] - counts[a]) || naturalCollator.compare(a, b));
-      return [...chart.selectedKeys].sort(naturalCollator.compare);
+    function getOrderedCustomKeys(chart) {
+      return chart.clickOrder.filter(key => chart.selectedKeys.includes(key));
     }
 
     function handleCustomKeywordClick(id, checkbox) {
@@ -539,7 +523,7 @@
       if (!chart || !card) return;
       const counts = getCustomCounts(chart.column);
       const allKeys = Object.keys(counts).sort(naturalCollator.compare);
-      const orderedSelected = getOrderedCustomKeys(chart, counts);
+      const orderedSelected = getOrderedCustomKeys(chart);
       const unselected = allKeys.filter(key => !chart.selectedKeys.includes(key));
       const displayKeys = [...orderedSelected, ...unselected];
       const selectedTotal = orderedSelected.reduce((sum, key) => sum + (counts[key] || 0), 0);
@@ -588,15 +572,12 @@
       renderOutputOrder();
     }
 
-    function handleOutputOrderClickByIndex(index, checked) {
+    function handleOutputOrderClickByIndex(index) {
+      if (!isOutputOrderReordering) return;
       const id = outputOrder[index]?.id;
-      if (!id) return;
-      if (checked) {
-        outputOrderClickOrder = outputOrderClickOrder.filter(itemId => itemId !== id);
-        outputOrderClickOrder.push(id);
-      } else {
-        outputOrderClickOrder = outputOrderClickOrder.filter(itemId => itemId !== id);
-      }
+      if (!id || outputOrderClickOrder.includes(id)) return;
+
+      outputOrderClickOrder.push(id);
 
       const byId = new Map(outputOrder.map(item => [item.id, item]));
       const ordered = outputOrderClickOrder.map(itemId => byId.get(itemId)).filter(Boolean);
@@ -622,11 +603,10 @@
         const selectedIndex = outputOrderClickOrder.indexOf(item.id);
         const checked = selectedIndex >= 0;
         const order = checked ? selectedIndex + 1 : null;
-        return `<label class="output-order-item">
+        return `<div class="output-order-item" onclick="handleOutputOrderClickByIndex(${index})">
           <span class="order-number">${order ? order + '.' : ''}</span>
-          <input type="checkbox" ${checked ? 'checked' : ''} onchange="handleOutputOrderClickByIndex(${index}, this.checked)">
           <span class="order-name">${escapeHtml(name)}</span>
-        </label>`;
+        </div>`;
       }).join('');
     }
 
@@ -685,7 +665,7 @@
       const chart = getCustomChart(id);
       if (!chart) return { labels: [], values: [], total: 0 };
       const counts = getCustomCounts(chart.column);
-      const labels = getOrderedCustomKeys(chart, counts);
+      const labels = getOrderedCustomKeys(chart);
       const values = labels.map(key => counts[key] || 0);
       return { labels, values, total: values.reduce((sum, value) => sum + value, 0) };
     }
