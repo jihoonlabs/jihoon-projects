@@ -229,7 +229,7 @@
 
       <div class="form-group">
         <label>並び順 (時計回りの配置順)</label>
-        <select id="custom-sort-mode" onchange="updateCustomPercentages()">
+        <select id="custom-sort-mode" onchange="refreshCustomSelectionUI()">
           <option value="click" selected>👈 選択した順番 (クリックした順に12時から配置)</option>
           <option value="count">人数/割合順 (多い順)</option>
           <option value="name">項目名順 (五十音・アルファベット順)</option>
@@ -237,7 +237,7 @@
       </div>
 
       <div class="form-group">
-        <label>抽出したいデータ項目を選択 (チェックを入れた順番で12時方向から 시계방향으로 배치됩니다)</label>
+        <label>抽出したいデータ項目を選択 (選択順に番号を表示し、12時方向から時計回りに配置します)</label>
         <div id="custom-keywords-list" class="checkbox-container" style="max-height: 160px; background: #ffffff;">
           <!-- JSで動的生成 -->
         </div>
@@ -304,8 +304,9 @@
 
   <script>
     let rawData = [], headers = [], globalTotalMembers = 0;
-    // ★ 사용자가 클릭한 순서를 담아두는 순서 기억 배열
+    // カスタム項目の選択順を保持する
     let customClickOrder = [];
+    const naturalCollator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
 
     const valClean = v => (v === undefined || v === null) ? "" : String(v).trim().replace(/^(undefined|null)$/, "");
 
@@ -370,17 +371,69 @@
       renderCustomKeywords();
     }
 
-    // ★ 클릭 이벤트 발생 시 클릭 순서를 제어하는 핸들러
+    // チェック操作に合わせて選択順を更新する
     function handleCustomKeywordClick(chk) {
       const val = chk.value;
       if (chk.checked) {
-        if (!customClickOrder.includes(val)) {
-          customClickOrder.push(val); // 클릭한 순서대로 배열 뒤에 추가
-        }
+        if (!customClickOrder.includes(val)) customClickOrder.push(val);
       } else {
-        customClickOrder = customClickOrder.filter(item => item !== val); // 해제 시 삭제
+        customClickOrder = customClickOrder.filter(item => item !== val);
       }
+      refreshCustomSelectionUI();
+    }
+
+    function getCustomCounts(col) {
+      const counts = {};
+      rawData.forEach(row => {
+        const val = formatValueLabel(row[col]);
+        if (val && val !== "未入力") counts[val] = (counts[val] || 0) + 1;
+      });
+      return counts;
+    }
+
+    function getOrderedCustomKeys(selectedKeys, counts, sortMode) {
+      if (sortMode === 'click') {
+        return customClickOrder.filter(key => selectedKeys.includes(key));
+      }
+      if (sortMode === 'count') {
+        return [...selectedKeys].sort((a, b) => (counts[b] - counts[a]) || naturalCollator.compare(a, b));
+      }
+      return [...selectedKeys].sort(naturalCollator.compare);
+    }
+
+    function refreshCustomSelectionUI() {
       updateCustomPercentages();
+
+      const col = document.getElementById('custom-target-col').value;
+      if (!col) return;
+
+      const container = document.getElementById('custom-keywords-list');
+      const items = Array.from(container.querySelectorAll('.custom-kw-item'));
+      const selectedKeys = items.filter(item => item.querySelector('.custom-kw-chk').checked).map(item => item.querySelector('.custom-kw-chk').value);
+      const counts = getCustomCounts(col);
+      const sortMode = document.getElementById('custom-sort-mode').value;
+      const orderedSelected = getOrderedCustomKeys(selectedKeys, counts, sortMode);
+      const orderMap = new Map(orderedSelected.map((key, index) => [key, index + 1]));
+
+      items.sort((a, b) => {
+        const aKey = a.querySelector('.custom-kw-chk').value;
+        const bKey = b.querySelector('.custom-kw-chk').value;
+        const aOrder = orderMap.get(aKey);
+        const bOrder = orderMap.get(bKey);
+        if (aOrder && bOrder) return aOrder - bOrder;
+        if (aOrder) return -1;
+        if (bOrder) return 1;
+        return naturalCollator.compare(aKey, bKey);
+      });
+
+      items.forEach(item => {
+        const key = item.querySelector('.custom-kw-chk').value;
+        const orderBadge = item.querySelector('.order-badge');
+        const order = orderMap.get(key);
+        orderBadge.textContent = order ? `${order}.` : '';
+        orderBadge.style.display = order ? 'inline' : 'none';
+        container.appendChild(item);
+      });
     }
 
     function updateCustomPercentages() {
@@ -390,13 +443,7 @@
       const checkedBoxes = Array.from(document.querySelectorAll('.custom-kw-chk:checked'));
       const selectedKeys = checkedBoxes.map(cb => cb.value);
 
-      let counts = {};
-      rawData.forEach(row => {
-        let val = formatValueLabel(row[col]);
-        if (val !== "未入力") {
-          counts[val] = (counts[val] || 0) + 1;
-        }
-      });
+      const counts = getCustomCounts(col);
 
       let selectedTotal = selectedKeys.reduce((sum, key) => sum + (counts[key] || 0), 0);
 
@@ -426,21 +473,14 @@
         return;
       }
 
-      let counts = {};
-      rawData.forEach(row => {
-        let val = formatValueLabel(row[col]);
-        if (val && val !== "未入力") {
-          counts[val] = (counts[val] || 0) + 1;
-        }
-      });
+      const counts = getCustomCounts(col);
+      const keys = Object.keys(counts).sort(naturalCollator.compare);
 
-      let keys = Object.keys(counts);
-
-      // 기본 초기화 시 등장 순서대로 클릭 순서 배열 채움
       customClickOrder = [...keys];
 
       listContainer.innerHTML = keys.map((key) => {
         return `<label class="checkbox-item custom-kw-item">
+                  <span class="order-badge" style="font-size:0.75rem; font-weight:bold; color:#2563eb;"></span>
                   <input type="checkbox" class="custom-kw-chk" value="${key}" checked onchange="handleCustomKeywordClick(this)">
                   <span>${key}</span>
                   <span class="pct-badge" style="font-size:0.75rem; font-weight:bold;"></span>
@@ -448,14 +488,14 @@
       }).join('');
 
       document.getElementById('custom-chart-title').value = `${col} (抽出分布)`;
-      updateCustomPercentages();
+      refreshCustomSelectionUI();
     }
 
     function selectAllCustomItems(flag) {
-      document.querySelectorAll('.custom-kw-chk').forEach(chk => {
-        chk.checked = flag;
-        handleCustomKeywordClick(chk);
-      });
+      const checkboxes = Array.from(document.querySelectorAll('.custom-kw-chk'));
+      checkboxes.forEach(chk => { chk.checked = flag; });
+      customClickOrder = flag ? checkboxes.map(chk => chk.value) : [];
+      refreshCustomSelectionUI();
     }
 
     function toggleCustomExtractPanel() {
@@ -524,42 +564,15 @@
       return { labels: sortedKeys, values: values, total: total };
     }
 
-    // ★ 커스텀 추출 렌더링 시 클릭 순서(click), 비율순(count), 이름순(name)으로 완벽 전환
+    // UIとPPTで同じ並び順を使用する
     function getCustomExtractedData() {
       const col = document.getElementById('custom-target-col').value;
       const sortMode = document.getElementById('custom-sort-mode').value;
-      
-      const checkedBoxes = Array.from(document.querySelectorAll('.custom-kw-chk:checked')).map(cb => cb.value);
-
-      let counts = {};
-      checkedBoxes.forEach(kw => counts[kw] = 0);
-
-      rawData.forEach(row => {
-        let val = formatValueLabel(row[col]);
-        if (counts.hasOwnProperty(val)) {
-          counts[val]++;
-        }
-      });
-
-      let labels = [];
-
-      if (sortMode === 'click') {
-        // ★ 클릭한 순서(customClickOrder)를 최우선으로 배치
-        labels = customClickOrder.filter(item => checkedBoxes.includes(item));
-        // 혹시 유실된 항목이 있으면 뒤에 붙여줌
-        checkedBoxes.forEach(item => {
-          if (!labels.includes(item)) labels.push(item);
-        });
-      } else if (sortMode === 'count') {
-        // 비율(인원수) 순서
-        labels = [...checkedBoxes].sort((a, b) => counts[b] - counts[a]);
-      } else {
-        // 이름순/알파벳순
-        labels = [...checkedBoxes].sort((a, b) => a.localeCompare(b, 'ja', { numeric: true }));
-      }
-
-      let values = labels.map(k => counts[k]);
-      let total = values.reduce((a, b) => a + b, 0);
+      const selectedKeys = Array.from(document.querySelectorAll('.custom-kw-chk:checked')).map(cb => cb.value);
+      const counts = getCustomCounts(col);
+      const labels = getOrderedCustomKeys(selectedKeys, counts, sortMode);
+      const values = labels.map(key => counts[key] || 0);
+      const total = values.reduce((sum, value) => sum + value, 0);
 
       return { labels, values, total };
     }
@@ -599,7 +612,7 @@
         let baseColor = isDefault ? '#0F3854' : document.getElementById('custom-color-picker').value;
         let palette = generateMonochromePalette(baseColor, labels.length);
 
-        let startAngle = -Math.PI / 2; // 12시 정각(맨 위)에서부터 배치 시작
+        let startAngle = -Math.PI / 2; // 12時方向から配置を開始
 
         labels.forEach((label, i) => {
           let sliceAngle = total > 0 ? (values[i] / total) * 2 * Math.PI : 0;
@@ -617,7 +630,7 @@
           ctx.lineWidth = 3.0; 
           ctx.stroke();
           
-          startAngle = endAngle; // 시계 방향 순서대로 이동
+          startAngle = endAngle; // 時計回りに次の項目へ進む
         });
 
         startAngle = -Math.PI / 2;
