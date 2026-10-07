@@ -217,13 +217,15 @@
     </div>
     <div id="custom-charts-container"></div>
 
-    <div class="section-title">3. グラフ出力順</div>
-    <div style="font-size:0.8rem; color:#64748b;">選択した通常グラフとカスタムグラフを、↑ ↓ でPPTXの出力順に並べ替えできます。</div>
-    <div id="output-order-list" class="output-order-list"></div>
+    <div id="output-order-section" style="display:none;">
+      <div class="section-title">詳細設定: グラフ出力順</div>
+      <div style="font-size:0.8rem; color:#64748b;">カスタムグラフ使用時のみ、通常グラフを含めてPPTXの出力順を変更できます。</div>
+      <div id="output-order-list" class="output-order-list"></div>
+    </div>
 
     <div class="opt-grid">
       <div>
-        <div class="section-title">4. 1スライドの配置数</div>
+        <div class="section-title">3. 1スライドの配置数</div>
         <select id="items-per-page" onchange="updateScaleRanges()">
           <option value="3" selected>3個配置 (標準・バランス重視)</option>
           <option value="2">2個配置 (ゆったり・大きめ)</option>
@@ -232,7 +234,7 @@
       </div>
 
       <div>
-        <div class="section-title">5. グラフデザイン形式を選択</div>
+        <div class="section-title">4. グラフデザイン形式を選択</div>
         <select id="chart-type" onchange="updateScaleRanges()">
           <option value="pie" selected>⭕ 単色グラデーション・円サイズ極大化ドーナツ</option>
           <option value="bar">📊 スリム＆モダン横棒グラフ (おすすめ)</option>
@@ -240,7 +242,7 @@
       </div>
     </div>
 
-    <div class="section-title">6. デザイン詳細設定</div>
+    <div class="section-title">5. デザイン詳細設定</div>
     <div class="custom-card">
       <label class="default-toggle">
         <input type="checkbox" id="use-default-style" checked onchange="toggleCustomPanel()">
@@ -522,6 +524,8 @@
     }
 
     function syncOutputOrder() {
+      const orderSection = document.getElementById('output-order-section');
+      if (orderSection) orderSection.style.display = customCharts.length ? 'block' : 'none';
       const selectedColumns = Array.from(document.querySelectorAll('.normal-chart-chk:checked')).map(cb => cb.value);
       const activeIds = new Set([...selectedColumns.map(col => `normal:${col}`), ...customCharts.map(chart => chart.id)]);
       outputOrder = outputOrder.filter(item => activeIds.has(item.id));
