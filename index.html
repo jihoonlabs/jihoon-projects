@@ -588,7 +588,9 @@
       renderOutputOrder();
     }
 
-    function handleOutputOrderClick(id, checked) {
+    function handleOutputOrderClickByIndex(index, checked) {
+      const id = outputOrder[index]?.id;
+      if (!id) return;
       if (checked) {
         outputOrderClickOrder = outputOrderClickOrder.filter(itemId => itemId !== id);
         outputOrderClickOrder.push(id);
@@ -614,7 +616,7 @@
         container.innerHTML = '<span style="font-size:0.8rem; color:#94a3b8;">出力するグラフを選択してください。</span>';
         return;
       }
-      container.innerHTML = outputOrder.map(item => {
+      container.innerHTML = outputOrder.map((item, index) => {
         const chart = item.type === 'custom' ? getCustomChart(item.customId) : null;
         const name = item.type === 'custom' ? `カスタム: ${chart?.title || '名称未設定'}` : item.column;
         const selectedIndex = outputOrderClickOrder.indexOf(item.id);
@@ -622,7 +624,7 @@
         const order = checked ? selectedIndex + 1 : null;
         return `<label class="output-order-item">
           <span class="order-number">${order ? order + '.' : ''}</span>
-          <input type="checkbox" ${checked ? 'checked' : ''} onchange="handleOutputOrderClick('${item.id}', this.checked)">
+          <input type="checkbox" ${checked ? 'checked' : ''} onchange="handleOutputOrderClickByIndex(${index}, this.checked)">
           <span class="order-name">${escapeHtml(name)}</span>
         </label>`;
       }).join('');
