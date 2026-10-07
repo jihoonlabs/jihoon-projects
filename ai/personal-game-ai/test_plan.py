@@ -294,8 +294,7 @@ def generate_tests(path, model=None):
                 json.loads(answer), envelope["design"]
             )
             generation_profile.validate_tests(
-                envelope["request"]["area"], candidate, envelope["design"],
-                design_plan.directory_for(envelope["request"]["area"]),
+                envelope["request"]["area"], candidate, envelope["design"]
             )
         except ValueError as error:
             feedback = str(error)

@@ -75,9 +75,14 @@ def _sets_fake_thumby(node):
     )
 
 
-def validate_tests(area, candidate, design, directory):
+def validate_tests(area, candidate, design, directory=None):
     if area != "game" or current_profile() != "thumby":
         return
+    if directory is None:
+        config = json.loads(Path(CONFIG_PATH).read_text(encoding="utf-8"))
+        directory = config.get("edit_directory")
+        if not isinstance(directory, str) or not directory.strip():
+            raise ValueError("일반 Thumby 게임 경로 설정이 필요합니다.")
     entry = Path(directory).name + ".py"
     entry_source = next(
         (item for item in design["files"] if item.get("filename") == entry), None

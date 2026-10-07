@@ -128,6 +128,7 @@ class TestPlanTests(unittest.TestCase):
         self.assertEqual(args[0], "sandbox")
         self.assertEqual(args[1], self.proposal)
         self.assertEqual(args[2], self.envelope["design"])
+        self.assertEqual(len(args), 3)
 
     def test_generation_profile_prompt_is_included(self):
         model = Mock(return_value=json.dumps(self.proposal))
