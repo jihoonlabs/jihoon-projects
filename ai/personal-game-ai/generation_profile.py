@@ -52,8 +52,22 @@ def validate_design(area, files, directory):
     if area != "game" or current_profile() != "thumby":
         return
     entry = _entry_filename(directory)
-    if not any(item.get("filename") == entry for item in files):
+    entry_item = next((item for item in files if item.get("filename") == entry), None)
+    if entry_item is None:
         raise ValueError("일반 Thumby 게임은 폴더명과 같은 엔트리 Python 파일이 필요합니다.")
+
+    pure_ids = {
+        item.get("id") for item in files
+        if item.get("filename") != entry and isinstance(item.get("id"), str)
+    }
+    if not pure_ids:
+        raise ValueError("일반 Thumby 게임은 엔트리와 분리된 순수 규칙 모듈이 필요합니다.")
+    dependencies = entry_item.get("depends_on")
+    if (
+        not isinstance(dependencies, list)
+        or not any(identifier in pure_ids for identifier in dependencies)
+    ):
+        raise ValueError("일반 Thumby 엔트리는 순수 규칙 모듈에 의존해야 합니다.")
 
 
 def _sets_fake_thumby(node):

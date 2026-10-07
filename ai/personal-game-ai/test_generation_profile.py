@@ -38,8 +38,27 @@ class GenerationProfileTests(unittest.TestCase):
                     "game", files, Path("/tmp/ThumbyDodge")
                 )
 
-    def test_thumby_design_accepts_folder_named_entry(self):
-        files = [{"filename": "ThumbyDodge.py"}, {"filename": "rules.py"}]
+    def test_thumby_design_requires_separate_rules_dependency(self):
+        entry_only = [{
+            "id": "001", "filename": "ThumbyDodge.py", "depends_on": []
+        }]
+        disconnected = [
+            {"id": "001", "filename": "rules.py", "depends_on": []},
+            {"id": "002", "filename": "ThumbyDodge.py", "depends_on": []},
+        ]
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            for files in (entry_only, disconnected):
+                with self.subTest(files=files):
+                    with self.assertRaises(ValueError):
+                        generation_profile.validate_design(
+                            "game", files, Path("/tmp/ThumbyDodge")
+                        )
+
+    def test_thumby_design_accepts_entry_depending_on_rules(self):
+        files = [
+            {"id": "001", "filename": "rules.py", "depends_on": []},
+            {"id": "002", "filename": "ThumbyDodge.py", "depends_on": ["001"]},
+        ]
         with patch.object(generation_profile, "current_profile", return_value="thumby"):
             generation_profile.validate_design(
                 "game", files, Path("/tmp/ThumbyDodge")
