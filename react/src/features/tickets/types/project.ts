@@ -4,6 +4,7 @@ export type ProjectPermission = 'read' | 'write';
 export interface Project {
   id: string;
   name: string;
+  projectKey: string;
   boardVersion: number;
 }
 
