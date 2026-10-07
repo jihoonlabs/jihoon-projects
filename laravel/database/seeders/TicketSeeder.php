@@ -27,7 +27,7 @@ class TicketSeeder extends Seeder
 
         $tickets = [
             [
-                'issue_key' => 'TICK-101',
+                'issue_key' => sprintf('%s-%02d', $project->project_key, 1),
                 'title' => 'ログインAPIおよびJWTトークン処理の連携',
                 'description' => 'Laravelバックエンド認証APIの構築',
                 'status' => 'DONE',
@@ -35,7 +35,7 @@ class TicketSeeder extends Seeder
                 'assignee_id' => $user->id,
             ],
             [
-                'issue_key' => 'TICK-102',
+                'issue_key' => sprintf('%s-%02d', $project->project_key, 2),
                 'title' => 'JiraスタイルかんばんボードのUI実装',
                 'description' => 'Next.jsベースのドラッグ＆ドロップボード構築',
                 'status' => 'IN_PROGRESS',
@@ -43,7 +43,7 @@ class TicketSeeder extends Seeder
                 'assignee_id' => $user->id,
             ],
             [
-                'issue_key' => 'TICK-103',
+                'issue_key' => sprintf('%s-%02d', $project->project_key, 3),
                 'title' => 'チケット検索および担当者フィルターの実装',
                 'description' => 'リアルタイム検索クエリの状態バインディング',
                 'status' => 'IN_REVIEW',
@@ -51,7 +51,7 @@ class TicketSeeder extends Seeder
                 'assignee_id' => $user->id,
             ],
             [
-                'issue_key' => 'TICK-104',
+                'issue_key' => sprintf('%s-%02d', $project->project_key, 4),
                 'title' => 'DND-Kit マウストラッキングオーバーレイのバグ修正',
                 'description' => 'CSS Translateによるポータルアニメーション調整',
                 'status' => 'TODO',
@@ -59,7 +59,7 @@ class TicketSeeder extends Seeder
                 'assignee_id' => null,
             ],
             [
-                'issue_key' => 'TICK-105',
+                'issue_key' => sprintf('%s-%02d', $project->project_key, 5),
                 'title' => 'Laravel DBマイグレーションおよびAPI接続',
                 'description' => 'REST APIエンドポイントおよびCORSの設定',
                 'status' => 'BACKLOG',
@@ -70,9 +70,11 @@ class TicketSeeder extends Seeder
 
         foreach ($tickets as $ticketData) {
             Ticket::updateOrCreate(
-                ['issue_key' => $ticketData['issue_key']],
+                ['project_id' => $project->id, 'title' => $ticketData['title']],
                 [...$ticketData, 'project_id' => $project->id]
             );
         }
+
+        $project->update(['next_ticket_number' => count($tickets) + 1]);
     }
 }
