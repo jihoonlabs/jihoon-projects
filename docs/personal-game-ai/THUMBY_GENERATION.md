@@ -81,7 +81,7 @@
 
 - 현재 작업은 이 Child에서 계속한다. main 통합·merge/rebase·브랜치 삭제는 아직 하지 않는다.
 - main과 Git history는 diverged 상태지만 main 쪽 차이는 AGENTS/docs/agent 문서뿐이며 Personal Game AI 코드는 충돌하지 않는다. 현재 Child AGENTS와 main AGENTS의 차이는 MANUAL 기록 방침 한 줄뿐이다. AGENTS는 임의 수정하지 않고, 사용자가 방금 확정한 최신 MANUAL 운용(짧은 사용자용 완료 보고)은 현재 작업부터 따른다.
-- 최근 동작 변경 기준 commit: `11f019c6b8331d379566bd1eef397d180781dbda`.
+- 최근 동작 변경 기준 commit: `f79b8c697bb96c6e7bfc18b12a572a202cafabdd`.
 - 현재 생성 계약:
   - `ThumbyDodge.py`가 폴더명 엔트리이자 기기 어댑터다.
   - 엔트리 함수 계약에는 실제 런타임 진입 함수 외에 CPython에서 1회 호출하고 끝나는 유한 adapter/helper를 둬 fixed test가 무한 루프 없이 어댑터 동작을 검사할 수 있게 한다.
@@ -89,6 +89,7 @@
   - 엔트리는 CPython import-safe이며 MicroPython runtime guard에서 진입 함수를 직접 호출한다.
   - 런처/runtime guard 요구의 fixed unittest는 CPython import-safe 동작을 검사하고, MicroPython guard 존재·직접 호출은 구현 단계 generation profile AST gate가 맡는다.
   - 엔트리 fixed test의 fake-module 계약은 `import sys` 후 `sys.modules['thumby']`에 None이 아닌 fake를 직접 넣고 엔트리를 import하는 순서 하나로 통일한다. profile 테스트 지침은 generic mock 지침 뒤에 적용한다.
+  - 테스트 scaffold의 대상 import 문장은 유지하되 그 앞에 `sys` import와 fake 주입을 넣도록 profile prompt에서 명시해 scaffold와 gate의 순서를 일치시킨다.
   - 엔트리 구현 prompt에는 실제 `/Games/ThumbyDodge` sibling 경로를 전달한다.
   - 해당 `sys.path` 추가는 MicroPython 조건 안에서만 수행하도록 안내해 CPython import의 경로 상태를 바꾸지 않는다.
   - `execute_plan`이 통과한 선행 task의 artifact를 재검증하고 실제 검증 코드를 후속 task에 전달한다.
