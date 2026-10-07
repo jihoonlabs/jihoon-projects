@@ -405,6 +405,26 @@ def summarize(state, folder):
     return result
 
 
+def workflow_folder(output, path, data, context):
+    legacy = output / ("workflow_" + digest(str(path).encode("utf-8")))
+    legacy_state = legacy / "state.json"
+    if legacy_state.is_file() and not legacy_state.is_symlink():
+        state = json.loads(legacy_state.read_text(encoding="utf-8"))
+        if (
+            state.get("request_path") == str(path)
+            and state.get("request_sha256") == digest(data)
+            and state.get("context") == context
+        ):
+            return legacy
+
+    identity = b"\0".join((
+        str(path).encode("utf-8"),
+        data,
+        context.encode("utf-8"),
+    ))
+    return output / ("workflow_" + digest(identity))
+
+
 def run_workflow(
     request_path, *, model=None, approve=None, confirm=None,
     answer_id=None, answer=None, retry=False, feedback=None, review_design=None,
@@ -435,9 +455,8 @@ def run_workflow(
         raise RuntimeError("워크플로 실행 중이거나 이전 실행이 강제 종료됐습니다.")
 
     try:
-        # 요청 파일의 위치별로 기록 하나를 사용하고 내용 변경은 차단한다.
-        identifier = digest(str(path).encode("utf-8"))
-        folder = output / ("workflow_" + identifier)
+        # 같은 요청·문맥은 재개하고, 변경된 요청·문맥은 이전 기록을 보존한 새 실행으로 분리한다.
+        folder = workflow_folder(output, path, data, context)
         if folder.is_symlink():
             raise ValueError("워크플로 기록에 심볼릭 링크를 사용할 수 없습니다.")
         folder.mkdir(exist_ok=True)

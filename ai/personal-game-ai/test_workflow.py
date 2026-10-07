@@ -69,18 +69,36 @@ class WorkflowTests(unittest.TestCase):
         approve.assert_not_called()
         self.assertEqual(result["stage"], "review_design")
 
-    def test_request_change_blocks_resume(self):
-        self.run_flow()
+    def test_request_change_starts_new_record_and_preserves_old(self):
+        first = self.run_flow()
         self.request.write_text(self.request.read_text() + "\n")
-        with self.assertRaises(RuntimeError):
-            self.run_flow()
-        self.assertEqual(self.generator.call_count, 1)
+        second = self.run_flow()
+        self.assertNotEqual(first["record"], second["record"])
+        self.assertTrue(Path(first["record"]).is_dir())
+        self.assertTrue(Path(second["record"]).is_dir())
+        self.assertEqual(self.generator.call_count, 2)
 
-    def test_context_change_blocks_resume(self):
-        self.run_flow()
+    def test_context_change_starts_new_record_and_preserves_old(self):
+        first = self.run_flow()
         self.context.return_value = "OTHER"
-        with self.assertRaises(RuntimeError):
-            self.run_flow()
+        second = self.run_flow()
+        self.assertNotEqual(first["record"], second["record"])
+        self.assertTrue(Path(first["record"]).is_dir())
+        self.assertTrue(Path(second["record"]).is_dir())
+        self.assertEqual(self.generator.call_count, 2)
+
+    def test_matching_legacy_record_is_resumed(self):
+        first = self.run_flow()
+        current = Path(first["record"])
+        legacy = self.root / "outputs" / (
+            "workflow_" + workflow.digest(str(self.request.resolve()).encode("utf-8"))
+        )
+        current.rename(legacy)
+
+        second = self.run_flow()
+
+        self.assertEqual(Path(second["record"]), legacy)
+        self.assertEqual(self.generator.call_count, 1)
 
     def test_changed_design_blocks_resume(self):
         first = self.run_flow()
