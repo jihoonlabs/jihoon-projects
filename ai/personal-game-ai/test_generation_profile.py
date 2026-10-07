@@ -158,6 +158,8 @@ class GenerationProfileTests(unittest.TestCase):
         self.assertIn("재시작", prompt)
         self.assertIn("sys.modules['thumby']", prompt)
         self.assertIn("None이 아닌", prompt)
+        self.assertIn("그 import보다 앞에", prompt)
+        self.assertIn("fake 주입 코드를 삽입", prompt)
         self.assertNotIn("unittest.mock으로 대체", prompt)
         self.assertIn("functions에 없는 새 production", prompt)
         self.assertIn("무한 진입 함수를 테스트에서 직접 호출하지", prompt)
