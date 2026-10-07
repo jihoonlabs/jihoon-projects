@@ -50,6 +50,7 @@
 - 개선 후보: 실제 실패 사례가 확인되면 import 부작용·Color 모듈 혼입에 필요한 최소 gate를 보강한다.
 - 미구현: 생성 게임을 실제 Thumby `/Games/<GameName>/`로 전송하거나 웹 에뮬레이터를 자동 실행하는 장치 배포 연결.
 - 기존 전체 회귀 216개는 이전 Epic의 집 검증 결과다. 현재 Child 전체 회귀를 재검증한 결과가 아니다.
+- 최신 프로필/엔트리 계약 보강 후 단위·전체 테스트는 원격 GitHub 연결에서 실행하지 못했으므로 미검증이다.
 - 일반 Thumby 공식 API: https://thumby.us/API/Get-Started/
 - 허용된 첫 게임 API: buttonL/buttonR.pressed, display.fill/drawFilledRectangle/drawText/update/setFPS.
 
