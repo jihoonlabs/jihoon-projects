@@ -77,7 +77,7 @@
 
 ## 2026-10-07 집 체크 메모
 
-- 기능 변경 마지막 commit: `7abbc2c7e8c17993b17533a1baeb3ce8a6f5959f`.
+- 기능 변경 마지막 commit: `f5289673bc1665e6a272d4009bd6a72de7ab9930`.
 - main은 원격 작업에서 수정하지 않았다. Child의 AGENTS.md는 main의 승인된 v2.1과 동일하다.
 - 오늘 원격 보강:
   - 실제 TinyCircuits 런처의 게임 import 방식에 맞춰 CPython import-safe + MicroPython import-start 계약으로 교정.
@@ -91,6 +91,7 @@
   - Thumby fixed test가 승인 설계 `functions` 밖의 새 production API를 발명하지 않도록 prompt를 보강.
   - 파일별 구현 prompt를 분리해 순수 rules에는 장치 지침을 넣지 않고, 폴더명 엔트리에는 실제 `/Games/ThumbyDodge` 경로와 런처 진입 계약을 전달.
   - 기존 `execute_plan`이 선행 file task의 `tests_passed` 상태와 artifact를 재검증한 뒤 실제 검증 코드를 후속 task에 전달하는 것을 확인. 중복 dependency 전달은 추가하지 않음.
+  - 4000자 dependent-request 안전 제한은 기존 Epic 계약대로 유지. 대신 각 구현 task에는 전체 요구사항을 반복하지 않고 해당 파일의 `checks`가 참조하는 R번호 요구사항만 전달해 요청 예산을 절약.
   - 저장소에는 현재 GitHub Actions workflow/check가 없어 원격 전체 회귀 실행 경로가 없음. 이 Child에서 새 CI는 만들지 않음.
   - 요청 내용/작업 문맥이 바뀌면 과거 승인 기록을 덮지 않고 새 workflow 기록에서 다시 시작. 동일 문맥의 기존 기록은 재개.
   - Thumby MicroPython 대상이라는 지침을 설계/구현 prompt에 추가하되, 추측성 표준 라이브러리 allowlist는 만들지 않음.
