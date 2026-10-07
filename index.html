@@ -425,7 +425,7 @@
 
       card.innerHTML = `
         <div class="custom-card-title">
-          <span>⚙ カスタム抽出グラフ ${customCharts.findIndex(item => item.id === id) + 1}</span>
+          <span>⚙ カスタム抽出グラフ ${customCharts.length - customCharts.findIndex(item => item.id === id)}</span>
           <button type="button" class="btn-small" onclick="removeCustomChart('${id}')">削除</button>
         </div>
         <div class="grid-2col">
