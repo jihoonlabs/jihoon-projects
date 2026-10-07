@@ -43,15 +43,41 @@ class StoreTest extends TestCase
             ->assertJsonPath('data.title', 'テストチケット')
             ->assertJsonPath('data.status', 'TODO')
             ->assertJsonPath('data.priority', 'MEDIUM')
-            ->assertJsonPath('data.issue_key', 'TICK-1');
+            ->assertJsonPath('data.issue_key', $this->project->project_key.'-01');
 
         $this->assertDatabaseHas('tickets', [
             'id' => 1,
-            'issue_key' => 'TICK-1',
+            'issue_key' => $this->project->project_key.'-01',
             'title' => 'テストチケット',
             'status' => 'TODO',
             'priority' => 'MEDIUM',
         ]);
+    }
+
+
+    public function test_ticket_numbers_increment_per_project(): void
+    {
+        $first = $this->postJson('/api/tickets', [
+            'project_id' => $this->project->id,
+            'title' => 'First',
+        ])->assertCreated();
+
+        $second = $this->postJson('/api/tickets', [
+            'project_id' => $this->project->id,
+            'title' => 'Second',
+        ])->assertCreated();
+
+        $otherProject = Project::factory()->create();
+        $this->addProjectMember($otherProject, $this->project->members()->first(), permission: 'write');
+
+        $other = $this->postJson('/api/tickets', [
+            'project_id' => $otherProject->id,
+            'title' => 'Other project',
+        ])->assertCreated();
+
+        $this->assertSame($this->project->project_key.'-01', $first->json('data.issue_key'));
+        $this->assertSame($this->project->project_key.'-02', $second->json('data.issue_key'));
+        $this->assertSame($otherProject->project_key.'-01', $other->json('data.issue_key'));
     }
 
     public function test_タイトルは必須(): void
