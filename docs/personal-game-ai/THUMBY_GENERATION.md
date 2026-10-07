@@ -75,38 +75,37 @@
 5. 같은 요청을 재실행해 구현과 Docker 검사를 완료하고 실제 Thumby에서 플레이한다.
 6. 플레이 의견은 기존 게임 수정 흐름의 다음 Child 입력으로 넘긴다.
 
-## 2026-10-07 집 체크 메모
+## 다음 작업자 handoff
 
-- 기능 변경 마지막 commit: `059083fa9f611fd5e3ff2d4a5d50b22816334b70`.
-- 이 메모 갱신 전 Child HEAD: `5268d343bad37f3def54412a4f11a1114b90b46a`.
-- main은 원격 작업에서 수정하지 않았다. Child의 AGENTS.md는 main의 승인된 v2.1과 동일하다.
-- Git history는 현재 Child가 main 대비 120 ahead / 23 behind로 diverged지만, main 쪽 차이는 AGENTS/docs/agent 문서뿐이고 Personal Game AI 코드는 건드리지 않았다. AGENTS 내용은 현재 동일하므로 로컬 검증 전 merge/rebase하지 않는다.
-- 오늘 원격 보강:
-  - 실제 TinyCircuits 런처의 게임 import 방식에 맞춰 CPython import-safe + MicroPython import-start 계약으로 교정.
-  - 폴더명과 같은 엔트리 파일 및 MicroPython runtime guard를 생성 gate에서 검사.
-  - Thumby 엔트리 고정 테스트가 `import sys` → 유효한 fake `thumby` 등록 → 엔트리 import 순서를 지키도록 검사. `None` fake도 거부.
-  - 작은 일반 Thumby 게임은 폴더명 엔트리가 기기 어댑터 역할을 함께 맡고, 다른 생성 모듈은 `thumby`를 import하지 않는 2층 구조로 고정. 엔트리는 최소 한 순수 규칙 모듈에 의존해야 함.
-  - 공식 Thumby의 sibling 모듈 예를 반영해 엔트리 구현 prompt는 MicroPython에서 보조 모듈 import 전 `/Games/<게임폴더명>`을 `sys.path`에 추가하도록 안내. 실기 확인 전에는 hard gate로 승격하지 않음.
-  - 엔트리 fixed test는 실제 무한 진입 함수를 직접 호출하지 않고 import 안전성·유한 helper를 검사하도록 안내.
-  - MicroPython runtime guard 안의 실제 직접 진입 함수 호출만 시작으로 인정해, 호출되지 않는 중첩 함수 속 가짜 `run()` 패턴을 거부.
-  - 문맥별 workflow 기록 분리에서도 기존 legacy 기록 폴더 symlink를 읽기 전에 거부하도록 기존 신뢰 경계를 유지.
-  - Thumby fixed test가 승인 설계 `functions` 밖의 새 production API를 발명하지 않도록 prompt를 보강.
-  - 파일별 구현 prompt를 분리해 순수 rules에는 장치 지침을 넣지 않고, 폴더명 엔트리에는 실제 `/Games/ThumbyDodge` 경로와 런처 진입 계약을 전달.
-  - 기존 `execute_plan`이 선행 file task의 `tests_passed` 상태와 artifact를 재검증한 뒤 실제 검증 코드를 후속 task에 전달하는 것을 확인. 중복 dependency 전달은 추가하지 않음.
-  - 4000자 dependent-request 안전 제한은 기존 Epic 계약대로 유지. 대신 각 구현 task에는 전체 요구사항을 반복하지 않고 해당 파일의 `checks`가 참조하는 R번호 요구사항만 전달해 요청 예산을 절약.
-  - 저장소에는 현재 GitHub Actions workflow/check가 없어 원격 전체 회귀 실행 경로가 없음. 이 Child에서 새 CI는 만들지 않음.
-  - 요청 내용/작업 문맥이 바뀌면 과거 승인 기록을 덮지 않고 새 workflow 기록에서 다시 시작. 동일 문맥의 기존 기록은 재개.
-  - Thumby MicroPython 대상이라는 지침을 설계/구현 prompt에 추가하되, 추측성 표준 라이브러리 allowlist는 만들지 않음.
-- 원격에서 실행하지 못한 것: 최신 단위 테스트, 전체 unittest, Docker, Ollama, 실제 Thumby.
-- 집에서 아래 순서로 확인:
+- 현재 작업은 이 Child에서 계속한다. main 통합·merge/rebase·브랜치 삭제는 아직 하지 않는다.
+- main과 Git history는 diverged 상태지만 main 쪽 차이는 AGENTS/docs/agent 문서뿐이며 Personal Game AI 코드는 충돌하지 않는다. Child의 AGENTS 내용은 현재 main v2.1과 동일하다.
+- 최근 동작 변경 기준 commit: `059083fa9f611fd5e3ff2d4a5d50b22816334b70`. 이후 commit은 테스트 fixture·작업 MD 정리다.
+- 현재 생성 계약:
+  - `ThumbyDodge.py`가 폴더명 엔트리이자 기기 어댑터다.
+  - 최소 한 순수 규칙 모듈을 별도로 두고, 그 모듈은 `thumby`를 import하지 않는다.
+  - 엔트리는 CPython import-safe이며 MicroPython runtime guard에서 진입 함수를 직접 호출한다.
+  - 엔트리 구현 prompt에는 실제 `/Games/ThumbyDodge` sibling 경로를 전달한다.
+  - `execute_plan`이 통과한 선행 task의 artifact를 재검증하고 실제 검증 코드를 후속 task에 전달한다.
+  - dependent request 4000자 제한은 유지하며, 각 구현 task에는 자기 checks가 담당하는 requirement만 전달한다.
+  - 요청/작업 문맥이 바뀌면 과거 승인 기록을 재사용하지 않고 새 workflow 기록을 만든다.
+- 원격 확인 완료:
+  - 공식 TinyCircuits 런처가 `/Games/<폴더>/<폴더>.py`를 import하는 구조와 현재 엔트리 계약이 일치한다.
+  - 기존 GitHub Actions/check 실행 경로는 없다. 이 Child에서 CI를 새로 만들지 않는다.
+  - legacy workflow 기록 symlink는 state를 읽기 전에 거부하도록 기존 신뢰 경계를 유지한다.
+- 아직 미검증:
+  - 최신 단위 테스트와 전체 unittest.
+  - Docker 검사.
+  - 실제 Ollama 설계/테스트/구현 생성.
+  - 실제 Thumby 실행.
+- 다음 작업 순서:
   1. `git branch --show-current && git status --short && git rev-parse HEAD`
-  2. 원격 Child 최신 내용을 반영한 뒤 `cd ai/personal-game-ai`
+  2. 원격 Child 최신 상태를 반영하고 `cd ai/personal-game-ai`
   3. `python read_context.py`
-  4. `python -m unittest test_generation_profile test_test_plan test_workflow test_create_loop -v`
+  4. `python -m unittest test_generation_profile test_test_plan test_workflow test_create_loop test_implementation_link -v`
   5. `python -m unittest discover -p 'test_*.py'`
-  6. 모두 통과하면 `python workflow.py --request thumby_dodge_request.json`
-  7. 출력된 설계 후보와 SHA를 먼저 검토한다. 설계가 맞으면 해당 SHA로 승인하고, 이어 생성되는 고정 테스트도 내용 확인 후 SHA로 확정한다.
-  8. workflow가 고정 테스트 Git commit을 요구하면 테스트 내용을 마지막으로 확인한 뒤 commit하고 같은 요청을 재개한다.
-  9. 구현·Docker 검사 완료 후 `micropython/ThumbyDodge/` 전체와 테스트 결과를 확인하고 실제 Thumby에서 플레이한다.
-- 집 결과에서 필요한 정보: 실패한 첫 명령의 전체 오류 또는, 성공 시 workflow의 현재 stage·record·review_file/SHA. 이 정보부터 다음 수정으로 이어간다.
-- 첫 플레이 이후의 자연어 피드백 수정은 다음 책임 단위다. 기존 `edit_loop`/plan 엔진을 재사용할 수 있으므로 새 수정 엔진을 만들지 않고 “플레이 의견 → 수정 대상 선택 → 기존 수정/검사” 연결을 우선한다.
+  6. 통과하면 `python workflow.py --request thumby_dodge_request.json`
+  7. 설계 후보를 검토해 SHA로 승인하고, 고정 테스트도 검토 후 SHA로 확정한다.
+  8. workflow가 요구하는 고정 테스트 commit 후 같은 요청을 재개해 구현·Docker 검사를 끝낸다.
+  9. `micropython/ThumbyDodge/` 결과를 실제 Thumby에서 플레이한다.
+- 실패 시 다음 작업자는 **처음 실패한 명령의 전체 오류 + workflow stage/record/review SHA**부터 확인한다. 실제 실패가 없는 상태에서 새 gate나 추측성 호환 규칙을 추가하지 않는다.
+- 첫 플레이 이후 자연어 피드백 수정은 다음 책임 단위다. 새 수정 엔진을 만들기보다 기존 `edit_loop`/plan 엔진에 “플레이 의견 → 수정 대상 선택 → 수정/검사”를 연결한다.
