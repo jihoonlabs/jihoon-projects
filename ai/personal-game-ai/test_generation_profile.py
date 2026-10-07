@@ -115,6 +115,18 @@ class GenerationProfileTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 generation_profile.validate_code("game", code)
 
+    def test_thumby_code_rejects_unverified_submodule_import(self):
+        code = "import thumby.audio\n"
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_code("game", code)
+
+    def test_thumby_code_rejects_unverified_submodule_from_import(self):
+        code = "from thumby.audio import play\n"
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_code("game", code)
+
     def test_thumby_code_rejects_color_from_import(self):
         code = "from thumbyColor import display\n"
         with patch.object(generation_profile, "current_profile", return_value="thumby"):

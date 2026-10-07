@@ -76,7 +76,9 @@ def validate_code(area, code):
             for item in node.names:
                 if item.name == "thumby" and item.asname is not None:
                     raise ValueError("일반 Thumby는 import thumby 형태로 사용해야 합니다.")
-        elif node.module == "thumby":
+                if item.name.startswith("thumby."):
+                    raise ValueError("확인하지 않은 일반 Thumby 하위 모듈을 사용할 수 없습니다.")
+        elif node.module == "thumby" or (node.module or "").startswith("thumby."):
             raise ValueError("일반 Thumby는 import thumby 형태로 사용해야 합니다.")
 
     for node in ast.walk(tree):
