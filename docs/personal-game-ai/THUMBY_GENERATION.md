@@ -63,7 +63,7 @@
    - python read_context.py
    - python -m unittest test_generation_profile -v
    - python -m unittest discover -p 'test_*.py'
-3. `python workflow.py thumby_dodge_request.json`으로 설계 후보를 생성한다.
+3. `python workflow.py --request thumby_dodge_request.json`으로 설계 후보를 생성한다.
 4. 설계·테스트 후보를 검토하고 표시된 SHA-256으로 승인·확정한 뒤 고정 테스트를 commit한다.
 5. 같은 요청을 재실행해 구현과 Docker 검사를 완료하고 실제 Thumby에서 플레이한다.
 6. 플레이 의견은 기존 게임 수정 흐름의 다음 Child 입력으로 넘긴다.
