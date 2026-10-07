@@ -165,6 +165,20 @@ class GenerationProfileTests(unittest.TestCase):
         ):
             generation_profile.validate_code("game", code, "ThumbyDodge.py")
 
+    def test_thumby_entry_code_rejects_start_call_outside_guard(self):
+        code = (
+            "import sys\nimport thumby\n\ndef run():\n"
+            "    while True:\n        break\n\n"
+            "if sys.implementation.name == 'micropython':\n    run()\n"
+            "run()\n"
+        )
+        with patch.object(
+            generation_profile, "CONFIG_PATH",
+            self.config(edit_directory="micropython/ThumbyDodge"),
+        ):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_code("game", code, "ThumbyDodge.py")
+
     def test_non_entry_code_does_not_require_micropython_start_guard(self):
         code = "def step():\n    return 1\n"
         with patch.object(

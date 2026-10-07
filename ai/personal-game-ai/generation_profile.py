@@ -209,24 +209,40 @@ def _validate_entry_start(tree):
         and any(alias.name == "sys" and alias.asname is None for alias in node.names)
         for node in tree.body
     )
-    guarded_start = any(
-        isinstance(node, ast.If)
-        and _is_micropython_guard(node.test)
-        and any(
+    guards = [
+        node for node in tree.body
+        if isinstance(node, ast.If) and _is_micropython_guard(node.test)
+    ]
+    start_names = {
+        child.func.id
+        for node in guards
+        for statement in node.body
+        for child in ast.walk(statement)
+        if (
             isinstance(child, ast.Call)
             and isinstance(child.func, ast.Name)
             and child.func.id in defined
-            for statement in node.body
-            for child in ast.walk(statement)
         )
-        for node in tree.body
-    )
-    if not sys_import or not guarded_start:
+    }
+    if not sys_import or not start_names:
         raise ValueError(
             "일반 Thumby 엔트리는 import sys 후 "
             "sys.implementation.name == 'micropython' 조건에서 "
             "정의한 진입 함수를 호출해야 합니다."
         )
+
+    for node in tree.body:
+        if node in guards or isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        if any(
+            isinstance(child, ast.Call)
+            and isinstance(child.func, ast.Name)
+            and child.func.id in start_names
+            for child in ast.walk(node)
+        ):
+            raise ValueError(
+                "일반 Thumby 진입 함수는 MicroPython guard 밖 최상위에서 호출할 수 없습니다."
+            )
 
 
 def validate_code(area, code, filename=None):
