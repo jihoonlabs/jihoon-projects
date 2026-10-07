@@ -158,7 +158,7 @@ def test_prompt(area):
     return (
         "\n# 일반 Thumby 테스트 계약\n"
         "순수 게임 규칙은 실제 thumby 모듈 없이 검사하세요. "
-        "기기 어댑터 테스트가 thumby를 필요로 하면 import 전에 sys.modules에 "
+        "폴더명 엔트리의 기기 어댑터 테스트는 대상 모듈 import 전에 sys.modules에 "
         "가짜 thumby를 주입하거나 unittest.mock으로 대체해 CPython에서 검사 가능하게 하세요. "
         "좌우 이동 경계·장애물 충돌·점수·재시작 조건을 설계 checks에 따라 직접 assertion으로 확인하세요. "
         "CPython 테스트에서 어댑터를 import해도 게임 루프가 시작되지 않는 구조를 유지하세요. "
@@ -171,7 +171,7 @@ def implementation_prompt(area, filename):
     return (
         "\n# 일반 Thumby 구현 계약\n"
         "승인 설계의 역할 분리를 유지하세요. 규칙 모듈에는 thumby 의존성을 넣지 말고, "
-        "기기 어댑터에서만 공식 일반 Thumby API를 사용하세요. "
+        "폴더명 엔트리 파일만 기기 어댑터 역할로 공식 일반 Thumby API를 사용하세요. "
         "Thumby MicroPython에서 실행할 수 있도록 CPython 전용 모듈·기능을 사용하지 마세요. "
         "CPython import에서는 게임 루프를 시작하지 마세요. 엔트리 파일은 "
         "sys.implementation.name == 'micropython'일 때 진입 함수를 호출해 "
