@@ -181,7 +181,36 @@ class ImplementationLinkTests(unittest.TestCase):
 
     def test_non_profile_plan_keeps_full_requirements_context(self):
         self.envelope["request"]["requirements"]["R2"] = "화면에 상태를 표시한다"
+        self.envelope["design"]["files"].append({
+            "id": "002",
+            "filename": "screen.py",
+            "functions": [{
+                "name": "show",
+                "parameters": ["hp"],
+                "behavior": "현재 상태를 표시한다",
+            }],
+            "checks": [{
+                "requirement": "R2",
+                "case": "show(8)",
+                "expected": "상태를 표시한다",
+            }],
+            "depends_on": ["001"],
+        })
+        screen_code = (
+            "import unittest\n"
+            "from screen import show\n"
+            "class Tests(unittest.TestCase):\n"
+            "    def test_show(self):\n"
+            "        self.assertIsNone(show(8))\n"
+        )
+        self.candidate["files"].append({
+            "id": "002",
+            "filename": "test_screen.py",
+            "code": screen_code,
+            "covers": [{"check": 1, "method": "test_show"}],
+        })
         (self.directory / "test_health.py").write_text(self.code)
+        (self.directory / "test_screen.py").write_text(screen_code)
         with patch.object(link.edit_loop, "check_git_files"), patch.object(
             link.plan_tasks, "validate_plan",
             side_effect=lambda proposal, allowed, goal: proposal["tasks"],
