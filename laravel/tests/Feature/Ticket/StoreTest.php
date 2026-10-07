@@ -54,7 +54,6 @@ class StoreTest extends TestCase
         ]);
     }
 
-
     public function test_ticket_numbers_increment_per_project(): void
     {
         $first = $this->postJson('/api/tickets', [

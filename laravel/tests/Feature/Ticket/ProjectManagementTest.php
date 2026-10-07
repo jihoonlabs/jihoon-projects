@@ -62,7 +62,6 @@ class ProjectManagementTest extends TestCase
             ->assertJsonPath('data.name', $project->name);
     }
 
-
     public function test_project_key_does_not_change_when_project_is_renamed(): void
     {
         $admin = User::factory()->create();
