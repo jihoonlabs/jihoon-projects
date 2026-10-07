@@ -152,7 +152,7 @@ def test_prompt(area):
         "기기 어댑터 테스트가 thumby를 필요로 하면 import 전에 sys.modules에 "
         "가짜 thumby를 주입하거나 unittest.mock으로 대체해 CPython에서 검사 가능하게 하세요. "
         "좌우 이동 경계·장애물 충돌·점수·재시작 조건을 설계 checks에 따라 직접 assertion으로 확인하세요. "
-        "어댑터 import가 무한 루프를 시작하지 않는 구조를 유지하세요. "
+        "CPython 테스트에서 어댑터를 import해도 게임 루프가 시작되지 않는 구조를 유지하세요. "
     )
 
 
