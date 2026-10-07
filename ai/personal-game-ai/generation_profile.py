@@ -31,15 +31,26 @@ def design_prompt(area):
         "기기 어댑터만 import thumby를 사용하며 buttonL/buttonR 입력과 "
         "display.fill, drawFilledRectangle, drawText, update, setFPS를 필요한 범위에서 사용하세요. "
         "실기에서 실행할 엔트리 Python 파일은 게임 폴더와 정확히 같은 이름으로 설계하세요. "
-        "어댑터 import만으로 무한 게임 루프를 시작하지 말고 실제 진입 함수를 분리하세요. 엔트리 파일을 게임 스크립트로 실행하면 그 진입 함수가 호출되어 실제 게임이 시작되어야 합니다. "
+        "실제 진입 함수를 분리하고 CPython 테스트 import에서는 게임 루프를 시작하지 마세요. "
+        "일반 Thumby 런처는 엔트리 모듈을 import하므로 엔트리 파일은 "
+        "sys.implementation.name == 'micropython'일 때 진입 함수를 호출해 게임을 시작하세요. "
         "Thumby Color API와 추측한 API는 사용하지 마세요. "
     )
+
+
+def _entry_filename(directory=None):
+    if directory is None:
+        config = json.loads(Path(CONFIG_PATH).read_text(encoding="utf-8"))
+        directory = config.get("edit_directory")
+        if not isinstance(directory, str) or not directory.strip():
+            raise ValueError("일반 Thumby 게임 경로 설정이 필요합니다.")
+    return Path(directory).name + ".py"
 
 
 def validate_design(area, files, directory):
     if area != "game" or current_profile() != "thumby":
         return
-    entry = Path(directory).name + ".py"
+    entry = _entry_filename(directory)
     if not any(item.get("filename") == entry for item in files):
         raise ValueError("일반 Thumby 게임은 폴더명과 같은 엔트리 Python 파일이 필요합니다.")
 
@@ -79,12 +90,7 @@ def _sets_fake_thumby(node):
 def validate_tests(area, candidate, design, directory=None):
     if area != "game" or current_profile() != "thumby":
         return
-    if directory is None:
-        config = json.loads(Path(CONFIG_PATH).read_text(encoding="utf-8"))
-        directory = config.get("edit_directory")
-        if not isinstance(directory, str) or not directory.strip():
-            raise ValueError("일반 Thumby 게임 경로 설정이 필요합니다.")
-    entry = Path(directory).name + ".py"
+    entry = _entry_filename(directory)
     entry_source = next(
         (item for item in design["files"] if item.get("filename") == entry), None
     )
@@ -158,15 +164,77 @@ def implementation_prompt(area, filename):
         "승인 설계의 역할 분리를 유지하세요. 규칙 모듈에는 thumby 의존성을 넣지 말고, "
         "기기 어댑터에서만 공식 일반 Thumby API를 사용하세요. "
         "Thumby MicroPython에서 실행할 수 있도록 CPython 전용 모듈·기능을 사용하지 마세요. "
-        "import 시 게임 루프를 자동 실행하지 말고, 엔트리 파일을 게임 스크립트로 실행할 때는 실제 게임을 시작하세요. "
+        "CPython import에서는 게임 루프를 시작하지 마세요. 엔트리 파일은 "
+        "sys.implementation.name == 'micropython'일 때 진입 함수를 호출해 "
+        "Thumby 런처 import에서 실제 게임을 시작하세요. "
         f"현재 구현 대상은 {filename} 하나뿐입니다. "
     )
 
 
-def validate_code(area, code):
+def _is_micropython_guard(test):
+    if not isinstance(test, ast.Compare) or len(test.ops) != 1 or len(test.comparators) != 1:
+        return False
+    if not isinstance(test.ops[0], ast.Eq):
+        return False
+
+    def implementation_name(node):
+        return (
+            isinstance(node, ast.Attribute)
+            and node.attr == "name"
+            and isinstance(node.value, ast.Attribute)
+            and node.value.attr == "implementation"
+            and isinstance(node.value.value, ast.Name)
+            and node.value.value.id == "sys"
+        )
+
+    left, right = test.left, test.comparators[0]
+    return (
+        implementation_name(left)
+        and isinstance(right, ast.Constant)
+        and right.value == "micropython"
+    ) or (
+        implementation_name(right)
+        and isinstance(left, ast.Constant)
+        and left.value == "micropython"
+    )
+
+
+def _validate_entry_start(tree):
+    defined = {
+        node.name for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    sys_import = any(
+        isinstance(node, ast.Import)
+        and any(alias.name == "sys" and alias.asname is None for alias in node.names)
+        for node in tree.body
+    )
+    guarded_start = any(
+        isinstance(node, ast.If)
+        and _is_micropython_guard(node.test)
+        and any(
+            isinstance(child, ast.Call)
+            and isinstance(child.func, ast.Name)
+            and child.func.id in defined
+            for statement in node.body
+            for child in ast.walk(statement)
+        )
+        for node in tree.body
+    )
+    if not sys_import or not guarded_start:
+        raise ValueError(
+            "일반 Thumby 엔트리는 import sys 후 "
+            "sys.implementation.name == 'micropython' 조건에서 "
+            "정의한 진입 함수를 호출해야 합니다."
+        )
+
+
+def validate_code(area, code, filename=None):
     if area != "game" or current_profile() != "thumby":
         return
     tree = ast.parse(code)
+    if filename == _entry_filename():
+        _validate_entry_start(tree)
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             names = [item.name for item in node.names]

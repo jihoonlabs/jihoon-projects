@@ -7,9 +7,9 @@
     "Increase the score when the player successfully avoids an obstacle.",
     "After a collision, enter a game-over state and allow restart by pressing the left and right buttons together.",
     "Use only the verified monochrome Thumby APIs allowed by the thumby generation profile.",
-    "Do not start an infinite game loop when a module is imported.",
+    "Keep CPython test imports side-effect safe; the real Thumby launcher imports the entry module, so start the game loop only when running under MicroPython.",
     "Use ThumbyDodge.py as the playable device entry file so the main Python filename exactly matches the ThumbyDodge game folder name.",
-    "When ThumbyDodge.py is executed as the game script, start the playable game loop while keeping imports side-effect safe."
+    "When the Thumby MicroPython launcher imports ThumbyDodge.py, start the playable game through a MicroPython runtime guard while CPython imports remain safe."
   ],
   "area": "game"
 }

@@ -8,11 +8,14 @@ import generation_profile
 
 
 class GenerationProfileTests(unittest.TestCase):
-    def config(self, profile="thumby"):
+    def config(self, profile="thumby", edit_directory=None):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         path = Path(temporary.name) / "target.json"
-        path.write_text(json.dumps({"generation_profile": profile}), encoding="utf-8")
+        config = {"generation_profile": profile}
+        if edit_directory is not None:
+            config["edit_directory"] = edit_directory
+        path.write_text(json.dumps(config), encoding="utf-8")
         return path
 
     def test_thumby_game_design_separates_rules_and_adapter(self):
@@ -22,8 +25,8 @@ class GenerationProfileTests(unittest.TestCase):
         self.assertIn("MicroPython", prompt)
         self.assertIn("import thumby", prompt)
         self.assertIn("게임 폴더와 정확히 같은 이름", prompt)
-        self.assertIn("무한 게임 루프", prompt)
-        self.assertIn("실제 게임이 시작", prompt)
+        self.assertIn("CPython 테스트 import", prompt)
+        self.assertIn("sys.implementation.name", prompt)
         self.assertIn("Thumby Color", prompt)
 
     def test_thumby_design_requires_folder_named_entry(self):
@@ -135,10 +138,40 @@ class GenerationProfileTests(unittest.TestCase):
     def test_thumby_implementation_prompt_requires_script_start(self):
         with patch.object(generation_profile, "current_profile", return_value="thumby"):
             prompt = generation_profile.implementation_prompt("game", "ThumbyDodge.py")
-        self.assertIn("import 시 게임 루프를 자동 실행하지", prompt)
-        self.assertIn("게임 스크립트로 실행할 때는 실제 게임을 시작", prompt)
+        self.assertIn("CPython import", prompt)
+        self.assertIn("sys.implementation.name", prompt)
+        self.assertIn("Thumby 런처 import", prompt)
         self.assertIn("MicroPython", prompt)
 
+
+    def test_thumby_entry_code_requires_micropython_start_guard(self):
+        code = "import sys\nimport thumby\n\ndef run():\n    pass\n"
+        with patch.object(
+            generation_profile, "CONFIG_PATH",
+            self.config(edit_directory="micropython/ThumbyDodge"),
+        ):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_code("game", code, "ThumbyDodge.py")
+
+    def test_thumby_entry_code_accepts_micropython_start_guard(self):
+        code = (
+            "import sys\nimport thumby\n\ndef run():\n"
+            "    while True:\n        break\n\n"
+            "if sys.implementation.name == 'micropython':\n    run()\n"
+        )
+        with patch.object(
+            generation_profile, "CONFIG_PATH",
+            self.config(edit_directory="micropython/ThumbyDodge"),
+        ):
+            generation_profile.validate_code("game", code, "ThumbyDodge.py")
+
+    def test_non_entry_code_does_not_require_micropython_start_guard(self):
+        code = "def step():\n    return 1\n"
+        with patch.object(
+            generation_profile, "CONFIG_PATH",
+            self.config(edit_directory="micropython/ThumbyDodge"),
+        ):
+            generation_profile.validate_code("game", code, "rules.py")
 
     def test_thumby_code_rejects_unverified_api(self):
         code = "import thumby\n\ndef draw():\n    thumby.display.blit(None, 0, 0)\n"

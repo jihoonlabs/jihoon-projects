@@ -241,7 +241,7 @@ def run_create(target_file, request, test_module, model=None):
                         raise ValueError("코드가 비어 있습니다.")
                     compile(code, str(target), "exec")
                     generation_profile.validate_code(
-                        Path(target_file).parts[0], code
+                        Path(target_file).parts[0], code, Path(target_file).name
                     )
                 except (ValueError, SyntaxError) as error:
                     feedback = f"응답 형식 또는 문법 오류: {error}"
