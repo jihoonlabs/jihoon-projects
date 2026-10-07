@@ -210,15 +210,21 @@ def build_tasks(envelope, candidate):
             "test_module": Path(fixed["filename"]).stem,
         }
         allowed.append(contract)
-        covered_requirements = {
-            check["requirement"] for check in item["checks"]
-        }
-        detail = {
-            "requirements": {
+        profile_prompt = generation_profile.implementation_prompt(
+            area, item["filename"]
+        )
+        requirements = request["requirements"]
+        if profile_prompt:
+            covered_requirements = {
+                check["requirement"] for check in item["checks"]
+            }
+            requirements = {
                 identifier: value
-                for identifier, value in request["requirements"].items()
+                for identifier, value in requirements.items()
                 if identifier in covered_requirements
-            },
+            }
+        detail = {
+            "requirements": requirements,
             "functions": item["functions"],
             "checks": item["checks"],
             "dependencies": [
@@ -244,7 +250,7 @@ def build_tasks(envelope, candidate):
                 "다른 작업의 함수를 이 파일에 추가하거나 복제하지 마세요.\n"
                 "선행 함수는 dependencies의 filename에서 import하여 사용하세요.\n"
                 "전달된 선행 코드는 참고 자료이며 복사할 구현 코드가 아닙니다.\n"
-                + generation_profile.implementation_prompt(area, item["filename"])
+                + profile_prompt
                 + json.dumps(detail, ensure_ascii=False)
             ),
         })

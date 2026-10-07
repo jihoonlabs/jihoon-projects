@@ -134,7 +134,7 @@ class ImplementationLinkTests(unittest.TestCase):
         self.assertIn("최대 체력을 넘지 않게 회복한다", tasks[0]["prompt"])
         self.assertFalse((self.directory / "health.py").exists())
 
-    def test_plan_prompt_includes_only_requirements_checked_by_file(self):
+    def test_profile_plan_prompt_includes_only_requirements_checked_by_file(self):
         self.envelope["request"]["requirements"]["R2"] = "화면에 상태를 표시한다"
         self.envelope["design"]["files"].append({
             "id": "002",
@@ -169,12 +169,29 @@ class ImplementationLinkTests(unittest.TestCase):
         with patch.object(link.edit_loop, "check_git_files"), patch.object(
             link.plan_tasks, "validate_plan",
             side_effect=lambda proposal, allowed, goal: proposal["tasks"],
+        ), patch.object(
+            link.generation_profile, "implementation_prompt",
+            return_value="PROFILE IMPLEMENTATION",
         ):
             path = link.create_plan(self.path, "sha")
         tasks = json.loads(path.read_text())
         self.assertIn("최대 체력을 넘지 않는다", tasks[0]["prompt"])
         self.assertNotIn("화면에 상태를 표시한다", tasks[0]["prompt"])
         self.assertIn("화면에 상태를 표시한다", tasks[1]["prompt"])
+
+    def test_non_profile_plan_keeps_full_requirements_context(self):
+        self.envelope["request"]["requirements"]["R2"] = "화면에 상태를 표시한다"
+        (self.directory / "test_health.py").write_text(self.code)
+        with patch.object(link.edit_loop, "check_git_files"), patch.object(
+            link.plan_tasks, "validate_plan",
+            side_effect=lambda proposal, allowed, goal: proposal["tasks"],
+        ), patch.object(
+            link.generation_profile, "implementation_prompt", return_value="",
+        ):
+            path = link.create_plan(self.path, "sha")
+        prompt = json.loads(path.read_text())[0]["prompt"]
+        self.assertIn("최대 체력을 넘지 않는다", prompt)
+        self.assertIn("화면에 상태를 표시한다", prompt)
 
     def test_generation_profile_prompt_is_included_in_plan(self):
         (self.directory / "test_health.py").write_text(self.code)
