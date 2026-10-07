@@ -79,6 +79,7 @@
 
 - 기능 변경 마지막 commit: `f5289673bc1665e6a272d4009bd6a72de7ab9930`.
 - main은 원격 작업에서 수정하지 않았다. Child의 AGENTS.md는 main의 승인된 v2.1과 동일하다.
+- Git history는 현재 Child가 main 대비 120 ahead / 23 behind로 diverged지만, main 쪽 차이는 AGENTS/docs/agent 문서뿐이고 Personal Game AI 코드는 건드리지 않았다. AGENTS 내용은 현재 동일하므로 로컬 검증 전 merge/rebase하지 않는다.
 - 오늘 원격 보강:
   - 실제 TinyCircuits 런처의 게임 import 방식에 맞춰 CPython import-safe + MicroPython import-start 계약으로 교정.
   - 폴더명과 같은 엔트리 파일 및 MicroPython runtime guard를 생성 gate에서 검사.
