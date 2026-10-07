@@ -134,6 +134,8 @@ def validate_design(proposal, requirements, area):
                     raise ValueError("검사 입력과 기대 결과가 필요합니다.")
             covered.add(requirement)
 
+    generation_profile.validate_design(area, files, directory)
+
     if covered != required_ids:
         missing = ", ".join(sorted(required_ids - covered))
         raise ValueError(

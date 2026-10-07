@@ -24,6 +24,21 @@ class GenerationProfileTests(unittest.TestCase):
         self.assertIn("무한 게임 루프", prompt)
         self.assertIn("Thumby Color", prompt)
 
+    def test_thumby_design_requires_folder_named_entry(self):
+        files = [{"filename": "rules.py"}]
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_design(
+                    "game", files, Path("/tmp/ThumbyDodge")
+                )
+
+    def test_thumby_design_accepts_folder_named_entry(self):
+        files = [{"filename": "ThumbyDodge.py"}, {"filename": "rules.py"}]
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            generation_profile.validate_design(
+                "game", files, Path("/tmp/ThumbyDodge")
+            )
+
     def test_thumby_game_tests_mock_device_dependency(self):
         with patch.object(generation_profile, "CONFIG_PATH", self.config()):
             prompt = generation_profile.test_prompt("game")

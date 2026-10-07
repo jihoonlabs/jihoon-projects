@@ -35,6 +35,14 @@ def design_prompt(area):
     )
 
 
+def validate_design(area, files, directory):
+    if area != "game" or current_profile() != "thumby":
+        return
+    entry = Path(directory).name + ".py"
+    if not any(item.get("filename") == entry for item in files):
+        raise ValueError("일반 Thumby 게임은 폴더명과 같은 엔트리 Python 파일이 필요합니다.")
+
+
 def test_prompt(area):
     if area != "game" or current_profile() != "thumby":
         return ""
