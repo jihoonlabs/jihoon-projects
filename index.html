@@ -104,6 +104,11 @@
       padding: 18px;
       margin-top: 12px;
     }
+    #custom-charts-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
     .custom-card-title {
       font-size: 0.92rem;
       font-weight: bold;
@@ -112,6 +117,13 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 10px;
+    }
+    .custom-card-title .btn-small {
+      flex: 0 0 auto;
+      width: auto;
+      padding: 4px 8px;
+      font-size: 0.72rem;
     }
     .grid-2col {
       display: grid;
@@ -364,15 +376,28 @@
       }
       const id = `custom-${++customChartSequence}`;
       customCharts.push({ id, column: headers[0], title: `${headers[0]} (抽出分布)`, sortMode: 'click', selectedKeys: [], clickOrder: [] });
-      renderCustomChart(id, true);
+      initializeCustomSelection(id);
+      renderAllCustomCharts();
       syncOutputOrder();
     }
 
     function removeCustomChart(id) {
       customCharts = customCharts.filter(chart => chart.id !== id);
-      document.getElementById(id)?.remove();
       outputOrder = outputOrder.filter(item => item.id !== id);
+
+      if (!customCharts.length) {
+        customChartSequence = 0;
+        outputOrder = [];
+      }
+
+      renderAllCustomCharts();
       syncOutputOrder();
+    }
+
+    function renderAllCustomCharts() {
+      const container = document.getElementById('custom-charts-container');
+      container.innerHTML = '';
+      customCharts.forEach(chart => renderCustomChart(chart.id));
     }
 
     function renderCustomChart(id, initializeSelection = false) {
@@ -389,7 +414,7 @@
 
       card.innerHTML = `
         <div class="custom-card-title">
-          <span>⚙ カスタム抽出グラフ ${id.split('-')[1]}</span>
+          <span>⚙ カスタム抽出グラフ ${customCharts.findIndex(item => item.id === id) + 1}</span>
           <button type="button" class="btn-small" onclick="removeCustomChart('${id}')">削除</button>
         </div>
         <div class="grid-2col">
