@@ -46,6 +46,7 @@
 - 첫 생성 경로와 요청 계약을 `micropython/ThumbyDodge/`로 고정했고, 실기 런처 규칙에 맞춰 `ThumbyDodge.py`를 필수 엔트리로 요구한다.
 - game + thumby 설계 validator가 게임 폴더와 같은 이름의 엔트리 Python 파일을 구조적으로 강제한다.
 - 미검증 Thumby 하위 모듈 import(`import thumby.*`, `from thumby.* import ...`)를 gate에서 차단하고 회귀 테스트 2개를 추가했다.
+- 엔트리 고정 테스트는 `import sys` → `sys.modules` fake `thumby` 등록 → 엔트리 모듈 import 순서를 profile gate에서 강제해 CPython/Docker의 기기 모듈 부재를 후보 단계에서 차단한다.
 - 확인 불가: 추가 테스트를 포함한 현재 Child 전체 회귀, 집의 현재 브랜치·미커밋 상태·현재 outputs 및 실제 Ollama/Docker/기기 결과.
 - 개선 후보: 실제 실패 사례가 확인되면 import 부작용·Color 모듈 혼입에 필요한 최소 gate를 보강한다.
 - 미구현: 생성 게임을 실제 Thumby `/Games/<GameName>/`로 전송하거나 웹 에뮬레이터를 자동 실행하는 장치 배포 연결.
