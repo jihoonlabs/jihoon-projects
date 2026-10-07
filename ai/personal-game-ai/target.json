@@ -4,5 +4,6 @@
   "branch_document": "docs/personal-game-ai/THUMBY_GENERATION.md",
   "code_files": [],
   "max_context_chars": 12000,
-  "generation_profile": "thumby"
+  "generation_profile": "thumby",
+  "edit_directory": "micropython/ThumbyDodge"
 }

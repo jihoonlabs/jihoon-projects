@@ -1,0 +1,13 @@
+{
+  "goal": "Create a small playable monochrome Thumby dodge game that validates the personal game AI workflow from design through fixed tests and implementation.",
+  "requirements": [
+    "Keep game rules independent from the thumby module so they can be tested with CPython.",
+    "Move the player left and right within the 72x40 display bounds.",
+    "Move an obstacle toward the player and detect collision.",
+    "Increase the score when the player successfully avoids an obstacle.",
+    "After a collision, enter a game-over state and allow restart by pressing the left and right buttons together.",
+    "Use only the verified monochrome Thumby APIs allowed by the thumby generation profile.",
+    "Do not start an infinite game loop when a module is imported."
+  ],
+  "area": "game"
+}
