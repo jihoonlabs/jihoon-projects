@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Tests\Feature\Ticket\Concerns\UsesGeneralProject;
 use Tests\TestCase;
 
@@ -41,6 +42,39 @@ class ProjectManagementTest extends TestCase
         $this->assertMatchesRegularExpression('/^[A-Z]{3}$/', $created->project_key);
 
         $this->getJson('/api/projects')->assertJsonCount(4, 'data');
+    }
+
+    public function test_project_creation_retries_when_another_insert_claims_the_generated_key(): void
+    {
+        $admin = User::factory()->create();
+        $admin->forceFill(['role' => 'admin'])->save();
+        $existing = Project::factory()->create();
+        $existingKey = $existing->project_key;
+        $collisions = 0;
+        $event = 'eloquent.creating: '.Project::class;
+
+        // Force a collision after the model checks for existing keys, simulating a race.
+        Event::listen($event, function (Project $candidate) use (&$collisions, $existingKey) {
+            if ($collisions++ === 0) {
+                $candidate->project_key = $existingKey;
+            }
+        });
+
+        try {
+            $this->actingAs($admin)
+                ->postJson('/api/projects', ['name' => 'Retried Project'])
+                ->assertCreated()
+                ->assertJsonPath('data.name', 'Retried Project');
+
+            $created = Project::query()->where('name', 'Retried Project')->firstOrFail();
+            $this->assertNotSame($existingKey, $created->project_key);
+            $this->assertMatchesRegularExpression('/^[A-Z]{3}$/', $created->project_key);
+            $this->assertSame(2, $collisions);
+            $this->assertSame($existingKey, $existing->fresh()->project_key);
+        } finally {
+            Event::forget($event);
+            Project::clearBootedModels();
+        }
     }
 
     public function test_project_creation_and_changes_are_admin_only(): void
