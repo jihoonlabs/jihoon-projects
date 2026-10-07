@@ -185,7 +185,7 @@
   <div class="container">
     <h2>
       <span>📊 営業用 人材分布 レポート作成ツール</span>
-      <span class="tag-preview">v58 Selected Items 100% Recalculation</span>
+      <span class="tag-preview">v64 Click-Order Custom Sorting</span>
     </h2>
 
     <div class="section-title">1. Excel / CSV ファイル選択 または 貼り付け</div>
@@ -229,14 +229,15 @@
 
       <div class="form-group">
         <label>並び順 (時計回りの配置順)</label>
-        <select id="custom-sort-mode" onchange="renderCustomKeywords()">
-          <option value="count" selected>人数/割合順 (多い順)</option>
-          <option value="name">項目名順 (昇順)</option>
+        <select id="custom-sort-mode" onchange="updateCustomPercentages()">
+          <option value="click" selected>👈 選択した順番 (クリックした順に12時から配置)</option>
+          <option value="count">人数/割合順 (多い順)</option>
+          <option value="name">項目名順 (五十音・アルファベット順)</option>
         </select>
       </div>
 
       <div class="form-group">
-        <label>抽出したいデータ項目を選択 (チェックを入れた項目のみで100%として再計算されます)</label>
+        <label>抽出したいデータ項目を選択 (チェックを入れた順番で12時方向から 시계방향으로 배치됩니다)</label>
         <div id="custom-keywords-list" class="checkbox-container" style="max-height: 160px; background: #ffffff;">
           <!-- JSで動的生成 -->
         </div>
@@ -256,7 +257,7 @@
       <div>
         <div class="section-title">4. グラフデザイン形式を選択</div>
         <select id="chart-type" onchange="updateScaleRanges()">
-          <option value="pie" selected>⭕ ビビッドカラー・円サイズ極大化ドーナツ</option>
+          <option value="pie" selected>⭕ 単色グラデーション・円サイズ極大化ドーナツ</option>
           <option value="bar">📊 スリム＆モダン横棒グラフ (おすすめ)</option>
         </select>
       </div>
@@ -266,7 +267,7 @@
     <div class="custom-card">
       <label class="default-toggle">
         <input type="checkbox" id="use-default-style" checked onchange="toggleCustomPanel()">
-        <span>✨ 標準ビビッドカラーを使用 (チェック解除で手動カラー調整)</span>
+        <span>✨ 標準ブルーグラデーションを使用 (チェック解除で好きなテーマ色を選択)</span>
       </label>
 
       <div id="custom-panel" class="grid-2col" style="display:none; margin-top:14px; padding-top:14px; border-top:1px dashed #cbd5e1;">
@@ -282,11 +283,11 @@
 
         <div>
           <label style="font-size: 0.82rem; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
-            🎨 メインテーマカラー選択
+            🎨 メインテーマカラー選択 (最も濃い基準色)
           </label>
           <div class="color-picker-wrapper">
-            <input type="color" id="custom-color-picker" value="#2563eb" oninput="document.getElementById('color-code-display').innerText = this.value.toUpperCase()">
-            <span id="color-code-display" style="font-size: 0.85rem; font-weight: 600; color: #64748b;">#2563EB</span>
+            <input type="color" id="custom-color-picker" value="#0F3854" oninput="document.getElementById('color-code-display').innerText = this.value.toUpperCase()">
+            <span id="color-code-display" style="font-size: 0.85rem; font-weight: 600; color: #64748b;">#0F3854</span>
           </div>
         </div>
       </div>
@@ -303,17 +304,8 @@
 
   <script>
     let rawData = [], headers = [], globalTotalMembers = 0;
-
-    const COLOR_PALETTE = [
-      ['#3B82F6', '#60A5FA'], // Blue
-      ['#8B5CF6', '#A78BFA'], // Purple
-      ['#EC4899', '#F472B6'], // Pink
-      ['#10B981', '#34D399'], // Emerald
-      ['#F59E0B', '#FBBF24'], // Amber
-      ['#06B6D4', '#22D3EE'], // Cyan
-      ['#6366F1', '#818CF8'], // Indigo
-      ['#F97316', '#FB923C']  // Orange
-    ];
+    // ★ 사용자가 클릭한 순서를 담아두는 순서 기억 배열
+    let customClickOrder = [];
 
     const valClean = v => (v === undefined || v === null) ? "" : String(v).trim().replace(/^(undefined|null)$/, "");
 
@@ -378,7 +370,19 @@
       renderCustomKeywords();
     }
 
-    // チェック状態が変わるたびにリアルタイムでパーセンテージ(100%基準)を再計算して更新
+    // ★ 클릭 이벤트 발생 시 클릭 순서를 제어하는 핸들러
+    function handleCustomKeywordClick(chk) {
+      const val = chk.value;
+      if (chk.checked) {
+        if (!customClickOrder.includes(val)) {
+          customClickOrder.push(val); // 클릭한 순서대로 배열 뒤에 추가
+        }
+      } else {
+        customClickOrder = customClickOrder.filter(item => item !== val); // 해제 시 삭제
+      }
+      updateCustomPercentages();
+    }
+
     function updateCustomPercentages() {
       const col = document.getElementById('custom-target-col').value;
       if (!col || !rawData.length) return;
@@ -389,10 +393,11 @@
       let counts = {};
       rawData.forEach(row => {
         let val = formatValueLabel(row[col]);
-        counts[val] = (counts[val] || 0) + 1;
+        if (val !== "未入力") {
+          counts[val] = (counts[val] || 0) + 1;
+        }
       });
 
-      // チェックされた項目のみの合計人数（母体）
       let selectedTotal = selectedKeys.reduce((sum, key) => sum + (counts[key] || 0), 0);
 
       document.querySelectorAll('.custom-kw-item').forEach(item => {
@@ -414,7 +419,6 @@
 
     function renderCustomKeywords() {
       const col = document.getElementById('custom-target-col').value;
-      const sortMode = document.getElementById('custom-sort-mode').value;
       const listContainer = document.getElementById('custom-keywords-list');
       
       if (!col || !rawData.length) {
@@ -425,25 +429,19 @@
       let counts = {};
       rawData.forEach(row => {
         let val = formatValueLabel(row[col]);
-        counts[val] = (counts[val] || 0) + 1;
+        if (val && val !== "未入力") {
+          counts[val] = (counts[val] || 0) + 1;
+        }
       });
 
       let keys = Object.keys(counts);
 
-      keys.sort((a, b) => {
-        if (a === "未入力") return 1;
-        if (b === "未入力") return -1;
-
-        if (sortMode === 'name') {
-          return a.localeCompare(b, 'ja', { numeric: true });
-        }
-        return counts[b] - counts[a];
-      });
+      // 기본 초기화 시 등장 순서대로 클릭 순서 배열 채움
+      customClickOrder = [...keys];
 
       listContainer.innerHTML = keys.map((key) => {
-        let isChecked = key !== "未入力";
         return `<label class="checkbox-item custom-kw-item">
-                  <input type="checkbox" class="custom-kw-chk" value="${key}" ${isChecked ? 'checked' : ''} onchange="updateCustomPercentages()">
+                  <input type="checkbox" class="custom-kw-chk" value="${key}" checked onchange="handleCustomKeywordClick(this)">
                   <span>${key}</span>
                   <span class="pct-badge" style="font-size:0.75rem; font-weight:bold;"></span>
                 </label>`;
@@ -454,8 +452,10 @@
     }
 
     function selectAllCustomItems(flag) {
-      document.querySelectorAll('.custom-kw-chk').forEach(chk => chk.checked = flag);
-      updateCustomPercentages();
+      document.querySelectorAll('.custom-kw-chk').forEach(chk => {
+        chk.checked = flag;
+        handleCustomKeywordClick(chk);
+      });
     }
 
     function toggleCustomExtractPanel() {
@@ -508,24 +508,31 @@
         return getCustomExtractedData();
       }
 
-      let counts = {}, total = globalTotalMembers || rawData.length;
+      let counts = {};
       rawData.forEach(row => {
         let cleanItem = formatValueLabel(row[targetCol]);
         if (cleanItem === "インフラ ") cleanItem = "インフラ";
-        counts[cleanItem] = (counts[cleanItem] || 0) + 1;
+        if (cleanItem && cleanItem !== "未入力") {
+          counts[cleanItem] = (counts[cleanItem] || 0) + 1;
+        }
       });
 
-      let sortedKeys = Object.keys(counts).sort((a, b) => (a === "未入力") ? 1 : (b === "未入力") ? -1 : counts[b] - counts[a]);
-      return { labels: sortedKeys, values: sortedKeys.map(k => counts[k]), total };
+      let sortedKeys = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+      let values = sortedKeys.map(k => counts[k]);
+      let total = values.reduce((a, b) => a + b, 0);
+
+      return { labels: sortedKeys, values: values, total: total };
     }
 
-    // チェックされた項目のみの合計人数を母体(100%)としてデータ抽出
+    // ★ 커스텀 추출 렌더링 시 클릭 순서(click), 비율순(count), 이름순(name)으로 완벽 전환
     function getCustomExtractedData() {
       const col = document.getElementById('custom-target-col').value;
-      const selectedChks = Array.from(document.querySelectorAll('.custom-kw-chk:checked')).map(cb => cb.value);
+      const sortMode = document.getElementById('custom-sort-mode').value;
+      
+      const checkedBoxes = Array.from(document.querySelectorAll('.custom-kw-chk:checked')).map(cb => cb.value);
 
       let counts = {};
-      selectedChks.forEach(kw => counts[kw] = 0);
+      checkedBoxes.forEach(kw => counts[kw] = 0);
 
       rawData.forEach(row => {
         let val = formatValueLabel(row[col]);
@@ -534,21 +541,48 @@
         }
       });
 
-      let labels = selectedChks;
+      let labels = [];
+
+      if (sortMode === 'click') {
+        // ★ 클릭한 순서(customClickOrder)를 최우선으로 배치
+        labels = customClickOrder.filter(item => checkedBoxes.includes(item));
+        // 혹시 유실된 항목이 있으면 뒤에 붙여줌
+        checkedBoxes.forEach(item => {
+          if (!labels.includes(item)) labels.push(item);
+        });
+      } else if (sortMode === 'count') {
+        // 비율(인원수) 순서
+        labels = [...checkedBoxes].sort((a, b) => counts[b] - counts[a]);
+      } else {
+        // 이름순/알파벳순
+        labels = [...checkedBoxes].sort((a, b) => a.localeCompare(b, 'ja', { numeric: true }));
+      }
+
       let values = labels.map(k => counts[k]);
-      
-      // チェックした項目の合計人数を母体（100%）に設定
       let total = values.reduce((a, b) => a + b, 0);
 
       return { labels, values, total };
     }
 
-    function adjustColorBrightness(hex, percent) {
-      let num = parseInt(hex.replace('#',''), 16), amt = Math.round(2.55 * percent);
-      let R = Math.min(255, Math.max(0, (num >> 16) + amt));
-      let G = Math.min(255, Math.max(0, (num >> 8 & 0x00FF) + amt));
-      let B = Math.min(255, Math.max(0, (num & 0x0000FF) + amt));
-      return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+    function generateMonochromePalette(baseHex, totalSteps) {
+      let num = parseInt(baseHex.replace('#',''), 16);
+      let r = (num >> 16) & 0xFF;
+      let g = (num >> 8) & 0xFF;
+      let b = num & 0xFF;
+
+      let palette = [];
+      let steps = Math.max(totalSteps, 1);
+
+      for (let i = 0; i < steps; i++) {
+        let factor = i / (steps > 1 ? steps - 0.2 : 1);
+        let nr = Math.round(r + (255 - r) * (factor * 0.75));
+        let ng = Math.round(g + (255 - g) * (factor * 0.75));
+        let nb = Math.round(b + (255 - b) * (factor * 0.75));
+
+        let hex = '#' + ((1 << 24) + (nr << 16) + (ng << 8) + nb).toString(16).slice(1).toUpperCase();
+        palette.push(hex);
+      }
+      return palette;
     }
 
     function renderCustomDonutCanvas(colName, labels, values, total, isDefault, itemsPerPage) {
@@ -562,34 +596,31 @@
         const outerRadius = isDefault ? defaultRadius : parseInt(document.getElementById('size-num').value, 10);
         const innerRadius = Math.round(outerRadius * 0.22);
         
-        let paletteGradients = isDefault ? COLOR_PALETTE : (() => {
-          let c = document.getElementById('custom-color-picker').value;
-          return [ [c, adjustColorBrightness(c, 20)], [adjustColorBrightness(c, -15), c], [adjustColorBrightness(c, 15), adjustColorBrightness(c, 35)] ];
-        })();
+        let baseColor = isDefault ? '#0F3854' : document.getElementById('custom-color-picker').value;
+        let palette = generateMonochromePalette(baseColor, labels.length);
 
-        let startAngle = -Math.PI / 3;
+        let startAngle = -Math.PI / 2; // 12시 정각(맨 위)에서부터 배치 시작
 
         labels.forEach((label, i) => {
           let sliceAngle = total > 0 ? (values[i] / total) * 2 * Math.PI : 0;
           let endAngle = startAngle + sliceAngle;
-          let colors = (label === "未入力" || label === "その他") ? ['#CBD5E1', '#E2E8F0'] : paletteGradients[i % paletteGradients.length];
-          let rad = startAngle + sliceAngle / 2;
-
-          let grad = ctx.createLinearGradient(
-            centerX + Math.cos(rad) * innerRadius, centerY + Math.sin(rad) * innerRadius,
-            centerX + Math.cos(rad) * outerRadius, centerY + Math.sin(rad) * outerRadius
-          );
-          grad.addColorStop(0, colors[0]); grad.addColorStop(1, colors[1]);
+          
+          let sliceColor = palette[i % palette.length];
 
           ctx.beginPath();
           ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
           ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true);
           ctx.closePath();
-          ctx.fillStyle = grad; ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4.0; ctx.stroke();
-          startAngle = endAngle;
+          ctx.fillStyle = sliceColor; 
+          ctx.fill(); 
+          ctx.strokeStyle = '#ffffff'; 
+          ctx.lineWidth = 3.0; 
+          ctx.stroke();
+          
+          startAngle = endAngle; // 시계 방향 순서대로 이동
         });
 
-        startAngle = -Math.PI / 3;
+        startAngle = -Math.PI / 2;
         let leftCallouts = [], rightCallouts = [];
 
         labels.forEach((label, i) => {
@@ -697,19 +728,22 @@
             let maxBarWidth = isDefault ? defaultBarWidth : (userLength / 100);
             let maxVal = Math.max(...values, 1);
 
+            let baseColor = isDefault ? '#0F3854' : document.getElementById('custom-color-picker').value;
+            let palette = generateMonochromePalette(baseColor, labels.length);
+
             labels.forEach((label, j) => {
               let count = values[j], pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0, currentY = startY + (j * rowGap);
-              let barColor = isDefault ? COLOR_PALETTE[j % COLOR_PALETTE.length][0].replace('#', '') : document.getElementById('custom-color-picker').value.replace('#', '');
+              let barColor = palette[j % palette.length].replace('#', '');
 
               slide.addText(label.length > 20 ? label.slice(0, 19) + '…' : label, {
                 x: colX, y: currentY - (rowGap * 0.42), w: colWidth, h: rowGap * 0.4,
-                fontSize: itemCount > 10 ? 8.5 : 9.5, bold: true, color: (label === "未入力" || label === "その他") ? '94A3B8' : '334155', fontFace: 'Meiryo'
+                fontSize: itemCount > 10 ? 8.5 : 9.5, bold: true, color: '334155', fontFace: 'Meiryo'
               });
               slide.addShape(pptx.ShapeType.rect, { x: colX, y: currentY, w: maxBarWidth, h: barHeight, fill: { color: 'F1F5F9' } });
               slide.addShape(pptx.ShapeType.rect, { x: colX, y: currentY, w: Math.max((count / maxVal) * maxBarWidth, 0.05), h: barHeight, fill: { color: barColor } });
               slide.addText(`${count}名 (${pct}%)`, {
                 x: colX + maxBarWidth + 0.08, y: currentY - 0.03, w: 1.5, h: barHeight + 0.06,
-                fontSize: itemCount > 10 ? 8.5 : 9.5, bold: true, color: (label === "未入力" || label === "その他") ? '94A3B8' : '0F172A', fontFace: 'Meiryo', align: 'left', valign: 'middle'
+                fontSize: itemCount > 10 ? 8.5 : 9.5, bold: true, color: '0F172A', fontFace: 'Meiryo', align: 'left', valign: 'middle'
               });
             });
           }
