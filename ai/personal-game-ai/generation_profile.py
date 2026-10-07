@@ -43,6 +43,81 @@ def validate_design(area, files, directory):
         raise ValueError("일반 Thumby 게임은 폴더명과 같은 엔트리 Python 파일이 필요합니다.")
 
 
+def _sets_fake_thumby(node):
+    if isinstance(node, ast.Assign):
+        targets = node.targets
+    else:
+        targets = []
+    for target in targets:
+        if (
+            isinstance(target, ast.Subscript)
+            and isinstance(target.value, ast.Attribute)
+            and isinstance(target.value.value, ast.Name)
+            and target.value.value.id == "sys"
+            and target.value.attr == "modules"
+            and isinstance(target.slice, ast.Constant)
+            and target.slice.value == "thumby"
+        ):
+            return True
+    if not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call):
+        return False
+    call = node.value
+    return (
+        isinstance(call.func, ast.Attribute)
+        and call.func.attr == "setdefault"
+        and isinstance(call.func.value, ast.Attribute)
+        and isinstance(call.func.value.value, ast.Name)
+        and call.func.value.value.id == "sys"
+        and call.func.value.attr == "modules"
+        and bool(call.args)
+        and isinstance(call.args[0], ast.Constant)
+        and call.args[0].value == "thumby"
+    )
+
+
+def validate_tests(area, candidate, design, directory):
+    if area != "game" or current_profile() != "thumby":
+        return
+    entry = Path(directory).name + ".py"
+    entry_source = next(
+        (item for item in design["files"] if item.get("filename") == entry), None
+    )
+    if entry_source is None:
+        raise ValueError("일반 Thumby 엔트리 설계가 없습니다.")
+    entry_test = next(
+        (item for item in candidate["files"] if item.get("id") == entry_source["id"]),
+        None,
+    )
+    if entry_test is None:
+        raise ValueError("일반 Thumby 엔트리 테스트가 없습니다.")
+
+    module = Path(entry).stem
+    tree = ast.parse(entry_test["code"])
+    import_index = next(
+        (
+            index for index, node in enumerate(tree.body)
+            if (
+                isinstance(node, ast.Import)
+                and any(alias.name == module for alias in node.names)
+            ) or (
+                isinstance(node, ast.ImportFrom)
+                and node.level == 0
+                and node.module == module
+            )
+        ),
+        None,
+    )
+    fake_index = next(
+        (index for index, node in enumerate(tree.body) if _sets_fake_thumby(node)),
+        None,
+    )
+    if import_index is None or fake_index is None or fake_index >= import_index:
+        raise ValueError(
+            "일반 Thumby 엔트리 테스트는 대상 모듈 import 전에 "
+            "sys.modules에 가짜 thumby를 주입해야 합니다."
+        )
+
+
 def test_prompt(area):
     if area != "game" or current_profile() != "thumby":
         return ""

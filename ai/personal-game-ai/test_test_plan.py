@@ -118,6 +118,17 @@ class TestPlanTests(unittest.TestCase):
             self.generate(model)
         model.assert_not_called()
 
+    def test_generation_profile_candidate_validation_is_applied(self):
+        with patch.object(
+            test_plan.generation_profile, "validate_tests"
+        ) as profile:
+            self.generate()
+        profile.assert_called_once()
+        args = profile.call_args.args
+        self.assertEqual(args[0], "sandbox")
+        self.assertEqual(args[1], self.proposal)
+        self.assertEqual(args[2], self.envelope["design"])
+
     def test_generation_profile_prompt_is_included(self):
         model = Mock(return_value=json.dumps(self.proposal))
         with patch.object(

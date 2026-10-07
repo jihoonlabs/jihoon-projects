@@ -293,6 +293,10 @@ def generate_tests(path, model=None):
             candidate = validate_candidate(
                 json.loads(answer), envelope["design"]
             )
+            generation_profile.validate_tests(
+                envelope["request"]["area"], candidate, envelope["design"],
+                design_plan.directory_for(envelope["request"]["area"]),
+            )
         except ValueError as error:
             feedback = str(error)
             print("테스트 구조 검사 실패:", feedback)

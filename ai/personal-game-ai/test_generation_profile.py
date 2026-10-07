@@ -40,6 +40,41 @@ class GenerationProfileTests(unittest.TestCase):
                 "game", files, Path("/tmp/ThumbyDodge")
             )
 
+    def test_thumby_entry_test_requires_fake_module_before_import(self):
+        design = {"files": [{"id": "001", "filename": "ThumbyDodge.py"}]}
+        candidate = {"files": [{"id": "001", "code": (
+            "import unittest\nfrom ThumbyDodge import run\n"
+        )}]}
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_tests(
+                    "game", candidate, design, Path("/tmp/ThumbyDodge")
+                )
+
+    def test_thumby_entry_test_accepts_fake_module_before_import(self):
+        design = {"files": [{"id": "001", "filename": "ThumbyDodge.py"}]}
+        candidate = {"files": [{"id": "001", "code": (
+            "import sys\nfrom unittest.mock import MagicMock\n"
+            "sys.modules['thumby'] = MagicMock()\n"
+            "from ThumbyDodge import run\n"
+        )}]}
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            generation_profile.validate_tests(
+                "game", candidate, design, Path("/tmp/ThumbyDodge")
+            )
+
+    def test_thumby_entry_test_accepts_setdefault_before_import(self):
+        design = {"files": [{"id": "001", "filename": "ThumbyDodge.py"}]}
+        candidate = {"files": [{"id": "001", "code": (
+            "import sys\nfrom unittest.mock import MagicMock\n"
+            "sys.modules.setdefault('thumby', MagicMock())\n"
+            "from ThumbyDodge import run\n"
+        )}]}
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            generation_profile.validate_tests(
+                "game", candidate, design, Path("/tmp/ThumbyDodge")
+            )
+
     def test_thumby_game_tests_mock_device_dependency(self):
         with patch.object(generation_profile, "CONFIG_PATH", self.config()):
             prompt = generation_profile.test_prompt("game")
