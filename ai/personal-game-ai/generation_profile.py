@@ -36,6 +36,8 @@ def design_prompt(area):
         "CPython 테스트 import에서는 게임 루프를 시작하지 마세요. "
         "일반 Thumby 런처는 엔트리 모듈을 import하므로 엔트리 파일은 "
         "sys.implementation.name == 'micropython'일 때 진입 함수를 호출해 게임을 시작하세요. "
+        "런처 요구의 fixed check는 CPython import가 루프를 시작하지 않는 동작으로 표현하고, "
+        "MicroPython runtime guard 자체는 구현 단계 generation profile 정적 검사가 담당합니다. "
         "Thumby Color API와 추측한 API는 사용하지 마세요. "
     )
 
