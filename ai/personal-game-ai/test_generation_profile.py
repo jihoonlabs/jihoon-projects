@@ -51,6 +51,19 @@ class GenerationProfileTests(unittest.TestCase):
                     "game", candidate, design, Path("/tmp/ThumbyDodge")
                 )
 
+    def test_thumby_entry_test_requires_sys_import_before_fake(self):
+        design = {"files": [{"id": "001", "filename": "ThumbyDodge.py"}]}
+        candidate = {"files": [{"id": "001", "code": (
+            "from unittest.mock import MagicMock\n"
+            "sys.modules['thumby'] = MagicMock()\n"
+            "from ThumbyDodge import run\n"
+        )}]}
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_tests(
+                    "game", candidate, design, Path("/tmp/ThumbyDodge")
+                )
+
     def test_thumby_entry_test_accepts_fake_module_before_import(self):
         design = {"files": [{"id": "001", "filename": "ThumbyDodge.py"}]}
         candidate = {"files": [{"id": "001", "code": (

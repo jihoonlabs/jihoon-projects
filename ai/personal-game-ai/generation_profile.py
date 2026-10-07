@@ -116,9 +116,22 @@ def validate_tests(area, candidate, design, directory=None):
         (index for index, node in enumerate(tree.body) if _sets_fake_thumby(node)),
         None,
     )
-    if import_index is None or fake_index is None or fake_index >= import_index:
+    sys_index = next(
+        (
+            index for index, node in enumerate(tree.body)
+            if isinstance(node, ast.Import)
+            and any(alias.name == "sys" and alias.asname is None for alias in node.names)
+        ),
+        None,
+    )
+    if (
+        import_index is None
+        or fake_index is None
+        or sys_index is None
+        or not sys_index < fake_index < import_index
+    ):
         raise ValueError(
-            "일반 Thumby 엔트리 테스트는 대상 모듈 import 전에 "
+            "일반 Thumby 엔트리 테스트는 import sys 후 대상 모듈 import 전에 "
             "sys.modules에 가짜 thumby를 주입해야 합니다."
         )
 
