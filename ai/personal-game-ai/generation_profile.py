@@ -27,6 +27,7 @@ def design_prompt(area):
         "\n# 일반 Thumby 생성 계약\n"
         "게임 규칙과 기기 입출력·표시 어댑터를 서로 다른 모듈로 분리하세요. "
         "게임 규칙 모듈은 thumby를 import하지 않고 CPython에서 검사 가능해야 합니다. "
+        "실행 대상은 Thumby MicroPython이므로 CPython 전용 모듈·기능에 의존하지 마세요. "
         "기기 어댑터만 import thumby를 사용하며 buttonL/buttonR 입력과 "
         "display.fill, drawFilledRectangle, drawText, update, setFPS를 필요한 범위에서 사용하세요. "
         "실기에서 실행할 엔트리 Python 파일은 게임 폴더와 정확히 같은 이름으로 설계하세요. "
@@ -156,6 +157,7 @@ def implementation_prompt(area, filename):
         "\n# 일반 Thumby 구현 계약\n"
         "승인 설계의 역할 분리를 유지하세요. 규칙 모듈에는 thumby 의존성을 넣지 말고, "
         "기기 어댑터에서만 공식 일반 Thumby API를 사용하세요. "
+        "Thumby MicroPython에서 실행할 수 있도록 CPython 전용 모듈·기능을 사용하지 마세요. "
         "import 시 게임 루프를 자동 실행하지 말고, 엔트리 파일을 게임 스크립트로 실행할 때는 실제 게임을 시작하세요. "
         f"현재 구현 대상은 {filename} 하나뿐입니다. "
     )

@@ -19,6 +19,7 @@ class GenerationProfileTests(unittest.TestCase):
         with patch.object(generation_profile, "CONFIG_PATH", self.config()):
             prompt = generation_profile.design_prompt("game")
         self.assertIn("게임 규칙", prompt)
+        self.assertIn("MicroPython", prompt)
         self.assertIn("import thumby", prompt)
         self.assertIn("게임 폴더와 정확히 같은 이름", prompt)
         self.assertIn("무한 게임 루프", prompt)
@@ -136,6 +137,7 @@ class GenerationProfileTests(unittest.TestCase):
             prompt = generation_profile.implementation_prompt("game", "ThumbyDodge.py")
         self.assertIn("import 시 게임 루프를 자동 실행하지", prompt)
         self.assertIn("게임 스크립트로 실행할 때는 실제 게임을 시작", prompt)
+        self.assertIn("MicroPython", prompt)
 
 
     def test_thumby_code_rejects_unverified_api(self):
