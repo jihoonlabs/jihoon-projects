@@ -77,12 +77,13 @@
 
 ## 2026-10-07 집 체크 메모
 
-- 기능 변경 마지막 commit: `d52937d1616b94b261f8699a32472d7ab92c3d13`.
+- 기능 변경 마지막 commit: `46db9fe37dab546fdec3d099e91c9491f1bc1048`.
 - main은 원격 작업에서 수정하지 않았다. Child의 AGENTS.md는 main의 승인된 v2.1과 동일하다.
 - 오늘 원격 보강:
   - 실제 TinyCircuits 런처의 게임 import 방식에 맞춰 CPython import-safe + MicroPython import-start 계약으로 교정.
   - 폴더명과 같은 엔트리 파일 및 MicroPython runtime guard를 생성 gate에서 검사.
   - Thumby 엔트리 고정 테스트가 `import sys` → 유효한 fake `thumby` 등록 → 엔트리 import 순서를 지키도록 검사. `None` fake도 거부.
+  - 작은 일반 Thumby 게임은 폴더명 엔트리가 기기 어댑터 역할을 함께 맡고, 다른 생성 모듈은 `thumby`를 import하지 않는 2층 구조로 고정.
   - 요청 내용/작업 문맥이 바뀌면 과거 승인 기록을 덮지 않고 새 workflow 기록에서 다시 시작. 동일 문맥의 기존 기록은 재개.
   - Thumby MicroPython 대상이라는 지침을 설계/구현 prompt에 추가하되, 추측성 표준 라이브러리 allowlist는 만들지 않음.
 - 원격에서 실행하지 못한 것: 최신 단위 테스트, 전체 unittest, Docker, Ollama, 실제 Thumby.
