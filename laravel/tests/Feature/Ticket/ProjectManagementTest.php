@@ -62,6 +62,26 @@ class ProjectManagementTest extends TestCase
             ->assertJsonPath('data.name', $project->name);
     }
 
+
+    public function test_project_key_does_not_change_when_project_is_renamed(): void
+    {
+        $admin = User::factory()->create();
+        $admin->forceFill(['role' => 'admin'])->save();
+        $project = Project::factory()->create();
+        $key = $project->project_key;
+
+        $this->actingAs($admin)
+            ->patchJson("/api/projects/{$project->id}", [
+                'name' => 'Renamed Project',
+                'project_key' => 'NEW',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'Renamed Project')
+            ->assertJsonPath('data.project_key', $key);
+
+        $this->assertSame($key, $project->refresh()->project_key);
+    }
+
     public function test_project_leader_can_add_update_and_remove_members(): void
     {
         $project = Project::factory()->create();
