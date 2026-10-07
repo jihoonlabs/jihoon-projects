@@ -19,7 +19,7 @@
 - 関連Laravel/React検証が成功する。
 
 ## Handoff
-- 状態: 実装中
-- 採用SHA: 未確定
-- 検証: 未実行
-- 残る制約・未検証事項: migrationによる既存データbackfillと関連回帰を検証する。
+- 状態: 実装完了、実行検証待ち
+- 採用SHA: この文書更新commit
+- 検証: Project key生成、Project別連番、既存データbackfillの自動テストを追加。実行環境がないため未実行。
+- 残る制約・未検証事項: Laravel test/Pintを実行し、migrationのSQLite/MySQL互換と既存Ticket回帰を確認する。
