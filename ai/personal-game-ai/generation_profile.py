@@ -69,6 +69,10 @@ def _sets_fake_thumby(node):
             and target.value.attr == "modules"
             and isinstance(target.slice, ast.Constant)
             and target.slice.value == "thumby"
+            and not (
+                isinstance(node.value, ast.Constant)
+                and node.value.value is None
+            )
         ):
             return True
     if not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call):
@@ -81,9 +85,13 @@ def _sets_fake_thumby(node):
         and isinstance(call.func.value.value, ast.Name)
         and call.func.value.value.id == "sys"
         and call.func.value.attr == "modules"
-        and bool(call.args)
+        and len(call.args) >= 2
         and isinstance(call.args[0], ast.Constant)
         and call.args[0].value == "thumby"
+        and not (
+            isinstance(call.args[1], ast.Constant)
+            and call.args[1].value is None
+        )
     )
 
 

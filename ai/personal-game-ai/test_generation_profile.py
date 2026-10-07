@@ -68,6 +68,22 @@ class GenerationProfileTests(unittest.TestCase):
                     "game", candidate, design, Path("/tmp/ThumbyDodge")
                 )
 
+    def test_thumby_entry_test_rejects_none_fake_module(self):
+        design = {"files": [{"id": "001", "filename": "ThumbyDodge.py"}]}
+        candidates = [
+            "import sys\nsys.modules['thumby'] = None\nfrom ThumbyDodge import run\n",
+            "import sys\nsys.modules.setdefault('thumby')\nfrom ThumbyDodge import run\n",
+            "import sys\nsys.modules.setdefault('thumby', None)\nfrom ThumbyDodge import run\n",
+        ]
+        with patch.object(generation_profile, "current_profile", return_value="thumby"):
+            for code in candidates:
+                with self.subTest(code=code):
+                    with self.assertRaises(ValueError):
+                        generation_profile.validate_tests(
+                            "game", {"files": [{"id": "001", "code": code}]},
+                            design, Path("/tmp/ThumbyDodge"),
+                        )
+
     def test_thumby_entry_test_accepts_fake_module_before_import(self):
         design = {"files": [{"id": "001", "filename": "ThumbyDodge.py"}]}
         candidate = {"files": [{"id": "001", "code": (
