@@ -135,6 +135,7 @@ class GenerationProfileTests(unittest.TestCase):
         self.assertIn("폴더명 엔트리", prompt)
         self.assertIn("좌우 이동 경계", prompt)
         self.assertIn("재시작", prompt)
+        self.assertIn("무한 진입 함수를 테스트에서 직접 호출하지", prompt)
 
     def test_sandbox_has_no_platform_prompt(self):
         with patch.object(generation_profile, "CONFIG_PATH", self.config()):
