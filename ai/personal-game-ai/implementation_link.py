@@ -210,8 +210,15 @@ def build_tasks(envelope, candidate):
             "test_module": Path(fixed["filename"]).stem,
         }
         allowed.append(contract)
+        covered_requirements = {
+            check["requirement"] for check in item["checks"]
+        }
         detail = {
-            "requirements": request["requirements"],
+            "requirements": {
+                identifier: value
+                for identifier, value in request["requirements"].items()
+                if identifier in covered_requirements
+            },
             "functions": item["functions"],
             "checks": item["checks"],
             "dependencies": [

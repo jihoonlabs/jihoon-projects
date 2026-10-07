@@ -134,6 +134,18 @@ class ImplementationLinkTests(unittest.TestCase):
         self.assertIn("최대 체력을 넘지 않게 회복한다", tasks[0]["prompt"])
         self.assertFalse((self.directory / "health.py").exists())
 
+    def test_plan_prompt_includes_only_requirements_checked_by_file(self):
+        self.envelope["request"]["requirements"]["R2"] = "화면에 상태를 표시한다"
+        (self.directory / "test_health.py").write_text(self.code)
+        with patch.object(link.edit_loop, "check_git_files"), patch.object(
+            link.plan_tasks, "validate_plan",
+            side_effect=lambda proposal, allowed, goal: proposal["tasks"],
+        ):
+            path = link.create_plan(self.path, "sha")
+        prompt = json.loads(path.read_text())[0]["prompt"]
+        self.assertIn("최대 체력을 넘지 않는다", prompt)
+        self.assertNotIn("화면에 상태를 표시한다", prompt)
+
     def test_generation_profile_prompt_is_included_in_plan(self):
         (self.directory / "test_health.py").write_text(self.code)
         self.envelope["request"]["area"] = "game"
