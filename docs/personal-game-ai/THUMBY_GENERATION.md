@@ -35,9 +35,10 @@
 ## 강제 검사와 지침의 구분
 - read_context.py는 실제 브랜치, 문서 경로, 문맥 분량과 지정 파일을 검사한다.
 - generation_profile.validate_code 검사는 create_loop.py의 후보 저장 전 호출된다.
-- AST 검사 범위: thumbyColor 이름 import, thumby 별칭/from import, 일부 직접 API 속성, 최상위 while True.
+- AST 검사 범위: thumbyColor 이름 import, thumby 별칭/from import, 일부 직접 API 속성, 최상위 while True, 폴더명 엔트리의 MicroPython 런처 진입 guard.
 - 모든 Color 모듈·간접 API 접근·import 중 루프 실행을 포괄적으로 차단하는 검사는 아니다.
 - 순수 규칙/어댑터 분리는 현재 프롬프트 지침이며 전체 의미를 강제하는 gate는 아니다.
+- 엔트리 고정 테스트는 CPython에서 fake `thumby`를 선주입하고, 실제 기기에서는 MicroPython 런타임 guard가 진입 함수를 호출하는 계약이다.
 - 검사 통과가 MicroPython 호환성·게임 품질·실행 안전성을 보장하지 않는다.
 
 ## 현재 진단·검증
