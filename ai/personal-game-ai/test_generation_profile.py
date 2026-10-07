@@ -30,6 +30,8 @@ class GenerationProfileTests(unittest.TestCase):
         self.assertIn("CPython 테스트 import", prompt)
         self.assertIn("sys.implementation.name", prompt)
         self.assertIn("Thumby Color", prompt)
+        self.assertIn("런처 요구의 fixed check", prompt)
+        self.assertIn("정적 검사가 담당", prompt)
 
     def test_thumby_design_requires_folder_named_entry(self):
         files = [{"filename": "rules.py"}]
@@ -156,6 +158,8 @@ class GenerationProfileTests(unittest.TestCase):
         self.assertIn("재시작", prompt)
         self.assertIn("functions에 없는 새 production", prompt)
         self.assertIn("무한 진입 함수를 테스트에서 직접 호출하지", prompt)
+        self.assertIn("runtime guard 관련 check", prompt)
+        self.assertIn("unittest에서 실행해 증명하려 하지", prompt)
 
     def test_sandbox_has_no_platform_prompt(self):
         with patch.object(generation_profile, "CONFIG_PATH", self.config()):

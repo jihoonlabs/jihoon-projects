@@ -185,6 +185,8 @@ def test_prompt(area):
         "승인 설계의 functions에 없는 새 production 함수·클래스·상수 계약을 테스트에서 만들지 마세요. "
         "CPython 테스트에서 엔트리를 import해도 게임 루프가 시작되지 않는 구조를 유지하고, "
         "실제 무한 진입 함수를 테스트에서 직접 호출하지 말고 import 안전성과 유한 helper 동작을 검사하세요. "
+        "런처/runtime guard 관련 check는 CPython import-safe 동작을 assertion하고, "
+        "MicroPython guard의 존재 자체를 unittest에서 실행해 증명하려 하지 마세요. "
     )
 
 
