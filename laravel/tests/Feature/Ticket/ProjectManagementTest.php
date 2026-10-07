@@ -32,7 +32,13 @@ class ProjectManagementTest extends TestCase
         $this->actingAs($admin)
             ->postJson('/api/projects', ['name' => 'Admin Project'])
             ->assertCreated()
-            ->assertJsonPath('data.name', 'Admin Project');
+            ->assertJsonPath('data.name', 'Admin Project')
+            ->assertJson(fn ($json) => $json
+                ->whereType('data.project_key', 'string')
+                ->etc());
+
+        $created = Project::query()->where('name', 'Admin Project')->firstOrFail();
+        $this->assertMatchesRegularExpression('/^[A-Z]{3}$/', $created->project_key);
 
         $this->getJson('/api/projects')->assertJsonCount(4, 'data');
     }
