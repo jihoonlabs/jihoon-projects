@@ -77,7 +77,7 @@
 
 ## 2026-10-07 집 체크 메모
 
-- 기능 변경 마지막 commit: `2d6401a1c2f7f93b1b23f3a956ce203bc9aa6c62`.
+- 기능 변경 마지막 commit: `186c5d3f3275f4968c1ae1c31322398a5cf78ba9`.
 - main은 원격 작업에서 수정하지 않았다. Child의 AGENTS.md는 main의 승인된 v2.1과 동일하다.
 - 오늘 원격 보강:
   - 실제 TinyCircuits 런처의 게임 import 방식에 맞춰 CPython import-safe + MicroPython import-start 계약으로 교정.
@@ -86,6 +86,10 @@
   - 작은 일반 Thumby 게임은 폴더명 엔트리가 기기 어댑터 역할을 함께 맡고, 다른 생성 모듈은 `thumby`를 import하지 않는 2층 구조로 고정. 엔트리는 최소 한 순수 규칙 모듈에 의존해야 함.
   - 공식 Thumby의 sibling 모듈 예를 반영해 엔트리 구현 prompt는 MicroPython에서 보조 모듈 import 전 `/Games/<게임폴더명>`을 `sys.path`에 추가하도록 안내. 실기 확인 전에는 hard gate로 승격하지 않음.
   - 엔트리 fixed test는 실제 무한 진입 함수를 직접 호출하지 않고 import 안전성·유한 helper를 검사하도록 안내.
+  - MicroPython runtime guard 안의 실제 직접 진입 함수 호출만 시작으로 인정해, 호출되지 않는 중첩 함수 속 가짜 `run()` 패턴을 거부.
+  - 문맥별 workflow 기록 분리에서도 기존 legacy 기록 폴더 symlink를 읽기 전에 거부하도록 기존 신뢰 경계를 유지.
+  - Thumby fixed test가 승인 설계 `functions` 밖의 새 production API를 발명하지 않도록 prompt를 보강.
+  - 저장소에는 현재 GitHub Actions workflow/check가 없어 원격 전체 회귀 실행 경로가 없음. 이 Child에서 새 CI는 만들지 않음.
   - 요청 내용/작업 문맥이 바뀌면 과거 승인 기록을 덮지 않고 새 workflow 기록에서 다시 시작. 동일 문맥의 기존 기록은 재개.
   - Thumby MicroPython 대상이라는 지침을 설계/구현 prompt에 추가하되, 추측성 표준 라이브러리 allowlist는 만들지 않음.
 - 원격에서 실행하지 못한 것: 최신 단위 테스트, 전체 unittest, Docker, Ollama, 실제 Thumby.
