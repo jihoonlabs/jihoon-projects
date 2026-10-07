@@ -181,8 +181,8 @@ def test_prompt(area):
     return (
         "\n# 일반 Thumby 테스트 계약\n"
         "순수 게임 규칙은 실제 thumby 모듈 없이 검사하세요. "
-        "폴더명 엔트리의 기기 어댑터 테스트는 대상 모듈 import 전에 sys.modules에 "
-        "가짜 thumby를 주입하거나 unittest.mock으로 대체해 CPython에서 검사 가능하게 하세요. "
+        "폴더명 엔트리의 기기 어댑터 테스트는 import sys 후 대상 모듈 import 전에 "
+        "sys.modules['thumby']에 None이 아닌 가짜 thumby 객체를 직접 주입해 CPython에서 검사 가능하게 하세요. "
         "좌우 이동 경계·장애물 충돌·점수·재시작 조건을 설계 checks에 따라 직접 assertion으로 확인하세요. "
         "승인 설계의 functions에 없는 새 production 함수·클래스·상수 계약을 테스트에서 만들지 마세요. "
         "CPython 테스트에서 엔트리를 import해도 게임 루프가 시작되지 않는 구조를 유지하고, "
