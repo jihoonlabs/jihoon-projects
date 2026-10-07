@@ -407,6 +407,8 @@ def summarize(state, folder):
 
 def workflow_folder(output, path, data, context):
     legacy = output / ("workflow_" + digest(str(path).encode("utf-8")))
+    if legacy.is_symlink():
+        raise ValueError("워크플로 기록에 심볼릭 링크를 사용할 수 없습니다.")
     legacy_state = legacy / "state.json"
     if legacy_state.is_file() and not legacy_state.is_symlink():
         state = json.loads(legacy_state.read_text(encoding="utf-8"))

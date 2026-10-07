@@ -87,6 +87,19 @@ class WorkflowTests(unittest.TestCase):
         self.assertTrue(Path(second["record"]).is_dir())
         self.assertEqual(self.generator.call_count, 2)
 
+    def test_legacy_record_symlink_is_rejected_before_state_read(self):
+        legacy = self.root / "outputs" / (
+            "workflow_" + workflow.digest(str(self.request.resolve()).encode("utf-8"))
+        )
+        outside = self.root / "outside-record"
+        outside.mkdir()
+        (outside / "state.json").write_text("{}", encoding="utf-8")
+        legacy.symlink_to(outside, target_is_directory=True)
+
+        with self.assertRaises(ValueError):
+            self.run_flow()
+        self.assertEqual(self.generator.call_count, 0)
+
     def test_matching_legacy_record_is_resumed(self):
         first = self.run_flow()
         current = Path(first["record"])
