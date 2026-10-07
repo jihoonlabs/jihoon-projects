@@ -144,6 +144,13 @@ class GenerationProfileTests(unittest.TestCase):
         self.assertIn("MicroPython", prompt)
 
 
+    def test_thumby_code_without_filename_keeps_legacy_validation(self):
+        code = "import thumby\nthumby.display.fill(0)\n"
+        with patch.object(
+            generation_profile, "CONFIG_PATH", self.config(),
+        ):
+            generation_profile.validate_code("game", code)
+
     def test_thumby_entry_code_requires_micropython_start_guard(self):
         code = "import sys\nimport thumby\n\ndef run():\n    pass\n"
         with patch.object(

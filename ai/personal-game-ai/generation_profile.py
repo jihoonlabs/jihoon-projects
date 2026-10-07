@@ -249,7 +249,7 @@ def validate_code(area, code, filename=None):
     if area != "game" or current_profile() != "thumby":
         return
     tree = ast.parse(code)
-    if filename == _entry_filename():
+    if filename is not None and filename == _entry_filename():
         _validate_entry_start(tree)
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
