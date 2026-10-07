@@ -80,9 +80,10 @@
 
 - 현재 작업은 이 Child에서 계속한다. main 통합·merge/rebase·브랜치 삭제는 아직 하지 않는다.
 - main과 Git history는 diverged 상태지만 main 쪽 차이는 AGENTS/docs/agent 문서뿐이며 Personal Game AI 코드는 충돌하지 않는다. Child의 AGENTS 내용은 현재 main v2.1과 동일하다.
-- 최근 동작 변경 기준 commit: `059083fa9f611fd5e3ff2d4a5d50b22816334b70`. 이후 commit은 테스트 fixture·작업 MD 정리다.
+- 최근 동작 변경 기준 commit: `bb075a6c60dcb7b8a3047cfd770f29c12921935c`.
 - 현재 생성 계약:
   - `ThumbyDodge.py`가 폴더명 엔트리이자 기기 어댑터다.
+  - 엔트리 함수 계약에는 실제 런타임 진입 함수 외에 CPython에서 1회 호출하고 끝나는 유한 adapter/helper를 둬 fixed test가 무한 루프 없이 어댑터 동작을 검사할 수 있게 한다.
   - 최소 한 순수 규칙 모듈을 별도로 두고, 그 모듈은 `thumby`를 import하지 않는다.
   - 엔트리는 CPython import-safe이며 MicroPython runtime guard에서 진입 함수를 직접 호출한다.
   - 엔트리 구현 prompt에는 실제 `/Games/ThumbyDodge` sibling 경로를 전달한다.
