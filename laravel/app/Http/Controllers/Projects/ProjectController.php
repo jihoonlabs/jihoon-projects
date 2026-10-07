@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Projects;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Projects\ProjectResource;
 use App\Models\Project;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 
 class ProjectController extends Controller
@@ -32,7 +33,20 @@ class ProjectController extends Controller
             'name' => ['required', 'string', 'max:255'],
         ]);
 
-        return new ProjectResource(Project::create($validated));
+        $attempts = 0;
+
+        while (true) {
+            try {
+                return new ProjectResource(Project::create($validated));
+            } catch (UniqueConstraintViolationException $exception) {
+                // A concurrent insert can claim the generated key after the existence check.
+                // Retry only project_key collisions; other unique constraints must still fail.
+                $attempts++;
+                if ($attempts >= 5 || ! str_contains(strtolower($exception->getMessage()), 'project_key')) {
+                    throw $exception;
+                }
+            }
+        }
     }
 
     public function show(Request $request, Project $project): ProjectResource
