@@ -24,3 +24,10 @@
 
 ## Status
 Implementation + tests + docs committed on this Child for local Codex review. Tests remain unverified. Never merge into Epic/main without approval.
+
+## Safety review follow-up (2026-10-08)
+- Additional Child commits: ticket delete now rechecks archive under project lock; comment create/update/delete now use a project-row-locked transaction; member add/update/remove now reject archived projects under the same lock.
+- **Open blocker:** `PATCH /api/projects/{id}` currently allows admins to rename an archived project. A remote update attempt was blocked by the tool, so this has **not been fixed**. Codex should add a transaction/lock/archived guard and a regression test.
+- **Open blocker:** lifecycle Child and leadership Child both modify `ProjectMemberController`. Leadership transfer must also reject archived projects and follow the same lock ordering when integrated. Do not blindly merge these files.
+- **Open blocker:** verify DB migration, comments regression, and all role-related tests. No tests have been executed remotely.
+- **Operational decision:** keep archive as the default reversible action. Do not implement trash/purge or key recycling without a separate approved data-retention policy. At scale add paginated search and archived list filters rather than fetching all projects.
