@@ -61,6 +61,43 @@ def _config():
     return json.loads(Path(CONFIG_PATH).read_text(encoding="utf-8"))
 
 
+def design_structure(area, directory, requirements):
+    if area != "game" or current_profile() != "thumby":
+        return ""
+    entry = _entry_filename(directory)
+    ids = ["R" + str(number) for number in range(1, len(requirements) + 1)]
+    example = {"files": [
+        {"id": "001", "filename": "rules.py", "functions": [
+            {"name": "update_state", "parameters": ["state", "inputs"],
+             "behavior": "예시: 전달받은 상태와 입력만으로 다음 상태를 반환. 실제 계약으로 교체."}],
+         "checks": [{"requirement": "R1", "case": "실제 입력", "expected": "구체적 반환 상태"}],
+         "depends_on": []},
+        {"id": "002", "filename": entry, "functions": [
+            {"name": "main_loop", "parameters": [],
+             "behavior": "MicroPython 가드에서 시작하며 실제 게임 루프를 실행."},
+            {"name": "step_frame", "parameters": ["state"],
+             "behavior": "유한 프레임 함수. 버튼 읽기→규칙 호출→화면 표시→새 상태 반환."}],
+         "checks": [{"requirement": "R1", "case": "fake 기기와 한 프레임 입력", "expected": "상태와 기기 호출"}],
+         "depends_on": ["001"]},
+    ]}
+    return (
+        "\n# 실제 대상에 맞는 필수 설계 구조\n"
+        f"현재 게임 폴더는 {Path(directory).name}이며 엔트리는 정확히 {entry}입니다. "
+        "앞의 module.py 단일 파일은 JSON 필드 예시일 뿐입니다. 실제 답변은 반드시 "
+        f"{entry}와 별도의 순수 규칙 파일을 모두 포함하세요. 필요하면 규칙 파일을 더 나눌 수 있습니다. "
+        "아래 함수명도 형식 예시이며 승인 명세에 맞는 실제 함수 계약을 작성하세요. "
+        "순수 규칙 함수에는 state와 필요한 입력을 명시적으로 전달하고 반환 상태를 정의하세요. "
+        "숨겨진 변경 가능한 전역 상태에 의존하지 마세요. 순수 규칙은 기기 저장·읽기·표시를 하지 않습니다. "
+        f"실제 saveData I/O와 버튼·화면 호출은 {entry}의 유한 helper에 두고 "
+        "저장 값 인코딩·검증은 필요시 순수 함수로 분리하세요. "
+        "구매·장착 등 승인 명세에서 분리한 행동을 임의로 합치지 마세요. "
+        "files 전체 checks의 requirement가 다음 모든 ID를 포함해야 합니다: "
+        + json.dumps(ids) + ". 각 ID의 원문 계약을 확인하고 구체적인 입력·기대 결과로 검사하세요. "
+        "응답은 전체 files JSON이며 엔트리와 의존 파일을 생략하지 마세요.\n"
+        + json.dumps(example, ensure_ascii=False, separators=(",", ":")) + "\n"
+    )
+
+
 def validate_design(area, files, directory):
     if area != "game" or current_profile() != "thumby":
         return
