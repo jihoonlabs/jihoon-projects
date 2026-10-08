@@ -104,6 +104,11 @@
       padding: 18px;
       margin-top: 12px;
     }
+    #custom-charts-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
     .custom-card-title {
       font-size: 0.92rem;
       font-weight: bold;
@@ -112,6 +117,13 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 10px;
+    }
+    .custom-card-title .btn-small {
+      flex: 0 0 auto;
+      width: auto;
+      padding: 4px 8px;
+      font-size: 0.72rem;
     }
     .grid-2col {
       display: grid;
@@ -174,6 +186,12 @@
       font-weight: bold;
     }
     .btn-small:hover { background: #cbd5e1; }
+    .output-order-list { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+    .output-order-item { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #cbd5e1; border-radius: 7px; padding: 8px 10px; }
+    .output-order-item .order-number { width: 24px; font-weight: bold; color: #2563eb; text-align: center; }
+    .output-order-item .order-name { flex: 1; font-size: 0.86rem; font-weight: 600; }
+    .output-order-item button { flex: 0 0 auto; padding: 4px 9px; font-size: 0.75rem; }
+    .custom-extract-card { position: relative; }
     .btn-pptx { background-color: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
     .btn-pptx:hover { background-color: #1d4ed8; transform: translateY(-1px); }
     #status { margin-top: 12px; font-size: 0.88rem; color: #1e293b; font-weight: 600; }
@@ -206,42 +224,15 @@
       <span style="font-size:0.85rem; color:#94a3b8;">-- データ読込後に項目一覧が表示されます --</span>
     </div>
 
-    <!-- カスタム抽出グラフ設定カード -->
-    <div id="custom-extract-card" class="custom-card" style="display:none;">
-      <div class="custom-card-title">
-        <span>⚙ カスタム抽出グラフの設定 (選択項目のみで100%計算)</span>
-        <div>
-          <button type="button" class="btn-small" onclick="selectAllCustomItems(true)">全選択</button>
-          <button type="button" class="btn-small" onclick="selectAllCustomItems(false)">全解除</button>
-        </div>
-      </div>
+    <div style="margin-top:10px;">
+      <button type="button" class="btn-small" onclick="addCustomChart()" style="width:100%; padding:9px;">➕ カスタム抽出グラフを追加</button>
+    </div>
+    <div id="custom-charts-container"></div>
 
-      <div class="grid-2col">
-        <div class="form-group">
-          <label>対象カラム選択</label>
-          <select id="custom-target-col" onchange="renderCustomKeywords()"></select>
-        </div>
-        <div class="form-group">
-          <label>グラフタイトル</label>
-          <input type="text" id="custom-chart-title" value="特定技術・カテゴリ分布">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>並び順 (時計回りの配置順)</label>
-        <select id="custom-sort-mode" onchange="updateCustomPercentages()">
-          <option value="click" selected>👈 選択した順番 (クリックした順に12時から配置)</option>
-          <option value="count">人数/割合順 (多い順)</option>
-          <option value="name">項目名順 (五十音・アルファベット順)</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>抽出したいデータ項目を選択 (チェックを入れた順番で12時方向から 시계방향으로 배치됩니다)</label>
-        <div id="custom-keywords-list" class="checkbox-container" style="max-height: 160px; background: #ffffff;">
-          <!-- JSで動的生成 -->
-        </div>
-      </div>
+    <div id="output-order-section" style="display:none;">
+      <div class="section-title">詳細設定: グラフ出力順</div>
+      <div style="font-size:0.8rem; color:#64748b;">カスタムグラフ使用時のみ、通常グラフを含めてPPTXの出力順を変更できます。</div>
+      <div id="output-order-list" class="output-order-list"></div>
     </div>
 
     <div class="opt-grid">
@@ -304,8 +295,10 @@
 
   <script>
     let rawData = [], headers = [], globalTotalMembers = 0;
-    // ★ 사용자가 클릭한 순서를 담아두는 순서 기억 배열
-    let customClickOrder = [];
+    let customCharts = [];
+    let outputOrder = [];
+    let customChartSequence = 0;
+    const naturalCollator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
 
     const valClean = v => (v === undefined || v === null) ? "" : String(v).trim().replace(/^(undefined|null)$/, "");
 
@@ -323,8 +316,12 @@
       globalTotalMembers = rawData.length;
       if (rawData.length > 0) {
         headers = Object.keys(rawData[0]);
+        customCharts = [];
+        outputOrder = [];
+        customChartSequence = 0;
+        document.getElementById('custom-charts-container').innerHTML = '';
         renderCheckboxes();
-        populateCustomColDropdown();
+        syncOutputOrder();
         document.getElementById('status').innerText = `✅ ${nameInfo} (総人員: ${globalTotalMembers}名基準)`;
       }
     }
@@ -357,110 +354,242 @@
       applyParsedData(parsed, "貼り付けデータ適用完了");
     }
 
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    }
+
     function renderCheckboxes() {
       const container = document.getElementById('checkbox-list');
-      let html = headers.map(h => `<label class="checkbox-item"><input type="checkbox" value="${h}" checked> ${h}</label>`).join('');
-      html += `<label class="checkbox-item custom-item"><input type="checkbox" id="chk-custom-extract" value="__CUSTOM_EXTRACT__" onchange="toggleCustomExtractPanel()"> ➕ カスタム抽出グラフを追加</label>`;
-      container.innerHTML = html;
+      container.innerHTML = headers.map(h =>
+        `<label class="checkbox-item"><input type="checkbox" class="normal-chart-chk" value="${escapeHtml(h)}" checked onchange="syncOutputOrder()"> ${escapeHtml(h)}</label>`
+      ).join('');
     }
 
-    function populateCustomColDropdown() {
-      const sel = document.getElementById('custom-target-col');
-      sel.innerHTML = headers.map(h => `<option value="${h}">${h}</option>`).join('');
-      renderCustomKeywords();
+    function getCustomChart(id) {
+      return customCharts.find(chart => chart.id === id);
     }
 
-    // ★ 클릭 이벤트 발생 시 클릭 순서를 제어하는 핸들러
-    function handleCustomKeywordClick(chk) {
-      const val = chk.value;
-      if (chk.checked) {
-        if (!customClickOrder.includes(val)) {
-          customClickOrder.push(val); // 클릭한 순서대로 배열 뒤에 추가
-        }
-      } else {
-        customClickOrder = customClickOrder.filter(item => item !== val); // 해제 시 삭제
-      }
-      updateCustomPercentages();
-    }
-
-    function updateCustomPercentages() {
-      const col = document.getElementById('custom-target-col').value;
-      if (!col || !rawData.length) return;
-
-      const checkedBoxes = Array.from(document.querySelectorAll('.custom-kw-chk:checked'));
-      const selectedKeys = checkedBoxes.map(cb => cb.value);
-
-      let counts = {};
-      rawData.forEach(row => {
-        let val = formatValueLabel(row[col]);
-        if (val !== "未入力") {
-          counts[val] = (counts[val] || 0) + 1;
-        }
-      });
-
-      let selectedTotal = selectedKeys.reduce((sum, key) => sum + (counts[key] || 0), 0);
-
-      document.querySelectorAll('.custom-kw-item').forEach(item => {
-        const chk = item.querySelector('.custom-kw-chk');
-        const badge = item.querySelector('.pct-badge');
-        const key = chk.value;
-        const cnt = counts[key] || 0;
-
-        if (chk.checked && selectedTotal > 0) {
-          let pct = ((cnt / selectedTotal) * 100).toFixed(1);
-          badge.innerText = `(${cnt}名 / ${pct}%)`;
-          badge.style.color = '#2563eb';
-        } else {
-          badge.innerText = `(${cnt}名 / 除外)`;
-          badge.style.color = '#94a3b8';
-        }
-      });
-    }
-
-    function renderCustomKeywords() {
-      const col = document.getElementById('custom-target-col').value;
-      const listContainer = document.getElementById('custom-keywords-list');
-      
-      if (!col || !rawData.length) {
-        listContainer.innerHTML = '<span style="font-size:0.8rem; color:#94a3b8;">データがありません</span>';
+    function addCustomChart() {
+      if (!headers.length) {
+        alert("データを先に読み込んでください。");
         return;
       }
+      const id = `custom-${++customChartSequence}`;
+      customCharts.push({ id, column: headers[0], title: `${headers[0]} (抽出分布)`, sortMode: 'click', selectedKeys: [], clickOrder: [] });
+      initializeCustomSelection(id);
+      renderAllCustomCharts();
+      syncOutputOrder();
+    }
 
-      let counts = {};
+    function removeCustomChart(id) {
+      customCharts = customCharts.filter(chart => chart.id !== id);
+      outputOrder = outputOrder.filter(item => item.id !== id);
+
+      if (!customCharts.length) {
+        customChartSequence = 0;
+        outputOrder = [];
+      }
+
+      renderAllCustomCharts();
+      syncOutputOrder();
+    }
+
+    function renderAllCustomCharts() {
+      const container = document.getElementById('custom-charts-container');
+      container.innerHTML = '';
+      customCharts.forEach(chart => renderCustomChart(chart.id));
+    }
+
+    function renderCustomChart(id, initializeSelection = false) {
+      const chart = getCustomChart(id);
+      if (!chart) return;
+      const container = document.getElementById('custom-charts-container');
+      let card = document.getElementById(id);
+      if (!card) {
+        card = document.createElement('div');
+        card.id = id;
+        card.className = 'custom-card custom-extract-card';
+        container.appendChild(card);
+      }
+
+      card.innerHTML = `
+        <div class="custom-card-title">
+          <span>⚙ カスタム抽出グラフ ${customCharts.findIndex(item => item.id === id) + 1}</span>
+          <button type="button" class="btn-small" onclick="removeCustomChart('${id}')">削除</button>
+        </div>
+        <div class="grid-2col">
+          <div class="form-group">
+            <label>対象カラム選択</label>
+            <select class="custom-target-col" onchange="changeCustomColumn('${id}', this.value)">
+              ${headers.map(h => `<option value="${escapeHtml(h)}" ${h === chart.column ? 'selected' : ''}>${escapeHtml(h)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>グラフタイトル</label>
+            <input type="text" class="custom-chart-title" value="${escapeHtml(chart.title)}" oninput="updateCustomTitle('${id}', this.value)">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>並び順 (時計回りの配置順)</label>
+          <select class="custom-sort-mode" onchange="changeCustomSortMode('${id}', this.value)">
+            <option value="click" ${chart.sortMode === 'click' ? 'selected' : ''}>👈 選択した順番</option>
+            <option value="count" ${chart.sortMode === 'count' ? 'selected' : ''}>人数/割合順 (多い順)</option>
+            <option value="name" ${chart.sortMode === 'name' ? 'selected' : ''}>項目名順 (自然順)</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:6px; margin-bottom:8px;">
+          <button type="button" class="btn-small" onclick="selectAllCustomItems('${id}', true)">全選択</button>
+          <button type="button" class="btn-small" onclick="selectAllCustomItems('${id}', false)">全解除</button>
+        </div>
+        <div class="form-group">
+          <label>抽出したいデータ項目を選択 (表示順がPPTXの配置順です)</label>
+          <div class="checkbox-container custom-keywords-list" style="max-height:160px; background:#fff;"></div>
+        </div>`;
+
+      if (initializeSelection) initializeCustomSelection(id);
+      else refreshCustomChartUI(id);
+    }
+
+    function initializeCustomSelection(id) {
+      const chart = getCustomChart(id);
+      if (!chart) return;
+      const keys = Object.keys(getCustomCounts(chart.column)).sort(naturalCollator.compare);
+      chart.selectedKeys = [...keys];
+      chart.clickOrder = [...keys];
+      refreshCustomChartUI(id);
+    }
+
+    function changeCustomColumn(id, column) {
+      const chart = getCustomChart(id);
+      if (!chart) return;
+      chart.column = column;
+      chart.title = `${column} (抽出分布)`;
+      document.querySelector(`#${id} .custom-chart-title`).value = chart.title;
+      initializeCustomSelection(id);
+      renderOutputOrder();
+    }
+
+    function updateCustomTitle(id, title) {
+      const chart = getCustomChart(id);
+      if (!chart) return;
+      chart.title = title;
+      renderOutputOrder();
+    }
+
+    function changeCustomSortMode(id, sortMode) {
+      const chart = getCustomChart(id);
+      if (!chart) return;
+      chart.sortMode = sortMode;
+      refreshCustomChartUI(id);
+    }
+
+    function getCustomCounts(col) {
+      const counts = {};
       rawData.forEach(row => {
-        let val = formatValueLabel(row[col]);
-        if (val && val !== "未入力") {
-          counts[val] = (counts[val] || 0) + 1;
-        }
+        const val = formatValueLabel(row[col]);
+        if (val && val !== "未入力") counts[val] = (counts[val] || 0) + 1;
       });
+      return counts;
+    }
 
-      let keys = Object.keys(counts);
+    function getOrderedCustomKeys(chart, counts) {
+      if (chart.sortMode === 'click') return chart.clickOrder.filter(key => chart.selectedKeys.includes(key));
+      if (chart.sortMode === 'count') return [...chart.selectedKeys].sort((a, b) => (counts[b] - counts[a]) || naturalCollator.compare(a, b));
+      return [...chart.selectedKeys].sort(naturalCollator.compare);
+    }
 
-      // 기본 초기화 시 등장 순서대로 클릭 순서 배열 채움
-      customClickOrder = [...keys];
+    function handleCustomKeywordClick(id, checkbox) {
+      const chart = getCustomChart(id);
+      if (!chart) return;
+      const key = checkbox.value;
+      if (checkbox.checked) {
+        if (!chart.selectedKeys.includes(key)) chart.selectedKeys.push(key);
+        chart.clickOrder = chart.clickOrder.filter(item => item !== key);
+        chart.clickOrder.push(key);
+      } else {
+        chart.selectedKeys = chart.selectedKeys.filter(item => item !== key);
+        chart.clickOrder = chart.clickOrder.filter(item => item !== key);
+      }
+      refreshCustomChartUI(id);
+    }
 
-      listContainer.innerHTML = keys.map((key) => {
+    function selectAllCustomItems(id, flag) {
+      const chart = getCustomChart(id);
+      if (!chart) return;
+      const keys = Object.keys(getCustomCounts(chart.column)).sort(naturalCollator.compare);
+      chart.selectedKeys = flag ? [...keys] : [];
+      chart.clickOrder = flag ? [...keys] : [];
+      refreshCustomChartUI(id);
+    }
+
+    function refreshCustomChartUI(id) {
+      const chart = getCustomChart(id);
+      const card = document.getElementById(id);
+      if (!chart || !card) return;
+      const counts = getCustomCounts(chart.column);
+      const allKeys = Object.keys(counts).sort(naturalCollator.compare);
+      const orderedSelected = getOrderedCustomKeys(chart, counts);
+      const unselected = allKeys.filter(key => !chart.selectedKeys.includes(key));
+      const displayKeys = [...orderedSelected, ...unselected];
+      const selectedTotal = orderedSelected.reduce((sum, key) => sum + (counts[key] || 0), 0);
+      const list = card.querySelector('.custom-keywords-list');
+
+      list.innerHTML = displayKeys.map(key => {
+        const selected = chart.selectedKeys.includes(key);
+        const order = selected ? orderedSelected.indexOf(key) + 1 : null;
+        const count = counts[key] || 0;
+        const pct = selected && selectedTotal > 0 ? ((count / selectedTotal) * 100).toFixed(1) : null;
         return `<label class="checkbox-item custom-kw-item">
-                  <input type="checkbox" class="custom-kw-chk" value="${key}" checked onchange="handleCustomKeywordClick(this)">
-                  <span>${key}</span>
-                  <span class="pct-badge" style="font-size:0.75rem; font-weight:bold;"></span>
-                </label>`;
+          <span class="order-badge" style="font-size:0.75rem; font-weight:bold; color:#2563eb; ${order ? '' : 'display:none;'}">${order ? order + '.' : ''}</span>
+          <input type="checkbox" value="${escapeHtml(key)}" ${selected ? 'checked' : ''} onchange="handleCustomKeywordClick('${id}', this)">
+          <span>${escapeHtml(key)}</span>
+          <span style="font-size:0.75rem; font-weight:bold; color:${selected ? '#2563eb' : '#94a3b8'};">(${count}名 / ${pct !== null ? pct + '%' : '除外'})</span>
+        </label>`;
       }).join('');
-
-      document.getElementById('custom-chart-title').value = `${col} (抽出分布)`;
-      updateCustomPercentages();
     }
 
-    function selectAllCustomItems(flag) {
-      document.querySelectorAll('.custom-kw-chk').forEach(chk => {
-        chk.checked = flag;
-        handleCustomKeywordClick(chk);
+    function syncOutputOrder() {
+      const orderSection = document.getElementById('output-order-section');
+      if (orderSection) orderSection.style.display = customCharts.length ? 'block' : 'none';
+      const selectedColumns = Array.from(document.querySelectorAll('.normal-chart-chk:checked')).map(cb => cb.value);
+      const activeIds = new Set([...selectedColumns.map(col => `normal:${col}`), ...customCharts.map(chart => chart.id)]);
+      outputOrder = outputOrder.filter(item => activeIds.has(item.id));
+
+      selectedColumns.forEach(column => {
+        const id = `normal:${column}`;
+        if (!outputOrder.some(item => item.id === id)) outputOrder.push({ id, type: 'normal', column });
       });
+      customCharts.forEach(chart => {
+        if (!outputOrder.some(item => item.id === chart.id)) outputOrder.push({ id: chart.id, type: 'custom', customId: chart.id });
+      });
+      renderOutputOrder();
     }
 
-    function toggleCustomExtractPanel() {
-      const chk = document.getElementById('chk-custom-extract');
-      document.getElementById('custom-extract-card').style.display = chk && chk.checked ? 'block' : 'none';
+    function moveOutputItem(id, direction) {
+      const index = outputOrder.findIndex(item => item.id === id);
+      const next = index + direction;
+      if (index < 0 || next < 0 || next >= outputOrder.length) return;
+      [outputOrder[index], outputOrder[next]] = [outputOrder[next], outputOrder[index]];
+      renderOutputOrder();
+    }
+
+    function renderOutputOrder() {
+      const container = document.getElementById('output-order-list');
+      if (!container) return;
+      if (!outputOrder.length) {
+        container.innerHTML = '<span style="font-size:0.8rem; color:#94a3b8;">出力するグラフを選択してください。</span>';
+        return;
+      }
+      container.innerHTML = outputOrder.map((item, index) => {
+        const chart = item.type === 'custom' ? getCustomChart(item.customId) : null;
+        const name = item.type === 'custom' ? `カスタム: ${chart?.title || '名称未設定'}` : item.column;
+        return `<div class="output-order-item">
+          <span class="order-number">${index + 1}</span>
+          <span class="order-name">${escapeHtml(name)}</span>
+          <button type="button" class="btn-small" onclick="moveOutputItem('${item.id}', -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+          <button type="button" class="btn-small" onclick="moveOutputItem('${item.id}', 1)" ${index === outputOrder.length - 1 ? 'disabled' : ''}>↓</button>
+        </div>`;
+      }).join('');
     }
 
     function updateScaleRanges() {
@@ -504,64 +633,23 @@
     }
 
     function getAggregatedData(targetCol) {
-      if (targetCol === "__CUSTOM_EXTRACT__") {
-        return getCustomExtractedData();
-      }
-
-      let counts = {};
+      const counts = {};
       rawData.forEach(row => {
-        let cleanItem = formatValueLabel(row[targetCol]);
-        if (cleanItem === "インフラ ") cleanItem = "インフラ";
-        if (cleanItem && cleanItem !== "未入力") {
-          counts[cleanItem] = (counts[cleanItem] || 0) + 1;
-        }
+        const cleanItem = formatValueLabel(row[targetCol]);
+        if (cleanItem && cleanItem !== "未入力") counts[cleanItem] = (counts[cleanItem] || 0) + 1;
       });
-
-      let sortedKeys = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-      let values = sortedKeys.map(k => counts[k]);
-      let total = values.reduce((a, b) => a + b, 0);
-
-      return { labels: sortedKeys, values: values, total: total };
+      const labels = Object.keys(counts).sort((a, b) => (counts[b] - counts[a]) || naturalCollator.compare(a, b));
+      const values = labels.map(key => counts[key]);
+      return { labels, values, total: values.reduce((sum, value) => sum + value, 0) };
     }
 
-    // ★ 커스텀 추출 렌더링 시 클릭 순서(click), 비율순(count), 이름순(name)으로 완벽 전환
-    function getCustomExtractedData() {
-      const col = document.getElementById('custom-target-col').value;
-      const sortMode = document.getElementById('custom-sort-mode').value;
-      
-      const checkedBoxes = Array.from(document.querySelectorAll('.custom-kw-chk:checked')).map(cb => cb.value);
-
-      let counts = {};
-      checkedBoxes.forEach(kw => counts[kw] = 0);
-
-      rawData.forEach(row => {
-        let val = formatValueLabel(row[col]);
-        if (counts.hasOwnProperty(val)) {
-          counts[val]++;
-        }
-      });
-
-      let labels = [];
-
-      if (sortMode === 'click') {
-        // ★ 클릭한 순서(customClickOrder)를 최우선으로 배치
-        labels = customClickOrder.filter(item => checkedBoxes.includes(item));
-        // 혹시 유실된 항목이 있으면 뒤에 붙여줌
-        checkedBoxes.forEach(item => {
-          if (!labels.includes(item)) labels.push(item);
-        });
-      } else if (sortMode === 'count') {
-        // 비율(인원수) 순서
-        labels = [...checkedBoxes].sort((a, b) => counts[b] - counts[a]);
-      } else {
-        // 이름순/알파벳순
-        labels = [...checkedBoxes].sort((a, b) => a.localeCompare(b, 'ja', { numeric: true }));
-      }
-
-      let values = labels.map(k => counts[k]);
-      let total = values.reduce((a, b) => a + b, 0);
-
-      return { labels, values, total };
+    function getCustomExtractedData(id) {
+      const chart = getCustomChart(id);
+      if (!chart) return { labels: [], values: [], total: 0 };
+      const counts = getCustomCounts(chart.column);
+      const labels = getOrderedCustomKeys(chart, counts);
+      const values = labels.map(key => counts[key] || 0);
+      return { labels, values, total: values.reduce((sum, value) => sum + value, 0) };
     }
 
     function generateMonochromePalette(baseHex, totalSteps) {
@@ -599,7 +687,7 @@
         let baseColor = isDefault ? '#0F3854' : document.getElementById('custom-color-picker').value;
         let palette = generateMonochromePalette(baseColor, labels.length);
 
-        let startAngle = -Math.PI / 2; // 12시 정각(맨 위)에서부터 배치 시작
+        let startAngle = -Math.PI / 2; // 12時方向から配置を開始
 
         labels.forEach((label, i) => {
           let sliceAngle = total > 0 ? (values[i] / total) * 2 * Math.PI : 0;
@@ -617,7 +705,7 @@
           ctx.lineWidth = 3.0; 
           ctx.stroke();
           
-          startAngle = endAngle; // 시계 방향 순서대로 이동
+          startAngle = endAngle; // 時計回りに次の項目へ進む
         });
 
         startAngle = -Math.PI / 2;
@@ -674,7 +762,7 @@
         };
         drawCallouts(leftCallouts, false); drawCallouts(rightCallouts, true);
 
-        let titleText = (colName === "__CUSTOM_EXTRACT__") ? document.getElementById('custom-chart-title').value : colName;
+        let titleText = colName;
         ctx.fillStyle = '#0f172a'; ctx.font = 'bold 22px -apple-system, Meiryo, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(titleText.length > 6 ? titleText.slice(0, 5) + '..' : titleText, centerX, centerY);
         resolve(canvas.toDataURL('image/png'));
@@ -682,9 +770,10 @@
     }
 
     async function generatePPTX() {
-      const selectedCols = Array.from(document.querySelectorAll('#checkbox-list input[type="checkbox"]:checked')).map(cb => cb.value);
-      if (!rawData.length || !selectedCols.length) {
-        alert(!rawData.length ? "データを先に読み込んでください。" : "出力したい項目を1つ以上選択してください。");
+      syncOutputOrder();
+      const selectedCharts = [...outputOrder];
+      if (!rawData.length || !selectedCharts.length) {
+        alert(!rawData.length ? "データを先に読み込んでください。" : "出力したいグラフを1つ以上選択してください。");
         return;
       }
 
@@ -695,8 +784,8 @@
       let pptx = new PptxGenJS();
       pptx.defineLayout({ name: 'WIDE_16_9', width: 13.333, height: 7.5 }); pptx.layout = 'WIDE_16_9';
 
-      for (let pageStart = 0; pageStart < selectedCols.length; pageStart += itemsPerPage) {
-        let pageCols = selectedCols.slice(pageStart, pageStart + itemsPerPage), countInSlide = pageCols.length, slide = pptx.addSlide();
+      for (let pageStart = 0; pageStart < selectedCharts.length; pageStart += itemsPerPage) {
+        let pageCharts = selectedCharts.slice(pageStart, pageStart + itemsPerPage), countInSlide = pageCharts.length, slide = pptx.addSlide();
 
         slide.addShape(pptx.ShapeType.rect, { x: 0.8, y: 0.45, w: 1.5, h: 0.32, fill: { color: '3B82F6' } });
         slide.addText("About Report", { x: 0.8, y: 0.45, w: 1.5, h: 0.32, fontSize: 10, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', fontFace: 'Meiryo' });
@@ -710,15 +799,16 @@
                          (itemsPerPage === 2 ? [1.0, 1.0 + colWidth + (13.333 - 2.0 - colWidth * 2)] : [0.8, 0.8 + colWidth + (11.733 - colWidth * 3) / 2, 0.8 + (colWidth + (11.733 - colWidth * 3) / 2) * 2]);
 
         for (let i = 0; i < countInSlide; i++) {
-          let col = pageCols[i], colX = xPositions[i];
-          const { labels, values, total } = getAggregatedData(col);
+          const chartItem = pageCharts[i];
+          const colX = xPositions[i];
+          const customChart = chartItem.type === 'custom' ? getCustomChart(chartItem.customId) : null;
+          const displayTitle = customChart ? customChart.title : chartItem.column;
+          const { labels, values, total } = customChart ? getCustomExtractedData(customChart.id) : getAggregatedData(chartItem.column);
           if (!labels.length) continue;
-
-          let displayTitle = (col === "__CUSTOM_EXTRACT__") ? document.getElementById('custom-chart-title').value : col;
           slide.addText(`■ ${displayTitle}`, { x: colX, y: 2.1, w: colWidth, h: 0.35, fontSize: 13, bold: true, color: '0F172A', fontFace: 'Meiryo' });
 
           if (chartType === 'pie') {
-            let imgDataUrl = await renderCustomDonutCanvas(col, labels, values, total, isDefault, itemsPerPage);
+            let imgDataUrl = await renderCustomDonutCanvas(displayTitle, labels, values, total, isDefault, itemsPerPage);
             let imgSize = itemsPerPage === 1 ? 5.2 : (itemsPerPage === 2 ? 4.9 : 4.7);
             slide.addImage({ data: imgDataUrl, x: colX + (colWidth - imgSize) / 2, y: 2.25, w: imgSize, h: imgSize });
           } else {
