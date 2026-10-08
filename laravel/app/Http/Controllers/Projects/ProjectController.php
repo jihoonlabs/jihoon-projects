@@ -38,7 +38,9 @@ class ProjectController extends Controller
         while (true) {
             try {
                 return new ProjectResource(DB::transaction(function () use ($validated, $request) {
-                    $project = Project::create($validated);
+                    $project = new Project($validated);
+                    $project->created_by = $request->user()->id;
+                    $project->save();
                     $project->members()->attach($request->user()->id, [
                         'role' => 'leader',
                         'permission' => 'write',
