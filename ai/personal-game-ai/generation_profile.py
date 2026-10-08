@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 from read_context import CONFIG_PATH
+import thumby_capabilities
 
 SUPPORTED_PROFILES = {"thumby"}
 THUMBY_ALLOWED_ROOTS = {"buttonL", "buttonR", "display"}
@@ -12,6 +13,9 @@ THUMBY_ALLOWED_DISPLAY = {"fill", "drawFilledRectangle", "drawText", "update", "
 def current_profile(config_path=None):
     path = Path(CONFIG_PATH if config_path is None else config_path)
     config = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(config, dict):
+        raise ValueError("생성 프로필 설정은 JSON 객체여야 합니다.")
+    thumby_capabilities.selected(config)
     profile = config.get("generation_profile")
     if profile is None:
         return None
@@ -23,13 +27,15 @@ def current_profile(config_path=None):
 def design_prompt(area):
     if area != "game" or current_profile() != "thumby":
         return ""
-    return (
+    inputs = ("buttonL/buttonR/buttonU/buttonD/buttonA/buttonB" if "controls" in
+              thumby_capabilities.selected(_config()) else "buttonL/buttonR")
+    return thumby_capabilities.prompt(_config()) + (
         "\n# 일반 Thumby 생성 계약\n"
         "게임 규칙과 기기 입출력·표시 어댑터를 서로 다른 모듈로 분리하세요. "
         "게임 규칙 모듈은 thumby를 import하지 않고 CPython에서 검사 가능해야 합니다. "
         "실행 대상은 Thumby MicroPython이므로 CPython 전용 모듈·기능에 의존하지 마세요. "
         "게임 폴더와 같은 이름의 엔트리 파일이 기기 어댑터 역할을 함께 맡고, "
-        "그 엔트리 파일만 import thumby를 사용하세요. buttonL/buttonR 입력과 "
+        f"그 엔트리 파일만 import thumby를 사용하세요. {inputs} 입력과 "
         "display.fill, drawFilledRectangle, drawText, update, setFPS를 필요한 범위에서 사용하세요. "
         "실기에서 실행할 엔트리 Python 파일은 게임 폴더와 정확히 같은 이름으로 설계하세요. "
         "실제 무한 진입 함수와 별도로 CPython 테스트에서 한 번 호출하고 끝나는 유한 adapter/helper 함수를 설계하고, "
@@ -49,6 +55,10 @@ def _entry_filename(directory=None):
         if not isinstance(directory, str) or not directory.strip():
             raise ValueError("일반 Thumby 게임 경로 설정이 필요합니다.")
     return Path(directory).name + ".py"
+
+
+def _config():
+    return json.loads(Path(CONFIG_PATH).read_text(encoding="utf-8"))
 
 
 def validate_design(area, files, directory):
@@ -178,14 +188,20 @@ def validate_tests(area, candidate, design, directory=None):
 def test_prompt(area):
     if area != "game" or current_profile() != "thumby":
         return ""
-    return (
+    extended = bool(thumby_capabilities.selected(_config()))
+    prefix = ("\n기기 모킹 틀을 대상 import보다 앞에 두세요. 각 테스트에서 Mock을 초기화하고 "
+              "승인 설계의 유한 helper를 호출하여 버튼·상태 반환·화면 호출을 검사하세요. "
+              "저장 테스트는 성공·없음·손상·실패를 fake로 구성하고 실제 파일·기기를 사용하지 마세요.\n"
+              + thumby_capabilities.fake_prefix(_config())) if extended else ""
+    return prefix + (
         "\n# 일반 Thumby 테스트 계약\n"
         "순수 게임 규칙은 실제 thumby 모듈 없이 검사하세요. "
         "폴더명 엔트리의 기기 어댑터 테스트는 import sys 후 대상 모듈 import 전에 "
         "sys.modules['thumby']에 None이 아닌 가짜 thumby 객체를 직접 주입해 CPython에서 검사 가능하게 하세요. "
         "아래 틀에 제시되는 대상 모듈 import 문장은 유지하되, 그 import보다 앞에 sys import와 fake 주입 코드를 삽입하세요. "
-        "좌우 이동 경계·장애물 충돌·점수·재시작 조건을 설계 checks에 따라 직접 assertion으로 확인하세요. "
-        "승인 설계의 functions에 없는 새 production 함수·클래스·상수 계약을 테스트에서 만들지 마세요. "
+        + ("이동·공격·메뉴·장착·저장 중 승인 설계에 있는 조건을 checks에 따라 검사하세요. " if extended else
+           "좌우 이동 경계·장애물 충돌·점수·재시작 조건을 설계 checks에 따라 직접 assertion으로 확인하세요. ")
+        + "승인 설계의 functions에 없는 새 production 함수·클래스·상수 계약을 테스트에서 만들지 마세요. "
         "CPython 테스트에서 엔트리를 import해도 게임 루프가 시작되지 않는 구조를 유지하고, "
         "실제 무한 진입 함수를 테스트에서 직접 호출하지 말고 import 안전성과 유한 helper 동작을 검사하세요. "
         "런처/runtime guard 관련 check는 CPython import-safe 동작을 assertion하고, "
@@ -215,6 +231,7 @@ def implementation_prompt(area, filename):
         "\n# 일반 Thumby 구현 계약\n"
         "승인 설계의 역할 분리를 유지하세요. "
         + role
+        + (thumby_capabilities.prompt(_config()) if filename == entry else "")
         + "Thumby MicroPython에서 실행할 수 있도록 CPython 전용 모듈·기능을 사용하지 마세요. "
         + f"현재 구현 대상은 {filename} 하나뿐입니다. "
     )
@@ -301,6 +318,7 @@ def validate_code(area, code, filename=None):
     if area != "game" or current_profile() != "thumby":
         return
     tree = ast.parse(code)
+    allowed = thumby_capabilities.allowed(_config())
     entry_filename = _entry_filename() if filename is not None else None
     if filename is not None and filename == entry_filename:
         _validate_entry_start(tree)
@@ -339,20 +357,23 @@ def validate_code(area, code, filename=None):
         if not isinstance(current, ast.Name) or current.id != "thumby":
             continue
         chain.reverse()
-        if not chain or chain[0] not in THUMBY_ALLOWED_ROOTS:
+        if not chain or chain[0] not in allowed:
             raise ValueError("확인하지 않은 일반 Thumby API를 사용할 수 없습니다.")
-        if (
-            chain[0] == "display"
-            and len(chain) >= 2
-            and chain[1] not in THUMBY_ALLOWED_DISPLAY
-        ):
-            raise ValueError("확인하지 않은 Thumby display API를 사용할 수 없습니다.")
-        if (
-            chain[0] in {"buttonL", "buttonR"}
-            and len(chain) >= 2
-            and chain[1] != "pressed"
-        ):
-            raise ValueError("확인하지 않은 Thumby button API를 사용할 수 없습니다.")
+        if len(chain) > 2 or (len(chain) == 2 and chain[1] not in allowed[chain[0]]):
+            raise ValueError("확인하지 않은 Thumby " + chain[0] + " API를 사용할 수 없습니다.")
+
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        statements = node.orelse if isinstance(node, ast.If) and _is_micropython_guard(node.test) else [node]
+        for statement in statements:
+            for child in ast.walk(statement):
+                if (isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute)
+                        and isinstance(child.func.value, ast.Attribute)
+                        and isinstance(child.func.value.value, ast.Name)
+                        and child.func.value.value.id == "thumby"
+                        and child.func.value.attr == "saveData"):
+                    raise ValueError("CPython import 경로의 최상위 저장 I/O는 사용할 수 없습니다.")
 
     for node in tree.body:
         if isinstance(node, ast.While) and isinstance(node.test, ast.Constant) and node.test.value is True:
