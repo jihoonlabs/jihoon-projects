@@ -24,12 +24,12 @@ php artisan test --filter=TicketSeederTest
 php artisan test
 ./vendor/bin/pint --test
 cd ../react
-npm test -- --run
+npm run test:run
 npx tsc --noEmit
 npm run lint
 npm run build
 ```
-Adjust the React test invocation only after checking `react/package.json` scripts; never assume it ran if the command is unsupported.
+The React command above matches the checked `react/package.json` `test:run` script.
 
 ## Concurrency regression expectations
 - Creating a project generates an uppercase three-letter key.
