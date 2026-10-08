@@ -53,6 +53,32 @@ class ProjectAuditHistoryTest extends TestCase
         ]);
     }
 
+    public function test_deleted_project_key_is_reserved_for_new_projects(): void
+    {
+        $project = Project::factory()->create();
+        $historicalKey = $project->project_key;
+        $admin = User::factory()->create();
+        $admin->forceFill(['role' => 'admin'])->save();
+
+        $this->actingAs($admin)->deleteJson("/api/projects/{$project->id}")
+            ->assertNoContent();
+
+        // Even an explicit import/factory assignment cannot resurrect a deleted key.
+        try {
+            Project::factory()->create(['project_key' => $historicalKey]);
+            $this->fail('Historical project key should be rejected.');
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertSame('This project key is permanently reserved.', $exception->getMessage());
+        }
+
+        $replacement = Project::factory()->create();
+        $this->assertNotSame($historicalKey, $replacement->project_key);
+        $this->assertDatabaseHas('project_audit_events', [
+            'project_key' => $historicalKey,
+            'action' => 'project.deleted',
+        ]);
+    }
+
     public function test_delete_with_tickets_is_rejected_without_audit_event(): void
     {
         $project = Project::factory()->create();
