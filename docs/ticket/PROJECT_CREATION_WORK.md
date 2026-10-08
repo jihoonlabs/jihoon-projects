@@ -1,35 +1,31 @@
-# Ticket Project Creation Child — WORK
+# Ticket Project Creation — Child WORK
 
-## Parent and responsibility
-- Parent Epic: `feature/ticket`. This branch: `feature/ticket-project-creation`.
-- Responsibility: project creation by an authenticated active user; automatically assign an immutable three-letter project key, persist `created_by` separately from leadership, and enroll the creator as the initial `leader` with `write` permission, atomically.
-- Outside scope: project-key search / URL routing / React project creation screen, leader handover, project archive / restore / irreversible deletion, role changes for existing members. Split those into separate Child branches if implemented.
-- Invariants: retain numeric database project ID/FKs internally; project_key cannot be changed by renaming; Ticket numbering remains project-scoped. Unauthorized access to unrelated projects stays forbidden.
+## 目的と責任
+- Parent: `feature/ticket`; Child: `feature/ticket-project-creation`.
+- 認証済みactive userによるProject作成、固定3文字key、変更されない`created_by`、初期leader/write登録を提供する。
+- Project検索/UI、leader譲渡、archive/restore、削除権限拡張は対象外。
 
-## Implementation state (2026-10-08)
-- Imported two commits from Epic into this Child: `03a983f5c925a2ffaffcbf37e06de2182e0cacdb` (controller), `6e7614b06d8022b15cdd7ee06f841ceac4c90e0d` (test).
-- `POST /api/projects` no longer admin-only, creation and initial membership use a DB transaction, creator becomes `leader/write`.
-- Existing unique project_key retry behavior remains, and errors other than project_key conflicts are not retried.
-- Follow-up: nullable `projects.created_by` migration preserves original creator ID for new projects, even if leadership later transfers. The API returns `created_by` as a string or null; request-provided `created_by` is ignored. Legacy projects remain null rather than guessing from their leader.
-- Existing `PATCH`/`DELETE` project API remains admin-only: modifications to these permissions are separate work.
-- Tests added/changed, but **NOT executed** on this branch; no claims of successful validation.
+## 実装契約
+- Fetch時点で最新Epicは`be3cb7b`。共通祖先`6e7614b`からEpic固有4 commits、Child固有9 commitsに分岐しているためfast-forwardでは統合できない。
+- `POST /api/projects` はadmin以外のactive userも利用できる。作成・creator設定・作成者のleader/write登録をtransactionで行う。
+- `created_by`はAPI入力で指定・変更できず、leader変更後も保持する。既存Projectは推測せず`null`を維持する。
+- Project key衝突は最大5回まで再試行し、他のunique違反は再試行しない。
+- `PATCH`/`DELETE`は従来どおりadmin限定。削除条件もEpic契約を維持する。
+- Project Audit Child (`e723d79`) も`ProjectController::store`と`Project`のkey生成を変更する。統合ではProject、creator、leader/write、`project.created` audit insertを一つのtransactionにまとめ、Audit側の歴史的key予約とEpicの最大5回key衝突retryを両立させる。
+- Lifecycle Child (`a52c78c`) はControllerの一覧・改名・削除に加えてarchive/restoreを追加し、Projectの`archived_at` castを持つ。Audit統合時はrename/deleteとarchive/restoreのイベント記録を各状態変更transactionに保つ。
+- Leadership Child (`0d52402`) は`ProjectMemberController`でleader譲渡をlock付きtransactionにし、leaderのrole変更・削除を制限する。作成APIの初期leader/write登録をその唯一leader契約の入口として統合する。
+- Discovery API Child (`31d9dc7`) はProjectControllerの検索・key lookupを変更する。Lifecycleのactive/archive filterと検索条件を同じ一覧queryで保持する。
+- 本ChildのEpic比較差分は `docs/ticket/TICKET.md` の削除を含む。統合時は最新Epic Routerを保持し、この削除を適用しない。
 
-## Verification and acceptance
-- Run focused `php artisan test --filter=ProjectManagementTest` and `vendor/bin/pint --test` at an environment with existing dependencies, without installing packages solely for this work.
-- Check active authenticated non-admin user: response 201, 3-letter immutable project_key, correct immutable `created_by`, exact one leader/write membership for creator, new project appears in their own project list.
-- Check admin creation, unauthorized/guest rejection (auth:sanctum), unrelated project visibility restrictions, key collision retry, failure rollback (no orphan Project or member). Tests now also cover legacy null creator rather than inferring it from leader; rollback fault injection remains untested.
-- Run related Project/Ticket regression tests and review final diff. If verified, record exact test results and adopted Child SHA in the Epic MD before integration.
-- Until then, keep Child unmerged.
+## 検証状態 (SHA `67aa0cd58b96d3a58b74051f6d448bbf0cf10be6`)
+- `ProjectManagementTest`: 12 tests / 61 assertions、Laravel全体: 115 / 513 が成功。
+- Epic既存のevent injectionによるkey unique衝突・最大5回retryテストも成功。これは複数DB接続を使う実競合テストではない。
+- `vendor/bin/pint --test` 成功。
+- 専用SQLiteファイルDBで既存Project rowを作成後、Lifecycle `archived_at` (`000001`) → audit ledger (`000003`) → creator (`000004`) のschema-only overlayを適用。row保持とnullable列の`null`を確認。APIのlegacy null回帰テストも成功。Controller統合はしていない。
+- 検証環境: Childごとに依存vendorとComposer autoloadを分離し、テスト用APP_KEYとSQLiteを指定。初回はvendor symlinkがEpic側のautoloadを参照し、APP_KEYも未設定だったためその結果を破棄して再実行した。migration helperも初回にDB環境変数を渡せず、明示設定で再実行した。既存`.env`・DBは使用していない。
 
-## Future sibling Child candidates
-- `feature/ticket-project-leadership`: single-leader invariant, transfer operation, permissions.
-- `feature/ticket-project-discovery`: project-key search and project selection.
-- `feature/ticket-project-lifecycle`: archive / restore / completed-ticket checks / hard-delete guardrails.
-- UI changes could form a separate Child after the backend contracts are confirmed.
-
-## Integration constraints for creator identity
-- New schema migration: `2026_10_08_000004_add_created_by_to_projects_table.php`. Existing projects have null `created_by`; do not automatically grant creator-only deletion to legacy projects.
-- This Child deliberately does not expand permanent-delete privileges. Before creator/admin deletion is enabled, require project key confirmation, complete-ticket rules, durable audit records and archived lifecycle policy.
-- Project audit Child modifies `ProjectController::store`; preserve both `created_by` assignment and the audit event within the same transaction on integration. Also reconcile historical key reservation in its `Project` model.
-- Leadership Child must never update `created_by` when changing the leader. Avoid exposing owner changes through project PATCH mass assignment.
-- Migration and tests authored remotely, NOT EXECUTED; no integration or merge.
+## 未検証と統合ゲート
+- MySQL migration、複数DB接続によるkey衝突、同時作成、transaction rollback fault injectionは未検証。
+- 本Child単体にはaudit ledgerがない。SQLite overlayでmigration順と既存row互換性は確認済み。統合後はProject・creator・membership・audit eventの一括rollbackを回帰テストする。
+- Discoveryのkey lookupとarchive済みProjectの可視性は未統合。Lifecycleの一覧filterは検索一覧に保持し、key lookupでarchive済みProjectを返す方針は別途確認する。
+- 本Childは未merge。次はProject Audit Childとの`ProjectController`/`Project` 3-way比較および統合rollback回帰テスト。
