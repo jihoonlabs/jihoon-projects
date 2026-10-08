@@ -6,7 +6,7 @@ from pathlib import Path
 
 import edit_loop
 import generation_profile
-from ask_ai import ask_model
+from ask_ai import ModelLengthError, ask_model
 from read_context import read_context
 from task_dependencies import order_tasks
 
@@ -262,6 +262,13 @@ def generate_design(
         "design_" + datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     )
     folder.mkdir()
+    (folder / "context.txt").write_text(context, encoding="utf-8")
+
+    def record_attempt(attempt, status, error=None):
+        record = {"attempt": attempt, "status": status,
+                  "error": error, "automatic_approval": False}
+        with (folder / f"attempt_{attempt}.json").open("x", encoding="utf-8") as stream:
+            stream.write(json.dumps(record, ensure_ascii=False, indent=2) + "\n")
     with (folder / "request.json").open("x", encoding="utf-8") as stream:
         stream.write(json.dumps(request, ensure_ascii=False, indent=2) + "\n")
     if revision is not None:
@@ -309,9 +316,26 @@ def generate_design(
             + "# 이전 구조 검사\n" + validation_feedback
         )
         print(f"AI 설계 시도 {attempt}/3", flush=True)
-        answer = model(prompt)
+        (folder / f"prompt_{attempt}.txt").write_text(prompt, encoding="utf-8")
+        try:
+            answer = model(prompt)
+        except ModelLengthError as error:
+            # An incomplete response must remain inspectable, never approvable.
+            (folder / f"response_{attempt}.json").write_text(
+                json.dumps(error.result, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            record_attempt(attempt, "output_limit", str(error))
+            raise RuntimeError(
+                f"출력 한도 중단. 기록: {folder}. "
+                "GAME_AI_NUM_CTX/GAME_AI_NUM_PREDICT를 검토한 뒤 명시 재시도하세요."
+            ) from error
+        except Exception as error:
+            record_attempt(attempt, "model_error", str(error))
+            raise
         check_unchanged()
         if not isinstance(answer, str) or not answer.strip():
+            record_attempt(attempt, "empty_response", "AI 응답이 비어 있습니다.")
             raise ValueError("AI 응답이 비어 있습니다.")
         (folder / f"answer_{attempt}.txt").write_text(answer, encoding="utf-8")
         try:
@@ -320,7 +344,13 @@ def generate_design(
             design = validate_design(json.loads(answer), requirements, area)
         except ValueError as error:
             validation_feedback = str(error)
+            record_attempt(attempt, "invalid_structure", validation_feedback)
             print("설계 검사 실패:", validation_feedback)
+            if any(
+                (folder / f"answer_{previous}.txt").read_text(encoding="utf-8") == answer
+                for previous in range(1, attempt)
+            ):
+                raise RuntimeError(f"동일한 실패 응답 반복으로 중단. 기록: {folder}") from error
             continue
 
         check_unchanged()
@@ -330,6 +360,7 @@ def generate_design(
             envelope["revision"] = revision
         with path.open("x", encoding="utf-8") as stream:
             stream.write(json.dumps(envelope, ensure_ascii=False, indent=2) + "\n")
+        record_attempt(attempt, "review_required")
         print("설계 SHA-256:", hashlib.sha256(path.read_bytes()).hexdigest())
         return path
 
@@ -402,3 +433,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
