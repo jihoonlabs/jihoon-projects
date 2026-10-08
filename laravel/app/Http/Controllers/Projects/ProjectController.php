@@ -15,8 +15,10 @@ class ProjectController extends Controller
     {
         $validated = $request->validate([
             'archived' => ['sometimes', 'boolean'],
+            'search' => ['sometimes', 'string', 'max:255'],
         ]);
         $archived = (bool) ($validated['archived'] ?? false);
+        $search = trim($validated['search'] ?? '');
 
         $projects = Project::query()
             ->when($archived, fn ($query) => $query->whereNotNull('archived_at'), fn ($query) => $query->whereNull('archived_at'))
@@ -27,6 +29,10 @@ class ProjectController extends Controller
                     fn ($members) => $members->where('users.id', $request->user()->id)
                 )
             )
+            ->when($search !== '', fn ($query) => $query->where(function ($filter) use ($search) {
+                $filter->where('project_key', 'like', strtoupper($search).'%')
+                    ->orWhere('name', 'like', '%'.$search.'%');
+            }))
             ->orderBy('name')
             ->get();
 
@@ -66,6 +72,15 @@ class ProjectController extends Controller
                 }
             }
         }
+    }
+
+    public function showByKey(Request $request, string $projectKey): ProjectResource
+    {
+        abort_unless(preg_match('/^[A-Z]{3}$/', strtoupper($projectKey)) === 1, 404);
+        $project = Project::query()->where('project_key', strtoupper($projectKey))->firstOrFail();
+        $this->authorizeRead($request, $project);
+
+        return new ProjectResource($project->load('members'));
     }
 
     public function show(Request $request, Project $project): ProjectResource
