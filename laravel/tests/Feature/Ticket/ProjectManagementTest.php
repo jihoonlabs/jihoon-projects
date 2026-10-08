@@ -136,6 +136,48 @@ class ProjectManagementTest extends TestCase
             ->assertJsonPath('data.name', $project->name);
     }
 
+    public function test_project_creator_is_persisted_and_cannot_be_spoofed_or_changed(): void
+    {
+        $creator = User::factory()->create();
+        $other = User::factory()->create();
+        $this->actingAs($creator)->postJson('/api/projects', [
+            'name' => 'Creator identity',
+            'created_by' => $other->id,
+        ])->assertCreated()->assertJsonPath('data.created_by', (string) $creator->id);
+
+        $project = Project::query()->where('name', 'Creator identity')->firstOrFail();
+        $this->assertSame($creator->id, (int) $project->created_by);
+
+        $admin = User::factory()->create();
+        $admin->forceFill(['role' => 'admin'])->save();
+        $this->actingAs($admin)->patchJson("/api/projects/{$project->id}", [
+            'name' => 'Renamed by admin',
+            'created_by' => $other->id,
+        ])->assertOk()->assertJsonPath('data.created_by', (string) $creator->id);
+
+        $this->assertSame($creator->id, (int) $project->refresh()->created_by);
+    }
+
+    public function test_project_creator_does_not_change_when_leader_membership_changes(): void
+    {
+        $creator = User::factory()->create();
+        $nextLeader = User::factory()->create();
+
+        $this->actingAs($creator)->postJson('/api/projects', [
+            'name' => 'Transfer independent ownership',
+        ])->assertCreated();
+
+        $project = Project::query()->where('name', 'Transfer independent ownership')->firstOrFail();
+        $project->members()->updateExistingPivot($creator->id, ['role' => 'member']);
+        $project->members()->attach($nextLeader->id, [
+            'role' => 'leader',
+            'permission' => 'write',
+        ]);
+
+        $this->assertSame($creator->id, (int) $project->refresh()->created_by);
+        $this->assertSame('member', $project->members()->where('users.id', $creator->id)->firstOrFail()->pivot->role);
+    }
+
     public function test_project_key_does_not_change_when_project_is_renamed(): void
     {
         $admin = User::factory()->create();
