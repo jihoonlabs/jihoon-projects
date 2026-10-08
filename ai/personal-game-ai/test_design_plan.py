@@ -63,6 +63,45 @@ class DesignPlanTests(unittest.TestCase):
     def sha256(self, path):
         return hashlib.sha256(path.read_bytes()).hexdigest()
 
+    def test_thumby_target_structure_follows_generic_example_on_retry(self):
+        game = self.root / "ThumbyGrowth"
+        game.mkdir()
+        config = self.root / "target.json"
+        config.write_text(json.dumps({"generation_profile": "thumby",
+                                      "edit_directory": "micropython/ThumbyGrowth"}))
+        requirements = ["Return state.", "Use a finite device frame."]
+        valid = copy.deepcopy(self.proposal)
+        valid["files"][0]["checks"].append({"requirement": "R2", "case": "state", "expected": "state"})
+        valid["files"].append({"id": "002", "filename": "ThumbyGrowth.py",
+            "functions": [{"name": "main_loop", "parameters": [], "behavior": "Runtime loop."},
+                          {"name": "step_frame", "parameters": ["state"], "behavior": "Finite frame."}],
+            "checks": [{"requirement": "R2", "case": "fake input", "expected": "state"}],
+            "depends_on": ["001"]})
+        captured = []
+
+        def model(prompt):
+            captured.append(prompt)
+            return json.dumps(self.proposal if len(captured) == 1 else valid)
+
+        with patch.object(design_plan.edit_loop, "game_location", return_value=(game, self.root)), \
+                patch.object(design_plan.generation_profile, "CONFIG_PATH", config):
+            path = design_plan.generate_design("Game", requirements, "game", model=model)
+        self.assertEqual(len(captured), 2)
+        for prompt in captured:
+            self.assertGreater(prompt.index("# 실제 대상에 맞는 필수 설계 구조"), prompt.index('"filename":"module.py"'))
+            self.assertIn("엔트리는 정확히 ThumbyGrowth.py", prompt)
+            self.assertIn('["R1", "R2"]', prompt)
+            self.assertIn("숨겨진 변경 가능한 전역 상태", prompt)
+            self.assertIn("순수 규칙은 기기 저장", prompt)
+        self.assertIn("폴더명과 같은 엔트리", captured[1])
+        self.assertEqual(json.loads(path.read_text())["design"], valid)
+        self.assertFalse(list(game.iterdir()))
+
+    def test_non_thumby_structure_guidance_is_empty(self):
+        self.assertEqual(design_plan.generation_profile.design_structure("sandbox", self.sandbox, self.requirements), "")
+        with patch.object(design_plan.generation_profile, "current_profile", return_value=None):
+            self.assertEqual(design_plan.generation_profile.design_structure("game", self.sandbox, self.requirements), "")
+
     def test_valid_design_and_original_input_are_saved(self):
         path = self.generate()
         envelope = json.loads(path.read_text())
