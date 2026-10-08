@@ -6,6 +6,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 interface ProjectResponse {
   id: string | number;
   name: string;
+  project_key: string;
   board_version: number;
 }
 
@@ -27,17 +28,25 @@ async function readData<T>(response: Response): Promise<T> {
   return result.data as T;
 }
 
+function toProject({ id, name, project_key, board_version }: ProjectResponse): Project {
+  return { id: String(id), name, projectKey: project_key, boardVersion: board_version };
+}
+
+export async function createProject(name: string): Promise<Project> {
+  const data = await readData<ProjectResponse>(await fetchWithCsrf('/api/projects', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  }));
+  return toProject(data);
+}
+
 export async function fetchProjects(): Promise<Project[]> {
   const data = await readData<ProjectResponse[]>(await fetch(`${API_URL}/api/projects`, {
     credentials: 'include',
     headers: { Accept: 'application/json' },
   }));
   if (!Array.isArray(data)) throw new Error('プロジェクト一覧の応答形式が不正です。');
-  return data.map(({ id, name, board_version }) => ({
-    id: String(id),
-    name,
-    boardVersion: board_version,
-  }));
+  return data.map(toProject);
 }
 
 export async function fetchProjectMembers(projectId: string): Promise<ProjectMember[]> {
