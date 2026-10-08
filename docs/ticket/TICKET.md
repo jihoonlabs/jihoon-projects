@@ -28,7 +28,8 @@
 - 今回の検証状態: GitHub上でコード・差分を確認。追加PHPテスト、Laravel全件、Pint、Reactテスト、実MySQLでの同時実行/migrationは未実行。過去の成功記録を今回の結果として扱わない。
 
 ## 次の作業
-- 追加回帰テストとLaravel/Pintの実行環境での再検証を行い、mainとの差分および統合時の競合を確認する。main merge/pushとbranch削除は承認待ち。
+- 実行手順と検証記録のテンプレートは `docs/ticket/TICKET_REMOTE_VALIDATION.md` を参照。追加回帰テストとLaravel/Pintの再検証、MySQL migration・独立接続の競合確認、main統合時の競合確認が未完了。
+- main merge/pushとbranch削除は承認待ち。
 
 ## 今後の候補
 - Activity / HistoryはV1完了後に再評価する。
