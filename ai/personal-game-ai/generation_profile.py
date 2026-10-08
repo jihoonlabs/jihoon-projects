@@ -281,13 +281,16 @@ def _validate_entry_start(tree):
         )
 
     for node in tree.body:
-        if node in guards or isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             continue
+        # else/elif는 CPython import에서도 실행될 수 있다.
+        candidates = node.orelse if node in guards else [node]
         if any(
             isinstance(child, ast.Call)
             and isinstance(child.func, ast.Name)
             and child.func.id in start_names
-            for child in ast.walk(node)
+            for statement in candidates
+            for child in ast.walk(statement)
         ):
             raise ValueError(
                 "일반 Thumby 진입 함수는 MicroPython guard 밖 최상위에서 호출할 수 없습니다."

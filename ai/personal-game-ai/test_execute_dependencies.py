@@ -203,6 +203,70 @@ class ExecuteDependencyTests(unittest.TestCase):
         self.assertEqual(self.load()[1]["status"], "pending")
         self.assertFalse((self.root / ".run_tasks.lock").exists())
 
+    def test_oversized_request_compacts_without_changing_artifact(self):
+        dependency = self.task("a")
+        code = "# explanation\n" * 180 + "VALUE = 'a'\n"
+        (self.root / "a.py").write_text(code, encoding="utf-8")
+        dependency.update(status="tests_passed")
+        dependency["artifact"] = execute_plan.capture_artifact(dependency)
+        task = self.task("b", ["a"])
+        contract = {
+            "requirements": {"r1": "한글 공백 유지"},
+            "functions": [], "checks": [], "dependencies": [],
+        }
+        task["prompt"] = "Implement b.\n" + json.dumps(
+            contract, ensure_ascii=False, indent=2
+        )
+        task["prompt"] += " " * 1500
+        result = execute_plan.dependency_request(task, {"a": dependency})
+        self.assertLessEqual(len(result), 4000)
+        self.assertIn("한글 공백 유지", result)
+        self.assertIn("VALUE = 'a'", result)
+        self.assertEqual(execute_plan.capture_artifact(dependency), dependency["artifact"])
+        self.assertEqual((self.root / "a.py").read_text(), code)
+
+    def test_contract_compaction_preserves_values_and_other_text(self):
+        contract = {
+            "requirements": {"r1": 'a  b "quoted"'},
+            "functions": [], "checks": [], "dependencies": [],
+        }
+        prompt = "Prefix {literal}\n" + json.dumps(contract, indent=2)
+        compact = execute_plan.compact_contract(prompt)
+        self.assertTrue(compact.startswith("Prefix {literal}\n"))
+        self.assertEqual(json.loads(compact.split("\n", 1)[1]), contract)
+        self.assertEqual(execute_plan.compact_contract(prompt + "\nAnswer: yes"), prompt + "\nAnswer: yes")
+
+    def test_answer_resume_compacts_contract_and_preserves_exchange(self):
+        task = self.task("b")
+        contract = {
+            "requirements": {"r1": "preserve  spaces"},
+            "functions": [], "checks": [], "dependencies": [],
+        }
+        task["prompt"] = json.dumps(contract, indent=2) + " " * 3000
+        task["answers"] = [{
+            "question": "Which option? {literal}",
+            "answer": "Keep  these spaces\n" + "x" * 1000,
+        }]
+        before = json.dumps(task)
+        self.assertGreater(len(run_tasks.task_request(task)), 4000)
+        result = execute_plan.dependency_request(task, {})
+        expected = run_tasks.task_request({
+            **task, "prompt": execute_plan.compact_contract(task["prompt"])
+        })
+        self.assertEqual(result, expected)
+        self.assertLessEqual(len(result), 4000)
+        self.assertEqual(json.dumps(task), before)
+
+    def test_request_limit_includes_answers_at_exact_boundary(self):
+        task = self.task("b")
+        task["answers"] = [{"question": "Choose?", "answer": "yes"}]
+        overhead = len(run_tasks.task_request({**task, "prompt": ""}))
+        task["prompt"] = "x" * (4000 - overhead)
+        self.assertEqual(len(execute_plan.dependency_request(task, {})), 4000)
+        task["answers"][0]["answer"] += "!"
+        with self.assertRaises(ValueError):
+            execute_plan.dependency_request(task, {})
+
 
 if __name__ == "__main__":
     unittest.main()

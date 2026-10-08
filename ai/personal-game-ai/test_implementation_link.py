@@ -229,6 +229,7 @@ class ImplementationLinkTests(unittest.TestCase):
 
         def validate(proposal, allowed, goal):
             captured["goal"] = goal
+            captured["tasks"] = proposal["tasks"]
             return proposal["tasks"]
 
         with patch.object(link.edit_loop, "check_git_files"), patch.object(
@@ -239,7 +240,8 @@ class ImplementationLinkTests(unittest.TestCase):
             return_value="PROFILE IMPLEMENTATION",
         ):
             link.create_plan(self.path, "sha")
-        self.assertIn("PROFILE IMPLEMENTATION", captured["goal"])
+        self.assertIn("PROFILE IMPLEMENTATION", captured["tasks"][0]["prompt"])
+        self.assertEqual(captured["goal"], self.envelope["request"]["goal"])
 
     def test_wrong_digest_is_rejected_before_confirmation_read(self):
         # 실제 읽기 함수로 SHA 검사 경로를 확인한다.

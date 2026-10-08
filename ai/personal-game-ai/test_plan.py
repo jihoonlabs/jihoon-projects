@@ -41,6 +41,30 @@ def read_approved_design(path):
     return source, data, approval_data, envelope
 
 
+def _constant_expression(node):
+    # 평가/실행 없이 리터럴과 리터럴만의 연산을 구분한다.
+    return all(isinstance(child, (
+        ast.Constant, ast.Tuple, ast.List, ast.Set, ast.Dict, ast.Load,
+        ast.UnaryOp, ast.BinOp, ast.BoolOp, ast.Compare, ast.IfExp,
+        ast.operator, ast.unaryop, ast.boolop, ast.cmpop,
+    )) for child in ast.walk(node))
+
+
+def _runtime_assertion(node):
+    if not (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "self"
+        and node.func.attr.startswith("assert")
+    ):
+        return False
+    arguments = [*node.args, *(
+        keyword.value for keyword in node.keywords if keyword.arg != "msg"
+    )]
+    return any(not _constant_expression(argument) for argument in arguments)
+
+
 def validate_code(code, module, check_count):
     if not isinstance(code, str) or not code.strip() or len(code) > 20000:
         raise ValueError("테스트 코드는 1~20000자여야 합니다.")
@@ -105,15 +129,11 @@ def validate_code(code, module, check_count):
                 raise ValueError("테스트는 데코레이터 없는 test_*(self)여야 합니다.")
             if method.name in methods:
                 raise ValueError("테스트 메서드 이름은 파일 안에서 고유해야 합니다.")
-            if not any(
-                isinstance(child, ast.Call)
-                and isinstance(child.func, ast.Attribute)
-                and isinstance(child.func.value, ast.Name)
-                and child.func.value.id == "self"
-                and child.func.attr.startswith("assert")
-                for child in ast.walk(method)
-            ):
-                raise ValueError("각 테스트 메서드에 unittest assertion이 필요합니다.")
+            if not any(_runtime_assertion(child) for child in ast.walk(method)):
+                raise ValueError(
+                    "각 테스트 메서드에 실제 결과나 상태를 검사하는 unittest assertion이 필요합니다. "
+                    "상수만 비교하는 assertion은 검사로 인정하지 않습니다."
+                )
             methods[method.name] = method
 
     if not check_count <= len(methods) <= 64:
@@ -226,6 +246,7 @@ def generate_tests(path, model=None):
             "import unittest와 설계 대상 모듈의 직접 import를 사용하세요. "
             "클래스는 unittest.TestCase를 직접 상속하세요. "
             "검사 사례마다 고유한 test_ 메서드 하나와 assertion을 작성하세요. "
+            "상수끼리 비교하지 말고 대상 함수 반환값·상태·호출 결과를 assertion으로 검사하세요. "
             "구현 파일이 아직 없어도 테스트 후보를 작성할 수 있습니다. "
             "mock 검사도 생략하지 말고 unittest.mock의 patch를 사용하세요. "
             "대상 모듈이 참조하는 함수 이름을 patch하세요. "

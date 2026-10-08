@@ -94,6 +94,7 @@ class WorkflowTests(unittest.TestCase):
         outside = self.root / "outside-record"
         outside.mkdir()
         (outside / "state.json").write_text("{}", encoding="utf-8")
+        legacy.parent.mkdir(parents=True, exist_ok=True)
         legacy.symlink_to(outside, target_is_directory=True)
 
         with self.assertRaises(ValueError):
@@ -206,14 +207,22 @@ class WorkflowTests(unittest.TestCase):
         install.assert_not_called()
 
     def test_confirmation_installs_then_stops_before_execution(self):
+        self.check_confirmation_install(self.root / "sandbox")
+
+    def test_confirmation_records_game_tests_outside_tool_directory(self):
+        self.check_confirmation_install(self.root.with_name(self.root.name + "_game"))
+
+    def check_confirmation_install(self, directory):
         folder = self.root / "outputs" / "workflow_fixture"
         folder.mkdir(parents=True)
         manifest = self.root / "outputs" / "test_plan_fixture" / "tests.json"
         manifest.parent.mkdir()
         manifest.write_text("candidate")
-        installed = self.root / "sandbox" / "test_health.py"
+        installed = directory / "test_health.py"
         installed.parent.mkdir()
+        self.addCleanup(installed.parent.rmdir)
         installed.write_text("fixed test")
+        self.addCleanup(installed.unlink)
         state = {
             "stage": "review_tests", "protected": {},
             "tests": str(manifest.relative_to(self.root)),
@@ -234,7 +243,17 @@ class WorkflowTests(unittest.TestCase):
                 None, "sha", None, None,
             )
         self.assertEqual(state["stage"], "waiting_git")
-        self.assertIn("sandbox/test_health.py", state["installed"])
+        self.assertEqual(len(state["installed"]), 1)
+        relative = next(iter(state["installed"]))
+        self.assertEqual((self.root / relative).resolve(), installed.resolve())
+        state["request"] = {"area": "game"}
+        with patch.object(workflow.design_plan, "directory_for", return_value=directory.resolve()), patch.object(
+            workflow.edit_loop, "git_output", side_effect=[str(directory.parent.resolve()), "test_health.py", ""]
+        ):
+            self.assertEqual(workflow.installed_tests(state), [])
+        installed.write_text("changed")
+        with patch.object(workflow.design_plan, "directory_for", return_value=directory.resolve()), self.assertRaises(RuntimeError):
+            workflow.installed_tests(state)
         execute.assert_not_called()
 
     def test_git_wait_does_not_create_plan_or_execute(self):

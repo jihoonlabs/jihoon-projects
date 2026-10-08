@@ -297,6 +297,31 @@ class GenerationProfileTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 generation_profile.validate_code("game", code, "device.py")
 
+    def test_entry_rejects_start_in_guard_else_or_elif(self):
+        prefix = (
+            "import sys\nimport thumby\ndef run():\n    pass\n"
+            "if sys.implementation.name == 'micropython':\n    run()\n"
+        )
+        with patch.object(
+            generation_profile, "CONFIG_PATH",
+            self.config(edit_directory="micropython/ThumbyDodge"),
+        ):
+            for branch in ("else:\n    run()\n", "elif True:\n    run()\n"):
+                with self.subTest(branch=branch), self.assertRaises(ValueError):
+                    generation_profile.validate_code("game", prefix + branch, "ThumbyDodge.py")
+
+    def test_entry_accepts_non_starting_else(self):
+        code = (
+            "import sys\nimport thumby\ndef run():\n    pass\n"
+            "if sys.implementation.name == 'micropython':\n    run()\n"
+            "else:\n    READY = True\n"
+        )
+        with patch.object(
+            generation_profile, "CONFIG_PATH",
+            self.config(edit_directory="micropython/ThumbyDodge"),
+        ):
+            generation_profile.validate_code("game", code, "ThumbyDodge.py")
+
     def test_non_entry_code_does_not_require_micropython_start_guard(self):
         code = "def step():\n    return 1\n"
         with patch.object(

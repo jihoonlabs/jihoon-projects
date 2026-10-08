@@ -104,7 +104,7 @@ def installed_tests(state):
     directory = design_plan.directory_for(state["request"]["area"])
     missing_git = []
     for relative, expected in files.items():
-        path = BASE_DIR / relative
+        path = Path(os.path.abspath(BASE_DIR / relative))
         if (
             path.is_symlink()
             or path.parent != directory
@@ -306,7 +306,7 @@ def advance(state, state_path, model, approve, confirm, answer_id, answer, feedb
         save()
         paths = implementation_link.install_tests(path, confirm)
         state["installed"] = {
-            str(item.relative_to(BASE_DIR)): digest(item.read_bytes())
+            os.path.relpath(item, BASE_DIR): digest(item.read_bytes())
             for item in paths
         }
         state["stage"] = "waiting_git"

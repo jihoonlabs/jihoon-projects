@@ -1,4 +1,5 @@
 import argparse
+import ast
 import hashlib
 import json
 from pathlib import Path
@@ -61,17 +62,60 @@ def check_artifact(task):
     return artifact["code"]
 
 
+def compact_contract(request):
+    # 승인 기록은 그대로 두고 전달 문자열 끝의 JSON 서식만 줄인다.
+    for position, character in enumerate(request):
+        if character != "{":
+            continue
+        try:
+            contract = json.loads(request[position:])
+        except ValueError:
+            continue
+        if isinstance(contract, dict) and set(contract) == {
+            "requirements", "functions", "checks", "dependencies"
+        }:
+            return request[:position] + json.dumps(
+                contract, ensure_ascii=False, separators=(",", ":")
+            )
+    return request
+
+
+def compact_code(code):
+    try:
+        tree = ast.parse(code)
+        if not tree.body:
+            return code
+        compact = ast.unparse(tree)
+        if ast.dump(ast.parse(compact)) != ast.dump(tree):
+            return code
+    except (SyntaxError, ValueError, RecursionError):
+        return code
+    return compact if len(compact) < len(code) else code
+
+
 def dependency_request(task, by_id):
     request = run_tasks.task_request(task)
+    dependencies = []
     for dependency_id in task.get("depends_on", []):
         dependency = by_id[dependency_id]
         if dependency["status"] != "tests_passed":
             raise RuntimeError("선행 작업이 통과하지 않았습니다.")
         code = check_artifact(dependency)
-        request += (
+        dependencies.append((dependency["target"], code))
+
+    def assemble(base, compact=False):
+        return base + "".join(
             "\n\n# 검증된 선행 코드: "
-            + dependency["target"] + "\n" + code
+            + target + "\n" + (compact_code(code) if compact else code)
+            for target, code in dependencies
         )
+
+    full_request = assemble(request)
+    if len(full_request) <= 4000:
+        return full_request
+    # 답변을 붙이기 전에 계약만 축약해야 질문/답변 원문을 보존할 수 있다.
+    compact_task = {**task, "prompt": compact_contract(task["prompt"])}
+    request = assemble(run_tasks.task_request(compact_task), compact=True)
     if len(request) > 4000:
         raise ValueError("선행 코드와 답변을 포함한 요청이 4000자를 넘습니다.")
     return request

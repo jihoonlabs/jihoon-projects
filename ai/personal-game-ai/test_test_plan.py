@@ -186,6 +186,33 @@ class TestPlanTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.validate()
 
+    def test_constant_only_assertions_are_rejected(self):
+        original = self.proposal["files"][0]["code"]
+        for expression in (
+            "self.assertTrue(True)", "self.assertEqual(10, 10)",
+            "self.assertTrue(1 == 1)", "self.assertEqual([1, 2], [1, 2])",
+            "self.assertEqual(1 + 1, 2)",
+            "self.assertEqual(1, 1, msg=str(heal(8, 5, 10)))",
+        ):
+            with self.subTest(expression=expression):
+                self.proposal["files"][0]["code"] = original.replace(
+                    "self.assertEqual(heal(8, 5, 10), 10)", expression
+                )
+                with self.assertRaisesRegex(ValueError, "상수"):
+                    self.validate()
+
+    def test_result_variable_and_exception_assertions_are_accepted(self):
+        original = self.proposal["files"][0]["code"]
+        for expression in (
+            "result = heal(8, 5, 10)\n        self.assertEqual(result, 10)",
+            "with self.assertRaises(ValueError):\n            heal('invalid', 5, 10)",
+        ):
+            with self.subTest(expression=expression):
+                self.proposal["files"][0]["code"] = original.replace(
+                    "self.assertEqual(heal(8, 5, 10), 10)", expression
+                )
+                self.validate()
+
     def test_skip_decorator_is_rejected(self):
         self.proposal["files"][0]["code"] = (
             "import unittest\nfrom health import heal\n"
