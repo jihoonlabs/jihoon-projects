@@ -16,6 +16,11 @@ class Project extends Model
     {
         static::creating(function (Project $project) {
             if ($project->project_key !== null) {
+                // Explicit keys (e.g. factories/imports) cannot revive deleted identities.
+                if (DB::table('project_audit_events')->where('project_key', $project->project_key)->exists()) {
+                    throw new \InvalidArgumentException('This project key is permanently reserved.');
+                }
+
                 return;
             }
 
