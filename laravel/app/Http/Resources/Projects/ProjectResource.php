@@ -17,6 +17,7 @@ class ProjectResource extends JsonResource
             'name' => $this->name,
             'project_key' => $this->project_key,
             'archived_at' => $this->archived_at?->toIso8601String(),
+            'created_by' => $this->created_by === null ? null : (string) $this->created_by,
             'board_version' => (int) $this->board_version,
             'members' => ProjectMemberResource::collection($this->whenLoaded('members')),
         ];

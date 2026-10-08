@@ -44,7 +44,20 @@ class ProjectController extends Controller
 
         while (true) {
             try {
-                return new ProjectResource(Project::create($validated));
+                return new ProjectResource(DB::transaction(function () use ($validated, $request) {
+                    $project = new Project($validated);
+                    $project->created_by = $request->user()->id;
+                    $project->save();
+                    $project->members()->attach($request->user()->id, [
+                        'role' => 'leader',
+                        'permission' => 'write',
+                    ]);
+                    $this->recordAudit($request, $project, 'project.created', [
+                        'name' => $project->name,
+                    ]);
+
+                    return $project;
+                }));
             } catch (UniqueConstraintViolationException $exception) {
                 // A concurrent insert can claim the generated key after the existence check.
                 // Retry only project_key collisions; other unique constraints must still fail.
