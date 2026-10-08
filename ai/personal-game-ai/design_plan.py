@@ -305,6 +305,7 @@ def generate_design(
             '"checks":[{"requirement":"R1","case":"검사 입력",'
             '"expected":"기대 결과"}],"depends_on":[]}]}\n'
             + revision_prompt
+            + generation_profile.design_structure(area, directory, requirements)
             + "# 이전 구조 검사\n" + validation_feedback
         )
         print(f"AI 설계 시도 {attempt}/3", flush=True)
