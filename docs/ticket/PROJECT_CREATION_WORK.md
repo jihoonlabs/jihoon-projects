@@ -17,7 +17,7 @@
 ## Verification and acceptance
 - Run focused `php artisan test --filter=ProjectManagementTest` and `vendor/bin/pint --test` at an environment with existing dependencies, without installing packages solely for this work.
 - Check active authenticated non-admin user: response 201, 3-letter immutable project_key, correct immutable `created_by`, exact one leader/write membership for creator, new project appears in their own project list.
-- Check admin creation, unauthorized/guest rejection, unrelated project visibility restrictions, key collision retry, failure rollback (no orphan Project or member).
+- Check admin creation, unauthorized/guest rejection (auth:sanctum), unrelated project visibility restrictions, key collision retry, failure rollback (no orphan Project or member). Tests now also cover legacy null creator rather than inferring it from leader; rollback fault injection remains untested.
 - Run related Project/Ticket regression tests and review final diff. If verified, record exact test results and adopted Child SHA in the Epic MD before integration.
 - Until then, keep Child unmerged.
 
