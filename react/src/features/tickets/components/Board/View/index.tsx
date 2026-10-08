@@ -20,6 +20,7 @@ import Main from '../Main';
 import Card from '../Card';
 import TicketModal from '../TicketModal';
 import ProjectMembersDialog from '../ProjectMembersDialog';
+import ProjectCreateDialog from '../ProjectCreateDialog';
 import { fetchProjects, fetchProjectMembers } from '@/features/tickets/api/projectApi';
 import type { Project, ProjectMember } from '@/features/tickets/types/project';
 import styles from './index.module.css';
@@ -39,6 +40,8 @@ export function TicketBoardView() {
   const currentUserId = currentUser?.id ?? null;
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [projectQuery, setProjectQuery] = useState('');
+  const [creatingProject, setCreatingProject] = useState(false);
   const [assigneeFilter, setAssigneeFilter] = useState('ALL');
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -205,6 +208,9 @@ export function TicketBoardView() {
         projects={projects}
         selectedProjectId={selectedProjectId}
         onProjectChange={setSelectedProjectId}
+        projectQuery={projectQuery}
+        onProjectQueryChange={setProjectQuery}
+        onCreateProject={() => setCreatingProject(true)}
         canWrite={canWrite}
         canManageMembers={canManageMembers}
         onManageMembers={() => setManagingMembers(true)}
@@ -249,6 +255,21 @@ export function TicketBoardView() {
           onClose={() => setIsModalOpen(false)}
           onCreate={handleCreate}
           onUpdate={handleUpdate}
+        />
+      )}
+      {creatingProject && (
+        <ProjectCreateDialog
+          onClose={() => setCreatingProject(false)}
+          onCreated={(project) => {
+            setProjects((items) => [...items.filter((item) => item.id !== project.id), project]);
+            setSelectedProjectId(project.id);
+            setProjectQuery('');
+            setCreatingProject(false);
+            setProjectError(null);
+            void refreshProjects().catch((reason) =>
+              setProjectError(reason instanceof Error ? reason.message : 'プロジェクト一覧を更新できませんでした。'),
+            );
+          }}
         />
       )}
       {managingMembers && selectedProject && (
