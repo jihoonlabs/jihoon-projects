@@ -44,6 +44,66 @@ class ProjectManagementTest extends TestCase
         $this->getJson('/api/projects')->assertJsonCount(4, 'data');
     }
 
+    public function test_project_search_by_key_and_name_is_limited_to_accessible_projects(): void
+    {
+        $member = User::factory()->create();
+        $visible = Project::factory()->create(['name' => 'Customer Portal']);
+        $hidden = Project::factory()->create(['name' => 'Customer Private']);
+        $this->addProjectMember($visible, $member, permission: 'read');
+
+        $this->actingAs($member)
+            ->getJson('/api/projects?search='.strtolower($visible->project_key))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.project_key', $visible->project_key);
+
+        $this->getJson('/api/projects?search=Customer')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Customer Portal');
+
+        $this->getJson('/api/projects?search=missing')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        $this->getJson('/api/projects?search='.strtolower($hidden->project_key))
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        $this->getJson('/api/projects?search[]='.strtolower($visible->project_key))
+            ->assertUnprocessable();
+    }
+
+    public function test_project_lookup_by_stable_key_enforces_membership_and_supports_lowercase(): void
+    {
+        $member = User::factory()->create();
+        $visible = Project::factory()->create();
+        $hidden = Project::factory()->create();
+        $this->addProjectMember($visible, $member, permission: 'read');
+
+        $this->actingAs($member)
+            ->getJson('/api/projects/by-key/'.strtolower($visible->project_key))
+            ->assertOk()
+            ->assertJsonPath('data.id', (string) $visible->id)
+            ->assertJsonPath('data.project_key', $visible->project_key);
+
+        $this->getJson('/api/projects/by-key/'.$hidden->project_key)
+            ->assertForbidden();
+
+        $this->getJson('/api/projects/by-key/INVALID')
+            ->assertNotFound();
+
+        $this->getJson('/api/projects/by-key/999')
+            ->assertNotFound();
+
+        $admin = User::factory()->create();
+        $admin->forceFill(['role' => 'admin'])->save();
+        $this->actingAs($admin)
+            ->getJson('/api/projects/by-key/'.$hidden->project_key)
+            ->assertOk()
+            ->assertJsonPath('data.id', (string) $hidden->id);
+    }
+
     public function test_project_creation_retries_when_another_insert_claims_the_generated_key(): void
     {
         $admin = User::factory()->create();
