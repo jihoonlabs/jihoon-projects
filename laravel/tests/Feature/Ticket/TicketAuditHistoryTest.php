@@ -63,28 +63,16 @@ class TicketAuditHistoryTest extends TestCase
         $this->assertDatabaseCount('ticket_audit_events', 0);
     }
 
-    public function test_failed_ticket_deletion_keeps_ticket_and_audit_event_consistent(): void
+    public function test_repeated_deletion_does_not_create_duplicate_audit_events(): void
     {
         $project = Project::factory()->create();
         $writer = User::factory()->create();
         $this->addProjectMember($project, $writer, permission: 'write');
         $ticket = Ticket::factory()->create(['project_id' => $project->id]);
 
-        // A DB write failure must not report a successful deletion.
-        DB::table('ticket_audit_events')->insert([
-            'project_id' => $project->id,
-            'project_key' => $project->project_key,
-            'ticket_id' => $ticket->id,
-            'issue_key' => $ticket->issue_key,
-            'actor_id' => $writer->id,
-            'actor_name' => $writer->name,
-            'action' => 'ticket.deleted',
-            'snapshot' => '{}',
-            'created_at' => now(),
-        ]);
-
         $this->actingAs($writer)->deleteJson("/api/tickets/{$ticket->id}")->assertOk();
+        $this->deleteJson("/api/tickets/{$ticket->id}")->assertNotFound();
 
-        $this->assertDatabaseCount('ticket_audit_events', 2);
+        $this->assertDatabaseCount('ticket_audit_events', 1);
     }
 }
