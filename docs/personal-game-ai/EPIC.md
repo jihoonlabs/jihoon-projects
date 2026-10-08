@@ -160,10 +160,12 @@
 - 일반 Thumby 제작을 먼저 검증하고 Thumby Color까지 확장한다. StarCraft 유즈맵은 이후 범위다.
 
 ## 제품 방향·썸비 Epic 연결
-- 제품 목표: [GOAL_V1](https://github.com/jihoonlabs/jihoon-projects/blob/4be1a13ce70488ffd0ff5c91dc397ce6531ad88e/docs/personal-game-ai/GOAL_V1.md).
-- 플랫폼 작업 연결: [썸비 Epic](https://github.com/jihoonlabs/jihoon-projects/blob/4be1a13ce70488ffd0ff5c91dc397ce6531ad88e/docs/thumby/EPIC.md).
-- 문서 검토 SHA: 4be1a13ce70488ffd0ff5c91dc397ce6531ad88e. owner 브랜치의 문서만 참조한다. 해당 코드나 Child 브랜치를 merge·통합한 상태가 아니다.
+- 제품 목표: [GOAL_V1](https://github.com/jihoonlabs/jihoon-projects/blob/afa2123edbe99930c62fee33347e21b3a3a38195/docs/personal-game-ai/GOAL_V1.md).
+- 플랫폼 작업 연결: [썸비 Epic](https://github.com/jihoonlabs/jihoon-projects/blob/afa2123edbe99930c62fee33347e21b3a3a38195/docs/thumby/EPIC.md).
+- 문서 검토 SHA: afa2123edbe99930c62fee33347e21b3a3a38195. owner 브랜치의 문서만 참조한다. 해당 코드나 Child 브랜치를 merge·통합한 상태가 아니다.
 - 사용자는 핵심 디자인·시나리오·규칙을 선택하고 명세를 승인한다. 승인 범위의 구현과 명백한 수정은 계속 진행한다.
 - 원본 복사는 절대 금지한다. 독자적인 코드·캐릭터·어셋·시나리오·데이터를 제작한다.
 - 게임·기기 조사와 경량화 선택지는 후속 구현이다. 일반 Thumby 우선, Color까지 최소 확장 목표이며 Color 지원 완료를 의미하지 않는다.
 - 장르·플레이 형식·핵심 재미는 기기 한계 안에서 최대한 비슷하게 살리며, 축소할 요소는 명세 승인 전에 설명한다.
+
+- 제작 후보: 로봇대전·킹오파·쿠니오·악마성 효월·비트매니아·건담 제네레이션의 장르·형식. 세부 방향은 위 GOAL에 기록했으며 우선순위와 구현 완료를 뜻하지 않는다.
