@@ -11,10 +11,10 @@
 - `project.renamed`: prior/new names and actor are recorded in the same transaction as update; no event if name unchanged.
 - `project.deleted`: last name, original creation timestamp, actor and fixed key remain after deletion. **Existing deletion restriction remains**: admin only, zero tickets.
 - No public audit browse endpoint, so historical details are not exposed to unrelated users.
-- Tests authored: `laravel/tests/Feature/Ticket/ProjectAuditHistoryTest.php` for create/rename, safe delete, rejection with tickets and normal-user denial.
+- Tests authored: `laravel/tests/Feature/Ticket/ProjectAuditHistoryTest.php` for create/rename, safe delete, rejection with tickets, historical key reservation and normal-user denial.
 
 ## Critical integration blockers
-- **Never reuse key:** this branch records deleted keys, but `Project::booted()` still only checks live `projects` rows when generating new keys. Update key generation / collision strategy to consult durable reservations or the ledger **before approving irreversible deletion**; add collision and exhaustion tests. Do not claim key-reuse protection is complete.
+- **Never reuse key:** the generator now excludes keys found in either live `projects` or historical `project_audit_events`; explicit assignment of an audited key is also rejected. This requires the audit migration to exist before any Project creation. The generator has a bounded 17,576-key scan and fails when exhausted. **Still outstanding:** runtime tests, high-contention race tests, capacity/exhaustion test, legacy projects deleted before ledger installation, and any direct DB writes that bypass Eloquent. Do not claim end-to-end key reservation is fully verified.
 - **Creator vs leader:** `created_by` ownership is not modeled yet. Do not enable creator deletion before verified schema and authorization.
 - **Lifecycle Child** modifies the same `ProjectController` for archive/restore and archived name-write guards. Manually reconcile transaction locks and append `project.archived` / `project.restored` events inside state-changing transactions; avoid lost updates or blind merge.
 - **Creation Child** modifies the same `ProjectController` to allow all active users to create with leader/write membership. Keep atomic creator membership + audit insert inside its collision-retry transaction.
@@ -26,3 +26,8 @@
 - Test on SQLite and MySQL. Validate role denial, transaction rollback when audit insert fails, concurrent delete/update, FK cascades, and deletion when no tickets.
 - After reconciling the dependent children, verify project visibility isolation, archived read-only, ownership, keys, ticket write rights, and audit record retention.
 - Current status: remote commits and tests authored; runtime tests **NOT RUN**; **NOT MERGED**.
+
+## Follow-up: permanent key identity
+- `Project::creating` checks both live and audited keys before selecting a new uppercase three-letter key; direct explicit reuse of a key in the audit ledger throws an exception.
+- Model-generated keys remain protected by the live `projects.project_key` unique constraint against concurrent inserts; collision retries in the controller remain required. The audit table itself has no unique project-key constraint because multiple events share a project key.
+- This does not change deletion eligibility or implement project ownership, user confirmation, or full irreversible purge. Continue treating Archive as the preferred user-facing lifecycle.
