@@ -48,6 +48,14 @@ class ProductionRequestTests(unittest.TestCase):
         self.assertEqual(self.record, before)
         self.assertFalse(list((self.root / "micropython/Rpg").iterdir()))
 
+    def test_feature_binding_and_unknown_feature_rejection(self):
+        self.data["thumby_features"] = ["save_data", "controls"]
+        self.config.write_text(json.dumps(self.data))
+        self.assertEqual(self.prepare()["binding"]["thumby_features"], ["controls", "save_data"])
+        self.data["thumby_features"] = ["unknown"]
+        self.config.write_text(json.dumps(self.data))
+        with self.assertRaises(ValueError): self.prepare()
+
     def test_tampered_or_missing_approval_is_rejected(self):
         for field in ("stage", "approval", "details", "policy"):
             record = copy.deepcopy(self.record)
