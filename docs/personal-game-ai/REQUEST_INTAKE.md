@@ -16,6 +16,8 @@
 
 ## 검증·재개
 
+- 폰 검사 배포: build_phone_check.py로 request_intake/휴대용 테스트/실행기를 check.pyz 하나로 묶는다. 네트워크·Ollama·Git·subprocess 없이 실행하고 PASS/FAIL 및 고유 JSON 결과 파일명만 표시한다. 번들에 소스 SHA-256을 넣어 검사 버전을 기록한다. 폰에서 직접 실행한 결과는 아직 미검증이다.
+
 - 요청 준비 테스트 18개, 기존 생성 브랜치 이름/설정을 유지한 분리 검증 checkout의 전체 테스트 306개 통과. 실제 CLI·요청 파일 로더 연결·최대 길이 UTF-8·파일 보존·자동 저장·가짜 모델 확인/거절/실패 흐름을 검사했다. loader 테스트는 게임 경로 선택만 임시 경로로 대체했다.
 - 실제 Ollama·Docker·Thumby 실행은 미검증. 가짜 모델 검증을 실제 모델 품질 확인으로 취급하지 않는다.
 - 시작 자료: AGENTS.md → 이 MD → REQUEST_INTAKE_MANUAL.md → request_intake.py/test_request_intake.py.
