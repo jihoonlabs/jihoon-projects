@@ -36,6 +36,13 @@
 - 既存実装: DBのProject key生成、Project別Ticket連番、メンバーpivotのrole/permission、管理者によるProject作成API、メンバー管理API。未実装: 一般ユーザー作成/自動リーダー登録、単一リーダー制約と安全な譲渡、Project作成UI、key検索/公開URL。
 - 上記は仕様記録であり、実装・テスト完了の宣言ではない。既存のTicket V1の動作を維持し、権限変更は回帰テストを追加する。
 
+## Project管理 Child の作業状況（2026-10-08）
+- Project作成の新仕様はChild `feature/ticket-project-creation` に分離した。Child作業MD: `docs/ticket/PROJECT_CREATION_WORK.md`（Child上のみ）。
+- Child実装commit: `03a983f5c925a2ffaffcbf37e06de2182e0cacdb`、テストcommit: `6e7614b06d8022b15cdd7ee06f841ceac4c90e0d`。Child作業MD commit: `a2854d3a70393713c2df8fbb200c9abf4c43d51c`。
+- 上記コードを一時的にEpicへ直接commitしたことを修正し、Epic上で同等内容をrevertした（履歴は保持）。`08ed10d8` に対するEpicのコード差分はゼロであることをGitHub compareで確認。
+- Childのテストは未実行。検証・採用SHA確認前にEpicへ統合しない。
+- リーダー譲渡、Project key検索・画面、保管・復元・完全削除は責任単位ごとに別Child候補とする。仕様確定と実装完了を混同しない。
+
 ## 次の作業
 - 実行手順と検証記録のテンプレートは `docs/ticket/TICKET_REMOTE_VALIDATION.md` を参照。追加回帰テストとLaravel/Pintの再検証、MySQL migration・独立接続の競合確認、main統合時の競合確認が未完了。
 - main merge/pushとbranch削除は承認待ち。
