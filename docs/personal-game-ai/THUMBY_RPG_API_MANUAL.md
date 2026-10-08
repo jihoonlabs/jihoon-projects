@@ -16,3 +16,5 @@ controls: 십자키 네 방향과 A/B의 pressed/justPressed. L/R은 십자키 �
 검사(ai/personal-game-ai에서): `python -m unittest test_generation_profile test_thumby_capabilities test_production_request`. 관련 전체 98개 검사 통과. 명세→요청 변환은 기존 production_request.py를 사용한다. 제품 명세 승인과 생성 설계·테스트 승인은 별도이며 승인 digest를 임의 변경하지 않는다.
 
 별도 작업 checkout에서 비어 있는 새 게임 폴더와 정확한 expected_branch/edit_directory/branch_document를 준비한다. 생성기에 넘기기 전에 production_request로 명세·설정을 검사한다. 새 게임을 ThumbyDodge 경로에 생성하지 않는다. 경험 자동 재사용·모델 추가 학습은 아직 구현되지 않았다.
+
+설계가 엔트리 파일을 빠뜨리면 검증을 우회하지 않는다. 이번 수정은 단일 module.py 예시 뒤에 실제 게임 엔트리 이름과 역할 분리 예시를 제공한다. 기존 요청 파일을 재사용하고 생성 실패 기록에서 --retry로 명시 재시도한다. 요청 폴더나 worktree를 다시 생성하지 않는다. 승인된 제품 명세는 유지하며 새 설계는 별도 검토가 필요하다. 관련 전체 120개 검사 통과, 실제 Ollama 재생성은 미검증이다.
