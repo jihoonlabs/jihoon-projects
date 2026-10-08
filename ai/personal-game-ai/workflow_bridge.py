@@ -55,14 +55,48 @@ def main():
     action.add_argument("--answer", dest="answer_id")
     action.add_argument("--retry", action="store_true")
     parser.add_argument("--answer-text")
+    parser.add_argument("--interactive", action="store_true", help="모델 질문을 터미널에서 답하고 같은 요청으로 재개")
     args = parser.parse_args()
     try:
         result = run(args.request, args.tool_dir, approve=args.approve_design, confirm=args.confirm_tests,
                      answer_id=args.answer_id, answer=args.answer_text, retry=args.retry)
+        if args.interactive:
+            result = continue_dialogue(args.request, args.tool_dir, result)
     except (ValueError, OSError) as error:
         parser.error(str(error))
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 1 if "error" in result else 0
+
+
+def continue_dialogue(request, tool_dir, result, *, ask=None, step=None, limit=20):
+    """Answer execution questions only; never cross review/commit gates."""
+    if ask is None:
+        def ask(question):
+            print(question + "\n답변 (/stop으로 중단):", file=sys.stderr, flush=True)
+            line = sys.stdin.readline()
+            return line.rstrip("\r\n") if line else None
+    step = run if step is None else step
+    count = 0
+    while "error" not in result and result.get("stage") == "execute" and result.get("execution") == "waiting_for_user":
+        if count >= limit:
+            return {**result, "dialogue_paused": "question_limit"}
+        details = result.get("details")
+        if not isinstance(details, list) or not details or not all(
+            isinstance(item, dict) and isinstance(item.get("id"), str) and item["id"].strip()
+            and isinstance(item.get("question"), str) and item["question"].strip()
+            for item in details
+        ) or len({item["id"] for item in details}) != len(details):
+            return {**result, "error": "workflow 질문 형식이 잘못됐습니다."}
+        # Re-read the engine's latest question list after each answer.
+        item = details[0]
+        answer = ask("[" + item["id"] + "] " + item["question"])
+        if answer is None or answer.strip() == "/stop":
+            return {**result, "dialogue_paused": "user_stopped"}
+        if not answer.strip() or len(answer) > 4000:
+            return {**result, "dialogue_paused": "invalid_answer"}
+        result = step(request, tool_dir, answer_id=item["id"], answer=answer)
+        count += 1
+    return result
 
 
 if __name__ == "__main__":

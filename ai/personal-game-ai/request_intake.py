@@ -154,8 +154,9 @@ def main():
                 stream.write(data)
             print("요청 저장: " + str(destination.absolute()), file=sys.stderr)
         if args.workflow_dir is not None:
-            from workflow_bridge import run
+            from workflow_bridge import run, continue_dialogue
             result = run(destination, args.workflow_dir)
+            result = continue_dialogue(destination, args.workflow_dir, result)
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return 1 if "error" in result else 0
     except (ValueError, OSError) as error:
