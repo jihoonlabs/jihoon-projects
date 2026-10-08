@@ -63,6 +63,47 @@ class TicketAuditHistoryTest extends TestCase
         $this->assertDatabaseCount('ticket_audit_events', 0);
     }
 
+    public function test_creating_and_updating_ticket_records_work_history(): void
+    {
+        $project = Project::factory()->create();
+        $writer = User::factory()->create();
+        $this->addProjectMember($project, $writer, permission: 'write');
+
+        $response = $this->actingAs($writer)->postJson('/api/tickets', [
+            'project_id' => $project->id,
+            'title' => 'First task',
+        ])->assertCreated();
+
+        $ticketId = $response->json('data.id');
+        $this->patchJson("/api/tickets/{$ticketId}", [
+            'title' => 'Revised task',
+            'status' => 'DONE',
+        ])->assertOk();
+
+        $events = DB::table('ticket_audit_events')->where('ticket_id', $ticketId)
+            ->orderBy('id')->get();
+        $this->assertSame(['ticket.created', 'ticket.updated'], $events->pluck('action')->all());
+        $this->assertSame($project->project_key, $events->first()->project_key);
+        $this->assertSame($writer->id, $events->last()->actor_id);
+        $snapshot = json_decode($events->last()->snapshot, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('Revised task', $snapshot['title']);
+        $this->assertSame('DONE', $snapshot['status']);
+    }
+
+    public function test_read_only_member_cannot_create_audit_events_by_editing(): void
+    {
+        $project = Project::factory()->create();
+        $reader = User::factory()->create();
+        $this->addProjectMember($project, $reader, permission: 'read');
+        $ticket = Ticket::factory()->create(['project_id' => $project->id]);
+
+        $this->actingAs($reader)->patchJson("/api/tickets/{$ticket->id}", [
+            'title' => 'Unauthorized',
+        ])->assertForbidden();
+
+        $this->assertDatabaseCount('ticket_audit_events', 0);
+    }
+
     public function test_repeated_deletion_does_not_create_duplicate_audit_events(): void
     {
         $project = Project::factory()->create();
