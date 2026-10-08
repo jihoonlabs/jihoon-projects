@@ -125,6 +125,51 @@ class TicketAuditHistoryTest extends TestCase
         $this->assertDatabaseCount('ticket_audit_events', 0);
     }
 
+    public function test_comment_lifecycle_records_author_and_final_deleted_content(): void
+    {
+        $project = Project::factory()->create();
+        $member = User::factory()->create();
+        $this->addProjectMember($project, $member, permission: 'read');
+        $ticket = Ticket::factory()->create(['project_id' => $project->id]);
+        $this->actingAs($member);
+
+        $created = $this->postJson("/api/tickets/{$ticket->id}/comments", [
+            'body' => 'Original note',
+        ])->assertSuccessful();
+        $commentId = $created->json('data.id');
+
+        $this->patchJson("/api/tickets/{$ticket->id}/comments/{$commentId}", [
+            'body' => 'Revised note',
+        ])->assertOk();
+        $this->deleteJson("/api/tickets/{$ticket->id}/comments/{$commentId}")
+            ->assertNoContent();
+
+        $events = DB::table('ticket_audit_events')
+            ->where('ticket_id', $ticket->id)->orderBy('id')->get();
+        $this->assertSame(
+            ['comment.created', 'comment.updated', 'comment.deleted'],
+            $events->pluck('action')->all()
+        );
+        $this->assertSame([$member->id, $member->id, $member->id], $events->pluck('actor_id')->all());
+        $snapshot = json_decode($events->last()->snapshot, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('Revised note', $snapshot['body']);
+        $this->assertSame((int) $commentId, $snapshot['comment_id']);
+        $this->assertDatabaseMissing('ticket_comments', ['id' => $commentId]);
+    }
+
+    public function test_non_member_cannot_write_comments_or_audit_events(): void
+    {
+        $project = Project::factory()->create();
+        $outsider = User::factory()->create();
+        $ticket = Ticket::factory()->create(['project_id' => $project->id]);
+
+        $this->actingAs($outsider)->postJson("/api/tickets/{$ticket->id}/comments", [
+            'body' => 'Forbidden',
+        ])->assertForbidden();
+
+        $this->assertDatabaseCount('ticket_audit_events', 0);
+    }
+
     public function test_repeated_deletion_does_not_create_duplicate_audit_events(): void
     {
         $project = Project::factory()->create();
