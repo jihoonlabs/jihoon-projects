@@ -136,6 +136,26 @@ class ProjectManagementTest extends TestCase
             ->assertJsonPath('data.name', $project->name);
     }
 
+    public function test_guest_cannot_create_a_project_or_membership(): void
+    {
+        $this->postJson('/api/projects', ['name' => 'Guest attempt'])
+            ->assertUnauthorized();
+
+        $this->assertDatabaseMissing('projects', ['name' => 'Guest attempt']);
+    }
+
+    public function test_legacy_projects_have_unknown_creator_without_guessing_from_leader(): void
+    {
+        $legacy = Project::factory()->create();
+        $leader = User::factory()->create();
+        $this->addProjectMember($legacy, $leader, role: 'leader', permission: 'write');
+
+        $this->assertNull($legacy->refresh()->created_by);
+        $this->actingAs($leader)->getJson("/api/projects/{$legacy->id}")
+            ->assertOk()
+            ->assertJsonPath('data.created_by', null);
+    }
+
     public function test_project_creator_is_persisted_and_cannot_be_spoofed_or_changed(): void
     {
         $creator = User::factory()->create();
