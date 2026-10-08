@@ -16,6 +16,7 @@ class ProjectResource extends JsonResource
             'id' => (string) $this->id,
             'name' => $this->name,
             'project_key' => $this->project_key,
+            'archived_at' => $this->archived_at?->toIso8601String(),
             'board_version' => (int) $this->board_version,
             'members' => ProjectMemberResource::collection($this->whenLoaded('members')),
         ];

@@ -7,12 +7,19 @@ use App\Http\Resources\Projects\ProjectResource;
 use App\Models\Project;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProjectController extends Controller
 {
     public function index(Request $request)
     {
+        $validated = $request->validate([
+            'archived' => ['sometimes', 'boolean'],
+        ]);
+        $archived = (bool) ($validated['archived'] ?? false);
+
         $projects = Project::query()
+            ->when($archived, fn ($query) => $query->whereNotNull('archived_at'), fn ($query) => $query->whereNull('archived_at'))
             ->when(
                 $request->user()->role !== 'admin',
                 fn ($query) => $query->whereHas(
@@ -67,6 +74,28 @@ class ProjectController extends Controller
         return new ProjectResource($project->refresh());
     }
 
+    public function archive(Request $request, Project $project): ProjectResource
+    {
+        $this->authorizeManage($request, $project);
+        DB::transaction(function () use ($project) {
+            $locked = Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+            abort_if($locked->tickets()->where('status', '!=', 'DONE')->exists(), 409, 'Complete all tickets before archiving.');
+            if ($locked->archived_at === null) {
+                $locked->forceFill(['archived_at' => now()])->save();
+            }
+        });
+
+        return new ProjectResource($project->refresh());
+    }
+
+    public function restore(Request $request, Project $project): ProjectResource
+    {
+        $this->authorizeManage($request, $project);
+        $project->forceFill(['archived_at' => null])->save();
+
+        return new ProjectResource($project->refresh());
+    }
+
     public function destroy(Request $request, Project $project)
     {
         $this->authorizeAdmin($request);
@@ -85,6 +114,19 @@ class ProjectController extends Controller
 
         abort_unless(
             $project->members()->where('users.id', $request->user()->id)->exists(),
+            403
+        );
+    }
+
+    private function authorizeManage(Request $request, Project $project): void
+    {
+        if ($request->user()->role === 'admin') {
+            return;
+        }
+
+        abort_unless(
+            $project->members()->where('users.id', $request->user()->id)
+                ->wherePivot('role', 'leader')->exists(),
             403
         );
     }

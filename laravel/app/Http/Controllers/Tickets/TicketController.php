@@ -54,6 +54,7 @@ class TicketController extends Controller
 
         $ticket = DB::transaction(function () use ($validated) {
             $project = Project::query()->lockForUpdate()->findOrFail($validated['project_id']);
+            $this->ensureActive($project);
             $status = $validated['status'] ?? 'TODO';
             $ticketNumber = (int) $project->next_ticket_number;
             $position = ((int) (Ticket::query()
@@ -107,13 +108,18 @@ class TicketController extends Controller
         }
 
         if (! array_key_exists('status', $validated)) {
-            $ticket->update($validated);
+            DB::transaction(function () use ($ticket, $validated) {
+                $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
+                $this->ensureActive($project);
+                $ticket->update($validated);
+            });
 
             return new TicketResource($ticket->load(['project:id,name', 'assignee:id,name']));
         }
 
         DB::transaction(function () use ($ticket, $validated) {
             $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
+            $this->ensureActive($project);
             $ticket->refresh();
 
             if ($validated['status'] === $ticket->status) {
@@ -148,6 +154,7 @@ class TicketController extends Controller
 
         $project = DB::transaction(function () use ($ticket, $validated) {
             $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
+            $this->ensureActive($project);
 
             abort_if(
                 (int) $project->board_version !== (int) $validated['board_version'],
@@ -201,6 +208,7 @@ class TicketController extends Controller
 
         DB::transaction(function () use ($ticket) {
             $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
+            $this->ensureActive($project);
             $ticket->refresh();
             $status = $ticket->status;
 
@@ -249,6 +257,7 @@ class TicketController extends Controller
 
     private function authorizeProjectWrite(Request $request, Project $project): void
     {
+        $this->ensureActive($project);
         if ($request->user()->role === 'admin') {
             return;
         }
@@ -260,6 +269,11 @@ class TicketController extends Controller
                 ->exists(),
             403
         );
+    }
+
+    private function ensureActive(Project $project): void
+    {
+        abort_if($project->archived_at !== null, 409, 'Restore this project before editing tickets.');
     }
 
     private function validateAssignee(Project $project, ?int $assigneeId): void
