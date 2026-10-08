@@ -2,11 +2,13 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
 import design_plan
 import request_intake
+import workflow
 
 
 class RequestIntakeTests(unittest.TestCase):
@@ -47,6 +49,39 @@ class RequestIntakeTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 2)
                 self.assertEqual(result.stdout, "")
                 self.assertIn("error:", result.stderr)
+
+    def test_cli_request_file_is_accepted_without_modification_or_model_call(self):
+        # Exercise the real loader and validator; only game-directory selection
+        # is replaced because this Child retains the parent's target config.
+        brief = "🌸" * 3000
+        settings = {"play": "좌" * 400, "finish": "끝" * 400}
+        result = self.cli("--brief", brief, "--play", settings["play"],
+                          "--finish", settings["finish"], "--request-only")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        raw = result.stdout.encode("utf-8")
+        self.assertLessEqual(len(raw), 20000)
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "new-request.json"
+            path.write_bytes(raw)
+            with patch.object(design_plan, "directory_for", return_value=Path(folder)), \
+                    patch.object(workflow.edit_loop, "ask_model", side_effect=AssertionError("unexpected model call")):
+                loaded_path, loaded_bytes, loaded = workflow.load_request(path)
+            self.assertEqual(loaded_path, path)
+            self.assertEqual(loaded_bytes, raw)
+            self.assertEqual(loaded, request_intake.prepare(brief, settings)["request"])
+            self.assertEqual(path.read_bytes(), raw)
+            self.assertEqual(list(Path(folder).iterdir()), [path])
+
+    def test_intake_status_output_cannot_be_used_as_workflow_request(self):
+        result = self.cli("--brief", "회피 게임")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "incomplete.json"
+            path.write_text(result.stdout, encoding="utf-8")
+            with patch.object(design_plan, "directory_for") as directory, \
+                    self.assertRaises(ValueError):
+                workflow.load_request(path)
+            directory.assert_not_called()
 
     def test_missing_settings_ask_only_game_decisions(self):
         result = request_intake.prepare("시대극 액션 게임")
