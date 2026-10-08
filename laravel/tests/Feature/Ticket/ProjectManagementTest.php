@@ -77,6 +77,31 @@ class ProjectManagementTest extends TestCase
         }
     }
 
+    public function test_project_creation_stops_after_five_unique_key_collisions(): void
+    {
+        $admin = User::factory()->create();
+        $admin->forceFill(['role' => 'admin'])->save();
+        $existing = Project::factory()->create();
+        $attempts = 0;
+        $event = 'eloquent.creating: '.Project::class;
+
+        Event::listen($event, function (Project $candidate) use (&$attempts, $existing) {
+            $attempts++;
+            $candidate->project_key = $existing->project_key;
+        });
+
+        try {
+            $this->actingAs($admin)->postJson('/api/projects', ['name' => 'Always Collides'])
+                ->assertStatus(500);
+
+            $this->assertSame(5, $attempts);
+            $this->assertDatabaseMissing('projects', ['name' => 'Always Collides']);
+        } finally {
+            Event::forget($event);
+            Project::clearBootedModels();
+        }
+    }
+
     public function test_project_creation_and_changes_are_admin_only(): void
     {
         $member = User::factory()->create();
