@@ -24,6 +24,7 @@ class TicketCommentController extends Controller
     public function store(Request $request, Ticket $ticket): TicketCommentResource
     {
         $this->authorizeProjectRead($request, $ticket);
+        $this->ensureActive($ticket);
         $validated = $this->validateBody($request);
 
         $comment = $ticket->comments()->make(['body' => $validated['body']]);
@@ -36,6 +37,7 @@ class TicketCommentController extends Controller
     public function update(Request $request, Ticket $ticket, TicketComment $comment): TicketCommentResource
     {
         $this->authorizeProjectRead($request, $ticket);
+        $this->ensureActive($ticket);
         $this->ensureCommentBelongsToTicket($ticket, $comment);
         abort_unless($comment->user_id === $request->user()->id, 403);
 
@@ -70,6 +72,11 @@ class TicketCommentController extends Controller
             $ticket->project->members()->where('users.id', $request->user()->id)->exists(),
             403
         );
+    }
+
+    private function ensureActive(Ticket $ticket): void
+    {
+        abort_if($ticket->project->archived_at !== null, 409, 'Restore this project before changing comments.');
     }
 
     private function validateBody(Request $request): array
