@@ -1,10 +1,12 @@
 import json
+import io
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from unittest.mock import Mock
 
 import design_plan
 import request_intake
@@ -12,6 +14,57 @@ import workflow
 
 
 class RequestIntakeTests(unittest.TestCase):
+    def test_inferred_settings_require_confirmation_and_failure_falls_back(self):
+        cases = (
+            ('{"play":"좌우 이동","finish":"충돌 종료, 양쪽 재시작"}', "y\n", "좌우 이동"),
+            ('{"play":"좌우 이동","finish":"충돌 종료, 양쪽 재시작"}', "n\n수동 이동\n수동 종료\n", "수동 이동"),
+            ('{"play":"invented","finish":null}', "수동 이동\n수동 종료\n", "수동 이동"),
+            (OSError("offline"), "수동 이동\n수동 종료\n", "수동 이동"),
+        )
+        for response, answers, expected in cases:
+            with self.subTest(response=response), tempfile.TemporaryDirectory() as folder:
+                target = Path(folder) / "request.json"
+                model = Mock(side_effect=response) if isinstance(response, Exception) else Mock(return_value=response)
+                stderr = io.StringIO()
+                with patch.object(sys, "argv", ["request_intake.py", "--interactive", "--infer",
+                        "--brief", "좌우 이동. 충돌 종료, 양쪽 재시작", "--output", str(target)]), \
+                        patch.object(sys, "stdin", io.StringIO(answers)), \
+                        patch.object(sys, "stdout", io.StringIO()), patch.object(sys, "stderr", stderr), \
+                        patch("ask_ai.ask_model", model):
+                    self.assertEqual(request_intake.main(), 0)
+                saved = json.loads(target.read_text())
+                self.assertEqual(saved["requirements"][0], "핵심 플레이: " + expected)
+                model.assert_called_once()
+                if expected == "좌우 이동":
+                    self.assertNotIn(request_intake.QUESTIONS["play"], stderr.getvalue())
+
+    def test_extraction_uses_quotes_and_only_missing_settings(self):
+        model = Mock(return_value='{"finish":"충돌 종료, 양쪽 재시작"}')
+        settings = {"play": "직접 정한 이동"}
+        result = request_intake.extract_settings("좌우 피하기. 충돌 종료, 양쪽 재시작", settings, model=model)
+        self.assertEqual(result, {"finish": "충돌 종료, 양쪽 재시작"})
+        self.assertEqual(settings, {"play": "직접 정한 이동"})
+        prompt = model.call_args.args[0]
+        self.assertIn('"missing": ["finish"]', prompt)
+
+    def test_complete_settings_skip_model(self):
+        model = Mock(side_effect=AssertionError("unexpected model"))
+        self.assertEqual(request_intake.extract_settings("game", {"play": "move", "finish": "end"}, model=model), {})
+        model.assert_not_called()
+
+    def test_uncertain_extraction_keeps_questions(self):
+        extracted = request_intake.extract_settings("시대극", model=lambda _: '{"play":null,"finish":null}')
+        self.assertEqual(extracted, {})
+        self.assertEqual(len(request_intake.prepare("시대극", extracted)["questions"]), 2)
+
+    def test_invalid_model_proposals_are_rejected(self):
+        for response in ('{"play":"invented","finish":null}', '{"play":true,"finish":null}',
+                         '{"play":" ","finish":null}', '{"play":null}',
+                         '{"play":null,"play":null,"finish":null}',
+                         '```json\n{}\n```', '[]', 'x' * 2001, None):
+            with self.subTest(response=response), self.assertRaises(ValueError):
+                request_intake.extract_settings("시대극", model=lambda _: response)
+
     def cli(self, *args, input=None):
         return subprocess.run(
             [sys.executable, str(Path(request_intake.__file__).resolve()), *args],
