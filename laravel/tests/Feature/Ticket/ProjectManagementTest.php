@@ -40,6 +40,12 @@ class ProjectManagementTest extends TestCase
 
         $created = Project::query()->where('name', 'Admin Project')->firstOrFail();
         $this->assertMatchesRegularExpression('/^[A-Z]{3}$/', $created->project_key);
+        $this->assertDatabaseHas('project_members', [
+            'project_id' => $created->id,
+            'user_id' => $admin->id,
+            'role' => 'leader',
+            'permission' => 'write',
+        ]);
 
         $this->getJson('/api/projects')->assertJsonCount(4, 'data');
     }
@@ -102,15 +108,24 @@ class ProjectManagementTest extends TestCase
         }
     }
 
-    public function test_project_creation_and_changes_are_admin_only(): void
+    public function test_any_user_can_create_project_but_only_admin_can_change_or_delete_it(): void
     {
         $member = User::factory()->create();
         $project = Project::factory()->create();
         $this->addProjectMember($project, $member, role: 'leader', permission: 'write');
 
         $this->actingAs($member)
-            ->postJson('/api/projects', ['name' => 'Not allowed'])
-            ->assertForbidden();
+            ->postJson('/api/projects', ['name' => 'Member Project'])
+            ->assertCreated()
+            ->assertJsonPath('data.name', 'Member Project');
+
+        $created = Project::query()->where('name', 'Member Project')->firstOrFail();
+        $this->assertDatabaseHas('project_members', [
+            'project_id' => $created->id,
+            'user_id' => $member->id,
+            'role' => 'leader',
+            'permission' => 'write',
+        ]);
 
         $this->patchJson("/api/projects/{$project->id}", ['name' => 'Not allowed'])
             ->assertForbidden();
