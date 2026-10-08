@@ -30,7 +30,7 @@ vi.mock('../../../api/ticketCommentApi', () => ({
   deleteTicketComment: vi.fn(),
 }));
 vi.mock('@/features/tickets/api/projectApi', () => ({
-  fetchProjects: vi.fn().mockResolvedValue([{ id: '1', name: 'General', boardVersion: 3 }]),
+  fetchProjects: vi.fn().mockResolvedValue([{ id: '1', name: 'General', projectKey: 'GEN', boardVersion: 3 }]),
   fetchProjectMembers: vi.fn().mockResolvedValue([{ id: '7', name: 'Tester', email: 'tester@example.com', role: 'member', permission: 'write' }]),
   addProjectMember: vi.fn(),
   updateProjectMember: vi.fn(),
@@ -65,7 +65,7 @@ vi.mock('@dnd-kit/core', async (importOriginal) => {
 });
 
 beforeEach(() => {
-  vi.mocked(projectApi.fetchProjects).mockResolvedValue([{ id: '1', name: 'General', boardVersion: 3 }]);
+  vi.mocked(projectApi.fetchProjects).mockResolvedValue([{ id: '1', name: 'General', projectKey: 'GEN', boardVersion: 3 }]);
   vi.mocked(projectApi.fetchProjectMembers).mockResolvedValue([{ id: '7', name: 'Tester', email: 'tester@example.com', role: 'member', permission: 'write' }]);
   useAuthStore.setState({ user: { id: 7, name: 'Tester', email: 'tester@example.com', status: 'active', role: 'user', createdAt: '2026-09-24T00:00:00.000000Z' }, isAuthenticated: true });
 });
@@ -160,7 +160,7 @@ it('exposes accessible names for search and assignee filters', async () => {
 it('filters tickets by the selected project', async () => {
   const otherProjectTicket = api.toTicket({ ...responseTicket, id: '2', project_id: '2', title: 'Other project ticket' });
   vi.mocked(api.fetchTickets).mockResolvedValue([api.toTicket(responseTicket), otherProjectTicket]);
-  vi.mocked(projectApi.fetchProjects).mockResolvedValue([{ id: '1', name: 'General', boardVersion: 3 }, { id: '2', name: 'Design', boardVersion: 3 }]);
+  vi.mocked(projectApi.fetchProjects).mockResolvedValue([{ id: '1', name: 'General', projectKey: 'GEN', boardVersion: 3 }, { id: '2', name: 'Design', projectKey: 'DSN', boardVersion: 3 }]);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
   render(<TicketBoardView />);

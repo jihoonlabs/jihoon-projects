@@ -5,6 +5,7 @@ import styles from './index.module.css';
 
 interface MainProps {
   tickets: Ticket[];
+  projectKey?: string | null;
   searchQuery: string;
   assigneeFilter: string;
   currentUserId: number | null;
@@ -17,6 +18,7 @@ interface MainProps {
 
 export default function Main({
   tickets,
+  projectKey,
   searchQuery,
   assigneeFilter,
   currentUserId,
@@ -54,6 +56,7 @@ export default function Main({
             key={column.id}
             column={column}
             tickets={columnTickets}
+            projectKey={projectKey}
             onStatusChange={onStatusChange}
             onEdit={onEdit}
             onDelete={onDelete}

@@ -13,6 +13,7 @@ import styles from './index.module.css';
 interface ColumnProps {
   column: ColumnConfig;
   tickets: Ticket[];
+  projectKey?: string | null;
   onStatusChange?: (id: string, status: TicketStatus) => void;
   onEdit?: (ticket: Ticket) => void;
   onDelete?: (ticket: Ticket) => void;
@@ -23,6 +24,7 @@ interface ColumnProps {
 export default function Column({
   column,
   tickets,
+  projectKey,
   onStatusChange,
   onEdit,
   onDelete,
@@ -48,6 +50,7 @@ export default function Column({
             <Card
               key={ticket.id}
               ticket={ticket}
+              projectKey={projectKey}
               onStatusChange={onStatusChange}
               onEdit={onEdit}
               onDelete={onDelete}

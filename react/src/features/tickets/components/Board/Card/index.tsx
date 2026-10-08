@@ -2,11 +2,14 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import type { CSSProperties } from 'react';
 import { Ticket, TicketStatus } from '@/features/tickets/types/ticket';
+import { getProjectBorderColor } from '@/features/tickets/utils/projectColor';
 import styles from './index.module.css';
 
 interface CardProps {
   ticket: Ticket;
+  projectKey?: string | null;
   isOverlay?: boolean;
   onStatusChange?: (id: string, status: TicketStatus) => void;
   onEdit?: (ticket: Ticket) => void;
@@ -29,6 +32,7 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
 
 export default function Card({
   ticket,
+  projectKey = null,
   isOverlay,
   onStatusChange,
   onEdit,
@@ -39,10 +43,11 @@ export default function Card({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: ticket.id, disabled: !canDrag });
 
-  const style = {
+  const style: CSSProperties & { '--project-border-color'?: string } = {
     transform: CSS.Translate.toString(transform),
     transition,
     opacity: isDragging ? 0.3 : 1,
+    '--project-border-color': getProjectBorderColor(projectKey) ?? undefined,
   };
 
   return (

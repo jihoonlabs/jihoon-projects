@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 import { toTicket } from '../../../api/ticketApi';
 import { responseTicket } from '../../../api/test/ticketFixture';
+import { getProjectBorderColor } from '../../../utils/projectColor';
 import Main from '../Main';
 
 it('renders null issue keys safely and searches actual ticket numbers', () => {
@@ -110,4 +111,45 @@ it('filters assigned tickets by the signed-in user ID', () => {
   );
   expect(screen.queryByText('Someone else')).not.toBeInTheDocument();
   expect(screen.queryByText('Mine')).not.toBeInTheDocument();
+});
+
+it('uses the selected project key for subtle card borders without replacing ticket cues', () => {
+  const tickets = [
+    toTicket(responseTicket),
+    toTicket({ ...responseTicket, id: '2', issue_key: 'ABC-2', title: 'Second ticket' }),
+  ];
+  const { rerender } = render(
+    <Main
+      tickets={tickets}
+      projectKey="ABC"
+      searchQuery=""
+      assigneeFilter="ALL"
+      currentUserId={7}
+    />,
+  );
+
+  const firstCard = screen.getByText('First ticket').closest('[aria-roledescription="sortable"]');
+  const secondCard = screen.getByText('Second ticket').closest('[aria-roledescription="sortable"]');
+  expect(firstCard).not.toBeNull();
+  expect(secondCard).not.toBeNull();
+  expect(firstCard).toHaveAttribute('role', 'button');
+  expect(firstCard).toHaveAttribute('tabindex', '0');
+  expect(firstCard?.getAttribute('style')).toContain(getProjectBorderColor('ABC'));
+  expect(secondCard?.getAttribute('style')).toContain(getProjectBorderColor('ABC'));
+  expect(screen.getByText('TICK-1')).toBeInTheDocument();
+  expect(screen.getByText('ABC-2')).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'First ticket のステータス' })).toBeInTheDocument();
+  expect(screen.getAllByText('中')).toHaveLength(2);
+
+  rerender(
+    <Main
+      tickets={tickets}
+      projectKey="XYZ"
+      searchQuery=""
+      assigneeFilter="ALL"
+      currentUserId={7}
+    />,
+  );
+  expect(screen.getByText('First ticket').closest('[aria-roledescription="sortable"]')?.getAttribute('style'))
+    .toContain(getProjectBorderColor('XYZ'));
 });

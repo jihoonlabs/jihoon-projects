@@ -222,6 +222,7 @@ export function TicketBoardView() {
       >
         <Main
           tickets={projectTickets}
+          projectKey={selectedProject?.projectKey}
           searchQuery={searchQuery}
           assigneeFilter={assigneeFilter}
           currentUserId={currentUserId}
@@ -233,7 +234,7 @@ export function TicketBoardView() {
         />
 
         <DragOverlay>
-          {activeTicket && canDrag ? <Card ticket={activeTicket} isOverlay canWrite canDrag /> : null}
+          {activeTicket && canDrag ? <Card ticket={activeTicket} projectKey={selectedProject?.projectKey} isOverlay canWrite canDrag /> : null}
         </DragOverlay>
       </DndContext>
 
