@@ -208,6 +208,7 @@ class TicketController extends Controller
 
         DB::transaction(function () use ($ticket) {
             $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
+            $this->ensureActive($project);
             $ticket->refresh();
             $status = $ticket->status;
 
