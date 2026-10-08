@@ -1,7 +1,7 @@
-# Project audit history — Codex handoff
+# Project Audit History
 
-Project creation, rename, and the existing admin-only deletion of **empty projects** now leave database audit events. A record keeps the 3-letter key, project ID, actor, date and name/snapshot even after its live row is deleted.
+Projectの作成・改名・空Projectの削除を記録し、削除後もProject keyと操作記録を保持します。既存のadmin限定・Ticketなしの場合のみ削除可能という条件は維持します。
 
-This branch does **not** allow deleting projects with tickets, and it now checks both live and historical project keys before assigning a new key. An explicitly assigned historical key is rejected as well. This safeguard is code-only and remains unverified at runtime; a broader purge workflow still requires ownership, confirmation, archive policy and integration tests. Archive/restore events must be integrated with the separate lifecycle Child; creator membership requires the creation Child.
+Laravel全116 tests / 527 assertions、関連Project tests、Pintを確認済みです。schema-onlyの専用SQLite検証でLifecycle・audit・creator migrationを順に適用し、既存Project rowとnullable値を維持しました。アプリコードを統合した検証ではありません。MySQL、複数DB接続による競合、rollback fault injection、key全枯渇、直接DB書込みは未検証です。Ledger導入前に削除済みのProjectは記録・keyを復元できません。
 
-Branch: `feature/ticket-project-audit-history`. All changes committed on remote Child, never merged. Laravel tests, migration and integration **not executed remotely**. See `PROJECT_AUDIT_WORK.md` for validation and merge conflict boundaries.
+Project Creationとの統合は未実施です。作成者設定・初期leader/write登録・作成監査記録を一つのtransactionにまとめる必要があります。詳細な統合契約は `PROJECT_AUDIT_WORK.md` を参照してください。

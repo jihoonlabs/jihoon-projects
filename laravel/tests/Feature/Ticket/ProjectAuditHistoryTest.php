@@ -24,12 +24,19 @@ class ProjectAuditHistoryTest extends TestCase
 
         $this->patchJson("/api/projects/{$project->id}", ['name' => 'Updated'])
             ->assertOk();
+        $this->patchJson("/api/projects/{$project->id}", ['name' => 'Updated'])
+            ->assertOk();
 
         $events = DB::table('project_audit_events')->where('project_id', $project->id)
             ->orderBy('id')->get();
         $this->assertSame(['project.created', 'project.renamed'], $events->pluck('action')->all());
         $this->assertSame($project->project_key, $events->first()->project_key);
+        $this->assertSame($admin->id, $events->first()->actor_id);
+        $this->assertSame($admin->name, $events->first()->actor_name);
+        $created = json_decode($events->first()->snapshot, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(['name' => 'Original'], $created);
         $this->assertSame($admin->id, $events->last()->actor_id);
+        $this->assertSame($admin->name, $events->last()->actor_name);
         $renamed = json_decode($events->last()->snapshot, true, 512, JSON_THROW_ON_ERROR);
         $this->assertSame('Original', $renamed['previous_name']);
         $this->assertSame('Updated', $renamed['name']);
@@ -38,6 +45,7 @@ class ProjectAuditHistoryTest extends TestCase
     public function test_deleting_empty_project_retains_identity_in_ledger(): void
     {
         $project = Project::factory()->create();
+        $createdAt = $project->created_at?->toIso8601String();
         $admin = User::factory()->create();
         $admin->forceFill(['role' => 'admin'])->save();
 
@@ -51,6 +59,13 @@ class ProjectAuditHistoryTest extends TestCase
             'actor_id' => $admin->id,
             'action' => 'project.deleted',
         ]);
+
+        $event = DB::table('project_audit_events')->where('project_id', $project->id)->first();
+        $this->assertSame($admin->id, $event->actor_id);
+        $this->assertSame($admin->name, $event->actor_name);
+        $deleted = json_decode($event->snapshot, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame($project->name, $deleted['name']);
+        $this->assertSame($createdAt, $deleted['created_at']);
     }
 
     public function test_deleted_project_key_is_reserved_for_new_projects(): void

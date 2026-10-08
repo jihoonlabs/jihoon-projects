@@ -1,33 +1,30 @@
-# Project Audit — Child WORK
+# Project Audit History — Child WORK
 
-## Responsibility
+## 目的と責任
 - Branch: `feature/ticket-project-audit-history`; parent: `feature/ticket`.
-- Preserve project identity/action evidence on create, rename and current guarded deletion.
-- No project archive/restore actions exist in this Child's base. Implement those audit events when integrating `feature/ticket-project-lifecycle-api`; do not claim them complete.
+- Projectの作成・改名・既存条件内の削除を記録し、削除後もProject ID/keyと操作情報を保持する。
+- Archive/restore、公開監査一覧、Ticket履歴は対象外。
 
-## Implemented contract
-- New `project_audit_events` migration: project ID/key, actor ID/name, action, JSON snapshot, timestamp, no FK references to live rows.
-- `project.created`: name and fixed project key are recorded together with live creation in a transaction. Retries still cover existing project_key unique collisions.
-- `project.renamed`: prior/new names and actor are recorded in the same transaction as update; no event if name unchanged.
-- `project.deleted`: last name, original creation timestamp, actor and fixed key remain after deletion. **Existing deletion restriction remains**: admin only, zero tickets.
-- No public audit browse endpoint, so historical details are not exposed to unrelated users.
-- Tests authored: `laravel/tests/Feature/Ticket/ProjectAuditHistoryTest.php` for create/rename, safe delete, rejection with tickets, historical key reservation and normal-user denial.
+## 実装契約
+- Fetch時点の最新Epicは`be3cb7b`で、本Childのbaseと一致。Child tipはEpicから10 commits ahead。
+- `project_audit_events` はProject/Userへの外部キーを持たず、削除後もID/key、実行者、action、snapshot、時刻を保持する。
+- 作成・改名・削除の監査insertは各状態変更と同一transaction。変更のない改名ではイベントを作らない。
+- 削除権限は従来どおりadmin限定、Ticketを持たないProjectに限定する。
+- Project key生成はlive Projectsと監査ledgerの両方を予約済みとして扱う。監査済みkeyの明示指定も拒否する。
+- Creation Child (`67aa0cd`) は同じ `ProjectController::store` と作成フローを変更する。creator設定・leader/write登録・`project.created`記録を一つのtransactionに統合し、Epicの5回key衝突retryをtransaction外側に維持する。
+- Lifecycle Child (`a52c78c`) は同じControllerの一覧・改名・削除を変更し、archive/restoreも追加する。改名・削除監査を残し、archive/restoreイベントも各状態変更transaction内に記録する必要がある。LifecycleのProject model castも保持する。
+- Discovery API Child (`31d9dc7`) は同じControllerの検索一覧とkey検索を変更する。Lifecycleのactive/archive絞り込みを検索にも適用する。Leadership Child (`0d52402`) は別の `ProjectMemberController` を変更し、作成時leaderを唯一のleaderとして扱う。
 
-## Critical integration blockers
-- **Never reuse key:** the generator now excludes keys found in either live `projects` or historical `project_audit_events`; explicit assignment of an audited key is also rejected. This requires the audit migration to exist before any Project creation. The generator has a bounded 17,576-key scan and fails when exhausted. **Still outstanding:** runtime tests, high-contention race tests, capacity/exhaustion test, legacy projects deleted before ledger installation, and any direct DB writes that bypass Eloquent. Do not claim end-to-end key reservation is fully verified.
-- **Creator vs leader:** `created_by` ownership is not modeled yet. Do not enable creator deletion before verified schema and authorization.
-- **Lifecycle Child** modifies the same `ProjectController` for archive/restore and archived name-write guards. Manually reconcile transaction locks and append `project.archived` / `project.restored` events inside state-changing transactions; avoid lost updates or blind merge.
-- **Creation Child** modifies the same `ProjectController` to allow all active users to create with leader/write membership. Keep atomic creator membership + audit insert inside its collision-retry transaction.
-- **Key search Child** also changes `ProjectController`. Merge approval requires 3-way review of each action and tests, not only automatic resolution.
-- Auditing project deletion cannot replace ticket history or a database backup. No tamper-proof guarantee, retention rules and access policy not finalized. Preserve confidential descriptions in appropriate restricted storage.
+## 検証状態 (SHA `e723d79f3de5ef503827b3192e1f711b26395fb1`)
+- SQLite in-memoryで `ProjectAuditHistoryTest`: 5 tests / 31 assertions、`ProjectManagementTest`: 8 / 44、Laravel全体: 116 / 527 が成功。
+- Epic既存のevent injectionによるkey unique衝突・最大5回retryテストも成功。これは複数DB接続を使う実競合テストではない。
+- `vendor/bin/pint --test` 成功。
+- 専用SQLiteファイルDBで既存Project rowを作成後、Lifecycle `archived_at` (`000001`) → audit ledger (`000003`) → creator (`000004`) をschema-only overlayで適用。Project rowが保持され、`archived_at`/`created_by`は`null`、audit ledgerは作成された。Controller統合はしていない。
+- 検証環境: Childごとに依存vendorとComposer autoloadを分離し、テスト用APP_KEYとSQLiteを指定。初回はvendor symlinkがEpic側のautoloadを参照し、APP_KEYも未設定だったためその結果を破棄して再実行した。migration helperも初回にDB環境変数を渡せず、明示設定で再実行した。既存`.env`・DBは使用していない。
 
-## Home Codex checklist
-- Verify branch and diff, AGENTS.md, this work MD; run `php artisan migrate`, `php artisan test --filter=ProjectAuditHistoryTest`, `php artisan test --filter=ProjectManagementTest`, `vendor/bin/pint --test`.
-- Test on SQLite and MySQL. Validate role denial, transaction rollback when audit insert fails, concurrent delete/update, FK cascades, and deletion when no tickets.
-- After reconciling the dependent children, verify project visibility isolation, archived read-only, ownership, keys, ticket write rights, and audit record retention.
-- Current status: remote commits and tests authored; runtime tests **NOT RUN**; **NOT MERGED**.
-
-## Follow-up: permanent key identity
-- `Project::creating` checks both live and audited keys before selecting a new uppercase three-letter key; direct explicit reuse of a key in the audit ledger throws an exception.
-- Model-generated keys remain protected by the live `projects.project_key` unique constraint against concurrent inserts; collision retries in the controller remain required. The audit table itself has no unique project-key constraint because multiple events share a project key.
-- This does not change deletion eligibility or implement project ownership, user confirmation, or full irreversible purge. Continue treating Archive as the preferred user-facing lifecycle.
+## 未検証と統合ゲート
+- MySQL migration、複数DB接続による高競合、transaction rollback fault injection、key全枯渇、直接DB書込みによるEloquent迂回は未検証。
+- Ledger導入前に既に削除されたProjectのkeyは復元できない。migration後の通常API削除では予約が維持される。
+- 統合後は作成・leader/write membership・created_by・audit insertの一括rollbackを回帰テストし、監査insert失敗時にProject/memberが残らないことを確認する。
+- Migration順はProject key (`2026_10_07_000001`) → Lifecycle `archived_at` (`2026_10_08_000001`) → audit ledger (`2026_10_08_000003`) → creator (`2026_10_08_000004`)。この順で既存rowを保持するSQLite overlayを確認済み。MySQL上の互換性は未検証。
+- 本Childは未merge。次はProject Creation ChildとController/Modelの3-way統合設計・統合テスト。
