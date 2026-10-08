@@ -29,6 +29,11 @@ class Project extends Model
         });
     }
 
+    protected function casts(): array
+    {
+        return ['archived_at' => 'datetime'];
+    }
+
     protected $fillable = [
         'name',
     ];
