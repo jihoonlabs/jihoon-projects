@@ -204,6 +204,87 @@ class ProjectManagementTest extends TestCase
             ->assertJsonPath('data.role', 'leader');
     }
 
+    public function test_project_leader_can_archive_completed_project_and_restore_it(): void
+    {
+        $project = Project::factory()->create();
+        $leader = User::factory()->create();
+        $this->addProjectMember($project, $leader, role: 'leader', permission: 'write');
+        $ticket = Ticket::factory()->create(['project_id' => $project->id, 'status' => 'DONE']);
+        $originalKey = $project->project_key;
+
+        $this->actingAs($leader)
+            ->postJson("/api/projects/{$project->id}/archive")
+            ->assertOk()
+            ->assertJson(fn ($json) => $json->whereType('data.archived_at', 'string')->etc());
+
+        $this->assertNotNull($project->fresh()->archived_at);
+        $this->getJson('/api/projects')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/projects?archived=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.project_key', $originalKey);
+        $this->getJson("/api/projects/{$project->id}")
+            ->assertOk()
+            ->assertJsonPath('data.project_key', $originalKey);
+
+        $this->postJson("/api/projects/{$project->id}/restore")
+            ->assertOk()
+            ->assertJsonPath('data.archived_at', null);
+        $this->getJson('/api/projects')->assertOk()->assertJsonCount(1, 'data');
+        $this->assertDatabaseHas('tickets', ['id' => $ticket->id, 'project_id' => $project->id]);
+    }
+
+    public function test_project_with_unfinished_ticket_cannot_be_archived(): void
+    {
+        $project = Project::factory()->create();
+        $leader = User::factory()->create();
+        $this->addProjectMember($project, $leader, role: 'leader', permission: 'write');
+        Ticket::factory()->create(['project_id' => $project->id, 'status' => 'IN_PROGRESS']);
+
+        $this->actingAs($leader)
+            ->postJson("/api/projects/{$project->id}/archive")
+            ->assertStatus(409);
+
+        $this->assertNull($project->fresh()->archived_at);
+    }
+
+    public function test_regular_member_cannot_archive_or_restore_project(): void
+    {
+        $project = Project::factory()->create();
+        $member = User::factory()->create();
+        $this->addProjectMember($project, $member, role: 'member', permission: 'write');
+        $this->actingAs($member)
+            ->postJson("/api/projects/{$project->id}/archive")->assertForbidden();
+
+        $project->forceFill(['archived_at' => now()])->save();
+        $this->postJson("/api/projects/{$project->id}/restore")->assertForbidden();
+        $this->assertNotNull($project->fresh()->archived_at);
+    }
+
+    public function test_archived_project_rejects_ticket_creation_and_allows_restoration(): void
+    {
+        $project = Project::factory()->create();
+        $leader = User::factory()->create();
+        $this->addProjectMember($project, $leader, role: 'leader', permission: 'write');
+        $project->forceFill(['archived_at' => now()])->save();
+
+        $this->actingAs($leader)
+            ->postJson('/api/tickets', [
+                'project_id' => $project->id,
+                'title' => 'Must not be created',
+            ])->assertStatus(409);
+        $this->assertDatabaseMissing('tickets', [
+            'project_id' => $project->id,
+            'title' => 'Must not be created',
+        ]);
+
+        $this->postJson("/api/projects/{$project->id}/restore")->assertOk();
+        $this->postJson('/api/tickets', [
+            'project_id' => $project->id,
+            'title' => 'Created after restore',
+        ])->assertCreated();
+    }
+
     public function test_projects_with_tickets_cannot_be_deleted(): void
     {
         $project = Project::factory()->create();
