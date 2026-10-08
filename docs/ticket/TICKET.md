@@ -43,6 +43,18 @@
 - Childのテストは未実行。検証・採用SHA確認前にEpicへ統合しない。
 - リーダー譲渡、Project key検索・画面、保管・復元・完全削除は責任単位ごとに別Child候補とする。仕様確定と実装完了を混同しない。
 
+## Project管理の分担・統合Router（2026-10-08）
+- Parent Epic: `feature/ticket`。以下Childは独立の責任境界を持ち、検証済みSHAのみ順次取り込む。ブランチ作成は実装・検証完了を意味しない。
+- `feature/ticket-project-creation`（Laravel: 作成API + 作成者leader/write登録）。コード・テスト変更あり、検証未実施。作業詳細はChild内の `docs/ticket/PROJECT_CREATION_WORK.md`。
+- `feature/ticket-project-leadership`（Laravel: 1 Projectに1 leader、権限委譲、read/write権限、同時操作防止）。未実装。作成時leader登録と契約が接続するため、統合時の結合テストが必要。
+- `feature/ticket-project-discovery-api`（Laravel: Project keyによる検索・取得、所属Projectに限定した一覧、API契約）。未実装。内部数値ID/FKは維持。
+- `feature/ticket-project-lifecycle-api`（Laravel: 非表示/保管・復元と安全な削除）。未実装。保管時もkeyやTicket履歴を保持し、未完了Ticketがある場合は完全削除不可。生成者/管理者の削除権限と保管可否は権限テストで確認する。
+- `feature/ticket-project-ui`（React: Project作成、key検索/選択、Project内Ticket操作、leader設定、保管一覧/復元、削除確認）。未実装。API契約確定後に連携。
+- `feature/ticket-project-integration`（接続・回帰専用）。未実装。API・UI Childの検証結果/採用SHAを揃えてから総合検証し、親Epicへの統合は別途判断する。
+- 必要ならUIを作成画面・管理画面などの更なるChildに分割するが、未検証のままEpicに直接実装しない。
+- 最低限の検証: Laravel各Controller/Policyのfeatureテスト、作成/譲渡/保管/復元/削除の権限・異常系・DB transaction回帰、Project keyの不変性とProject間のTicket隔離、React component/APIテスト、TypeScript・ESLint・build、最後にProject作成→選択→Ticket作成→全件完了→保管→復元（および許可された完全削除）の実接続。各Childは実行コマンド・結果・未検証環境を自身のMDに残す。
+- 現環境はGitHub遠隔のコード/差分確認のみ可能であり、PHP/Reactの実行テストは未実施。依存インストールは無理に行わず既存の実行可能環境で検証する。
+ 
 ## 次の作業
 - 実行手順と検証記録のテンプレートは `docs/ticket/TICKET_REMOTE_VALIDATION.md` を参照。追加回帰テストとLaravel/Pintの再検証、MySQL migration・独立接続の競合確認、main統合時の競合確認が未完了。
 - main merge/pushとbranch削除は承認待ち。
