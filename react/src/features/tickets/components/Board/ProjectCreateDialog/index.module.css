@@ -1,0 +1,47 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(17 24 39 / 45%);
+}
+
+.dialog {
+  width: min(460px, 100%);
+  padding: 1.5rem;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 20px 45px rgb(0 0 0 / 20%);
+}
+
+.dialog h2 {
+  margin-top: 0;
+}
+
+.field {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.field input {
+  padding: 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.actions button {
+  padding: 0.5rem 0.85rem;
+}
+
+.error {
+  color: #b91c1c;
+}
