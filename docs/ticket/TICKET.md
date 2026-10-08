@@ -24,7 +24,7 @@
 - Chrome実機相当のブラウザー確認: Child SHA上で2 Projectのkey独立、同一Project内の連番、Project名変更後のkey維持を確認済み。テストデータは一時SQLite DBと一時Chrome contextを使用。
 - MySQL上のmigrationは未検証。SQLite migrationと既存データのkey backfillはテスト済み。
 - 2026-10-08の追加修正: 同時Project作成で生成した3文字keyがDBのunique制約に衝突した場合、Project作成APIは `project_key` のunique違反に限り最大5回まで再生成・再試行する。他のunique違反は再試行しない。既存key、Ticket採番、API契約は変更しない。
-- 追加回帰テスト: Project作成時にモデルのcreatingイベントで既存keyを注入し、DB unique違反後に新規keyで作成が成功することと既存keyが保持されることを確認するテストを追加。競合の再現はイベント注入方式であり、実際の複数DB接続による同時実行テストではない。
+- 追加回帰テスト: creatingイベントで既存keyを注入し、unique違反後に新規keyで作成成功すること・既存keyが保持されることを検証するケースと、5回連続で衝突して500応答となりProjectが残らないケースを追加。イベント注入による競合再現であり、実際の複数DB接続による同時実行テストではない。
 - 今回の検証状態: GitHub上でコード・差分を確認。追加PHPテスト、Laravel全件、Pint、Reactテスト、実MySQLでの同時実行/migrationは未実行。過去の成功記録を今回の結果として扱わない。
 
 ## 次の作業
