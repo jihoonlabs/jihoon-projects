@@ -90,6 +90,27 @@ class TicketAuditHistoryTest extends TestCase
         $this->assertSame('DONE', $snapshot['status']);
     }
 
+    public function test_moving_ticket_records_its_new_board_state(): void
+    {
+        $project = Project::factory()->create();
+        $writer = User::factory()->create();
+        $this->addProjectMember($project, $writer, permission: 'write');
+        $ticket = Ticket::factory()->create(['project_id' => $project->id, 'status' => 'TODO', 'position' => 0]);
+
+        $this->actingAs($writer)->patchJson("/api/tickets/{$ticket->id}/move", [
+            'status' => 'IN_PROGRESS',
+            'position' => 0,
+            'board_version' => (int) $project->board_version,
+        ])->assertOk();
+
+        $event = DB::table('ticket_audit_events')->where('ticket_id', $ticket->id)->first();
+        $this->assertNotNull($event);
+        $this->assertSame('ticket.moved', $event->action);
+        $snapshot = json_decode($event->snapshot, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('IN_PROGRESS', $snapshot['status']);
+        $this->assertSame(0, $snapshot['position']);
+    }
+
     public function test_read_only_member_cannot_create_audit_events_by_editing(): void
     {
         $project = Project::factory()->create();
