@@ -1,7 +1,11 @@
-# Ticket deletion evidence — home Codex handoff
+# Ticket work history — home Codex handoff
 
-A user with `write` access may delete a ticket, but the database now stores the ticket identifier, project key, title, description, status and who deleted it in a separate audit table. The deletion and the evidence record are written in one transaction. A `read` member still cannot delete tickets.
+**New capability in this Child:** Ticket creation, edits, Kanban moves and deletion each produce an audit event with project key, ticket key, actor, timestamp and the ticket state. Deleting a ticket retains the final title and details after the live record is gone. Audit writes and the corresponding ticket mutations share database transactions.
 
-Branch: `feature/ticket-audit-history`. Only ticket **deletion** history is implemented so far; this does not implement a history screen or project deletion. No runtime tests have run, and the Child has not been merged.
+**Existing access model remains:** project `write` members may mutate tickets, `read` members cannot. The audit history is not publicly exposed by API or UI yet, avoiding unintended disclosure of historic descriptions.
 
-For verification and integration caveats, read `TICKET_AUDIT_WORK.md`. In particular, preserve archived-project write guards from the separate lifecycle Child and do not conflate an audit log with backup or tamper-proof archival.
+Branch: `feature/ticket-audit-history`. Commits pushed remotely; **runtime tests NOT RUN, no merge**.
+
+Codex: read `TICKET_AUDIT_WORK.md`, run the focused tests and relevant ticket regressions, and reconcile `TicketController` with archived-project guards from `feature/ticket-project-lifecycle-api` before proposing an Epic merge. The audit table is not a backup or tamper-proof journal.
+
+Still outstanding: comment and project lifecycle audit events, secure audit reader, project creator, deleted-project tombstones and irreversible delete policy.
