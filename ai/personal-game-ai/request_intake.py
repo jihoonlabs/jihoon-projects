@@ -1,4 +1,4 @@
-"""Request preparation with optional model extraction; never runs the workflow."""
+"""Request preparation with opt-in model extraction and workflow delegation."""
 
 import argparse
 import json
@@ -99,10 +99,15 @@ def main():
     parser.add_argument("--interactive", action="store_true", help="누락 설정만 질문하고 완성된 요청 파일을 자동 저장")
     parser.add_argument("--output", type=Path, help="완성된 요청을 저장할 새 파일 경로 (기존 파일 덮어쓰기 금지)")
     parser.add_argument("--infer", action="store_true", help="대화 모드에서 Ollama로 원문 설정을 추출하고 사용자 확인 후 적용")
+    parser.add_argument("--workflow-dir", type=Path, help="요청 저장 후 실행할 별도 생성 checkout의 도구 폴더")
     args = parser.parse_args()
     try:
         if args.infer and not args.interactive:
             raise ValueError("--infer는 사용자 확인을 위해 --interactive와 함께 사용하세요.")
+        if args.workflow_dir is not None and not args.interactive:
+            raise ValueError("--workflow-dir는 --interactive와 함께 사용하세요.")
+        if args.workflow_dir is not None and args.request_only:
+            raise ValueError("--workflow-dir와 --request-only는 함께 사용할 수 없습니다.")
         def answer(question):
             print(question, file=sys.stderr, flush=True)
             line = sys.stdin.readline()
@@ -148,6 +153,11 @@ def main():
             with destination.open("x", encoding="utf-8") as stream:
                 stream.write(data)
             print("요청 저장: " + str(destination.absolute()), file=sys.stderr)
+        if args.workflow_dir is not None:
+            from workflow_bridge import run
+            result = run(destination, args.workflow_dir)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 1 if "error" in result else 0
     except (ValueError, OSError) as error:
         parser.error(str(error))
     print(json.dumps(result["request"] if args.request_only else result, ensure_ascii=False, indent=2))
