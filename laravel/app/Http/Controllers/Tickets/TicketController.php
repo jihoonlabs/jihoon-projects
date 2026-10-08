@@ -199,10 +199,31 @@ class TicketController extends Controller
     {
         $this->authorizeProjectWrite($request, $ticket->project);
 
-        DB::transaction(function () use ($ticket) {
+        DB::transaction(function () use ($ticket, $request) {
             $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
             $ticket->refresh();
             $status = $ticket->status;
+
+            // Keep an immutable snapshot even after the live ticket is removed.
+            DB::table('ticket_audit_events')->insert([
+                'project_id' => $project->id,
+                'project_key' => $project->project_key,
+                'ticket_id' => $ticket->id,
+                'issue_key' => $ticket->issue_key,
+                'actor_id' => $request->user()->id,
+                'actor_name' => $request->user()->name,
+                'action' => 'ticket.deleted',
+                'snapshot' => json_encode([
+                    'title' => $ticket->title,
+                    'description' => $ticket->description,
+                    'status' => $ticket->status,
+                    'priority' => $ticket->priority,
+                    'assignee_id' => $ticket->assignee_id,
+                    'created_at' => $ticket->created_at?->toIso8601String(),
+                    'deleted_at' => now()->toIso8601String(),
+                ], JSON_THROW_ON_ERROR),
+                'created_at' => now(),
+            ]);
 
             $ticket->delete();
             $this->compactColumn($project->id, $status);
