@@ -6,9 +6,13 @@ import subprocess
 import sys
 
 
-def run(request, tool_dir, *, approve=None, confirm=None):
-    if approve is not None and confirm is not None:
-        raise ValueError("설계 승인과 테스트 확정은 한 번에 하나만 지정하세요.")
+def run(request, tool_dir, *, approve=None, confirm=None, answer_id=None, answer=None, retry=False):
+    if (answer_id is None) != (answer is None):
+        raise ValueError("질문 ID와 답변을 함께 지정하세요.")
+    if sum(value is not None for value in (approve, confirm, answer_id)) + bool(retry) > 1:
+        raise ValueError("승인·확정·답변·재시도는 한 번에 하나만 지정하세요.")
+    if answer is not None and (not isinstance(answer, str) or not answer.strip() or len(answer) > 4000):
+        raise ValueError("답변은 1~4000자여야 합니다.")
     request = Path(request).absolute()
     tool_dir = Path(tool_dir).absolute()
     script = tool_dir / "workflow.py"
@@ -21,6 +25,10 @@ def run(request, tool_dir, *, approve=None, confirm=None):
         command += ["--approve-design", approve]
     if confirm is not None:
         command += ["--confirm-tests", confirm]
+    if answer_id is not None:
+        command += ["--answer", answer_id, "--answer-text", answer]
+    if retry:
+        command += ["--retry"]
     # The selected engine owns branch/context checks, locks and approval digests.
     # Do not import it here or replace its target.json with the intake config.
     completed = subprocess.run(command, cwd=tool_dir, capture_output=True,
@@ -44,9 +52,13 @@ def main():
     action = parser.add_mutually_exclusive_group()
     action.add_argument("--approve-design")
     action.add_argument("--confirm-tests")
+    action.add_argument("--answer", dest="answer_id")
+    action.add_argument("--retry", action="store_true")
+    parser.add_argument("--answer-text")
     args = parser.parse_args()
     try:
-        result = run(args.request, args.tool_dir, approve=args.approve_design, confirm=args.confirm_tests)
+        result = run(args.request, args.tool_dir, approve=args.approve_design, confirm=args.confirm_tests,
+                     answer_id=args.answer_id, answer=args.answer_text, retry=args.retry)
     except (ValueError, OSError) as error:
         parser.error(str(error))
     print(json.dumps(result, ensure_ascii=False, indent=2))

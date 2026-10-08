@@ -59,3 +59,38 @@ class BridgeTests(unittest.TestCase):
         with patch.object(workflow_bridge.subprocess, "run") as engine, self.assertRaises(ValueError):
             workflow_bridge.run(self.request, self.root / "missing")
         engine.assert_not_called()
+
+    def test_answer_is_forwarded_as_literal_argument(self):
+        answer = '좌우 이동; $(echo nope) "원문"\n둘째 줄'
+        with patch.object(workflow_bridge.subprocess, "run", return_value=
+                subprocess.CompletedProcess([], 0, '{"stage":"execute"}', '')) as engine:
+            workflow_bridge.run(self.request, self.root, answer_id="002", answer=answer)
+        self.assertEqual(engine.call_args.args[0][-4:], ["--answer", "002", "--answer-text", answer])
+        self.assertNotIn("shell", engine.call_args.kwargs)
+
+    def test_cli_answer_reaches_subprocess_without_shell_expansion(self):
+        (self.root / "workflow.py").write_text(
+            "import json,sys\nprint(json.dumps({'stage':'waiting_for_user','arguments':sys.argv[1:]}))\n")
+        answer = '한글 답변; $(echo nope)\n다음 줄'
+        completed = subprocess.run([sys.executable, str(Path(workflow_bridge.__file__).resolve()),
+            "--request", str(self.request), "--tool-dir", str(self.root),
+            "--answer", "002", "--answer-text", answer],
+            capture_output=True, text=True, encoding="utf-8", timeout=10)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["arguments"][-4:],
+                         ["--answer", "002", "--answer-text", answer])
+
+    def test_retry_requires_explicit_flag_and_conflicts_block_engine(self):
+        with patch.object(workflow_bridge.subprocess, "run", return_value=
+                subprocess.CompletedProcess([], 0, '{"stage":"review_design"}', '')) as engine:
+            workflow_bridge.run(self.request, self.root, retry=True)
+            self.assertEqual(engine.call_args.args[0][-1], "--retry")
+            engine.reset_mock()
+            for options in ({"retry": True, "approve": "digest"},
+                            {"answer_id": "002"}, {"answer": "yes"},
+                            {"answer_id": "002", "answer": " "},
+                            {"answer_id": "002", "answer": "x" * 4001},
+                            {"answer_id": "002", "answer": "yes", "confirm": "digest"}):
+                with self.subTest(options=options), self.assertRaises(ValueError):
+                    workflow_bridge.run(self.request, self.root, **options)
+            engine.assert_not_called()
