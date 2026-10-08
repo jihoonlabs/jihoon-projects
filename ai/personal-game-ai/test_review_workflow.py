@@ -115,6 +115,7 @@ class ReviewWorkflowTests(unittest.TestCase):
         self.assertEqual(self.inspect()["result"], "blocked")
 
     def test_pending_request_length_is_reported_without_running_model(self):
+        self.target.unlink()
         self.task["status"] = "pending"
         self.plan.write_text(json.dumps([self.task]))
         self.state["stage"] = "execute"
@@ -122,6 +123,24 @@ class ReviewWorkflowTests(unittest.TestCase):
         result = self.inspect()
         self.assertEqual(result["result"], "reviewed")
         self.assertEqual(result["tasks"][0]["request_chars"], len(self.task["prompt"]))
+
+    def test_pending_create_with_existing_target_is_blocked(self):
+        self.task["status"] = "pending"
+        self.plan.write_text(json.dumps([self.task]))
+        self.state["stage"] = "execute"
+        self.save()
+        result = self.inspect()
+        self.assertEqual(result["result"], "blocked")
+        self.assertEqual(self.target.read_text(), "def step():\n    return 1\n")
+
+    def test_pending_create_with_ignored_target_is_blocked(self):
+        self.target.unlink()
+        (self.root / ".gitignore").write_text("micropython/ThumbyDodge/rules.py\n")
+        self.task["status"] = "pending"
+        self.plan.write_text(json.dumps([self.task]))
+        self.state["stage"] = "execute"
+        self.save()
+        self.assertEqual(self.inspect()["result"], "blocked")
 
     def test_plan_contract_change_is_rejected(self):
         self.task["prompt"] = "Different contract"

@@ -55,9 +55,9 @@
 - 별도 임시 저장소의 실제 Git 명령으로 설치 경로/Git 보호 smoke 6항목 통과: 도구 폴더 밖 미추적 테스트, staged 테스트, clean commit된 테스트, 내용 변경, 추적 해제, 동일 내용 symlink. 원래 프로젝트에서는 commit하지 않았으며 이 확인에는 모델·Docker를 사용하지 않았다.
 - 사용자 승인으로 읽기 전용 `review_workflow.py`를 추가했다. 명시한 workflow 기록의 요청·문맥·보호 산출물·고정 테스트 Git 상태·계획 계약·완료 artifact와 pending 요청 길이를 기존 검사로 확인한다. 모델·Docker·workflow 실행/승인/상태 수정은 하지 않는다. 잠금·불일치·실패·중단 단계는 blocked, 정상적인 읽기 검사는 reviewed로 보고한다. reviewed는 새 테스트 실행이나 기기 검증 완료를 의미하지 않는다.
 - 로컬 재개 전 `python -B review_workflow.py --request thumby_dodge_request.json --record outputs/workflow_<실제ID>`를 실행한다. 기록은 자동 선택하지 않는다. exit 0은 읽기 검사 완료, exit 2는 차단 사유/기록 확인 필요다. 출력은 JSON이며 디스크 보고서를 자동 생성하지 않는다.
-- 원격 환경 전체 unittest 286개 통과. 검토 도구 14개 테스트는 실제 임시 Git fixture로 정상/변경/잠금/문맥 불일치/잘못된 completed/초과 요청을 확인하고 기록 미변경·모델/Docker 미호출을 검사한다. 기존 테스트의 symlink 부모 디렉터리 누락과 프로필 지침 위치 assertion을 수정했다. Docker/Ollama/Codex CLI는 없으며, 모델 호출·Docker 검사·실기 플레이는 미검증이다. 이 대화의 코딩 지원과 workflow의 Ollama 모델 호출은 별개다.
+- 원격 환경 전체 unittest 288개 통과. 검토 도구 16개 테스트는 실제 임시 Git fixture로 정상/변경/잠금/문맥 불일치/잘못된 completed/초과 요청을 확인하고 기록 미변경·모델/Docker 미호출을 검사한다. 기존 테스트의 symlink 부모 디렉터리 누락과 프로필 지침 위치 assertion을 수정했다. Docker/Ollama/Codex CLI는 없으며, 모델 호출·Docker 검사·실기 플레이는 미검증이다. 이 대화의 코딩 지원과 workflow의 Ollama 모델 호출은 별개다.
 - 다음 재개에는 집의 현재 `rules.py`, 고정 테스트 두 파일, 미커밋 도구 수정, 관련 `outputs` 설계·승인·확정·계획·workflow 기록을 원형 그대로 옮겨야 한다. 집 MANUAL도 함께 가져와 비교한다. 문맥 일치가 확인되지 않으면 기존 기록을 보존하고 새 승인 workflow를 사용하며 digest를 변경하지 않는다.
-- 아래 과거 원격 handoff의 미검증 항목 중 unittest는 위 286개 결과로 갱신한다. 현재 미완성은 실제 어댑터 생성·검증과 기기 실행이다. 이 환경의 도구 수정·읽기 전용 검토 도구·회귀 테스트·문서를 사용자 요청에 따라 현재 Child에 커밋해 전달한다. 원격 push와 merge는 별도 승인 전까지 하지 않는다. 집의 dirty 변경을 보존하고 새 커밋과 비교해 필요한 수정을 반영한다.
+- 아래 과거 원격 handoff의 미검증 항목 중 unittest는 위 288개 결과로 갱신한다. 현재 미완성은 실제 어댑터 생성·검증과 기기 실행이다. 이 환경의 도구 수정·읽기 전용 검토 도구·회귀 테스트·문서를 사용자 요청에 따라 현재 Child에 커밋해 전달한다. 사용자가 현재 Child의 commit·일반 push를 승인했다. merge는 승인 없이 하지 않는다. 집의 dirty 변경을 보존하고 새 커밋과 비교해 필요한 수정을 반영한다.
 - 잘 작동함: 원격 Child/설정/문서와 thumby 프로필 일치.
 - 잘 작동함: 필요한 원격 파일만 가져온 임시 Git 환경에서 문맥 검사 및 프로필 단위 테스트 16개 통과.
 - 첫 생성 경로와 요청 계약을 `micropython/ThumbyDodge/`로 고정했고, 실기 런처 규칙에 맞춰 `ThumbyDodge.py`를 필수 엔트리로 요구한다.
@@ -132,3 +132,5 @@
 - 첫 플레이 이후 자연어 피드백 수정은 다음 책임 단위다. 새 수정 엔진을 만들기보다 기존 `edit_loop`/plan 엔진에 “플레이 의견 → 수정 대상 선택 → 수정/검사”를 연결한다.
 
 검토 도구 추가 검증: 후보 경로·SHA·보호 기록이 없는 검토 단계를 차단하고, 보고 직전 계획 상태 변경도 감지합니다. 두 오판을 회귀 테스트로 재현한 뒤 수정했습니다. 정상 후보는 review_file·review_sha256을 표시하지만 승인하지 않습니다.
+
+읽기 전용 검토는 pending/답변 대기 작업에 기존 실행 엔진의 파일·Git 준비 검사를 적용합니다. 생성 대상이 이미 있거나 Git에서 제외된 경우 정상으로 보고하지 않습니다. 통과 시 tasks의 file_preparation 필드에 passed를 표시합니다. 원격에서 두 누락을 재현한 뒤 수정했습니다.

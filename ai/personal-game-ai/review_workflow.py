@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 
 import execute_plan
+import run_tasks
 import workflow
 from task_dependencies import order_tasks
 
@@ -115,7 +116,13 @@ def review(request_path, record):
                     by_id[name]["status"] == "tests_passed"
                     for name in task.get("depends_on", [])
                 ):
-                    item["request_chars"] = len(execute_plan.dependency_request(task, by_id))
+                    request_text = execute_plan.dependency_request(task, by_id)
+                    item["request_chars"] = len(request_text)
+                    run_tasks.prepare_file_task({**task, "prompt": request_text, "answers": []})
+                    item["file_preparation"] = "passed"
+                elif task["status"] in {"pending", "waiting_for_user"}:
+                    run_tasks.prepare_file_task(task)
+                    item["file_preparation"] = "passed"
             if state["stage"] == "completed" and any(task["status"] != "tests_passed" for task in tasks):
                 report["issues"].append("completed 기록과 작업 상태가 일치하지 않습니다.")
             if path.read_bytes() != plan_data:
