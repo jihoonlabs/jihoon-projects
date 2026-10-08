@@ -27,6 +27,15 @@
 - 追加回帰テスト: creatingイベントで既存keyを注入し、unique違反後に新規keyで作成成功すること・既存keyが保持されることを検証するケースと、5回連続で衝突して500応答となりProjectが残らないケースを追加。イベント注入による競合再現であり、実際の複数DB接続による同時実行テストではない。
 - 今回の検証状態: GitHub上でコード・差分を確認。追加PHPテスト、Laravel全件、Pint、Reactテスト、実MySQLでの同時実行/migrationは未実行。過去の成功記録を今回の結果として扱わない。
 
+## 合意済みの次期Project管理仕様（未実装部分を含む）
+- Project作成者を初期リーダーとして登録し、Ticket権限は `write` にする。一般ユーザーも作成可能にする変更は既存のadmin限定APIからの権限変更となるため、実装・テストを一体で扱う。
+- Projectごとのリーダーは1名。リーダー譲渡時は新リーダーを `leader`、旧リーダーを `member` に更新し、途中状態やリーダー不在を作らないようDB transactionで実装する。
+- メンバーのProject役割（leader/member）とTicket権限（read/write）は別軸。Ticketの参照・編集は選択中Projectの権限で判定する。
+- 3文字の `project_key` は画面表示、Project検索、Project別Ticket検索・共有URLで使う公開識別子。既存DBの数値 `id` は内部参照・FKとして維持し、`project_key` は改名やリーダー譲渡でも不変とする。
+- Project作成 → key自動採番 → 作成者をleader登録 → Project選択 → Project内Ticket発行（例 `ABC-01`）の一連の操作をUIで提供する。
+- 既存実装: DBのProject key生成、Project別Ticket連番、メンバーpivotのrole/permission、管理者によるProject作成API、メンバー管理API。未実装: 一般ユーザー作成/自動リーダー登録、単一リーダー制約と安全な譲渡、Project作成UI、key検索/公開URL。
+- 上記は仕様記録であり、実装・テスト完了の宣言ではない。既存のTicket V1の動作を維持し、権限変更は回帰テストを追加する。
+
 ## 次の作業
 - 実行手順と検証記録のテンプレートは `docs/ticket/TICKET_REMOTE_VALIDATION.md` を参照。追加回帰テストとLaravel/Pintの再検証、MySQL migration・独立接続の競合確認、main統合時の競合確認が未完了。
 - main merge/pushとbranch削除は承認待ち。
