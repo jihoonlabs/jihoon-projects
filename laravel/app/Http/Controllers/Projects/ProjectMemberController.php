@@ -87,11 +87,10 @@ class ProjectMemberController extends Controller
 
     public function transferLeader(Request $request, Project $project, User $user): ProjectMemberResource
     {
-        $this->authorizeManage($request, $project);
-
-        // Lock the project row to serialize concurrent leader transfers for this project.
-        return DB::transaction(function () use ($project, $user) {
+        // Lock the project row before checking authorization to serialize leader transfers.
+        return DB::transaction(function () use ($request, $project, $user) {
             Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+            $this->authorizeManage($request, $project);
             $current = $project->members()->wherePivot('role', 'leader')->get();
             abort_unless($current->count() === 1, 409, 'Project must have exactly one leader.');
             abort_unless($project->members()->where('users.id', $user->id)->exists(), 404);
