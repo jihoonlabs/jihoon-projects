@@ -7,6 +7,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\DB;
 use Tests\Feature\Ticket\Concerns\UsesGeneralProject;
 use Tests\TestCase;
 
@@ -278,6 +279,7 @@ class ProjectManagementTest extends TestCase
             ->postJson("/api/projects/{$project->id}/archive")
             ->assertOk()
             ->assertJson(fn ($json) => $json->whereType('data.archived_at', 'string')->etc());
+        $this->postJson("/api/projects/{$project->id}/archive")->assertOk();
 
         $this->assertNotNull($project->fresh()->archived_at);
         $this->getJson('/api/projects')->assertOk()->assertJsonCount(0, 'data');
@@ -292,8 +294,13 @@ class ProjectManagementTest extends TestCase
         $this->postJson("/api/projects/{$project->id}/restore")
             ->assertOk()
             ->assertJsonPath('data.archived_at', null);
+        $this->postJson("/api/projects/{$project->id}/restore")->assertOk();
         $this->getJson('/api/projects')->assertOk()->assertJsonCount(1, 'data');
         $this->assertDatabaseHas('tickets', ['id' => $ticket->id, 'project_id' => $project->id]);
+        $this->assertSame(
+            ['project.archived', 'project.restored'],
+            DB::table('project_audit_events')->where('project_id', $project->id)->orderBy('id')->pluck('action')->all()
+        );
     }
 
     public function test_project_with_unfinished_ticket_cannot_be_archived(): void

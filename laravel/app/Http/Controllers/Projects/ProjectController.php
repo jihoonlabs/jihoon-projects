@@ -35,7 +35,6 @@ class ProjectController extends Controller
 
     public function store(Request $request): ProjectResource
     {
-        $this->authorizeAdmin($request);
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
         ]);
@@ -82,7 +81,17 @@ class ProjectController extends Controller
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
         ]);
-        $project->update($validated);
+        DB::transaction(function () use ($request, $project, $validated) {
+            $locked = Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+            $previousName = $locked->name;
+            $locked->update($validated);
+            if ($locked->name !== $previousName) {
+                $this->recordAudit($request, $locked, 'project.renamed', [
+                    'previous_name' => $previousName,
+                    'name' => $locked->name,
+                ]);
+            }
+        });
 
         return new ProjectResource($project->refresh());
     }
@@ -90,11 +99,14 @@ class ProjectController extends Controller
     public function archive(Request $request, Project $project): ProjectResource
     {
         $this->authorizeManage($request, $project);
-        DB::transaction(function () use ($project) {
+        DB::transaction(function () use ($request, $project) {
             $locked = Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
             abort_if($locked->tickets()->where('status', '!=', 'DONE')->exists(), 409, 'Complete all tickets before archiving.');
             if ($locked->archived_at === null) {
                 $locked->forceFill(['archived_at' => now()])->save();
+                $this->recordAudit($request, $locked, 'project.archived', [
+                    'name' => $locked->name,
+                ]);
             }
         });
 
@@ -104,7 +116,15 @@ class ProjectController extends Controller
     public function restore(Request $request, Project $project): ProjectResource
     {
         $this->authorizeManage($request, $project);
-        $project->forceFill(['archived_at' => null])->save();
+        DB::transaction(function () use ($request, $project) {
+            $locked = Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+            if ($locked->archived_at !== null) {
+                $locked->forceFill(['archived_at' => null])->save();
+                $this->recordAudit($request, $locked, 'project.restored', [
+                    'name' => $locked->name,
+                ]);
+            }
+        });
 
         return new ProjectResource($project->refresh());
     }
@@ -112,11 +132,30 @@ class ProjectController extends Controller
     public function destroy(Request $request, Project $project)
     {
         $this->authorizeAdmin($request);
-        abort_if($project->tickets()->exists(), 409, 'Projects with tickets cannot be deleted.');
-
-        $project->delete();
+        DB::transaction(function () use ($request, $project) {
+            $locked = Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+            abort_if($locked->tickets()->exists(), 409, 'Projects with tickets cannot be deleted.');
+            $this->recordAudit($request, $locked, 'project.deleted', [
+                'name' => $locked->name,
+                'created_at' => $locked->created_at?->toIso8601String(),
+            ]);
+            $locked->delete();
+        });
 
         return response()->noContent();
+    }
+
+    private function recordAudit(Request $request, Project $project, string $action, array $snapshot): void
+    {
+        DB::table('project_audit_events')->insert([
+            'project_id' => $project->id,
+            'project_key' => $project->project_key,
+            'actor_id' => $request->user()->id,
+            'actor_name' => $request->user()->name,
+            'action' => $action,
+            'snapshot' => json_encode($snapshot, JSON_THROW_ON_ERROR),
+            'created_at' => now(),
+        ]);
     }
 
     private function authorizeRead(Request $request, Project $project): void
