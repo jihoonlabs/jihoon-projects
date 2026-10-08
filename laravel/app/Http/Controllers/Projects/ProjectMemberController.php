@@ -7,6 +7,7 @@ use App\Http\Resources\Projects\ProjectMemberResource;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class ProjectMemberController extends Controller
@@ -36,10 +37,13 @@ class ProjectMemberController extends Controller
             'User is already a project member.'
         );
 
-        $project->members()->attach($user, [
-            'role' => $validated['role'],
-            'permission' => $validated['permission'],
-        ]);
+        DB::transaction(function () use ($project, $user, $validated) {
+            $this->lockActiveProject($project);
+            $project->members()->attach($user, [
+                'role' => $validated['role'],
+                'permission' => $validated['permission'],
+            ]);
+        });
 
         $member = $project->members()->where('users.id', $user->id)->firstOrFail();
 
@@ -59,7 +63,10 @@ class ProjectMemberController extends Controller
             404
         );
 
-        $project->members()->updateExistingPivot($user->id, $validated);
+        DB::transaction(function () use ($project, $user, $validated) {
+            $this->lockActiveProject($project);
+            $project->members()->updateExistingPivot($user->id, $validated);
+        });
         $member = $project->members()->where('users.id', $user->id)->firstOrFail();
 
         return new ProjectMemberResource($member);
@@ -68,10 +75,20 @@ class ProjectMemberController extends Controller
     public function destroy(Request $request, Project $project, User $user)
     {
         $this->authorizeManage($request, $project);
-        $detached = $project->members()->detach($user->id);
+        $detached = DB::transaction(function () use ($project, $user) {
+            $this->lockActiveProject($project);
+
+            return $project->members()->detach($user->id);
+        });
         abort_unless($detached > 0, 404);
 
         return response()->noContent();
+    }
+
+    private function lockActiveProject(Project $project): void
+    {
+        $locked = Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+        abort_if($locked->archived_at !== null, 409, 'Restore this project before managing members.');
     }
 
     private function authorizeRead(Request $request, Project $project): void
