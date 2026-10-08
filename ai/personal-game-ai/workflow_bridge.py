@@ -6,11 +6,12 @@ import subprocess
 import sys
 
 
-def run(request, tool_dir, *, approve=None, confirm=None, answer_id=None, answer=None, retry=False):
+def run(request, tool_dir, *, approve=None, confirm=None, answer_id=None, answer=None, retry=False,
+        feedback=None, review_design=None):
     if (answer_id is None) != (answer is None):
         raise ValueError("질문 ID와 답변을 함께 지정하세요.")
-    if sum(value is not None for value in (approve, confirm, answer_id)) + bool(retry) > 1:
-        raise ValueError("승인·확정·답변·재시도는 한 번에 하나만 지정하세요.")
+    if sum(value is not None for value in (approve, confirm, answer_id, feedback, review_design)) + bool(retry) > 1:
+        raise ValueError("승인·확정·답변·재시도·검토 수정은 한 번에 하나만 지정하세요.")
     if answer is not None and (not isinstance(answer, str) or not answer.strip() or len(answer) > 4000):
         raise ValueError("답변은 1~4000자여야 합니다.")
     request = Path(request).absolute()
@@ -29,6 +30,20 @@ def run(request, tool_dir, *, approve=None, confirm=None, answer_id=None, answer
         command += ["--answer", answer_id, "--answer-text", answer]
     if retry:
         command += ["--retry"]
+    for flag, value in (("--test-feedback", feedback), ("--review-design", review_design)):
+        if value is None:
+            continue
+        # Resolve against the caller's cwd before switching to the engine cwd.
+        path = Path(value).absolute()
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("검토 자료는 일반 파일이어야 합니다.")
+        if flag == "--test-feedback":
+            if path.stat().st_size > 16000:
+                raise ValueError("테스트 피드백 파일은 16000바이트 이내여야 합니다.")
+            text = path.read_text(encoding="utf-8")
+            if not text.strip() or len(text) > 4000:
+                raise ValueError("테스트 피드백은 1~4000자여야 합니다.")
+        command += [flag, str(path)]
     # The selected engine owns branch/context checks, locks and approval digests.
     # Do not import it here or replace its target.json with the intake config.
     completed = subprocess.run(command, cwd=tool_dir, capture_output=True,
@@ -54,12 +69,15 @@ def main():
     action.add_argument("--confirm-tests")
     action.add_argument("--answer", dest="answer_id")
     action.add_argument("--retry", action="store_true")
+    action.add_argument("--test-feedback", type=Path)
+    action.add_argument("--review-design", type=Path)
     parser.add_argument("--answer-text")
     parser.add_argument("--interactive", action="store_true", help="모델 질문을 터미널에서 답하고 같은 요청으로 재개")
     args = parser.parse_args()
     try:
         result = run(args.request, args.tool_dir, approve=args.approve_design, confirm=args.confirm_tests,
-                     answer_id=args.answer_id, answer=args.answer_text, retry=args.retry)
+                     answer_id=args.answer_id, answer=args.answer_text, retry=args.retry,
+                     feedback=args.test_feedback, review_design=args.review_design)
         if args.interactive:
             result = continue_dialogue(args.request, args.tool_dir, result)
     except (ValueError, OSError) as error:

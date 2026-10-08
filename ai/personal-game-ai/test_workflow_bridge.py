@@ -97,6 +97,48 @@ class BridgeTests(unittest.TestCase):
             workflow_bridge.run(self.request, self.root / "missing")
         engine.assert_not_called()
 
+    def test_review_files_are_forwarded_with_absolute_paths_and_preserved(self):
+        feedback = self.root / "feedback.txt"
+        feedback.write_text("충돌 경계 테스트를 추가해주세요", encoding="utf-8")
+        design = self.root / "design.json"
+        design.write_text('{"review":"fixture"}')
+        response = subprocess.CompletedProcess([], 0, '{"stage":"review_tests"}', '')
+        for options, flag, path in (({"feedback": feedback}, "--test-feedback", feedback),
+                                    ({"review_design": design}, "--review-design", design)):
+            before = path.read_bytes()
+            with patch.object(workflow_bridge.subprocess, "run", return_value=response) as engine:
+                workflow_bridge.run(self.request, self.root, **options)
+            self.assertEqual(engine.call_args.args[0][-2:], [flag, str(path.absolute())])
+            self.assertEqual(path.read_bytes(), before)
+
+    def test_invalid_review_input_blocks_before_engine(self):
+        feedback = self.root / "feedback.txt"
+        with patch.object(workflow_bridge.subprocess, "run") as engine:
+            for text in (" ", "x" * 4001, "🌸" * 4001):
+                feedback.write_text(text, encoding="utf-8")
+                with self.subTest(text_length=len(text)), self.assertRaises(ValueError):
+                    workflow_bridge.run(self.request, self.root, feedback=feedback)
+            for options in ({"feedback": self.root / "missing"},
+                            {"review_design": self.root},
+                            {"feedback": feedback, "retry": True},
+                            {"review_design": feedback, "approve": "digest"}):
+                with self.subTest(options=options), self.assertRaises(ValueError):
+                    workflow_bridge.run(self.request, self.root, **options)
+            engine.assert_not_called()
+
+    def test_cli_relative_feedback_uses_caller_folder_not_engine_folder(self):
+        feedback = self.root / "feedback.txt"
+        feedback.write_text("경계 조건 추가", encoding="utf-8")
+        engine = self.root / "engine"
+        engine.mkdir()
+        (engine / "workflow.py").write_text(
+            "import json,sys\nprint(json.dumps({'stage':'review_tests','arguments':sys.argv[1:]}))\n")
+        result = subprocess.run([sys.executable, str(Path(workflow_bridge.__file__).resolve()),
+            "--request", "request.json", "--tool-dir", "engine", "--test-feedback", "feedback.txt"],
+            cwd=self.root, capture_output=True, text=True, encoding="utf-8", timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["arguments"][-2:], ["--test-feedback", str(feedback)])
+
     def test_answer_is_forwarded_as_literal_argument(self):
         answer = '좌우 이동; $(echo nope) "원문"\n둘째 줄'
         with patch.object(workflow_bridge.subprocess, "run", return_value=
