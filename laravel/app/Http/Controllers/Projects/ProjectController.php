@@ -7,7 +7,6 @@ use App\Http\Resources\Projects\ProjectResource;
 use App\Models\Project;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ProjectController extends Controller
 {
@@ -29,6 +28,7 @@ class ProjectController extends Controller
 
     public function store(Request $request): ProjectResource
     {
+        $this->authorizeAdmin($request);
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
         ]);
@@ -37,15 +37,7 @@ class ProjectController extends Controller
 
         while (true) {
             try {
-                return new ProjectResource(DB::transaction(function () use ($validated, $request) {
-                    $project = Project::create($validated);
-                    $project->members()->attach($request->user()->id, [
-                        'role' => 'leader',
-                        'permission' => 'write',
-                    ]);
-
-                    return $project;
-                }));
+                return new ProjectResource(Project::create($validated));
             } catch (UniqueConstraintViolationException $exception) {
                 // A concurrent insert can claim the generated key after the existence check.
                 // Retry only project_key collisions; other unique constraints must still fail.
