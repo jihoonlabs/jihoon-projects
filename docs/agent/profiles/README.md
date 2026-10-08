@@ -12,13 +12,14 @@ Agentは万能化せず、作業に必要なProfileだけ切り替えて使う�
 - 実作業の結果を優先し、合わない設計は固定せず柔軟に見直す。
 - 分割しすぎない。役割や判断方法が実際に異なる時だけProfileや作業単位を分ける。
 
-## MANUALとhandoff
-- MANUALも固定で一律に分割しない。作業規模・衝突リスク・handoff価値に応じて選ぶ。
-- 小さいChildは作業MDに結果・検証・制約を残すだけでもよい。
-- 独立したhandoff価値が高いChildや、同一MANUALを複数Childが触って競合しやすい場合はChildごとにMANUALを分ける。
-- 複数Childの結果をまとめる必要がある時だけ、Integration Profile/Agentが採用SHA・検証状態・制約を確認してParent/Epic MANUALへ統合する。
-- 最終MANUALは採用された結果だけを残し、Child間の重複や作業途中の説明をそのまま積み上げない。
-- 文書分割やIntegration Agent自体が管理コストになる場合は使わない。状況に合わなければ統合・削除・簡略化する。
+## WORKとMANUAL
+- WORKはAI同士のhandoff用。責任、依存関係、採用SHA、検証結果、残る制約・未検証事項など、次のAIが作業を継続・統合するために必要な情報を持つ。
+- MANUALはユーザー向けの記録。後から読んで、そのBranchでなぜ作業し、何を変え、何を確認し、現在どうなっているかを短時間で把握できるようにする。
+- 各Childは自分のWORKとMANUALを持ち、同じParentの共有MANUALを並行編集しない。
+- WORKとMANUALは同じ内容を複製しない。AI向けの詳細はWORK、ユーザーが後で読む事実と結果はMANUALへ分ける。
+- Parent/Epic統合時は、必要に応じてIntegration Profile/AgentがChild WORKの採用SHA・検証・制約を確認し、Child MANUALを基にParent/Epic MANUALを整理する。
+- 最終MANUALには実際に採用された結果だけを残し、Childの作業途中の説明や重複をそのまま積み上げない。
+- 小さい作業でも「そのBranchで何をしたか」は残す。ただし文書量は作業規模に合わせ、不要に長くしない。
 
 ## 最初の実験Profile
 - `continuation`: 既存作業を継続して実装・検証・統合する。
