@@ -260,11 +260,100 @@ class ProjectManagementTest extends TestCase
         $this->actingAs($admin)
             ->postJson("/api/projects/{$project->id}/members", [
                 'email' => $newMember->email,
-                'role' => 'leader',
+                'role' => 'member',
                 'permission' => 'write',
             ])
             ->assertCreated()
-            ->assertJsonPath('data.role', 'leader');
+            ->assertJsonPath('data.role', 'member');
+    }
+
+    public function test_project_leader_can_transfer_ownership_without_changing_ticket_permissions(): void
+    {
+        $project = Project::factory()->create();
+        $leader = User::factory()->create();
+        $nextLeader = User::factory()->create();
+        $this->addProjectMember($project, $leader, role: 'leader', permission: 'read');
+        $this->addProjectMember($project, $nextLeader, role: 'member', permission: 'write');
+
+        $this->actingAs($leader)
+            ->postJson("/api/projects/{$project->id}/members/{$nextLeader->id}/transfer-leader")
+            ->assertOk()
+            ->assertJsonPath('data.role', 'leader')
+            ->assertJsonPath('data.permission', 'write');
+
+        $this->assertDatabaseHas('project_members', [
+            'project_id' => $project->id,
+            'user_id' => $leader->id,
+            'role' => 'member',
+            'permission' => 'read',
+        ]);
+        $this->assertDatabaseHas('project_members', [
+            'project_id' => $project->id,
+            'user_id' => $nextLeader->id,
+            'role' => 'leader',
+            'permission' => 'write',
+        ]);
+        $this->assertSame(1, $project->members()->wherePivot('role', 'leader')->count());
+
+        $this->postJson("/api/projects/{$project->id}/members/{$leader->id}/transfer-leader")
+            ->assertForbidden();
+        $this->actingAs($nextLeader)
+            ->postJson("/api/projects/{$project->id}/members/{$nextLeader->id}/transfer-leader")
+            ->assertOk();
+    }
+
+    public function test_leader_role_cannot_be_changed_indirectly_or_removed(): void
+    {
+        $project = Project::factory()->create();
+        $leader = User::factory()->create();
+        $member = User::factory()->create();
+        $outsider = User::factory()->create();
+        $this->addProjectMember($project, $leader, role: 'leader', permission: 'write');
+        $this->addProjectMember($project, $member, role: 'member', permission: 'read');
+
+        $this->actingAs($leader)
+            ->postJson("/api/projects/{$project->id}/members", [
+                'email' => $outsider->email,
+                'role' => 'leader',
+                'permission' => 'write',
+            ])->assertUnprocessable();
+
+        $this->patchJson("/api/projects/{$project->id}/members/{$member->id}", [
+            'role' => 'leader',
+            'permission' => 'write',
+        ])->assertUnprocessable();
+
+        $this->patchJson("/api/projects/{$project->id}/members/{$leader->id}", [
+            'role' => 'member',
+            'permission' => 'write',
+        ])->assertStatus(409);
+
+        $this->deleteJson("/api/projects/{$project->id}/members/{$leader->id}")
+            ->assertStatus(409);
+
+        $this->postJson("/api/projects/{$project->id}/members/{$outsider->id}/transfer-leader")
+            ->assertNotFound();
+
+        $this->assertSame(1, $project->members()->wherePivot('role', 'leader')->count());
+    }
+
+    public function test_non_leader_cannot_transfer_project_leadership(): void
+    {
+        $project = Project::factory()->create();
+        $leader = User::factory()->create();
+        $member = User::factory()->create();
+        $this->addProjectMember($project, $leader, role: 'leader', permission: 'write');
+        $this->addProjectMember($project, $member, role: 'member', permission: 'write');
+
+        $this->actingAs($member)
+            ->postJson("/api/projects/{$project->id}/members/{$member->id}/transfer-leader")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('project_members', [
+            'project_id' => $project->id,
+            'user_id' => $leader->id,
+            'role' => 'leader',
+        ]);
     }
 
     public function test_project_leader_can_archive_completed_project_and_restore_it(): void

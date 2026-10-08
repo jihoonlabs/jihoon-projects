@@ -23,23 +23,22 @@ class ProjectMemberController extends Controller
 
     public function store(Request $request, Project $project)
     {
-        $this->authorizeManage($request, $project);
         $validated = $request->validate([
             'email' => ['required', 'email', 'exists:users,email'],
-            'role' => ['required', Rule::in(['leader', 'member'])],
+            'role' => ['required', Rule::in(['member'])],
             'permission' => ['required', Rule::in(['read', 'write'])],
         ]);
         $user = User::query()->where('email', $validated['email'])->firstOrFail();
 
-        abort_if(
-            $project->members()->where('users.id', $user->id)->exists(),
-            409,
-            'User is already a project member.'
-        );
-
-        DB::transaction(function () use ($project, $user, $validated) {
-            $this->lockActiveProject($project);
-            $project->members()->attach($user, [
+        DB::transaction(function () use ($request, $project, $user, $validated) {
+            $locked = $this->lockActiveProject($project);
+            $this->authorizeManage($request, $locked);
+            abort_if(
+                $locked->members()->where('users.id', $user->id)->exists(),
+                409,
+                'User is already a project member.'
+            );
+            $locked->members()->attach($user, [
                 'role' => $validated['role'],
                 'permission' => $validated['permission'],
             ]);
@@ -52,20 +51,21 @@ class ProjectMemberController extends Controller
 
     public function update(Request $request, Project $project, User $user): ProjectMemberResource
     {
-        $this->authorizeManage($request, $project);
         $validated = $request->validate([
             'role' => ['required', Rule::in(['leader', 'member'])],
             'permission' => ['required', Rule::in(['read', 'write'])],
         ]);
 
-        abort_unless(
-            $project->members()->where('users.id', $user->id)->exists(),
-            404
-        );
+        DB::transaction(function () use ($request, $project, $user, $validated) {
+            $locked = $this->lockActiveProject($project);
+            $this->authorizeManage($request, $locked);
+            abort_unless($locked->members()->where('users.id', $user->id)->exists(), 404);
+            $current = $locked->members()->where('users.id', $user->id)->firstOrFail();
+            abort_if($validated['role'] !== $current->pivot->role, 409, 'Use leader transfer to change project roles.');
 
-        DB::transaction(function () use ($project, $user, $validated) {
-            $this->lockActiveProject($project);
-            $project->members()->updateExistingPivot($user->id, $validated);
+            $locked->members()->updateExistingPivot($user->id, [
+                'permission' => $validated['permission'],
+            ]);
         });
         $member = $project->members()->where('users.id', $user->id)->firstOrFail();
 
@@ -74,21 +74,47 @@ class ProjectMemberController extends Controller
 
     public function destroy(Request $request, Project $project, User $user)
     {
-        $this->authorizeManage($request, $project);
-        $detached = DB::transaction(function () use ($project, $user) {
-            $this->lockActiveProject($project);
+        $detached = DB::transaction(function () use ($request, $project, $user) {
+            $locked = $this->lockActiveProject($project);
+            $this->authorizeManage($request, $locked);
+            abort_if(
+                $locked->members()->where('users.id', $user->id)->wherePivot('role', 'leader')->exists(),
+                409,
+                'Transfer leadership before removing the leader.'
+            );
 
-            return $project->members()->detach($user->id);
+            return $locked->members()->detach($user->id);
         });
         abort_unless($detached > 0, 404);
 
         return response()->noContent();
     }
 
-    private function lockActiveProject(Project $project): void
+    public function transferLeader(Request $request, Project $project, User $user): ProjectMemberResource
+    {
+        return DB::transaction(function () use ($request, $project, $user) {
+            // Serialize leadership changes and reject changes while the project is archived.
+            $locked = $this->lockActiveProject($project);
+            $this->authorizeManage($request, $locked);
+            $current = $locked->members()->wherePivot('role', 'leader')->get();
+            abort_unless($current->count() === 1, 409, 'Project must have exactly one leader.');
+            abort_unless($locked->members()->where('users.id', $user->id)->exists(), 404);
+
+            if ($current->first()->id !== $user->id) {
+                $locked->members()->updateExistingPivot($current->first()->id, ['role' => 'member']);
+                $locked->members()->updateExistingPivot($user->id, ['role' => 'leader']);
+            }
+
+            return new ProjectMemberResource($locked->members()->where('users.id', $user->id)->firstOrFail());
+        });
+    }
+
+    private function lockActiveProject(Project $project): Project
     {
         $locked = Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
         abort_if($locked->archived_at !== null, 409, 'Restore this project before managing members.');
+
+        return $locked;
     }
 
     private function authorizeRead(Request $request, Project $project): void
