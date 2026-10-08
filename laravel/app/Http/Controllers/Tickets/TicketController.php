@@ -52,7 +52,7 @@ class TicketController extends Controller
         $this->authorizeProjectWrite($request, $project);
         $this->validateAssignee($project, $validated['assignee_id'] ?? null);
 
-        $ticket = DB::transaction(function () use ($validated) {
+        $ticket = DB::transaction(function () use ($validated, $request) {
             $project = Project::query()->lockForUpdate()->findOrFail($validated['project_id']);
             $status = $validated['status'] ?? 'TODO';
             $ticketNumber = (int) $project->next_ticket_number;
@@ -74,6 +74,7 @@ class TicketController extends Controller
 
             $project->increment('next_ticket_number');
             $project->increment('board_version');
+            $this->recordAudit($request, $project, $ticket, 'ticket.created');
 
             return $ticket;
         });
@@ -107,17 +108,23 @@ class TicketController extends Controller
         }
 
         if (! array_key_exists('status', $validated)) {
-            $ticket->update($validated);
+            DB::transaction(function () use ($ticket, $validated, $request) {
+                $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
+                $ticket->refresh();
+                $ticket->update($validated);
+                $this->recordAudit($request, $project, $ticket, 'ticket.updated');
+            });
 
             return new TicketResource($ticket->load(['project:id,name', 'assignee:id,name']));
         }
 
-        DB::transaction(function () use ($ticket, $validated) {
+        DB::transaction(function () use ($ticket, $validated, $request) {
             $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
             $ticket->refresh();
 
             if ($validated['status'] === $ticket->status) {
                 $ticket->update($validated);
+                $this->recordAudit($request, $project, $ticket, 'ticket.updated');
 
                 return;
             }
@@ -131,6 +138,7 @@ class TicketController extends Controller
             $ticket->update([...$validated, 'position' => $newPosition]);
             $this->compactColumn($project->id, $sourceStatus);
             $project->increment('board_version');
+            $this->recordAudit($request, $project, $ticket, 'ticket.updated');
         });
 
         return new TicketResource($ticket->refresh()->load(['project:id,name', 'assignee:id,name']));
@@ -146,7 +154,7 @@ class TicketController extends Controller
             'board_version' => ['required', 'integer', 'min:0'],
         ]);
 
-        $project = DB::transaction(function () use ($ticket, $validated) {
+        $project = DB::transaction(function () use ($ticket, $validated, $request) {
             $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
 
             abort_if(
@@ -187,6 +195,8 @@ class TicketController extends Controller
             $ticket->update(['status' => $targetStatus]);
             $this->writePositions($targetIds);
             $project->increment('board_version');
+            $ticket->refresh();
+            $this->recordAudit($request, $project, $ticket, 'ticket.moved');
 
             return $project->refresh();
         });
@@ -231,6 +241,30 @@ class TicketController extends Controller
         });
 
         return response()->json(['message' => 'Ticket deleted successfully'], 200);
+    }
+
+    private function recordAudit(Request $request, Project $project, Ticket $ticket, string $action): void
+    {
+        // The caller owns a transaction: the work and its evidence commit together.
+        DB::table('ticket_audit_events')->insert([
+            'project_id' => $project->id,
+            'project_key' => $project->project_key,
+            'ticket_id' => $ticket->id,
+            'issue_key' => $ticket->issue_key,
+            'actor_id' => $request->user()->id,
+            'actor_name' => $request->user()->name,
+            'action' => $action,
+            'snapshot' => json_encode([
+                'title' => $ticket->title,
+                'description' => $ticket->description,
+                'status' => $ticket->status,
+                'priority' => $ticket->priority,
+                'assignee_id' => $ticket->assignee_id,
+                'position' => $ticket->position,
+                'created_at' => $ticket->created_at?->toIso8601String(),
+            ], JSON_THROW_ON_ERROR),
+            'created_at' => now(),
+        ]);
     }
 
     private function compactColumn(int $projectId, string $status): void
