@@ -2,6 +2,9 @@
 
 import argparse
 import json
+from pathlib import Path
+import sys
+import uuid
 
 QUESTIONS = {
     "play": "주인공이 하는 핵심 행동과 조작을 정해주세요. 예: 좌우 이동으로 장애물 피하기.",
@@ -46,16 +49,49 @@ def prepare(brief, settings=None):
 
 def main():
     parser = argparse.ArgumentParser(description="Ollama 없이 게임 요청과 필요한 사용자 설정 정리")
-    parser.add_argument("--brief", required=True)
+    parser.add_argument("--brief")
     parser.add_argument("--play")
     parser.add_argument("--finish")
     parser.add_argument("--request-only", action="store_true", help="설정이 완성된 경우 workflow 요청 JSON만 출력")
+    parser.add_argument("--interactive", action="store_true", help="누락 설정만 질문하고 완성된 요청 파일을 자동 저장")
+    parser.add_argument("--output", type=Path, help="완성된 요청을 저장할 새 파일 경로 (기존 파일 덮어쓰기 금지)")
     args = parser.parse_args()
     try:
-        result = prepare(args.brief, {key: value for key, value in {"play": args.play, "finish": args.finish}.items() if value is not None})
+        def answer(question):
+            print(question, file=sys.stderr, flush=True)
+            line = sys.stdin.readline()
+            if not line:
+                raise ValueError("입력이 중단됐습니다. 요청 파일을 저장하지 않았습니다.")
+            return line.rstrip("\r\n")
+
+        brief = args.brief
+        if brief is None and args.interactive:
+            brief = answer("만들고 싶은 Thumby 게임을 설명해주세요.")
+        settings = {key: value for key, value in {"play": args.play, "finish": args.finish}.items() if value is not None}
+        result = prepare(brief, settings)
+        if args.interactive:
+            for question in result["questions"]:
+                settings[question["id"]] = answer(question["question"])
+                # Validate each answer before asking the next decision.
+                prepare(brief, settings)
+            result = prepare(brief, settings)
         if args.request_only and result["request"] is None:
             raise ValueError("play·finish 설정을 먼저 채우세요. --request-only 없이 필요한 질문을 확인하세요.")
-    except ValueError as error:
+        if args.output is not None or args.interactive:
+            if result["request"] is None:
+                raise ValueError("누락 설정이 있어 요청 파일을 저장할 수 없습니다.")
+            destination = args.output
+            if destination is None:
+                folder = Path(__file__).resolve().parent / "outputs"
+                if folder.is_symlink():
+                    raise ValueError("outputs 심볼릭 링크에는 요청을 저장하지 않습니다.")
+                folder.mkdir(exist_ok=True)
+                destination = folder / ("request_" + uuid.uuid4().hex + ".json")
+            data = json.dumps(result["request"], ensure_ascii=False, indent=2) + "\n"
+            with destination.open("x", encoding="utf-8") as stream:
+                stream.write(data)
+            print("요청 저장: " + str(destination.absolute()), file=sys.stderr)
+    except (ValueError, OSError) as error:
         parser.error(str(error))
     print(json.dumps(result["request"] if args.request_only else result, ensure_ascii=False, indent=2))
     return 0

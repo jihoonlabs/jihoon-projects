@@ -3,7 +3,7 @@
 - 브랜치: feature/personal-game-ai-request-intake
 - 기반: Thumby 생성 연결의 원격 fda316a와 동일한 코드 tree. 기존 작업 폴더·집 산출물은 변경하지 않는다.
 - 목표: 게임 제작 툴의 입력 준비. 자연어 원문을 보존하고 이미 제공한 사용자 설정을 다시 묻지 않는다.
-- 범위: Ollama 없이 핵심 플레이와 성공/실패/재시작 조건의 누락 질문, 기존 workflow 요청 JSON 생성.
+- 범위: Ollama 없이 핵심 플레이와 성공/실패/재시작 조건의 누락 질문, 기존 workflow 요청 JSON 생성, 대화형 답변 수집과 새 요청 파일 자동 저장.
 - 대상외: 자연어 의미 자동 추론, 설정 추천 모델, 생성 자동 실행, 기기 배포, 기존 ThumbyDodge 변경.
 - 계약: request_intake.prepare(brief, settings); settings는 play/finish. request_ready이면 goal/requirements/area 형식 출력. 승인·설계·테스트 보호는 기존 workflow가 담당한다.
 - 현재 프로필은 좌우 버튼 중심이다. 시대극 액션을 지금 구현 가능하다고 선언하지 않는다. 새로운 조작/API/게임 경로 설정은 설계 전에 별도 확인한다.
@@ -12,8 +12,10 @@
 
 ## 성과·검증·재개
 
+- 새 기능: `python request_intake.py --interactive`에서 아이디어·누락 설정 입력부터 outputs의 고유 요청 파일 저장까지 연결했다. 명시한 설정은 다시 묻지 않는다. `--output`은 새 파일만 생성한다. 기존 파일·입력 중단·빈 답변·누락 설정 검사, 기본 경로에서 두 번 실행 시 별도 파일 생성 검사를 추가했다.
+
 - 변경: ai/personal-game-ai/request_intake.py, test_request_intake.py, 이 작업 MD와 MANUAL. 기존 게임·요청·승인 기록·target.json은 수정하지 않았다.
-- 요청 준비 테스트 10개 통과. 실제 subprocess로 CLI의 한글 JSON·부분 설정·request-only 계약을 검사하고, 잘못된 입력 8종에서 exit 2와 빈 stdout을 확인했다. 최대 길이의 UTF-8 요청 파일을 실제 workflow.load_request/validate_input으로 읽어 원문·파일 보존을 확인했다(directory_for만 임시 경로로 대체). 일반 상태 출력은 workflow 요청으로 거부된다. Thumby 생성 브랜치 이름과 기존 설정을 유지한 분리 검증 checkout에서 전체 unittest 298개 통과. 새 Child에서 기존 read_context가 통과했다고 주장하지 않는다.
+- 요청 준비 테스트 13개 통과. 실제 subprocess로 CLI의 한글 JSON·부분 설정·request-only 계약을 검사하고, 잘못된 입력 8종에서 exit 2와 빈 stdout을 확인했다. 최대 길이의 UTF-8 요청 파일을 실제 workflow.load_request/validate_input으로 읽어 원문·파일 보존을 확인했다(directory_for만 임시 경로로 대체). 일반 상태 출력은 workflow 요청으로 거부된다. Thumby 생성 브랜치 이름과 기존 설정을 유지한 분리 검증 checkout에서 전체 unittest 301개 통과. 새 Child에서 기존 read_context가 통과했다고 주장하지 않는다.
 - 로컬/Ollama 재개 시작 자료: AGENTS.md → 이 MD → REQUEST_INTAKE_MANUAL.md → request_intake.py/test_request_intake.py.
 - 이 Child는 입력 준비만 담당한다. target.json의 expected_branch와 branch_document는 기존 Thumby 생성 작업용으로 유지했다. 이 Child에서 workflow.py를 바로 실행하지 않는다.
 - 로컬 명령: ai/personal-game-ai에서 python -m unittest test_request_intake -v; python request_intake.py --brief '게임 아이디어'; --play와 --finish로 이미 결정한 내용을 전달한다.

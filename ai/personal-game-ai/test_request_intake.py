@@ -12,12 +12,53 @@ import workflow
 
 
 class RequestIntakeTests(unittest.TestCase):
-    def cli(self, *args):
+    def cli(self, *args, input=None):
         return subprocess.run(
             [sys.executable, str(Path(request_intake.__file__).resolve()), *args],
             capture_output=True, text=True, encoding="utf-8", check=False,
             timeout=10,
+            input=input,
         )
+
+    def test_interactive_collects_missing_answers_and_saves_request(self):
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder) / "request.json"
+            result = self.cli("--interactive", "--play", "좌우 피하기", "--output", str(target),
+                              input="산길 모험\n충돌 종료\n")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            payload = json.loads(result.stdout)
+            self.assertEqual(payload["stage"], "request_ready")
+            self.assertNotIn(request_intake.QUESTIONS["play"], result.stderr)
+            self.assertIn(request_intake.QUESTIONS["finish"], result.stderr)
+            self.assertEqual(json.loads(target.read_text()), payload["request"])
+
+    def test_interactive_default_creates_distinct_requests_next_to_tool(self):
+        with tempfile.TemporaryDirectory() as folder:
+            script = Path(folder) / "request_intake.py"
+            script.write_bytes(Path(request_intake.__file__).read_bytes())
+            for _ in range(2):
+                result = subprocess.run([sys.executable, str(script), "--interactive"],
+                    input="모험\n좌우 이동\n충돌 종료\n", capture_output=True,
+                    text=True, encoding="utf-8", timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+            files = list((Path(folder) / "outputs").glob("request_*.json"))
+            self.assertEqual(len(files), 2)
+            self.assertEqual(json.loads(files[0].read_text()), json.loads(files[1].read_text()))
+
+    def test_output_preserves_existing_file_and_rejects_incomplete_input(self):
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder) / "request.json"
+            target.write_bytes(b"existing")
+            result = self.cli("--brief", "game", "--play", "move", "--finish", "end", "--output", str(target))
+            self.assertEqual(result.returncode, 2)
+            self.assertEqual(target.read_bytes(), b"existing")
+            target.unlink()
+            for args, answer in ((["--brief", "game"], None),
+                                 (["--interactive", "--brief", "game"], "move\n"),
+                                 (["--interactive", "--brief", "game"], " \n")):
+                result = self.cli(*args, "--output", str(target), input=answer)
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertFalse(target.exists())
 
     def test_cli_unicode_and_partial_settings(self):
         result = self.cli("--brief", "시대극 산길 모험", "--play", "좌우 이동")
