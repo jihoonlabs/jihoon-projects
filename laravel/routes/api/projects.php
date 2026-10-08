@@ -16,6 +16,7 @@ Route::middleware([
 
     Route::get('/{project}/members', [ProjectMemberController::class, 'index']);
     Route::post('/{project}/members', [ProjectMemberController::class, 'store']);
+    Route::post('/{project}/members/{user}/transfer-leader', [ProjectMemberController::class, 'transferLeader']);
     Route::patch('/{project}/members/{user}', [ProjectMemberController::class, 'update']);
     Route::delete('/{project}/members/{user}', [ProjectMemberController::class, 'destroy']);
 });
