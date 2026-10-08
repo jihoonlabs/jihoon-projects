@@ -8,6 +8,13 @@ import generation_profile
 
 
 class GenerationProfileTests(unittest.TestCase):
+    def setUp(self):
+        # Legacy checks must not inherit features selected by a local game target.
+        context = patch.object(generation_profile, "CONFIG_PATH",
+                               self.config(edit_directory="micropython/ThumbyDodge"))
+        context.start()
+        self.addCleanup(context.stop)
+
     def config(self, profile="thumby", edit_directory=None):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
