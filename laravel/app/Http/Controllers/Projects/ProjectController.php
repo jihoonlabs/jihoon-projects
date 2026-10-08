@@ -113,9 +113,9 @@ class ProjectController extends Controller
 
     public function archive(Request $request, Project $project): ProjectResource
     {
-        $this->authorizeManage($request, $project);
         DB::transaction(function () use ($request, $project) {
             $locked = Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+            $this->authorizeManage($request, $locked);
             abort_if($locked->tickets()->where('status', '!=', 'DONE')->exists(), 409, 'Complete all tickets before archiving.');
             if ($locked->archived_at === null) {
                 $locked->forceFill(['archived_at' => now()])->save();
@@ -130,9 +130,9 @@ class ProjectController extends Controller
 
     public function restore(Request $request, Project $project): ProjectResource
     {
-        $this->authorizeManage($request, $project);
         DB::transaction(function () use ($request, $project) {
             $locked = Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+            $this->authorizeManage($request, $locked);
             if ($locked->archived_at !== null) {
                 $locked->forceFill(['archived_at' => null])->save();
                 $this->recordAudit($request, $locked, 'project.restored', [

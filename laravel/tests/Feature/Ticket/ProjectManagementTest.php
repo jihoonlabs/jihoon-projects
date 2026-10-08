@@ -6,8 +6,8 @@ use App\Models\Project;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Tests\Feature\Ticket\Concerns\UsesGeneralProject;
 use Tests\TestCase;
 
@@ -184,15 +184,18 @@ class ProjectManagementTest extends TestCase
         }
     }
 
-    public function test_project_creation_and_changes_are_admin_only(): void
+    public function test_active_users_can_create_projects_but_changes_are_admin_only(): void
     {
         $member = User::factory()->create();
         $project = Project::factory()->create();
         $this->addProjectMember($project, $member, role: 'leader', permission: 'write');
 
         $this->actingAs($member)
-            ->postJson('/api/projects', ['name' => 'Not allowed'])
-            ->assertForbidden();
+            ->postJson('/api/projects', ['name' => 'User-created project'])
+            ->assertCreated();
+        $created = Project::query()->where('name', 'User-created project')->firstOrFail();
+        $this->assertSame($member->id, (int) $created->created_by);
+        $this->assertSame('leader', $created->members()->firstOrFail()->pivot->role);
 
         $this->patchJson("/api/projects/{$project->id}", ['name' => 'Not allowed'])
             ->assertForbidden();
@@ -435,6 +438,29 @@ class ProjectManagementTest extends TestCase
             'user_id' => $leader->id,
             'role' => 'leader',
         ]);
+    }
+
+    public function test_leadership_transfer_rejects_projects_without_exactly_one_current_leader(): void
+    {
+        $admin = User::factory()->create();
+        $admin->forceFill(['role' => 'admin'])->save();
+        $emptyLeadership = Project::factory()->create();
+        $member = User::factory()->create();
+        $this->addProjectMember($emptyLeadership, $member, role: 'member', permission: 'write');
+        $multipleLeaders = Project::factory()->create();
+        $firstLeader = User::factory()->create();
+        $secondLeader = User::factory()->create();
+        $this->addProjectMember($multipleLeaders, $firstLeader, role: 'leader', permission: 'read');
+        $this->addProjectMember($multipleLeaders, $secondLeader, role: 'leader', permission: 'write');
+
+        $this->actingAs($admin)
+            ->postJson("/api/projects/{$emptyLeadership->id}/members/{$member->id}/transfer-leader")
+            ->assertStatus(409);
+        $this->postJson("/api/projects/{$multipleLeaders->id}/members/{$secondLeader->id}/transfer-leader")
+            ->assertStatus(409);
+
+        $this->assertSame(0, $emptyLeadership->members()->wherePivot('role', 'leader')->count());
+        $this->assertSame(2, $multipleLeaders->members()->wherePivot('role', 'leader')->count());
     }
 
     public function test_project_leader_can_archive_completed_project_and_restore_it(): void

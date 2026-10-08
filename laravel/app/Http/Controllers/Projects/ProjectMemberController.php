@@ -23,6 +23,7 @@ class ProjectMemberController extends Controller
 
     public function store(Request $request, Project $project)
     {
+        $this->authorizeManage($request, $project);
         $validated = $request->validate([
             'email' => ['required', 'email', 'exists:users,email'],
             'role' => ['required', Rule::in(['member'])],
@@ -51,6 +52,7 @@ class ProjectMemberController extends Controller
 
     public function update(Request $request, Project $project, User $user): ProjectMemberResource
     {
+        $this->authorizeManage($request, $project);
         $validated = $request->validate([
             'role' => ['required', Rule::in(['leader', 'member'])],
             'permission' => ['required', Rule::in(['read', 'write'])],
@@ -61,6 +63,11 @@ class ProjectMemberController extends Controller
             $this->authorizeManage($request, $locked);
             abort_unless($locked->members()->where('users.id', $user->id)->exists(), 404);
             $current = $locked->members()->where('users.id', $user->id)->firstOrFail();
+            abort_if(
+                $validated['role'] === 'leader' && $current->pivot->role !== 'leader',
+                422,
+                'Use leader transfer to promote a project member.'
+            );
             abort_if($validated['role'] !== $current->pivot->role, 409, 'Use leader transfer to change project roles.');
 
             $locked->members()->updateExistingPivot($user->id, [
@@ -74,6 +81,7 @@ class ProjectMemberController extends Controller
 
     public function destroy(Request $request, Project $project, User $user)
     {
+        $this->authorizeManage($request, $project);
         $detached = DB::transaction(function () use ($request, $project, $user) {
             $locked = $this->lockActiveProject($project);
             $this->authorizeManage($request, $locked);
