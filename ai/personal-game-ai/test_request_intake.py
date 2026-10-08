@@ -1,3 +1,7 @@
+import json
+from pathlib import Path
+import subprocess
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -6,6 +10,44 @@ import request_intake
 
 
 class RequestIntakeTests(unittest.TestCase):
+    def cli(self, *args):
+        return subprocess.run(
+            [sys.executable, str(Path(request_intake.__file__).resolve()), *args],
+            capture_output=True, text=True, encoding="utf-8", check=False,
+            timeout=10,
+        )
+
+    def test_cli_unicode_and_partial_settings(self):
+        result = self.cli("--brief", "시대극 산길 모험", "--play", "좌우 이동")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stderr, "")
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["brief"], "시대극 산길 모험")
+        self.assertEqual(payload["settings"], {"play": "좌우 이동"})
+        self.assertEqual([q["id"] for q in payload["questions"]], ["finish"])
+
+    def test_cli_request_only_matches_prepare(self):
+        result = self.cli("--brief", "산길", "--play", "피하기", "--finish", "충돌 종료", "--request-only")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), request_intake.prepare(
+            "산길", {"play": "피하기", "finish": "충돌 종료"})["request"])
+
+    def test_cli_invalid_inputs_do_not_emit_request(self):
+        cases = (
+            (), ("--brief", ""), ("--brief", "x" * 3001),
+            ("--brief", "game", "--play", " "),
+            ("--brief", "game", "--finish", "x" * 401),
+            ("--brief", "game", "--request-only"),
+            ("--brief", "game", "--play", "move", "--request-only"),
+            ("--brief", "game", "--unknown"),
+        )
+        for args in cases:
+            with self.subTest(args=args):
+                result = self.cli(*args)
+                self.assertEqual(result.returncode, 2)
+                self.assertEqual(result.stdout, "")
+                self.assertIn("error:", result.stderr)
+
     def test_missing_settings_ask_only_game_decisions(self):
         result = request_intake.prepare("시대극 액션 게임")
         self.assertEqual([q["id"] for q in result["questions"]], ["play", "finish"])
