@@ -7,6 +7,7 @@ use App\Http\Resources\Projects\ProjectResource;
 use App\Models\Project;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProjectController extends Controller
 {
@@ -76,9 +77,13 @@ class ProjectController extends Controller
     public function archive(Request $request, Project $project): ProjectResource
     {
         $this->authorizeManage($request, $project);
-        abort_if($project->tickets()->where('status', '!=', 'DONE')->exists(), 409, 'Complete all tickets before archiving.');
-
-        $project->forceFill(['archived_at' => now()])->save();
+        DB::transaction(function () use ($project) {
+            $locked = Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
+            abort_if($locked->tickets()->where('status', '!=', 'DONE')->exists(), 409, 'Complete all tickets before archiving.');
+            if ($locked->archived_at === null) {
+                $locked->forceFill(['archived_at' => now()])->save();
+            }
+        });
 
         return new ProjectResource($project->refresh());
     }
