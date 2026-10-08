@@ -9,6 +9,7 @@ import subprocess
 
 import production_spec
 import read_context
+import thumby_capabilities
 
 SECTIONS = ("scope", "rules", "controls", "display_defaults", "resource_budget", "acceptance", "unverified")
 
@@ -65,6 +66,7 @@ def prepare(record, config_path, *, game_directory, expected_branch):
     config = json.loads(data)
     if not isinstance(config, dict):
         raise ValueError("대상 설정은 JSON 객체여야 합니다.")
+    features = thumby_capabilities.selected(config)
     relative = Path(game_directory)
     if (relative.is_absolute() or len(relative.parts) != 2 or relative.parts[0] != "micropython"
             or not relative.name.isidentifier()):
@@ -91,10 +93,11 @@ def prepare(record, config_path, *, game_directory, expected_branch):
         "target_config_sha256": hashlib.sha256(data).hexdigest(),
         "context_sha256": hashlib.sha256(context.encode()).hexdigest(),
         "binding": {"expected_branch": expected_branch, "edit_directory": relative.as_posix(),
-                    "entry_filename": relative.name + ".py", "generation_profile": "thumby"},
+                    "entry_filename": relative.name + ".py", "generation_profile": "thumby",
+                    "thumby_features": sorted(features)},
         "request": request,
         "limitations": ["요청 변환은 API 지원·실기 성능·게임 완성 검증이 아닙니다.",
-                        "기존 thumby 프로필은 좌우 버튼·제한된 표시 API용입니다. RPG 입력·저장 확장은 별도 작업입니다.",
+                        "추가 입력·저장 API는 target 설정의 thumby_features로 선택합니다. API 허용은 실기 동작 검증을 뜻하지 않습니다.",
                         "실행기는 자신의 target.json을 다시 검사합니다. 제품 승인은 설계·테스트 승인을 대신하지 않습니다."],
     }
 
