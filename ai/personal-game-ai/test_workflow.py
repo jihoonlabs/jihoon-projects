@@ -425,6 +425,46 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(result["design_diagnostics"][0]["attempts"][0]["status"], "model_error")
         self.assertFalse((self.root / "outputs" / "design_failed" / "approval.json").exists())
 
+    def test_explicit_retry_reports_only_new_design_attempt(self):
+        count = [0]
+
+        def fail(*args, **kwargs):
+            count[0] += 1
+            folder = self.root / "outputs" / f"design_failure_{count[0]}"
+            folder.mkdir()
+            (folder / "attempt_1.json").write_text(json.dumps({
+                "attempt": 1, "status": "model_error",
+                "error": f"failure {count[0]}", "automatic_approval": False,
+            }), encoding="utf-8")
+            raise RuntimeError(f"failure {count[0]}")
+
+        self.generator.side_effect = fail
+        first = self.run_flow()
+        second = self.run_flow(retry=True)
+        self.assertEqual(first["stage"], "generating_design")
+        self.assertEqual(second["stage"], "generating_design")
+        self.assertEqual(len(second["design_diagnostics"]), 1)
+        self.assertEqual(second["design_diagnostics"][0]["attempts"][0]["error"], "failure 2")
+        self.assertEqual(len(list(Path(second["record"]).glob("retry_before_*.json"))), 1)
+
+    def test_output_limit_diagnostic_keeps_review_unapproved(self):
+        def fail(*args, **kwargs):
+            folder = self.root / "outputs" / "design_output_limit"
+            folder.mkdir()
+            (folder / "attempt_1.json").write_text(json.dumps({
+                "attempt": 1, "status": "output_limit",
+                "error": "truncated", "automatic_approval": False,
+            }), encoding="utf-8")
+            (folder / "response_1.json").write_text('{"done":false}', encoding="utf-8")
+            raise RuntimeError("output limit")
+
+        self.generator.side_effect = fail
+        result = self.run_flow()
+        self.assertEqual(result["stage"], "generating_design")
+        self.assertEqual(result["design_diagnostics"][0]["attempts"][0]["status"], "output_limit")
+        self.assertFalse((self.root / "outputs" / "design_output_limit" / "design.json").exists())
+        self.assertFalse((self.root / "outputs" / "design_output_limit" / "approval.json").exists())
+
     def test_design_failure_without_attempts_does_not_claim_diagnostics(self):
         self.generator.side_effect = RuntimeError("failure before record creation")
         result = self.run_flow()
