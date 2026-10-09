@@ -33,3 +33,7 @@ Next bounded implementation: attach a validated, read-only design-attempt diagno
 ## Diagnostic integration implementation
 
 Commits `d27f27e` and `d1c993f` add a read-only `design_diagnostics` field to workflow error results for newly created design attempt records, and two mock-based regression cases. Existing folders and symlinked diagnostic folders are excluded. This is observability, not automatic recovery or semantic validation. Tests have been authored but **not executed** in this remote connector session; treat pass status as unknown. The folder scan is invocation-scoped and cannot attribute concurrent uncoordinated external writers; workflow's own lock does not lock standalone design_plan invocations. Follow up with isolated test execution and tighten provenance if concurrent writers are supported.
+
+## Targeted typing (2026-10-09)
+
+Added `TypedDict` contracts and parameter/return annotations only to the new `workflow.design_diagnostics` boundary (`25c2be1`). No repository-wide type checker, dependency, CI gate, generated Thumby MicroPython change, or public workflow state schema change. Static typing is not proof of runtime correctness. Run the focused `test_workflow` suite and check Python interpreter compatibility before widening the scope; this connector session cannot execute tests or inspect the local dirty working tree.
