@@ -409,6 +409,24 @@ class WorkflowTests(unittest.TestCase):
 
 
 
+    def test_success_does_not_report_failure_diagnostics(self):
+        result = self.run_flow()
+        self.assertEqual(result["stage"], "review_design")
+        self.assertNotIn("design_diagnostics", result)
+        self.assertEqual(self.generator.call_count, 1)
+
+    def test_existing_diagnostic_folder_remains_untouched_on_failure(self):
+        old = self.root / "outputs" / "design_previous"
+        old.mkdir(parents=True)
+        original = '{"attempt":1,"status":"model_error","error":"old"}'
+        record = old / "attempt_1.json"
+        record.write_text(original, encoding="utf-8")
+        self.generator.side_effect = RuntimeError("new model failure")
+        result = self.run_flow()
+        self.assertEqual(result["error"], "new model failure")
+        self.assertNotIn("design_diagnostics", result)
+        self.assertEqual(record.read_text(encoding="utf-8"), original)
+
     def test_design_failure_surfaces_new_attempt_diagnostics(self):
         def fail(*args, **kwargs):
             folder = self.root / "outputs" / "design_failed"
