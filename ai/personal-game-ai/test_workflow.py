@@ -425,6 +425,23 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(result["design_diagnostics"][0]["attempts"][0]["status"], "model_error")
         self.assertFalse((self.root / "outputs" / "design_failed" / "approval.json").exists())
 
+    def test_design_failure_without_attempts_does_not_claim_diagnostics(self):
+        self.generator.side_effect = RuntimeError("failure before record creation")
+        result = self.run_flow()
+        self.assertEqual(result["stage"], "generating_design")
+        self.assertNotIn("design_diagnostics", result)
+
+    def test_design_diagnostics_skip_invalid_and_symlinked_attempts(self):
+        output = self.root / "outputs"
+        folder = output / "design_broken"
+        folder.mkdir(parents=True)
+        (folder / "attempt_1.json").write_text("{invalid", encoding="utf-8")
+        (folder / "attempt_2.json").write_text('["not a dict"]', encoding="utf-8")
+        outside = self.root / "outside_attempt.json"
+        outside.write_text('{"status":"external"}', encoding="utf-8")
+        (folder / "attempt_3.json").symlink_to(outside)
+        self.assertEqual(workflow.design_diagnostics(output, set()), [])
+
     def test_design_diagnostics_ignore_old_and_symlink_folders(self):
         output = self.root / "outputs"
         output.mkdir()
