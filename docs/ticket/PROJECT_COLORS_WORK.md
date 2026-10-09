@@ -16,9 +16,10 @@
 - `pnpm exec tsc --noEmit`、`pnpm lint` passed。
 - Production build: `next build --webpack` passed。既存`.next`を使わない一時コピーで実行した。
 - Chrome 154実ブラウザー: Sanctumログイン後にProject `FLF`と`KTT`を作成し、同Project内2枚の枠線が一致し、別Projectの枠線が異なることを確認。Project名変更後の再読込でもkeyと色が維持された。
-- ブラウザーでKEY番号、status、priority、sortable roleとkeyboard tab focusを確認。実ポインターによるDnD操作はこのChildでは未実施。既存DnDの回帰テストは全React suiteでpassed。
+- Child検証ではKEY番号、status、priority、sortable roleとkeyboard tab focusを確認。実ポインターDnDはChild時点では未実施。Epic統合後にPointer DnDで`TZX-01`の`TODO`→`DONE`移動と一時SQLite DBへの保存を確認した。
 - ブラウザー用DBは一時SQLite。既存DBと`.env`は使用・変更していない。
 
 ## 現在状態
-- 実装・自動検証・実ブラウザー確認済み。Childは未commit・未push・Epic未統合。
-- 次は最終diffを確認して結果を報告する。commit/push/Epic・main統合は別途承認が必要。
+- Child採用SHA: `279556ae55fed766d0299c4bdfb16e4c051b0d3e`。`feature/ticket` Epicへfast-forward統合済み。
+- Epic統合後のReact 23 files / 132 tests、TypeScript、ESLint、実ブラウザーのPointer DnDと一時SQLite保存を確認済み。詳細と最終状態は`docs/ticket/TICKET.md`を参照。
+- `main`への統合は未実施。
