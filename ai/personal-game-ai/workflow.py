@@ -451,8 +451,11 @@ def design_diagnostics(output: Path, started_at: set[Path]) -> list[DesignDiagno
             if path.is_symlink() or not path.is_file():
                 continue
             try:
+                # 외부에서 생성된 비정상적으로 큰 기록은 읽지 않는다.
+                if path.stat().st_size > 16384:
+                    continue
                 record = json.loads(path.read_text(encoding="utf-8"))
-            except (ValueError, OSError):
+            except (ValueError, OSError, UnicodeError):
                 continue
             # 진단 파일의 기본 계약을 확인하고 잘못된 기록은 노출하지 않는다.
             if (
