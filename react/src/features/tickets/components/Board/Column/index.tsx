@@ -14,6 +14,7 @@ interface ColumnProps {
   column: ColumnConfig;
   tickets: Ticket[];
   projectKey?: string | null;
+  projectKeys?: Record<string, string | null>;
   onStatusChange?: (id: string, status: TicketStatus) => void;
   onEdit?: (ticket: Ticket) => void;
   onDelete?: (ticket: Ticket) => void;
@@ -25,6 +26,7 @@ export default function Column({
   column,
   tickets,
   projectKey,
+  projectKeys,
   onStatusChange,
   onEdit,
   onDelete,
@@ -50,7 +52,7 @@ export default function Column({
             <Card
               key={ticket.id}
               ticket={ticket}
-              projectKey={projectKey}
+              projectKey={projectKeys ? projectKeys[ticket.projectId] : projectKey}
               onStatusChange={onStatusChange}
               onEdit={onEdit}
               onDelete={onDelete}
