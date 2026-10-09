@@ -124,7 +124,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
         set({ error: null });
         const without = before.filter((ticket) => ticket.id !== id);
         const target = without
-          .filter((ticket) => ticket.status === status)
+          .filter((ticket) => ticket.projectId === moving.projectId && ticket.status === status)
           .sort((a, b) => a.position - b.position);
         const insertAt = Math.min(position, target.length);
         target.splice(insertAt, 0, { ...moving, status });
