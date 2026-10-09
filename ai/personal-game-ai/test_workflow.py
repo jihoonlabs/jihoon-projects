@@ -508,6 +508,16 @@ class WorkflowTests(unittest.TestCase):
         (folder / "attempt_3.json").symlink_to(outside)
         self.assertEqual(workflow.design_diagnostics(output, set()), [])
 
+    def test_diagnostic_rejects_mismatched_attempt_filename(self):
+        output = self.root / "outputs"
+        folder = output / "design_mismatch"
+        folder.mkdir(parents=True)
+        (folder / "attempt_1.json").write_text(json.dumps({
+            "attempt": 2, "status": "model_error",
+            "error": "wrong file", "automatic_approval": False,
+        }), encoding="utf-8")
+        self.assertEqual(workflow.design_diagnostics(output, set()), [])
+
     def test_diagnostic_requires_attempt_contract(self):
         output = self.root / "outputs"
         folder = output / "design_contract"
