@@ -110,6 +110,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
             ),
           }));
           fail(error);
+          throw error;
         } finally {
           revision += 1;
         }
@@ -208,6 +209,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
         } catch (error) {
           set((state) => ({ tickets: [...state.tickets, before] }));
           fail(error);
+          throw error;
         } finally {
           revision += 1;
         }
