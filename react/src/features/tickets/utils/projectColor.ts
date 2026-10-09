@@ -7,5 +7,5 @@ export function getProjectBorderColor(projectKey: string | null): string | null 
     hash = Math.imul(hash ^ character.charCodeAt(0), 16777619);
   }
 
-  return `hsl(${(hash >>> 0) % 360} 42% 80%)`;
+  return `hsl(${(hash >>> 0) % 360} 66% 52%)`;
 }
