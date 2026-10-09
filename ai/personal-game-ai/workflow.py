@@ -5,6 +5,18 @@ import json
 import os
 import uuid
 from pathlib import Path
+from typing import Any, TypedDict
+
+
+class DesignAttemptDiagnostic(TypedDict):
+    file: str
+    status: Any
+    error: Any
+
+
+class DesignDiagnostic(TypedDict):
+    folder: str
+    attempts: list[DesignAttemptDiagnostic]
 
 import design_plan
 import edit_loop
@@ -428,13 +440,13 @@ def workflow_folder(output, path, data, context):
 
 
 
-def design_diagnostics(output, started_at):
+def design_diagnostics(output: Path, started_at: set[Path]) -> list[DesignDiagnostic]:
     """Return only new, ordinary diagnostic records from this invocation."""
-    records = []
+    records: list[DesignDiagnostic] = []
     for folder in output.glob("design_*"):
         if folder.is_symlink() or not folder.is_dir() or folder in started_at:
             continue
-        attempts = []
+        attempts: list[DesignAttemptDiagnostic] = []
         for path in sorted(folder.glob("attempt_*.json")):
             if path.is_symlink() or not path.is_file():
                 continue
