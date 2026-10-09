@@ -130,6 +130,13 @@ export const useTicketStore = create<TicketState>((set, get) => {
         const insertAt = Math.min(position, target.length);
         target.splice(insertAt, 0, { ...moving, status });
         const positions = new Map(target.map((ticket, index) => [ticket.id, index]));
+        if (moving.status !== status) {
+          // Moving across columns also compacts the source column.
+          without
+            .filter((ticket) => ticket.projectId === moving.projectId && ticket.status === moving.status)
+            .sort((a, b) => a.position - b.position || a.id.localeCompare(b.id))
+            .forEach((ticket, index) => positions.set(ticket.id, index));
+        }
         set({
           tickets: without.map((ticket) =>
             positions.has(ticket.id)
