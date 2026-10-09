@@ -504,8 +504,26 @@ class WorkflowTests(unittest.TestCase):
         (folder / "attempt_1.json").write_text("{invalid", encoding="utf-8")
         (folder / "attempt_2.json").write_text('["not a dict"]', encoding="utf-8")
         outside = self.root / "outside_attempt.json"
-        outside.write_text('{"status":"external"}', encoding="utf-8")
+        outside.write_text('{"attempt":1,"status":"external","automatic_approval":false}', encoding="utf-8")
         (folder / "attempt_3.json").symlink_to(outside)
+        self.assertEqual(workflow.design_diagnostics(output, set()), [])
+
+    def test_diagnostic_requires_attempt_contract(self):
+        output = self.root / "outputs"
+        folder = output / "design_contract"
+        folder.mkdir(parents=True)
+        (folder / "attempt_1.json").write_text(
+            '{"attempt":true,"status":"model_error","automatic_approval":false}',
+            encoding="utf-8",
+        )
+        (folder / "attempt_2.json").write_text(
+            '{"attempt":2,"status":"model_error","automatic_approval":true}',
+            encoding="utf-8",
+        )
+        (folder / "attempt_3.json").write_text(
+            '{"attempt":3,"status":null,"automatic_approval":false}',
+            encoding="utf-8",
+        )
         self.assertEqual(workflow.design_diagnostics(output, set()), [])
 
     def test_design_diagnostics_ignore_old_and_symlink_folders(self):
@@ -513,14 +531,14 @@ class WorkflowTests(unittest.TestCase):
         output.mkdir()
         old = output / "design_old"
         old.mkdir()
-        (old / "attempt_1.json").write_text('{"status":"old"}')
+        (old / "attempt_1.json").write_text('{"attempt":1,"status":"old","automatic_approval":false}')
         outside = self.root / "outside"
         outside.mkdir()
         (outside / "attempt_1.json").write_text('{"status":"external"}')
         (output / "design_link").symlink_to(outside, target_is_directory=True)
         fresh = output / "design_fresh"
         fresh.mkdir()
-        (fresh / "attempt_1.json").write_text('{"status":"length_error"}')
+        (fresh / "attempt_1.json").write_text('{"attempt":1,"status":"length_error","automatic_approval":false}')
         records = workflow.design_diagnostics(output, {old})
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0]["attempts"][0]["status"], "length_error")
