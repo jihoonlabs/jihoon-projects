@@ -81,6 +81,7 @@ export function TicketBoardView() {
     : undefined;
   const isAdmin = currentUser?.role === 'admin';
   const canWrite = selectedProject !== null && (isAdmin || currentMembership?.permission === 'write');
+  const canEditTicket = editingTicket !== null && (isAdmin || (selectedProjectId === editingTicket.projectId && canWrite));
   const canManageMembers = selectedProject !== null && (isAdmin || currentMembership?.role === 'leader');
   // The API scopes accessible tickets; only render tickets belonging to accessible projects.
   const accessibleProjectIds = new Set(projects.map((project) => project.id));
@@ -272,7 +273,7 @@ export function TicketBoardView() {
           currentUserRole={currentUser?.role}
           projectId={editingTicket?.projectId ?? selectedProjectId}
           projectMembers={membersProjectId === selectedProjectId ? projectMembers : []}
-          readOnly={!canWrite}
+          readOnly={editingTicket !== null ? !canEditTicket : !canWrite}
           onClose={() => setIsModalOpen(false)}
           onCreate={handleCreate}
           onUpdate={handleUpdate}
