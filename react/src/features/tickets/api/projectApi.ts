@@ -42,6 +42,19 @@ export async function fetchProjects(): Promise<Project[]> {
   }));
 }
 
+export async function createProject(name: string): Promise<Project> {
+  const data = await readData<ProjectResponse>(await fetchWithCsrf('/api/projects', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  }));
+  return {
+    id: String(data.id),
+    name: data.name,
+    projectKey: data.project_key,
+    boardVersion: data.board_version,
+  };
+}
+
 export async function fetchProjectMembers(projectId: string): Promise<ProjectMember[]> {
   const data = await readData<ProjectMemberResponse[]>(await fetch(
     `${API_URL}/api/projects/${encodeURIComponent(projectId)}/members`,
