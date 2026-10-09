@@ -5,13 +5,13 @@ import json
 import os
 import uuid
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TypedDict
 
 
 class DesignAttemptDiagnostic(TypedDict):
     file: str
-    status: Any
-    error: Any
+    status: str
+    error: str | None
 
 
 class DesignDiagnostic(TypedDict):
@@ -441,7 +441,10 @@ def workflow_folder(output, path, data, context):
 
 
 def design_diagnostics(output: Path, started_at: set[Path]) -> list[DesignDiagnostic]:
-    """Return only new, ordinary diagnostic records from this invocation."""
+    """Return valid attempts from folders absent in the initial snapshot.
+
+    Folder discovery is not an execution ID; concurrent writers may appear.
+    """
     records: list[DesignDiagnostic] = []
     for folder in output.glob("design_*"):
         if folder.is_symlink() or not folder.is_dir() or folder in started_at:
