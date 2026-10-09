@@ -513,7 +513,7 @@ class WorkflowTests(unittest.TestCase):
         folder = output / "design_bad_bytes"
         folder.mkdir(parents=True)
         (folder / "attempt_1.json").write_text("x" * 16385, encoding="utf-8")
-        (folder / "attempt_2.json").write_bytes(b"\\xff\\xfe")
+        (folder / "attempt_2.json").write_bytes(bytes([0xff, 0xfe]))
         self.assertEqual(workflow.design_diagnostics(output, set()), [])
 
     def test_diagnostic_rejects_mismatched_attempt_filename(self):
