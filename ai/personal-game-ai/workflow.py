@@ -602,8 +602,12 @@ def run_workflow(
                     diagnostics = []
                 if diagnostics:
                     result["design_diagnostics"] = diagnostics
-            with log.open("a", encoding="utf-8") as stream:
-                stream.write("\n워크플로 오류: " + str(error) + "\n")
+            try:
+                with log.open("a", encoding="utf-8") as stream:
+                    stream.write("\n워크플로 오류: " + str(error) + "\n")
+            except OSError:
+                # 로그 기록 실패가 원래 생성 오류를 가리지 않도록 한다.
+                pass
             return result
         result = summarize(state, folder)
         result["log"] = str(log)
