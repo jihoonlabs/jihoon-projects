@@ -454,10 +454,18 @@ def design_diagnostics(output: Path, started_at: set[Path]) -> list[DesignDiagno
                 record = json.loads(path.read_text(encoding="utf-8"))
             except (ValueError, OSError):
                 continue
-            if isinstance(record, dict):
+            # 진단 파일의 기본 계약을 확인하고 잘못된 기록은 노출하지 않는다.
+            if (
+                isinstance(record, dict)
+                and type(record.get("attempt")) is int
+                and record["attempt"] > 0
+                and isinstance(record.get("status"), str)
+                and (record.get("error") is None or isinstance(record["error"], str))
+                and record.get("automatic_approval") is False
+            ):
                 attempts.append({
                     "file": str(path),
-                    "status": record.get("status"),
+                    "status": record["status"],
                     "error": record.get("error"),
                 })
         if attempts:
