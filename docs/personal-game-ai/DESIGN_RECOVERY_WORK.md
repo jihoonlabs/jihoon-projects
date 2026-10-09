@@ -21,3 +21,11 @@ Tests use fake model/HTTP responses and temporary directories, covering output-l
 This is not semantic proof of arbitrary natural-language requirements. It does not automatically repair RPG contracts, approve designs or recover partial JSON. Existing workflow request/state/retry gates remain unchanged. Next: inspect real local request/state lineage before connecting a reviewed design, then define explicit machine-readable acceptance contracts instead of keyword heuristics. Test workflow integration before adoption.
 
 Local user-reported candidate: `outputs/design_20261009_005502_261874/design.json`, SHA-256 `12006806acb9de41b6239e6cb87193c2d6d66fa9edcb153dc7ad555601bdca31`. It combines Ollama contracts with ChatGPT-authored checks, is structurally valid and unapproved. File availability on GitHub is unverified; do not invent or replace it. Mac checkout and current branch were not accessible.
+
+## 2026-10-09 remote workflow audit
+
+Read-only inspection of `workflow.py`, `design_plan.py`, and `test_workflow.py` confirmed existing persistent stage transitions, request/context identity, protected SHA-256 artifacts, explicit retry, approval gates, and review-design direct-parent validation. No candidate design was imported or approved.
+
+Integration gap: a failed `generate_design` leaves workflow at `generating_design` with a separate `design_*` diagnostic folder; workflow result reports only its workflow log and folder. Preserve both records and expose a diagnostic pointer before adding any automated recovery. Existing `--retry` explicitly regenerates rather than resuming a partial model response. `generating_tests` and `installing` remain distinct interruption states; do not treat installation as retryable without verifying side effects.
+
+Next bounded implementation: attach a validated, read-only design-attempt diagnostic reference to workflow error output; test model-limit, model-error, and interrupted-retry paths with temporary folders. Then propose requirement-ID-to-observable-test traceability with explicit reviewer disposition (verified / failed / unverified); keyword coverage and model self-judgment are not evidence of compliance. Keep generated model output, reviewer edits, and execution evidence separately attributable. No live Ollama or hardware validation was performed in this audit.
