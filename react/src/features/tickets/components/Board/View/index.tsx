@@ -165,7 +165,7 @@ export function TicketBoardView() {
     const activeId = String(active.id);
     const overId = String(over.id);
     const draggedTicket = projectTickets.find((ticket) => ticket.id === activeId);
-    if (!draggedTicket) return;
+    if (!draggedTicket || draggedTicket.projectId !== selectedProject.id) return;
 
     const overTicket = projectTickets.find((ticket) => ticket.id === overId);
     if (!isOverColumnId(overId) && !overTicket) return;
@@ -178,7 +178,7 @@ export function TicketBoardView() {
     if (!newStatus) return;
 
     const targetTickets = projectTickets
-      .filter((ticket) => ticket.status === newStatus)
+      .filter((ticket) => ticket.projectId === draggedTicket.projectId && ticket.status === newStatus)
       .sort((a, b) => a.position - b.position);
     const overPosition = overTicket
       ? targetTickets.findIndex((ticket) => ticket.id === overTicket.id)
@@ -186,6 +186,7 @@ export function TicketBoardView() {
     const targetPosition = overPosition >= 0
       ? overPosition
       : targetTickets.filter((ticket) => ticket.id !== activeId).length;
+    if (draggedTicket.status === newStatus && draggedTicket.position === targetPosition) return;
 
     try {
       const boardVersion = await moveTicket(
