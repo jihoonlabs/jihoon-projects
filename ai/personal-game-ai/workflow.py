@@ -459,6 +459,7 @@ def design_diagnostics(output: Path, started_at: set[Path]) -> list[DesignDiagno
                 isinstance(record, dict)
                 and type(record.get("attempt")) is int
                 and record["attempt"] > 0
+                and path.name == f'attempt_{record["attempt"]}.json'
                 and isinstance(record.get("status"), str)
                 and (record.get("error") is None or isinstance(record["error"], str))
                 and record.get("automatic_approval") is False
