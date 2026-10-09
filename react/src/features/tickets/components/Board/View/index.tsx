@@ -20,7 +20,7 @@ import Main from '../Main';
 import Card from '../Card';
 import TicketModal from '../TicketModal';
 import ProjectMembersDialog from '../ProjectMembersDialog';
-import { fetchProjects, fetchProjectMembers } from '@/features/tickets/api/projectApi';
+import { fetchProjects, fetchProjectMembers, createProject } from '@/features/tickets/api/projectApi';
 import type { Project, ProjectMember } from '@/features/tickets/types/project';
 import styles from './index.module.css';
 
@@ -60,7 +60,7 @@ export function TicketBoardView() {
       .then((items) => {
         if (!active) return;
         setProjects(items);
-        setSelectedProjectId((current) => current && items.some((item) => item.id === current) ? current : items[0]?.id ?? '');
+        setSelectedProjectId((current) => current && items.some((item) => item.id === current) ? current : '');
       })
       .catch((reason) => { if (active) setProjectError(reason instanceof Error ? reason.message : 'プロジェクトを取得できませんでした。'); });
     return () => { active = false; };
@@ -80,10 +80,11 @@ export function TicketBoardView() {
     ? projectMembers.find((member) => member.id === String(currentUserId))
     : undefined;
   const isAdmin = currentUser?.role === 'admin';
-  const canWrite = isAdmin || currentMembership?.permission === 'write';
+  const canWrite = selectedProject !== null && (isAdmin || currentMembership?.permission === 'write');
   const canManageMembers = isAdmin || currentMembership?.role === 'leader';
-  const projectTickets = tickets.filter((ticket) => ticket.projectId === selectedProjectId);
-  const canDrag = canWrite && searchQuery.trim() === '' && assigneeFilter === 'ALL';
+  const projectTickets = selectedProjectId ? tickets.filter((ticket) => ticket.projectId === selectedProjectId) : tickets;
+  const projectKeys = Object.fromEntries(projects.map((project) => [project.id, project.projectKey]));
+  const canDrag = selectedProject !== null && canWrite && searchQuery.trim() === '' && assigneeFilter === 'ALL';
 
   const refreshProjects = async () => {
     const items = await fetchProjects();
@@ -91,8 +92,25 @@ export function TicketBoardView() {
     setSelectedProjectId((current) =>
       current && items.some((item) => item.id === current)
         ? current
-        : items[0]?.id ?? '',
+        : '',
     );
+  };
+
+  const handleCreateProject = async () => {
+    const name = window.prompt('新しいプロジェクト名を入力してください');
+    if (name === null) return;
+    if (!name.trim()) {
+      setProjectError('プロジェクト名を入力してください。');
+      return;
+    }
+    try {
+      const created = await createProject(name.trim());
+      await refreshProjects();
+      setSelectedProjectId(created.id);
+      setProjectError(null);
+    } catch (reason) {
+      setProjectError(reason instanceof Error ? reason.message : 'プロジェクトを作成できませんでした。');
+    }
   };
 
   const handleStatusChange = async (id: string, status: TicketStatus) => {
@@ -206,6 +224,9 @@ export function TicketBoardView() {
         selectedProjectId={selectedProjectId}
         onProjectChange={setSelectedProjectId}
         canWrite={canWrite}
+        canCreateProject={Boolean(currentUser)}
+        onCreateProject={() => void handleCreateProject()}
+        showAllProjects
         canManageMembers={canManageMembers}
         onManageMembers={() => setManagingMembers(true)}
       />
@@ -223,6 +244,7 @@ export function TicketBoardView() {
         <Main
           tickets={projectTickets}
           projectKey={selectedProject?.projectKey}
+          projectKeys={projectKeys}
           searchQuery={searchQuery}
           assigneeFilter={assigneeFilter}
           currentUserId={currentUserId}
