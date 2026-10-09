@@ -81,8 +81,12 @@ export function TicketBoardView() {
     : undefined;
   const isAdmin = currentUser?.role === 'admin';
   const canWrite = selectedProject !== null && (isAdmin || currentMembership?.permission === 'write');
-  const canManageMembers = isAdmin || currentMembership?.role === 'leader';
-  const projectTickets = selectedProjectId ? tickets.filter((ticket) => ticket.projectId === selectedProjectId) : tickets;
+  const canManageMembers = selectedProject !== null && (isAdmin || currentMembership?.role === 'leader');
+  // The API scopes accessible tickets; only render tickets belonging to accessible projects.
+  const accessibleProjectIds = new Set(projects.map((project) => project.id));
+  const projectTickets = tickets.filter((ticket) =>
+    accessibleProjectIds.has(ticket.projectId) && (!selectedProjectId || ticket.projectId === selectedProjectId),
+  );
   const projectKeys = Object.fromEntries(projects.map((project) => [project.id, project.projectKey]));
   const canDrag = selectedProject !== null && canWrite && searchQuery.trim() === '' && assigneeFilter === 'ALL';
 
