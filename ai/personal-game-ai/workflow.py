@@ -579,7 +579,11 @@ def run_workflow(
                 "log": str(log),
             }
             if state["stage"] == "generating_design":
-                diagnostics = design_diagnostics(output, existing_design_folders)
+                # 진단 기록 접근 실패가 원래 생성 오류를 가리지 않도록 한다.
+                try:
+                    diagnostics = design_diagnostics(output, existing_design_folders)
+                except OSError:
+                    diagnostics = []
                 if diagnostics:
                     result["design_diagnostics"] = diagnostics
             with log.open("a", encoding="utf-8") as stream:
