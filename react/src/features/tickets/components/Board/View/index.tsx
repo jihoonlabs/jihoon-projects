@@ -81,7 +81,7 @@ export function TicketBoardView() {
     : undefined;
   const isAdmin = currentUser?.role === 'admin';
   const canWrite = selectedProject !== null && (isAdmin || currentMembership?.permission === 'write');
-  const canEditTicket = editingTicket !== null && (isAdmin || (selectedProjectId === editingTicket.projectId && canWrite));
+  const canEditTicket = editingTicket !== null && selectedProjectId === editingTicket.projectId && canWrite;
   const canManageMembers = selectedProject !== null && (isAdmin || currentMembership?.role === 'leader');
   // The API scopes accessible tickets; only render tickets belonging to accessible projects.
   const accessibleProjectIds = new Set(projects.map((project) => project.id));
@@ -154,6 +154,8 @@ export function TicketBoardView() {
     setActiveTicket(null);
   };
 
+  const isOverColumnId = (id: string) => INITIAL_COLUMNS.some((column) => column.id === id);
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTicket(null);
@@ -166,7 +168,8 @@ export function TicketBoardView() {
     if (!draggedTicket) return;
 
     const overTicket = projectTickets.find((ticket) => ticket.id === overId);
-    const isOverColumn = INITIAL_COLUMNS.some((column) => column.id === overId);
+    if (!isOverColumnId(overId) && !overTicket) return;
+    const isOverColumn = isOverColumnId(overId);
     const newStatus = isOverColumn
       ? (overId as TicketStatus)
       : overTicket?.status;
