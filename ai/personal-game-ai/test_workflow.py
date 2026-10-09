@@ -465,6 +465,14 @@ class WorkflowTests(unittest.TestCase):
         self.assertFalse((self.root / "outputs" / "design_output_limit" / "design.json").exists())
         self.assertFalse((self.root / "outputs" / "design_output_limit" / "approval.json").exists())
 
+    def test_diagnostic_io_error_preserves_original_generation_error(self):
+        self.generator.side_effect = RuntimeError("original model failure")
+        with patch.object(workflow, "design_diagnostics", side_effect=OSError("unreadable")):
+            result = self.run_flow()
+        self.assertEqual(result["stage"], "generating_design")
+        self.assertEqual(result["error"], "original model failure")
+        self.assertNotIn("design_diagnostics", result)
+
     def test_design_failure_without_attempts_does_not_claim_diagnostics(self):
         self.generator.side_effect = RuntimeError("failure before record creation")
         result = self.run_flow()
