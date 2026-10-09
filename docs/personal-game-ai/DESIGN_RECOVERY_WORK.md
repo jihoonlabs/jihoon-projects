@@ -37,3 +37,16 @@ Commits `d27f27e` and `d1c993f` add a read-only `design_diagnostics` field to wo
 ## Targeted typing (2026-10-09)
 
 Added `TypedDict` contracts and parameter/return annotations only to the new `workflow.design_diagnostics` boundary (`25c2be1`). No repository-wide type checker, dependency, CI gate, generated Thumby MicroPython change, or public workflow state schema change. Static typing is not proof of runtime correctness. Run the focused `test_workflow` suite and check Python interpreter compatibility before widening the scope; this connector session cannot execute tests or inspect the local dirty working tree.
+
+## Current remote handoff (2026-10-09)
+
+Latest reviewed change: `94243b9` on this backup branch. Subsequent work hardened the workflow's read-only failure diagnostics and added mocked regression cases; no automatic design approval or artifact installation was added. The diagnostic folder scan excludes pre-existing folders, symlinks, malformed attempt records, mismatched attempt numbers, oversized files and invalid UTF-8. A scan still cannot establish exclusive provenance when another process writes a new folder concurrently.
+
+**Validation status:** the 88-test pass above predates the workflow diagnostic changes. New `test_workflow` cases have been written but **not executed**; no CI statuses were reported. Do not present the branch as tested or integration-ready. A separate, clean Mac checkout should first run:
+
+```bash
+cd ai/personal-game-ai
+python -m unittest test_workflow test_ask_ai test_design_plan test_design_revision test_generation_profile test_thumby_capabilities
+```
+
+Before running, inspect the checkout's branch and dirty/untracked files. Do not overwrite, reset, stash, or merge existing local work. Preserve the local candidate design and its approval status. If tests fail, keep the traceback and address the earliest reproducible failure before attempting live Ollama or Thumby validation.
