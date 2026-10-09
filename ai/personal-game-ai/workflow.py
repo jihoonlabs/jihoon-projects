@@ -543,6 +543,7 @@ def run_workflow(
                 state["stage"] = "review_design"
                 approve = state["design_sha256"]
             write_state(state_path, state)
+        # 출력 폴더 접근 실패는 기존 오류 처리 경로와 구분한다.
         existing_design_folders = set(output.glob("design_*"))
         log = folder / ("log_" + uuid.uuid4().hex + ".txt")
 
