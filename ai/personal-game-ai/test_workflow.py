@@ -408,5 +408,40 @@ class WorkflowTests(unittest.TestCase):
 
 
 
+
+    def test_design_failure_surfaces_new_attempt_diagnostics(self):
+        def fail(*args, **kwargs):
+            folder = self.root / "outputs" / "design_failed"
+            folder.mkdir()
+            (folder / "attempt_1.json").write_text(json.dumps({
+                "attempt": 1, "status": "model_error",
+                "error": "mock failure", "automatic_approval": False,
+            }), encoding="utf-8")
+            raise RuntimeError("mock failure")
+
+        self.generator.side_effect = fail
+        result = self.run_flow()
+        self.assertEqual(result["stage"], "generating_design")
+        self.assertEqual(result["design_diagnostics"][0]["attempts"][0]["status"], "model_error")
+        self.assertFalse((self.root / "outputs" / "design_failed" / "approval.json").exists())
+
+    def test_design_diagnostics_ignore_old_and_symlink_folders(self):
+        output = self.root / "outputs"
+        output.mkdir()
+        old = output / "design_old"
+        old.mkdir()
+        (old / "attempt_1.json").write_text('{"status":"old"}')
+        outside = self.root / "outside"
+        outside.mkdir()
+        (outside / "attempt_1.json").write_text('{"status":"external"}')
+        (output / "design_link").symlink_to(outside, target_is_directory=True)
+        fresh = output / "design_fresh"
+        fresh.mkdir()
+        (fresh / "attempt_1.json").write_text('{"status":"length_error"}')
+        records = workflow.design_diagnostics(output, {old})
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["attempts"][0]["status"], "length_error")
+
+
 if __name__ == "__main__":
     unittest.main()
