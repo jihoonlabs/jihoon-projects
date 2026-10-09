@@ -218,9 +218,14 @@ export function TicketBoardView() {
   };
 
   const handleDelete = async (ticket: Ticket) => {
+    if (!selectedProject || ticket.projectId !== selectedProject.id || !canWrite) return;
     if (!window.confirm(`${ticket.issueKey ?? ticket.title} を削除しますか？`)) return;
-    await deleteTicket(ticket.id);
-    await refreshProjects();
+    try {
+      await deleteTicket(ticket.id);
+      await refreshProjects();
+    } catch {
+      // The store already records the error and restores the deleted ticket.
+    }
   };
 
   return (
