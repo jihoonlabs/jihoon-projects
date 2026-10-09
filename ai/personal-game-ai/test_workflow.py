@@ -508,6 +508,14 @@ class WorkflowTests(unittest.TestCase):
         (folder / "attempt_3.json").symlink_to(outside)
         self.assertEqual(workflow.design_diagnostics(output, set()), [])
 
+    def test_diagnostics_ignore_oversized_and_invalid_utf8(self):
+        output = self.root / "outputs"
+        folder = output / "design_bad_bytes"
+        folder.mkdir(parents=True)
+        (folder / "attempt_1.json").write_text("x" * 16385, encoding="utf-8")
+        (folder / "attempt_2.json").write_bytes(b"\\xff\\xfe")
+        self.assertEqual(workflow.design_diagnostics(output, set()), [])
+
     def test_diagnostic_rejects_mismatched_attempt_filename(self):
         output = self.root / "outputs"
         folder = output / "design_mismatch"
