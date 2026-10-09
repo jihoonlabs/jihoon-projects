@@ -151,11 +151,15 @@ export const useTicketStore = create<TicketState>((set, get) => {
           refreshNeeded = true;
           return result.boardVersion;
         } catch (error) {
-          set({ tickets: before });
+          // Restore only this project's ordering; preserve writes in other projects.
+          set((state) => ({
+            tickets: state.tickets
+              .filter((ticket) => ticket.projectId !== moving.projectId)
+              .concat(before.filter((ticket) => ticket.projectId === moving.projectId)),
+          }));
           fail(error);
-          if (error instanceof api.TicketApiError && error.status === 409) {
-            refreshNeeded = true;
-          }
+          // Another write in this project may have succeeded while this move failed.
+          refreshNeeded = true;
           throw error;
         } finally {
           revision += 1;
