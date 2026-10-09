@@ -169,6 +169,8 @@ export function TicketBoardView() {
 
     const overTicket = projectTickets.find((ticket) => ticket.id === overId);
     if (!isOverColumnId(overId) && !overTicket) return;
+    // Never accept a drop on a ticket from another project.
+    if (overTicket && overTicket.projectId !== draggedTicket.projectId) return;
     const isOverColumn = isOverColumnId(overId);
     const newStatus = isOverColumn
       ? (overId as TicketStatus)
