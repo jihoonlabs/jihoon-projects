@@ -427,6 +427,33 @@ def workflow_folder(output, path, data, context):
     return output / ("workflow_" + digest(identity))
 
 
+
+def design_diagnostics(output, started_at):
+    """Return only new, ordinary diagnostic records from this invocation."""
+    records = []
+    for folder in output.glob("design_*"):
+        if folder.is_symlink() or not folder.is_dir() or folder in started_at:
+            continue
+        attempts = []
+        for path in sorted(folder.glob("attempt_*.json")):
+            if path.is_symlink() or not path.is_file():
+                continue
+            try:
+                record = json.loads(path.read_text(encoding="utf-8"))
+            except (ValueError, OSError):
+                continue
+            if isinstance(record, dict):
+                attempts.append({
+                    "file": str(path),
+                    "status": record.get("status"),
+                    "error": record.get("error"),
+                })
+        if attempts:
+            records.append({"folder": str(folder), "attempts": attempts})
+    return sorted(records, key=lambda item: item["folder"])
+
+
+
 def run_workflow(
     request_path, *, model=None, approve=None, confirm=None,
     answer_id=None, answer=None, retry=False, feedback=None, review_design=None,
@@ -504,6 +531,7 @@ def run_workflow(
                 state["stage"] = "review_design"
                 approve = state["design_sha256"]
             write_state(state_path, state)
+        existing_design_folders = set(output.glob("design_*"))
         log = folder / ("log_" + uuid.uuid4().hex + ".txt")
 
         def guard():
@@ -538,6 +566,10 @@ def run_workflow(
                 "record": str(folder),
                 "log": str(log),
             }
+            if state["stage"] == "generating_design":
+                diagnostics = design_diagnostics(output, existing_design_folders)
+                if diagnostics:
+                    result["design_diagnostics"] = diagnostics
             with log.open("a", encoding="utf-8") as stream:
                 stream.write("\n워크플로 오류: " + str(error) + "\n")
             return result
