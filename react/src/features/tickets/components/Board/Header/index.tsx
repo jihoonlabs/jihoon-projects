@@ -13,6 +13,9 @@ interface HeaderProps {
   selectedProjectId: string;
   onProjectChange: (projectId: string) => void;
   canWrite: boolean;
+  canCreateProject: boolean;
+  onCreateProject: () => void;
+  showAllProjects: boolean;
   canManageMembers: boolean;
   onManageMembers: () => void;
 }
@@ -27,6 +30,9 @@ export default function Header({
   selectedProjectId,
   onProjectChange,
   canWrite,
+  canCreateProject,
+  onCreateProject,
+  showAllProjects,
   canManageMembers,
   onManageMembers,
 }: HeaderProps) {
@@ -35,8 +41,10 @@ export default function Header({
       <div className={styles.leftSection}>
         <h1 className={styles.title}>チケットボード</h1>
 
-        <select aria-label="プロジェクト" className={styles.selectFilter} value={selectedProjectId} onChange={(event) => onProjectChange(event.target.value)} disabled={projects.length === 0}>
-          {projects.length === 0 ? <option value="">利用可能なプロジェクトがありません</option> : projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+        <select aria-label="プロジェクト" className={styles.selectFilter} value={selectedProjectId} onChange={(event) => onProjectChange(event.target.value)} disabled={projects.length === 0 && !showAllProjects}>
+          {showAllProjects && <option value="">すべてのプロジェクト</option>}
+          {projects.length === 0 && !showAllProjects && <option value="">利用可能なプロジェクトがありません</option>}
+          {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
         </select>
 
         <div className={styles.filterGroup}>
@@ -62,6 +70,7 @@ export default function Header({
       </div>
 
       <div className={styles.rightSection}>
+        {canCreateProject && <button type="button" onClick={onCreateProject}>+ プロジェクト作成</button>}
         {canManageMembers && <button type="button" onClick={onManageMembers}>メンバー管理</button>}
         {canWrite && <button type="button" className={styles.createBtn} onClick={onCreate}>
           + チケット作成
