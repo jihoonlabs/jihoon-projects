@@ -146,16 +146,23 @@ export const useTicketStore = create<TicketState>((set, get) => {
           ).concat({ ...moving, status, position: insertAt }),
         });
 
+        const optimistic = new Map(get().tickets.map((ticket) => [ticket.id, ticket]));
+        const original = new Map(before.map((ticket) => [ticket.id, ticket]));
         try {
           const result = await api.moveTicket(id, status, position, boardVersion);
           refreshNeeded = true;
           return result.boardVersion;
         } catch (error) {
-          // Restore only this project's ordering; preserve writes in other projects.
+          // Roll back only unchanged optimistic objects. Concurrent writes replace
+          // objects; creations and deletions must also survive a failed refresh.
+          // This ticket is safe to restore because its writes are serialized.
           set((state) => ({
-            tickets: state.tickets
-              .filter((ticket) => ticket.projectId !== moving.projectId)
-              .concat(before.filter((ticket) => ticket.projectId === moving.projectId)),
+            tickets: state.tickets.map((ticket) =>
+              ticket.projectId === moving.projectId &&
+              (ticket.id === id || ticket === optimistic.get(ticket.id))
+                ? original.get(ticket.id) ?? ticket
+                : ticket,
+            ),
           }));
           fail(error);
           // Another write in this project may have succeeded while this move failed.

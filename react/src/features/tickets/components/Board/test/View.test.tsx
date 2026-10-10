@@ -70,12 +70,22 @@ beforeEach(() => {
   useAuthStore.setState({ user: { id: 7, name: 'Tester', email: 'tester@example.com', status: 'active', role: 'user', createdAt: '2026-09-24T00:00:00.000000Z' }, isAuthenticated: true });
 });
 
+async function selectProject(id = '1') {
+  await screen.findByRole('option', { name: 'General' });
+  await act(async () => {
+    fireEvent.change(screen.getByRole('combobox', { name: 'プロジェクト' }), {
+      target: { value: id },
+    });
+  });
+}
+
 it('persists a board drop with the selected project version', async () => {
   const ticket = api.toTicket(responseTicket);
   vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
   vi.mocked(api.moveTicket).mockResolvedValue({ ticket, boardVersion: 4 });
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
   render(<TicketBoardView />);
+  await selectProject();
   await waitFor(() =>
     expect(useTicketStore.getState().tickets).toHaveLength(1),
   );
@@ -107,6 +117,7 @@ it('shows tickets assigned to the signed-in user in the ME filter', async () => 
 
   try {
     render(<TicketBoardView />);
+    await selectProject();
     await waitFor(() =>
       expect(screen.getByText('First ticket')).toBeInTheDocument(),
     );
@@ -127,6 +138,7 @@ it('allows manual status changes while search disables dragging', async () => {
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
   render(<TicketBoardView />);
+  await selectProject();
   expect(await screen.findByText('First ticket')).toBeInTheDocument();
   fireEvent.change(screen.getByRole('textbox', { name: 'チケット検索' }), {
     target: { value: 'First ticket' },
@@ -149,6 +161,7 @@ it('exposes accessible names for search and assignee filters', async () => {
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
   render(<TicketBoardView />);
+  await selectProject();
 
   expect(screen.getByRole('textbox', { name: 'チケット検索' })).toBeInTheDocument();
   expect(
@@ -164,6 +177,7 @@ it('filters tickets by the selected project', async () => {
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
   render(<TicketBoardView />);
+  await selectProject();
   expect(await screen.findByText('First ticket')).toBeInTheDocument();
   expect(screen.queryByText('Other project ticket')).not.toBeInTheDocument();
   fireEvent.change(screen.getByRole('combobox', { name: 'プロジェクト' }), { target: { value: '2' } });
@@ -177,6 +191,7 @@ it('keeps read members read-only while allowing Ticket details and comments', as
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
   render(<TicketBoardView />);
+  await selectProject();
   const ticketTitle = await screen.findByText('First ticket');
   expect(ticketTitle.closest('[aria-roledescription="sortable"]')).not.toHaveAttribute('aria-disabled', 'true');
   expect(await screen.findByRole('button', { name: '詳細' })).toBeInTheDocument();
@@ -195,6 +210,7 @@ it('allows a read-only project leader to manage members without Ticket write con
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
   render(<TicketBoardView />);
+  await selectProject();
   expect(await screen.findByRole('button', { name: 'メンバー管理' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '+ チケット作成' })).not.toBeInTheDocument();
 });
@@ -207,6 +223,7 @@ it('lets a project leader add members and change each member role and permission
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
   render(<TicketBoardView />);
+  await selectProject();
   fireEvent.click(await screen.findByRole('button', { name: 'メンバー管理' }));
   const dialog = await screen.findByRole('dialog');
   expect(within(dialog).getByText(/Tester/)).toBeInTheDocument();
@@ -223,6 +240,7 @@ it('keeps the create modal open and shows the save error when creation fails', a
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
   render(<TicketBoardView />);
+  await selectProject();
   fireEvent.click(await screen.findByRole('button', { name: '+ チケット作成' }));
   fireEvent.change(screen.getByLabelText('タイトル'), {
     target: { value: 'New ticket' },
@@ -247,6 +265,7 @@ it('keeps the modal open when the backdrop is clicked while saving', async () =>
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
   render(<TicketBoardView />);
+  await selectProject();
   fireEvent.click(await screen.findByRole('button', { name: '+ チケット作成' }));
   fireEvent.change(screen.getByLabelText('タイトル'), {
     target: { value: 'New ticket' },
@@ -272,6 +291,7 @@ it('keeps the edit modal open and shows the save error when editing fails', asyn
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
   render(<TicketBoardView />);
+  await selectProject();
   await screen.findByText('First ticket');
   fireEvent.click(screen.getByRole('button', { name: '編集' }));
   fireEvent.change(screen.getByLabelText('タイトル'), {
@@ -284,4 +304,56 @@ it('keeps the edit modal open and shows the save error when editing fails', asyn
   ).toHaveTextContent('update failed');
   expect(screen.getByRole('dialog')).toBeInTheDocument();
   expect(screen.getByLabelText('タイトル')).toHaveValue('Updated ticket');
+});
+
+it('starts with all accessible projects and requires selection before writing', async () => {
+  vi.mocked(projectApi.fetchProjects).mockResolvedValue([
+    { id: '1', name: 'General', projectKey: 'GEN', boardVersion: 3 },
+    { id: '2', name: 'Design', projectKey: 'DSN', boardVersion: 3 },
+  ]);
+  vi.mocked(api.fetchTickets).mockResolvedValue([
+    api.toTicket(responseTicket),
+    api.toTicket({ ...responseTicket, id: '2', project_id: '2', title: 'Other project ticket' }),
+  ]);
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+  render(<TicketBoardView />);
+  expect(await screen.findByText('First ticket')).toBeInTheDocument();
+  expect(screen.getByText('Other project ticket')).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'プロジェクト' })).toHaveValue('');
+  expect(screen.queryByRole('button', { name: '+ チケット作成' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '編集' })).not.toBeInTheDocument();
+  expect(projectApi.fetchProjectMembers).not.toHaveBeenCalled();
+});
+
+it('saves existing Ticket fields and closes the edit modal on success', async () => {
+  const ticket = api.toTicket(responseTicket);
+  vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
+  vi.mocked(api.updateTicket).mockResolvedValue({ ...ticket, title: 'Saved title', description: 'Saved description', priority: 'HIGH' });
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+  render(<TicketBoardView />);
+  await selectProject();
+  fireEvent.click(await screen.findByRole('button', { name: '編集' }));
+  fireEvent.change(screen.getByLabelText('タイトル'), { target: { value: 'Saved title' } });
+  fireEvent.change(screen.getByLabelText('説明'), { target: { value: 'Saved description' } });
+  fireEvent.change(screen.getByLabelText('優先度'), { target: { value: 'HIGH' } });
+  fireEvent.click(screen.getByRole('button', { name: '保存' }));
+  await waitFor(() => expect(api.updateTicket).toHaveBeenCalledWith('1', {
+    title: 'Saved title', description: 'Saved description', status: ticket.status, priority: 'HIGH',
+  }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+});
+
+it('reports a failed manual status change without an unhandled rejection', async () => {
+  vi.mocked(api.fetchTickets).mockResolvedValue([api.toTicket(responseTicket)]);
+  vi.mocked(api.updateTicketStatus).mockRejectedValue(new Error('status failed'));
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+  render(<TicketBoardView />);
+  await selectProject();
+  const status = await screen.findByRole('combobox', { name: 'First ticket のステータス' });
+  fireEvent.change(status, { target: { value: 'DONE' } });
+  expect(await screen.findByRole('alert')).toHaveTextContent('status failed');
+  expect(status).toHaveValue('TODO');
+  vi.mocked(api.updateTicketStatus).mockResolvedValue({ ...api.toTicket(responseTicket), status: 'DONE' });
+  fireEvent.change(status, { target: { value: 'DONE' } });
+  await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
 });

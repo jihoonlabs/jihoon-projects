@@ -119,8 +119,13 @@ export function TicketBoardView() {
   };
 
   const handleStatusChange = async (id: string, status: TicketStatus) => {
-    await updateStatus(id, status);
-    await refreshProjects();
+    try {
+      await updateStatus(id, status);
+      await refreshProjects();
+      setProjectError(null);
+    } catch (reason) {
+      setProjectError(reason instanceof Error ? reason.message : 'ステータスを更新できませんでした。');
+    }
   };
 
   const handleCreate = async (input: Parameters<typeof addTicket>[0]) => {

@@ -60,7 +60,7 @@ describe('Ticket state and persisted order', () => {
     vi.mocked(api.createTicket).mockResolvedValue(ticket('2', 1));
     await state().addTicket({ projectId: '1', title: 'New' });
     request.reject(new Error('DELETE failed'));
-    await remove;
+    await expect(remove).rejects.toThrow('DELETE failed');
     const ordered = [...state().tickets].sort(
       (a, b) => a.position - b.position,
     );
@@ -166,7 +166,7 @@ describe('Ticket state and persisted order', () => {
     const first = state().updateStatus('1', 'DONE');
     await state().updateStatus('2', 'DONE');
     request.reject(new Error('PATCH failed'));
-    await first;
+    await expect(first).rejects.toThrow('PATCH failed');
     expect(state().tickets[0]).toMatchObject({ status: 'TODO', position: 3 });
     expect(state().tickets[1]).toMatchObject({ status: 'DONE', position: 0 });
   });
@@ -180,7 +180,8 @@ describe('Ticket state and persisted order', () => {
     const second = state().updateStatus('1', 'IN_REVIEW');
     expect(api.updateTicketStatus).toHaveBeenCalledTimes(1);
     request.resolve(ticket('1', 0, 'DONE'));
-    await Promise.all([first, second]);
+    await first;
+    await expect(second).rejects.toThrow('second failed');
     expect(state().tickets[0].status).toBe('DONE');
   });
   it('applies server-confirmed ticket edits and keeps the current position', async () => {
@@ -240,7 +241,7 @@ describe('Ticket state and persisted order', () => {
     vi.mocked(api.createTicket).mockResolvedValue(ticket('2', 1));
     await state().addTicket({ projectId: '1', title: 'New' });
     request.reject(new Error('DELETE failed'));
-    await action;
+    await expect(action).rejects.toThrow('DELETE failed');
     expect(
       state()
         .tickets.map((t) => t.id)
@@ -309,7 +310,7 @@ describe('Ticket state and persisted order', () => {
     vi.mocked(api.createTicket).mockResolvedValue(ticket('2', 1));
     await state().addTicket({ projectId: '1', title: 'New' });
     request.reject(new Error('move failed'));
-    await move;
+    await expect(move).rejects.toThrow('move failed');
     const ordered = [...state().tickets].sort(
       (a, b) => a.position - b.position,
     );
@@ -318,6 +319,71 @@ describe('Ticket state and persisted order', () => {
       ['2', 1],
     ]);
   });
+  it('continues a queued write after the previous request fails', async () => {
+    useTicketStore.setState({ tickets: [ticket('1')] });
+    const first = deferred<Ticket>();
+    vi.mocked(api.updateTicketStatus)
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValueOnce(ticket('1', 0, 'IN_REVIEW'));
+    const failed = expect(state().updateStatus('1', 'DONE')).rejects.toThrow('first failed');
+    const queued = state().updateStatus('1', 'IN_REVIEW');
+    expect(api.updateTicketStatus).toHaveBeenCalledTimes(1);
+    first.reject(new Error('first failed'));
+    await failed;
+    await queued;
+    expect(api.updateTicketStatus).toHaveBeenCalledTimes(2);
+    expect(state().tickets[0].status).toBe('IN_REVIEW');
+  });
+
+  it.each(['same project', 'other project'])('retains a confirmed edit in the %s after drag and refresh fail', async (scope) => {
+    const other = { ...ticket('2', 1), projectId: scope === 'same project' ? '1' : '2' };
+    useTicketStore.setState({ tickets: [ticket('1'), other] });
+    const request = deferred<Awaited<ReturnType<typeof api.moveTicket>>>();
+    vi.mocked(api.moveTicket).mockReturnValue(request.promise);
+    vi.mocked(api.fetchTickets).mockRejectedValue(new Error('refresh failed'));
+    const failed = expect(state().moveTicket('1', 'DONE', 0, 3)).rejects.toThrow('drag failed');
+    const edited = { ...other, title: 'Confirmed edit', status: 'IN_REVIEW' as const, position: 0 };
+    vi.mocked(api.updateTicket).mockResolvedValue(edited);
+    await state().updateTicket('2', { title: edited.title, status: edited.status });
+    request.reject(new Error('drag failed'));
+    await failed;
+    expect(state().tickets.find((item) => item.id === '2')).toEqual(edited);
+    expect(state().tickets.find((item) => item.id === '1')).toEqual(ticket('1'));
+    expect(api.fetchTickets).toHaveBeenCalledTimes(1);
+    expect(state().error).toBe('refresh failed');
+  });
+
+  it('rolls back a failed move even when a concurrent successful move repositions it', async () => {
+    useTicketStore.setState({ tickets: [ticket('1'), ticket('2', 1)] });
+    const first = deferred<Awaited<ReturnType<typeof api.moveTicket>>>();
+    vi.mocked(api.moveTicket)
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValueOnce({ ticket: ticket('2', 0, 'DONE'), boardVersion: 4 });
+    vi.mocked(api.fetchTickets).mockRejectedValue(new Error('refresh failed'));
+    const failed = expect(state().moveTicket('1', 'DONE', 0, 3)).rejects.toThrow('drag failed');
+    await state().moveTicket('2', 'DONE', 0, 3);
+    first.reject(new Error('drag failed'));
+    await failed;
+    expect(state().tickets.find((item) => item.id === '1')).toEqual(ticket('1'));
+    expect(state().tickets.find((item) => item.id === '2')).toMatchObject({ status: 'DONE', position: 0 });
+  });
+
+  it('retains a concurrent creation and deletion when drag and refresh fail', async () => {
+    useTicketStore.setState({ tickets: [ticket('1'), ticket('2', 1)] });
+    const request = deferred<Awaited<ReturnType<typeof api.moveTicket>>>();
+    vi.mocked(api.moveTicket).mockReturnValue(request.promise);
+    vi.mocked(api.fetchTickets).mockRejectedValue(new Error('refresh failed'));
+    const failed = expect(state().moveTicket('1', 'DONE', 0, 3)).rejects.toThrow('drag failed');
+    vi.mocked(api.deleteTicket).mockResolvedValue(undefined);
+    await state().deleteTicket('2');
+    vi.mocked(api.createTicket).mockResolvedValue(ticket('3', 1));
+    await state().addTicket({ projectId: '1', title: 'Created' });
+    request.reject(new Error('drag failed'));
+    await failed;
+    expect(state().tickets.map((item) => item.id).sort()).toEqual(['1', '3']);
+    expect(api.fetchTickets).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps state on failed fetch or create and releases loading', async () => {
     useTicketStore.setState({ tickets: [ticket('1', 4)] });
     vi.mocked(api.fetchTickets).mockRejectedValue(new Error('fetch failed'));
