@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 import { LoginApiError, loginApi } from '@/features/auth/api/login';
 import { resendVerificationEmailApi } from '@/features/auth/api/resendVerificationEmail';
@@ -30,6 +31,7 @@ export function LoginForm({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const submitting = useRef(false);
   const [errors, setErrors] = useState<LoginValidationErrors>({});
   const [serverError, setServerError] = useState(() => {
     if (error === 'social_login_failed') {
@@ -73,11 +75,13 @@ export function LoginForm({
   }, []);
 
   const handleSocialLogin = (socialProvider: 'google' | 'line') => {
-    window.location.href = `${API_URL}/api/auth/${socialProvider}/redirect`;
+    window.location.assign(`${API_URL}/api/auth/${socialProvider}/redirect`);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    // 同じrender内の連続submitも、stateの反映を待たずに防ぐ。
+    if (submitting.current) return;
 
     setServerError('');
     setSuccessMessage('');
@@ -91,6 +95,7 @@ export function LoginForm({
     }
 
     setErrors({});
+    submitting.current = true;
     setLoading(true);
 
     try {
@@ -120,6 +125,7 @@ export function LoginForm({
 
       setServerError('ログイン中にエラーが発生しました。');
     } finally {
+      submitting.current = false;
       setLoading(false);
     }
   };
@@ -147,6 +153,8 @@ export function LoginForm({
       setResendingVerificationEmail(false);
     }
   };
+
+  const submitLabel = loading ? 'ログイン中...' : 'ログイン';
 
   return (
     <div className={styles.container}>
@@ -179,7 +187,12 @@ export function LoginForm({
           </button>
         )}
 
-        <form onSubmit={handleSubmit} className={styles.form} noValidate>
+        <form
+          onSubmit={handleSubmit}
+          className={styles.form}
+          noValidate
+          aria-busy={loading}
+        >
           <div className={styles.inputGroup}>
             <label htmlFor="email">メールアドレス</label>
 
@@ -216,37 +229,48 @@ export function LoginForm({
           <div className={styles.inputGroup}>
             <label htmlFor="password">パスワード</label>
 
-            <input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              placeholder="••••••••"
-              aria-invalid={Boolean(errors.password)}
-              aria-describedby={errors.password ? 'password-error' : undefined}
-              value={password}
-              onChange={(event) => {
-                setPassword(event.target.value);
-
-                if (errors.password) {
-                  setErrors((prev) => ({
-                    ...prev,
-                    password: undefined,
-                  }));
+            <div className={styles.passwordField}>
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                aria-invalid={Boolean(errors.password)}
+                aria-describedby={
+                  errors.password ? 'password-error' : undefined
                 }
-              }}
-              required
-              disabled={loading}
-            />
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
 
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              aria-label={
-                showPassword ? 'パスワードを隠す' : 'パスワードを表示'
-              }
-            >
-              {showPassword ? '隠す' : '表示'}
-            </button>
+                  if (errors.password) {
+                    setErrors((prev) => ({
+                      ...prev,
+                      password: undefined,
+                    }));
+                  }
+                }}
+                required
+                disabled={loading}
+              />
+              <button
+                type="button"
+                className={styles.passwordToggle}
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={
+                  showPassword ? 'パスワードを隠す' : 'パスワードを表示'
+                }
+                aria-pressed={showPassword}
+                aria-controls="password"
+                disabled={loading}
+              >
+                {showPassword ? (
+                  <EyeOff size={20} aria-hidden="true" />
+                ) : (
+                  <Eye size={20} aria-hidden="true" />
+                )}
+              </button>
+            </div>
 
             {errors.password && (
               <span id="password-error" className={styles.fieldError}>
@@ -261,26 +285,32 @@ export function LoginForm({
             </Link>
           </div>
 
-          <button type="submit" className={styles.submitBtn} disabled={loading}>
-            {loading ? 'ログイン中...' : 'ログイン'}
-          </button>
-
           <button
-            type="button"
-            onClick={() => handleSocialLogin('google')}
+            type="submit"
+            aria-label={submitLabel}
+            className={`${styles.actionButton} ${styles.submitBtn}`}
             disabled={loading}
           >
-            Googleでログイン
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSocialLogin('line')}
-            disabled={loading}
-          >
-            LINEでログイン
+            {loading ? <span role="status">{submitLabel}</span> : submitLabel}
           </button>
         </form>
+
+        <div className={styles.divider}>
+          <span>または</span>
+        </div>
+        <div className={styles.socialButtons}>
+          {(['google', 'line'] as const).map((socialProvider) => (
+            <button
+              key={socialProvider}
+              type="button"
+              className={`${styles.actionButton} ${socialProvider === 'google' ? styles.googleButton : styles.lineButton}`}
+              onClick={() => handleSocialLogin(socialProvider)}
+              disabled={loading}
+            >
+              {socialProvider === 'google' ? 'Google' : 'LINE'}でログイン
+            </button>
+          ))}
+        </div>
 
         <div className={styles.registerGuide}>
           <span>アカウントをお持ちでない方は</span>

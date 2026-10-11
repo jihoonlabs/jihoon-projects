@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { logoutApi } from '@/features/auth/api/logout';
@@ -11,15 +12,27 @@ export function Header() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inFlight = useRef(false);
 
   const handleLogout = async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setPending(true);
+    setError(null);
     try {
       await logoutApi();
-    } catch (error) {
-      console.error(error);
-    } finally {
       logout();
       router.push('/login');
+    } catch (reason) {
+      // サーバーのセッションが残る失敗を、ログアウト成功として扱わない。
+      setError(
+        reason instanceof Error ? reason.message : 'ログアウトに失敗しました。',
+      );
+    } finally {
+      inFlight.current = false;
+      setPending(false);
     }
   };
 
@@ -36,9 +49,11 @@ export function Header() {
           type="button"
           onClick={handleLogout}
           className={styles.logoutBtn}
+          disabled={pending}
         >
-          ログアウト
+          {pending ? 'ログアウト中...' : 'ログアウト'}
         </button>
+        {error && <p role="alert">{error}</p>}
       </div>
     </header>
   );

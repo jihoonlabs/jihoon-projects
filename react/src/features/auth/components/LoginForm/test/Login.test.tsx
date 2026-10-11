@@ -1,4 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -137,4 +143,138 @@ describe('LoginForm ログイン処理', () => {
     expect(pushMock).not.toHaveBeenCalled();
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
   });
+});
+
+describe('LoginForm request boundaries', () => {
+  beforeEach(() => {
+    pushMock.mockReset();
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      isInitialized: true,
+    });
+  });
+
+  const fill = async () => {
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByLabelText('メールアドレス'),
+      'user@example.com',
+    );
+    await user.type(screen.getByLabelText('パスワード'), 'password123');
+    return user;
+  };
+
+  it('submits with Enter while the password is visible, without submitting from the toggle', async () => {
+    let requests = 0;
+    server.use(
+      http.post(`${API_URL}/api/auth/login`, () => {
+        requests++;
+        return HttpResponse.json({ message: 'OK', user: mockUser });
+      }),
+    );
+    render(<LoginForm />);
+    const user = await fill();
+    await user.click(screen.getByRole('button', { name: 'パスワードを表示' }));
+    expect(screen.getByLabelText('パスワード')).toHaveAttribute('type', 'text');
+    expect(
+      screen.getByRole('button', { name: 'パスワードを隠す' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(requests).toBe(0);
+    await user.click(screen.getByRole('button', { name: 'パスワードを隠す' }));
+    expect(screen.getByLabelText('パスワード')).toHaveAttribute(
+      'type',
+      'password',
+    );
+    await user.click(screen.getByLabelText('パスワード'));
+    await user.keyboard('{Enter}');
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/tickets'));
+    expect(requests).toBe(1);
+  });
+
+  it.each([
+    [
+      () => new HttpResponse('<html>Server failure</html>', { status: 500 }),
+      'ログイン処理に失敗',
+    ],
+    [() => HttpResponse.json({ message: 'OK' }), '応答形式'],
+    [
+      () =>
+        HttpResponse.json({
+          message: 'OK',
+          user: { ...mockUser, status: 'suspended' },
+        }),
+      '応答形式',
+    ],
+    [() => HttpResponse.error(), 'ネットワーク'],
+  ])(
+    'keeps unauthenticated state for invalid or failed responses',
+    async (response, message) => {
+      server.use(http.post(`${API_URL}/api/auth/login`, response));
+      render(<LoginForm />);
+      const user = await fill();
+      await user.click(screen.getByRole('button', { name: 'ログイン' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent(message);
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
+      expect(pushMock).not.toHaveBeenCalled();
+      expect(screen.getByLabelText('パスワード')).toHaveValue('password123');
+      expect(screen.getByRole('button', { name: 'ログイン' })).toBeEnabled();
+    },
+  );
+});
+
+it('locks repeated submits, exposes loading and permits a retry after failure', async () => {
+  pushMock.mockReset();
+  useAuthStore.setState({
+    user: null,
+    isAuthenticated: false,
+    isInitialized: true,
+  });
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let requests = 0;
+  server.use(
+    http.post(`${API_URL}/api/auth/login`, async () => {
+      requests++;
+      await gate;
+      return HttpResponse.json(
+        { errors: { email: ['Rejected'] } },
+        { status: 422 },
+      );
+    }),
+  );
+  render(<LoginForm />);
+  fireEvent.change(screen.getByLabelText('メールアドレス'), {
+    target: { value: 'user@example.com' },
+  });
+  fireEvent.change(screen.getByLabelText('パスワード'), {
+    target: { value: 'password123' },
+  });
+  const form = screen
+    .getByRole('button', { name: 'ログイン' })
+    .closest('form')!;
+  act(() => {
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+  });
+  await waitFor(() => expect(requests).toBe(1));
+  expect(screen.getByRole('status')).toHaveTextContent('ログイン中');
+  expect(screen.getByRole('button', { name: 'ログイン中...' })).toBeDisabled();
+  expect(screen.getByLabelText('パスワード')).toBeDisabled();
+  expect(
+    screen.getByRole('button', { name: 'Googleでログイン' }),
+  ).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'LINEでログイン' })).toBeDisabled();
+  await act(async () => release());
+  expect(await screen.findByRole('alert')).toHaveTextContent('Rejected');
+  expect(screen.getByRole('button', { name: 'ログイン' })).toBeEnabled();
+  server.use(
+    http.post(`${API_URL}/api/auth/login`, () =>
+      HttpResponse.json({ message: 'OK', user: mockUser }),
+    ),
+  );
+  fireEvent.submit(form);
+  await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/tickets'));
 });
