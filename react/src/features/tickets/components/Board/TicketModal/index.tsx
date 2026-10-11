@@ -113,7 +113,8 @@ export default function TicketModal({
       description: description.trim() || null,
       status,
       priority,
-      ...(ticket && assigneeId === (ticket.assignee?.id ?? '')
+      // 同じ詳細画面で再編集する場合も、直前の成功した保存値と比較する。
+      ...(ticket && assigneeId === savedValues.current.assigneeId
         ? {}
         : { assigneeId: assigneeId || null }),
     };
