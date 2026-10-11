@@ -11,6 +11,8 @@
 
 - Ticket詳細中心UXを検証候補 `d260a70568d11272d8098e07ebc3f1a3370ae649` からローカルfast-forwardで採用した。カードから詳細を開き、編集・削除を詳細内で行う。担当者の再編集、ドラッグ失敗時の並行成功データ保持と再取得失敗時の案内も含む。Ticket V1全体は未完了。
 
+- Ticketの最新詳細取得・編集競合防止を検証候補 `07b0f0088798f1180879c46dcdd2fc3443401370` からローカルfast-forwardで採用した。取得中・失敗・削除・権限喪失を区別し、version条件付き保存で古い編集を拒否する。競合入力を保持し、明示再取得・再編集と遅延応答破棄に対応する。Ticket V1全体は未完了。
+
 ## 採用Child SHA
 - Project Lifecycle: `a52c78cfbb9c1d70d724adc06aa593ae0e67f0f3`
 - Project Creation: `f401c960c0d125f07569cda775b7bc28f581d5e5`
@@ -22,6 +24,9 @@
 - Project Color: `279556ae55fed766d0299c4bdfb16e4c051b0d3e`
 - Ticket Detail UX Child: `5c9c6e03a60b9b0ccba86e2d0915d2fbcbf0d99f`
 - Ticket Detail UX採用候補: `d260a70568d11272d8098e07ebc3f1a3370ae649`（採用前Epic基準: `fdccd96faa20bf9e5f424bd8ae47b1756b2978b6`、fast-forward採用済み）。先行修正の重複適用なし。
+
+- Ticket Detail Concurrency Child / アプリ検証SHA: `37a649666f1a45bff111a06c6d30b65da0a3df6f`
+- Ticket Detail Concurrency採用候補: `07b0f0088798f1180879c46dcdd2fc3443401370`（採用前Epic基準: `1d0af6114d2b354f64e4bc179a2eec94ce0c43a9`、fast-forward採用済み）。UX・先行修正は既に基準に含まれ、重複適用なし。
 
 ## 統合検証
 - Project関連Laravel tests: 33 tests / 186 assertions、Laravel全件: 136 tests / 638 assertions passed。Pintと変更PHPのsyntax checkもpassed。
@@ -37,9 +42,13 @@
 - 今回の採用後、候補とのアプリコード一致、文書参照、Git状態と既存`ai/`・環境/SQLiteファイルの保全を確認した。追加変更はこの採用記録のみで、全テストは再実行していない。候補WORKの未採用表記は候補検証時点の記録であり、採用状態の正本はこのEpic文書とする。
 - UX詳細: `docs/ticket/TICKET_DETAIL_FIRST_UX_INTEGRATION_WORK.md` と `docs/ticket/TICKET_DETAIL_FIRST_UX_MANUAL.md`。Child/integration branch・worktreeは保持する。
 
+- Ticket Detail Concurrency候補自身で実frontend→Laravel→一時SQLiteの16シナリオ、関連Laravel 23 tests / 162 assertions、最後のParent範囲React 169 testsが成功した。既存Ticket 5件へのversion migrationでデータ保持と初期値1を確認。詳細の最新取得・2クライアントの200/409・入力保持/再取得・500/403/404・遅延応答、担当者・DnD・失敗復元と編集中move後の競合を検証した。
+- Childの同一コードで全Laravel 144 tests / 703 assertions、TypeScript・Lint・buildと独立test reviewが成功済み。今回の採用後は候補とのアプリコード一致、文書参照、Git状態と既存`ai/`・環境/DBの保全を確認し、コード変更・新たな不確実性がないため通過済みテストを反復していない。採用後の追加変更はこの記録のみ。候補WORKの未採用表記は候補検証時点の記録であり、採用状態はこのEpic文書を正本とする。
+- 詳細: `docs/ticket/TICKET_DETAIL_CONCURRENCY_INTEGRATION_WORK.md` と `docs/ticket/TICKET_DETAIL_CONCURRENCY_MANUAL.md`。今回の採用段階では既存DBへのmigrationを実行していない。API/frontend起動前に `2026_10_11_000000_add_version_to_tickets_table.php` の適用が必要。MySQL migration・別接続同時実行・isolation・row lockは未検証。SQLite結果で検証済みとは扱わない。
+
 ## 次の作業
 - MySQL migrationと複数接続の同時作成/row lock検証は未検証。SQLiteや制御した要求順序で検証済みとは扱わず、専用環境で確認する。
-- 詳細の最新サーバーデータ取得・編集競合検出、keyboard DnDは未検証・未実装の範囲として残る。今回のUX採用をTicket V1全体の完了とは扱わない。
+- keyboard DnDは未検証・未実装の範囲として残る。詳細の最新取得・編集競合防止は上記候補から採用済みだが、Ticket V1全体は未完了。
 
 ## 今後の候補
 - 監査記録の画面表示、Activity / Historyの利用者向け機能は別途優先度を判断する。
