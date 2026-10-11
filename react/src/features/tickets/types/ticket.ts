@@ -19,6 +19,7 @@ export interface Ticket {
   priority: TicketPriority;
   assignee: UserSummary | null;
   position: number;
+  version: number;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -33,13 +34,13 @@ export interface CreateTicketInput {
 }
 
 export interface UpdateTicketInput {
+  expectedVersion?: number;
   title?: string;
   description?: string | null;
   status?: TicketStatus;
   priority?: TicketPriority;
   assigneeId?: string | null;
 }
-
 
 export interface TicketComment {
   id: string;

@@ -22,6 +22,13 @@ class Ticket extends Model
         'assignee_id',
     ];
 
+    protected $attributes = ['version' => 1];
+
+    protected function casts(): array
+    {
+        return ['version' => 'integer'];
+    }
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);

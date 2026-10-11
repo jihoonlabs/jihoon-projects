@@ -23,6 +23,7 @@ class TicketResource extends JsonResource
             'description' => $this->description,
             'status' => $this->status,
             'position' => (int) $this->position,
+            'version' => (int) $this->version,
             'priority' => $this->priority,
             'assignee' => new UserSummaryResource($this->whenLoaded('assignee')),
             'created_at' => $this->created_at?->toISOString(),

@@ -19,6 +19,7 @@ import * as projectApi from '@/features/tickets/api/projectApi';
 vi.mock('../../../api/ticketApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../api/ticketApi')>()),
   fetchTickets: vi.fn(),
+  fetchTicket: vi.fn(),
   updateTicketStatus: vi.fn(),
   moveTicket: vi.fn(),
   createTicket: vi.fn(),
@@ -79,6 +80,13 @@ vi.mock('@dnd-kit/core', async (importOriginal) => {
 });
 
 beforeEach(() => {
+  vi.mocked(api.fetchTicket).mockImplementation(async (id) => {
+    const ticket = useTicketStore
+      .getState()
+      .tickets.find((item) => item.id === id);
+    if (!ticket) throw new Error('missing test ticket');
+    return ticket;
+  });
   vi.mocked(projectApi.fetchProjects).mockResolvedValue([
     { id: '1', name: 'General', projectKey: 'GEN', boardVersion: 3 },
   ]);

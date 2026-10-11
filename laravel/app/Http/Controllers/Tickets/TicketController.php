@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Tickets\TicketResource;
 use App\Models\Project;
 use App\Models\Ticket;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -94,52 +95,62 @@ class TicketController extends Controller
     public function updateStatus(Request $request, Ticket $ticket)
     {
         $this->authorizeProjectWrite($request, $ticket->project);
-
         $validated = $request->validate([
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
             'status' => ['sometimes', 'required', Rule::in(self::STATUSES)],
             'priority' => ['sometimes', 'required', Rule::in(['HIGHEST', 'HIGH', 'MEDIUM', 'LOW', 'LOWEST'])],
             'assignee_id' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
+            'expected_version' => ['sometimes', 'required', 'integer', 'min:1'],
         ]);
-
         if (array_key_exists('assignee_id', $validated)) {
             $this->validateAssignee($ticket->project, $validated['assignee_id']);
         }
+        $expectedVersion = $validated['expected_version'] ?? null;
+        unset($validated['expected_version']);
 
-        if (! array_key_exists('status', $validated)) {
-            DB::transaction(function () use ($ticket, $validated) {
-                $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
-                $this->ensureActive($project);
-                $ticket->update($validated);
-            });
-
-            return new TicketResource($ticket->load(['project:id,name', 'assignee:id,name']));
-        }
-
-        DB::transaction(function () use ($ticket, $validated) {
+        $saved = DB::transaction(function () use ($ticket, $validated, $expectedVersion) {
             $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
             $this->ensureActive($project);
             $ticket->refresh();
-
-            if ($validated['status'] === $ticket->status) {
-                $ticket->update($validated);
-
-                return;
+            $sourceStatus = $ticket->status;
+            $changedStatus = isset($validated['status']) && $validated['status'] !== $sourceStatus;
+            $fields = $validated;
+            if ($changedStatus) {
+                $fields['position'] = ((int) (Ticket::query()
+                    ->where('project_id', $project->id)
+                    ->where('status', $validated['status'])
+                    ->max('position') ?? -1)) + 1;
             }
 
-            $sourceStatus = $ticket->status;
-            $newPosition = ((int) (Ticket::query()
-                ->where('project_id', $project->id)
-                ->where('status', $validated['status'])
-                ->max('position') ?? -1)) + 1;
+            // バージョン比較と更新を単一SQLにし、競合時は並び順も変更しない。
+            $this->updateVersioned($ticket, $fields, $expectedVersion);
+            if ($changedStatus) {
+                $this->compactColumn($project->id, $sourceStatus);
+                $project->increment('board_version');
+            }
 
-            $ticket->update([...$validated, 'position' => $newPosition]);
-            $this->compactColumn($project->id, $sourceStatus);
-            $project->increment('board_version');
+            // ロック解放後の別更新を、この保存の応答バージョンに混ぜない。
+            return $ticket->refresh()->load(['project:id,name', 'assignee:id,name']);
         });
 
-        return new TicketResource($ticket->refresh()->load(['project:id,name', 'assignee:id,name']));
+        return new TicketResource($saved);
+    }
+
+    private function updateVersioned(Ticket $ticket, array $fields, ?int $expectedVersion = null): void
+    {
+        $query = Ticket::query()->whereKey($ticket->id);
+        if ($expectedVersion !== null) {
+            $query->where('version', $expectedVersion);
+        }
+        $affected = $query->update([...$fields, 'version' => DB::raw('version + 1')]);
+        if ($affected === 0) {
+            Ticket::query()->findOrFail($ticket->id);
+            throw new HttpResponseException(response()->json([
+                'message' => 'This ticket has changed. Reload its latest information before editing again.',
+                'code' => 'ticket_conflict',
+            ], 409));
+        }
     }
 
     public function move(Request $request, Ticket $ticket)
@@ -191,7 +202,7 @@ class TicketController extends Controller
             $position = min((int) $validated['position'], count($targetIds));
             array_splice($targetIds, $position, 0, [$ticket->id]);
 
-            $ticket->update(['status' => $targetStatus]);
+            $this->updateVersioned($ticket, ['status' => $targetStatus]);
             $this->writePositions($targetIds);
             $project->increment('board_version');
 
@@ -239,7 +250,8 @@ class TicketController extends Controller
     private function writePositions(array $ticketIds): void
     {
         foreach ($ticketIds as $position => $ticketId) {
-            DB::table('tickets')->where('id', $ticketId)->update(['position' => $position]);
+            DB::table('tickets')->where('id', $ticketId)->where('position', '!=', $position)
+                ->update(['position' => $position, 'version' => DB::raw('version + 1')]);
         }
     }
 

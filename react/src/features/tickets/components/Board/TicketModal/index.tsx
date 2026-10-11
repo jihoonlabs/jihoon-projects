@@ -9,6 +9,7 @@ import type {
   TicketStatus,
   UpdateTicketInput,
 } from '@/features/tickets/types/ticket';
+import { fetchTicket, TicketApiError } from '@/features/tickets/api/ticketApi';
 import TicketComments from '../TicketComments';
 import type { ProjectMember } from '@/features/tickets/types/project';
 import { getProjectBorderColor } from '@/features/tickets/utils/projectColor';
@@ -36,7 +37,7 @@ interface TicketModalProps {
   currentUserRole?: 'user' | 'admin';
   onClose: () => void;
   onCreate: (input: CreateTicketInput) => Promise<void>;
-  onUpdate: (id: string, input: UpdateTicketInput) => Promise<void>;
+  onUpdate: (id: string, input: UpdateTicketInput) => Promise<Ticket>;
   onDelete: (ticket: Ticket) => Promise<void>;
   projectId: string;
   projectKey?: string | null;
@@ -44,8 +45,94 @@ interface TicketModalProps {
   readOnly?: boolean;
 }
 
-export default function TicketModal({
-  ticket,
+function detailError(error: unknown): string {
+  if (error instanceof TicketApiError) {
+    if (error.status === 404)
+      return 'このチケットは削除されたか、存在しません。';
+    if (error.status === 403 || error.status === 401)
+      return 'このチケットへのアクセス権限がありません。';
+  }
+  return '最新のチケット情報を取得できませんでした。再試行してください。';
+}
+
+export default function TicketModal(props: TicketModalProps) {
+  if (!props.ticket) return <TicketModalContent {...props} />;
+  return <TicketDetailLoader key={props.ticket.id} {...props} />;
+}
+
+function TicketDetailLoader(props: TicketModalProps) {
+  const id = props.ticket?.id;
+  const [result, setResult] = useState<{
+    attempt: number;
+    ticket?: Ticket;
+    error?: string;
+  } | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    if (!id) return;
+    const controller = new AbortController();
+    let active = true;
+    // 中断だけに依存せず、閉じた画面・別Ticketへの遅延応答も破棄する。
+    void fetchTicket(id, controller.signal)
+      .then((ticket) => {
+        if (active) setResult({ attempt, ticket });
+      })
+      .catch((reason) => {
+        if (active) setResult({ attempt, error: detailError(reason) });
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [id, attempt]);
+
+  const loaded = result?.attempt === attempt ? result.ticket : null;
+  const error = result?.attempt === attempt ? result.error : null;
+  if (loaded && loaded.id === id)
+    return <TicketModalContent key={id} {...props} ticket={loaded} />;
+  return (
+    <div
+      className={styles.backdrop}
+      role="presentation"
+      onMouseDown={props.onClose}
+    >
+      <section
+        className={styles.modal}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ticket-modal-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <h2 id="ticket-modal-title" tabIndex={-1}>
+          チケット情報
+        </h2>
+        {error ? (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        ) : (
+          <p role="status">最新情報を取得中...</p>
+        )}
+        <div className={styles.actions}>
+          <button type="button" onClick={props.onClose}>
+            閉じる
+          </button>
+          {error && (
+            <button
+              type="button"
+              onClick={() => setAttempt((value) => value + 1)}
+            >
+              再試行
+            </button>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function TicketModalContent({
+  ticket: initialTicket,
   currentUserId,
   currentUserRole,
   onClose,
@@ -57,6 +144,7 @@ export default function TicketModal({
   projectMembers,
   readOnly = false,
 }: TicketModalProps) {
+  const [ticket, setTicket] = useState(initialTicket);
   const initialValues = {
     title: ticket?.title ?? '',
     description: ticket?.description ?? '',
@@ -65,6 +153,19 @@ export default function TicketModal({
     assigneeId: ticket?.assignee?.id ?? '',
   };
   const savedValues = useRef(initialValues);
+  const version = useRef(ticket?.version);
+  const [conflict, setConflict] = useState(false);
+  const [latest, setLatest] = useState<Ticket | null>(null);
+  const [reloadError, setReloadError] = useState<string | null>(null);
+  const [reloading, setReloading] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
   const [title, setTitle] = useState(initialValues.title);
   const [description, setDescription] = useState(initialValues.description);
   const [status, setStatus] = useState<TicketStatus>(initialValues.status);
@@ -78,7 +179,7 @@ export default function TicketModal({
   const [submitting, setSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const canEdit = !!ticket && !readOnly;
+  const canEdit = !!ticket && !readOnly && !unavailable;
   const isDetail = !!ticket && mode === 'detail';
 
   useEffect(() => {
@@ -93,10 +194,53 @@ export default function TicketModal({
     setAssigneeId(savedValues.current.assigneeId);
   };
 
+  const loadLatest = async () => {
+    if (!ticket || reloading) return;
+    setReloading(true);
+    setReloadError(null);
+    try {
+      const incoming = await fetchTicket(ticket.id);
+      if (alive.current) setLatest(incoming);
+    } catch (reason) {
+      if (alive.current) {
+        setReloadError(detailError(reason));
+        if (
+          reason instanceof TicketApiError &&
+          [401, 403, 404].includes(reason.status)
+        )
+          setUnavailable(true);
+      }
+    } finally {
+      if (alive.current) setReloading(false);
+    }
+  };
+
+  const useLatest = () => {
+    if (!latest) return;
+    // 再取得だけでは入力・保存基準を変更しない。明示操作で編集をやり直す。
+    savedValues.current = {
+      title: latest.title,
+      description: latest.description ?? '',
+      status: latest.status,
+      priority: latest.priority,
+      assigneeId: latest.assignee?.id ?? '',
+    };
+    version.current = latest.version;
+    setTicket(latest);
+    restoreSavedValues();
+    setLatest(null);
+    setConflict(false);
+    setSaveError(null);
+  };
+
   const cancelEdit = () => {
     if (ticket) {
       restoreSavedValues();
       setSaveError(null);
+      if (conflict) {
+        onClose();
+        return;
+      }
       setMode('detail');
       return;
     }
@@ -105,10 +249,12 @@ export default function TicketModal({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (readOnly || !title.trim() || submitting) return;
+    if (readOnly || unavailable || conflict || !title.trim() || submitting)
+      return;
     setSubmitting(true);
     setSaveError(null);
     const fields: UpdateTicketInput = {
+      ...(ticket ? { expectedVersion: version.current } : {}),
       title: title.trim(),
       description: description.trim() || null,
       status,
@@ -120,14 +266,19 @@ export default function TicketModal({
     };
     try {
       if (ticket) {
-        await onUpdate(ticket.id, fields);
+        const updated = await onUpdate(ticket.id, fields);
+        if (!alive.current) return;
+        version.current = updated.version;
+        // 応答のフィールドとバージョンを同じスナップショットとして採用する。
         savedValues.current = {
-          title: fields.title ?? '',
-          description: fields.description ?? '',
-          status: fields.status ?? 'TODO',
-          priority: fields.priority ?? 'MEDIUM',
-          assigneeId: fields.assigneeId ?? assigneeId,
+          title: updated.title,
+          description: updated.description ?? '',
+          status: updated.status,
+          priority: updated.priority,
+          assigneeId: updated.assignee?.id ?? '',
         };
+        setTicket(updated);
+        restoreSavedValues();
         setMode('detail');
       } else {
         await onCreate({
@@ -141,9 +292,27 @@ export default function TicketModal({
         onClose();
       }
     } catch (error) {
-      setSaveError(
-        error instanceof Error ? error.message : '保存に失敗しました。',
-      );
+      if (!alive.current) return;
+      if (error instanceof TicketApiError && error.code === 'ticket_conflict') {
+        setConflict(true);
+        setSaveError(
+          '他のユーザーが変更したため保存できませんでした。入力内容は保持されています。',
+        );
+      } else {
+        if (
+          error instanceof TicketApiError &&
+          [401, 403, 404].includes(error.status)
+        )
+          setUnavailable(true);
+        setSaveError(
+          error instanceof TicketApiError &&
+            [401, 403, 404].includes(error.status)
+            ? detailError(error)
+            : error instanceof Error
+              ? error.message
+              : '保存に失敗しました。',
+        );
+      }
     } finally {
       setSubmitting(false);
     }
@@ -352,11 +521,46 @@ export default function TicketModal({
                 {saveError}
               </p>
             )}
+            {conflict && (
+              <section aria-label="競合の解決">
+                <button
+                  type="button"
+                  onClick={() => void loadLatest()}
+                  disabled={reloading}
+                >
+                  {reloading ? '取得中...' : '最新情報を再取得'}
+                </button>
+                {reloadError && <p role="alert">{reloadError}</p>}
+                {latest && (
+                  <div>
+                    <h3>最新情報</h3>
+                    <p>タイトル: {latest.title}</p>
+                    <p>説明: {latest.description || '説明はありません。'}</p>
+                    <p>
+                      ステータス: {latest.status} / 優先度: {latest.priority}
+                    </p>
+                    <p>担当者: {latest.assignee?.name ?? '未割り当て'}</p>
+                    <button
+                      type="button"
+                      onClick={useLatest}
+                      disabled={unavailable}
+                    >
+                      最新情報で編集し直す（入力を置き換える）
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
             <div className={styles.actions}>
               <button type="button" onClick={cancelEdit} disabled={submitting}>
                 {ticket ? 'キャンセル' : '閉じる'}
               </button>
-              <button type="submit" disabled={submitting || !title.trim()}>
+              <button
+                type="submit"
+                disabled={
+                  submitting || conflict || unavailable || !title.trim()
+                }
+              >
                 {submitting ? '保存中...' : '保存'}
               </button>
             </div>

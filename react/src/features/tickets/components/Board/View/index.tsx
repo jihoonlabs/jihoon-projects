@@ -166,8 +166,18 @@ export function TicketBoardView() {
     id: string,
     input: Parameters<typeof updateTicket>[1],
   ) => {
-    await updateTicket(id, input);
-    await refreshProjects();
+    const updated = await updateTicket(id, input);
+    // 保存成功後のメタデータ取得失敗を、保存失敗として扱わない。
+    try {
+      await refreshProjects();
+    } catch (reason) {
+      setProjectError(
+        reason instanceof Error
+          ? reason.message
+          : 'プロジェクトを取得できませんでした。',
+      );
+    }
+    return updated;
   };
 
   const sensors = useSensors(

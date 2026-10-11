@@ -31,11 +31,12 @@ class ResourceContractTest extends TestCase
             $data = $response->json($path);
             $this->assertEqualsCanonicalizing([
                 'id', 'project_id', 'issue_key', 'title', 'description', 'status', 'priority',
-                'position', 'assignee', 'created_at', 'updated_at',
+                'position', 'version', 'assignee', 'created_at', 'updated_at',
             ], array_keys($data));
             $this->assertIsString($data['id']);
             $this->assertIsString($data['project_id']);
             $this->assertIsInt($data['position']);
+            $this->assertIsInt($data['version']);
             $this->assertNotNull($data['created_at']);
             $this->assertNotNull($data['updated_at']);
             $this->assertSame($user->id, $data['assignee']['id']);

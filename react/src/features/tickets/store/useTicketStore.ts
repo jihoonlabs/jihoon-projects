@@ -20,7 +20,7 @@ interface TicketState {
     boardVersion: number,
   ) => Promise<number>;
   addTicket: (ticket: CreateTicketInput) => Promise<void>;
-  updateTicket: (id: string, input: UpdateTicketInput) => Promise<void>;
+  updateTicket: (id: string, input: UpdateTicketInput) => Promise<Ticket>;
   deleteTicket: (id: string) => Promise<void>;
 }
 
@@ -201,7 +201,8 @@ export const useTicketStore = create<TicketState>((set, get) => {
     updateTicket: (id, input) =>
       write(id, async () => {
         const before = get().tickets.find((ticket) => ticket.id === id);
-        if (!before) return;
+        if (!before)
+          throw new Error('チケットが一覧にありません。再取得してください。');
         revision += 1;
         set({ error: null });
         try {
@@ -212,6 +213,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
               ticket.id === id ? updated : ticket,
             ),
           }));
+          return updated;
         } catch (error) {
           fail(error);
           throw error;

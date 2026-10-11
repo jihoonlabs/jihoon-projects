@@ -18,6 +18,7 @@ export interface TicketResponse {
   description: string | null;
   status: TicketStatus;
   position: number;
+  version: number;
   priority: TicketPriority;
   assignee: { id: number; name: string; avatar_url: string | null } | null;
   created_at: string | null;
@@ -25,6 +26,9 @@ export interface TicketResponse {
 }
 
 export function toTicket(data: TicketResponse): Ticket {
+  if (!Number.isSafeInteger(data.version) || data.version < 1) {
+    throw new Error('チケットのバージョンが不正です。');
+  }
   return {
     id: String(data.id),
     projectId: String(data.project_id),
@@ -42,6 +46,7 @@ export function toTicket(data: TicketResponse): Ticket {
             avatarUrl: data.assignee.avatar_url ?? undefined,
           },
     position: data.position,
+    version: data.version,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
@@ -51,6 +56,7 @@ export class TicketApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly code?: string,
   ) {
     super(message);
     this.name = 'TicketApiError';
@@ -58,8 +64,14 @@ export class TicketApiError extends Error {
 }
 
 async function resource<T>(response: Response): Promise<T> {
-  if (!response.ok)
-    throw new TicketApiError(`チケット操作に失敗しました (${response.status})`, response.status);
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new TicketApiError(
+      `チケット操作に失敗しました (${response.status})`,
+      response.status,
+      error?.code,
+    );
+  }
   const result = await response.json();
   if (
     !result ||
@@ -84,10 +96,15 @@ export async function fetchTickets(): Promise<Ticket[]> {
   return data.map(toTicket);
 }
 
-export async function fetchTicket(id: string): Promise<Ticket> {
+export async function fetchTicket(
+  id: string,
+  signal?: AbortSignal,
+): Promise<Ticket> {
   return toTicket(
     await resource<TicketResponse>(
       await fetch(`${API_URL}/api/tickets/${encodeURIComponent(id)}`, {
+        cache: 'no-store',
+        signal,
         credentials: 'include',
         headers: { Accept: 'application/json' },
       }),
@@ -158,6 +175,9 @@ export async function updateTicket(
   }
 
   const body = {
+    ...(input.expectedVersion !== undefined
+      ? { expected_version: input.expectedVersion }
+      : {}),
     ...(input.title !== undefined ? { title: input.title } : {}),
     ...(input.description !== undefined
       ? { description: input.description }
@@ -186,7 +206,6 @@ export async function deleteTicket(id: string): Promise<void> {
     throw new Error(`チケットの削除に失敗しました (${response.status})`);
 }
 
-
 export interface MoveTicketResult {
   ticket: Ticket;
   boardVersion: number;
@@ -198,20 +217,29 @@ export async function moveTicket(
   position: number,
   boardVersion: number,
 ): Promise<MoveTicketResult> {
-  const response = await fetchWithCsrf(`/api/tickets/${encodeURIComponent(id)}/move`, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      status,
-      position,
-      board_version: boardVersion,
-    }),
-  });
+  const response = await fetchWithCsrf(
+    `/api/tickets/${encodeURIComponent(id)}/move`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({
+        status,
+        position,
+        board_version: boardVersion,
+      }),
+    },
+  );
 
   if (response.status === 409) {
-    throw new TicketApiError('ボードが更新されています。最新の状態を再取得します。', 409);
+    throw new TicketApiError(
+      'ボードが更新されています。最新の状態を再取得します。',
+      409,
+    );
   }
   if (!response.ok) {
-    throw new TicketApiError(`チケットの移動に失敗しました (${response.status})`, response.status);
+    throw new TicketApiError(
+      `チケットの移動に失敗しました (${response.status})`,
+      response.status,
+    );
   }
 
   const result = await response.json();
