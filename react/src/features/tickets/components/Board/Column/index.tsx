@@ -15,8 +15,7 @@ interface ColumnProps {
   tickets: Ticket[];
   projectKey?: string | null;
   onStatusChange?: (id: string, status: TicketStatus) => void;
-  onEdit?: (ticket: Ticket) => void;
-  onDelete?: (ticket: Ticket) => void;
+  onOpenDetails?: (ticket: Ticket, trigger: HTMLButtonElement) => void;
   canWrite?: boolean;
   canDrag?: boolean;
 }
@@ -26,8 +25,7 @@ export default function Column({
   tickets,
   projectKey,
   onStatusChange,
-  onEdit,
-  onDelete,
+  onOpenDetails,
   canWrite,
   canDrag,
 }: ColumnProps) {
@@ -52,8 +50,7 @@ export default function Column({
               ticket={ticket}
               projectKey={projectKey}
               onStatusChange={onStatusChange}
-              onEdit={onEdit}
-              onDelete={onDelete}
+              onOpenDetails={onOpenDetails}
               canWrite={canWrite}
               canDrag={canDrag}
             />

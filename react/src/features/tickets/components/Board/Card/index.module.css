@@ -1,16 +1,30 @@
 .card {
   background-color: #ffffff;
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 10px;
+  padding: 0.8rem;
   border: 1px solid var(--project-border-color, #e5e7eb);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  cursor: pointer;
+  gap: 0.65rem;
+  cursor: grab;
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease;
+}
+
+.card:active {
+  cursor: grabbing;
+}
+
+.staticCard,
+.staticCard:active {
+  cursor: default;
+}
+
+.card:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .card:hover {
@@ -19,13 +33,50 @@
   border-color: var(--project-border-color, #d1d5db);
 }
 
+.heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 .title {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 650;
   color: #111827;
-  margin: 0;
+  text-align: left;
   line-height: 1.4;
   word-break: break-word;
+  cursor: pointer;
+}
+
+.title:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.title:focus-visible,
+.detailsButton:focus-visible,
+.controls select:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.detailsButton {
+  flex: none;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  background: #fff;
+  color: #374151;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .footer {
@@ -123,4 +174,9 @@
   color: #374151;
   font-size: 0.72rem;
   cursor: pointer;
+}
+
+.controls button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }

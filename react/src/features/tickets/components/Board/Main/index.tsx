@@ -10,8 +10,7 @@ interface MainProps {
   assigneeFilter: string;
   currentUserId: number | null;
   onStatusChange?: (id: string, status: TicketStatus) => void;
-  onEdit?: (ticket: Ticket) => void;
-  onDelete?: (ticket: Ticket) => void;
+  onOpenDetails?: (ticket: Ticket, trigger: HTMLButtonElement) => void;
   canWrite?: boolean;
   canDrag?: boolean;
 }
@@ -23,8 +22,7 @@ export default function Main({
   assigneeFilter,
   currentUserId,
   onStatusChange,
-  onEdit,
-  onDelete,
+  onOpenDetails,
   canWrite = true,
   canDrag = canWrite,
 }: MainProps) {
@@ -58,8 +56,7 @@ export default function Main({
             tickets={columnTickets}
             projectKey={projectKey}
             onStatusChange={onStatusChange}
-            onEdit={onEdit}
-            onDelete={onDelete}
+            onOpenDetails={onOpenDetails}
             canWrite={canWrite}
             canDrag={canDrag}
           />

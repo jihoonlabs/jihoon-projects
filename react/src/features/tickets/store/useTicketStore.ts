@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import * as api from '../api/ticketApi';
-import type { CreateTicketInput, Ticket, TicketStatus, UpdateTicketInput } from '../types/ticket';
+import type {
+  CreateTicketInput,
+  Ticket,
+  TicketStatus,
+  UpdateTicketInput,
+} from '../types/ticket';
 
 interface TicketState {
   tickets: Ticket[];
@@ -128,21 +133,42 @@ export const useTicketStore = create<TicketState>((set, get) => {
           .sort((a, b) => a.position - b.position);
         const insertAt = Math.min(position, target.length);
         target.splice(insertAt, 0, { ...moving, status });
-        const positions = new Map(target.map((ticket, index) => [ticket.id, index]));
+        const positions = new Map(
+          target.map((ticket, index) => [ticket.id, index]),
+        );
         set({
-          tickets: without.map((ticket) =>
-            positions.has(ticket.id)
-              ? { ...ticket, position: positions.get(ticket.id)! }
-              : ticket,
-          ).concat({ ...moving, status, position: insertAt }),
+          tickets: without
+            .map((ticket) =>
+              positions.has(ticket.id)
+                ? { ...ticket, position: positions.get(ticket.id)! }
+                : ticket,
+            )
+            .concat({ ...moving, status, position: insertAt }),
         });
 
+        const optimistic = new Map(
+          get().tickets.map((ticket) => [ticket.id, ticket]),
+        );
+        const original = new Map(before.map((ticket) => [ticket.id, ticket]));
+
         try {
-          const result = await api.moveTicket(id, status, position, boardVersion);
+          const result = await api.moveTicket(
+            id,
+            status,
+            position,
+            boardVersion,
+          );
           refreshNeeded = true;
           return result.boardVersion;
         } catch (error) {
-          set({ tickets: before });
+          set((state) => ({
+            tickets: state.tickets.map((ticket) =>
+              ticket.projectId === moving.projectId &&
+              (ticket.id === id || ticket === optimistic.get(ticket.id))
+                ? (original.get(ticket.id) ?? ticket)
+                : ticket,
+            ),
+          }));
           fail(error);
           if (error instanceof api.TicketApiError && error.status === 409) {
             refreshNeeded = true;
@@ -208,6 +234,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
         } catch (error) {
           set((state) => ({ tickets: [...state.tickets, before] }));
           fail(error);
+          throw error;
         } finally {
           revision += 1;
         }

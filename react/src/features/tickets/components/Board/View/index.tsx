@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -20,7 +20,10 @@ import Main from '../Main';
 import Card from '../Card';
 import TicketModal from '../TicketModal';
 import ProjectMembersDialog from '../ProjectMembersDialog';
-import { fetchProjects, fetchProjectMembers } from '@/features/tickets/api/projectApi';
+import {
+  fetchProjects,
+  fetchProjectMembers,
+} from '@/features/tickets/api/projectApi';
 import type { Project, ProjectMember } from '@/features/tickets/types/project';
 import styles from './index.module.css';
 
@@ -42,13 +45,25 @@ export function TicketBoardView() {
   const [assigneeFilter, setAssigneeFilter] = useState('ALL');
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const modalTrigger = useRef<HTMLButtonElement | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const [membersProjectId, setMembersProjectId] = useState('');
   const [projectError, setProjectError] = useState<string | null>(null);
   const [managingMembers, setManagingMembers] = useState(false);
+
+  useEffect(() => {
+    if (isModalOpen || !modalTrigger.current) return;
+    const trigger = modalTrigger.current;
+    modalTrigger.current = null;
+    if (trigger.isConnected) trigger.focus();
+    else
+      document
+        .querySelector<HTMLSelectElement>('[aria-label="プロジェクト"]')
+        ?.focus();
+  }, [isModalOpen]);
 
   useEffect(() => {
     fetchTickets();
@@ -60,30 +75,63 @@ export function TicketBoardView() {
       .then((items) => {
         if (!active) return;
         setProjects(items);
-        setSelectedProjectId((current) => current && items.some((item) => item.id === current) ? current : items[0]?.id ?? '');
+        setSelectedProjectId((current) =>
+          current && items.some((item) => item.id === current)
+            ? current
+            : (items[0]?.id ?? ''),
+        );
       })
-      .catch((reason) => { if (active) setProjectError(reason instanceof Error ? reason.message : 'プロジェクトを取得できませんでした。'); });
-    return () => { active = false; };
+      .catch((reason) => {
+        if (active)
+          setProjectError(
+            reason instanceof Error
+              ? reason.message
+              : 'プロジェクトを取得できませんでした。',
+          );
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
     if (!selectedProjectId) return;
     let active = true;
     fetchProjectMembers(selectedProjectId)
-      .then((items) => { if (active) { setProjectMembers(items); setMembersProjectId(selectedProjectId); setProjectError(null); } })
-      .catch((reason) => { if (active) setProjectError(reason instanceof Error ? reason.message : 'メンバーを取得できませんでした。'); });
-    return () => { active = false; };
+      .then((items) => {
+        if (active) {
+          setProjectMembers(items);
+          setMembersProjectId(selectedProjectId);
+          setProjectError(null);
+        }
+      })
+      .catch((reason) => {
+        if (active)
+          setProjectError(
+            reason instanceof Error
+              ? reason.message
+              : 'メンバーを取得できませんでした。',
+          );
+      });
+    return () => {
+      active = false;
+    };
   }, [selectedProjectId]);
 
-  const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? null;
-  const currentMembership = membersProjectId === selectedProjectId
-    ? projectMembers.find((member) => member.id === String(currentUserId))
-    : undefined;
+  const selectedProject =
+    projects.find((project) => project.id === selectedProjectId) ?? null;
+  const currentMembership =
+    membersProjectId === selectedProjectId
+      ? projectMembers.find((member) => member.id === String(currentUserId))
+      : undefined;
   const isAdmin = currentUser?.role === 'admin';
   const canWrite = isAdmin || currentMembership?.permission === 'write';
   const canManageMembers = isAdmin || currentMembership?.role === 'leader';
-  const projectTickets = tickets.filter((ticket) => ticket.projectId === selectedProjectId);
-  const canDrag = canWrite && searchQuery.trim() === '' && assigneeFilter === 'ALL';
+  const projectTickets = tickets.filter(
+    (ticket) => ticket.projectId === selectedProjectId,
+  );
+  const canDrag =
+    canWrite && searchQuery.trim() === '' && assigneeFilter === 'ALL';
 
   const refreshProjects = async () => {
     const items = await fetchProjects();
@@ -91,13 +139,22 @@ export function TicketBoardView() {
     setSelectedProjectId((current) =>
       current && items.some((item) => item.id === current)
         ? current
-        : items[0]?.id ?? '',
+        : (items[0]?.id ?? ''),
     );
   };
 
   const handleStatusChange = async (id: string, status: TicketStatus) => {
-    await updateStatus(id, status);
-    await refreshProjects();
+    try {
+      await updateStatus(id, status);
+      await refreshProjects();
+      setProjectError(null);
+    } catch (reason) {
+      setProjectError(
+        reason instanceof Error
+          ? reason.message
+          : 'ステータスを更新できませんでした。',
+      );
+    }
   };
 
   const handleCreate = async (input: Parameters<typeof addTicket>[0]) => {
@@ -139,7 +196,9 @@ export function TicketBoardView() {
 
     const activeId = String(active.id);
     const overId = String(over.id);
-    const draggedTicket = projectTickets.find((ticket) => ticket.id === activeId);
+    const draggedTicket = projectTickets.find(
+      (ticket) => ticket.id === activeId,
+    );
     if (!draggedTicket) return;
 
     const overTicket = projectTickets.find((ticket) => ticket.id === overId);
@@ -155,9 +214,10 @@ export function TicketBoardView() {
     const overPosition = overTicket
       ? targetTickets.findIndex((ticket) => ticket.id === overTicket.id)
       : -1;
-    const targetPosition = overPosition >= 0
-      ? overPosition
-      : targetTickets.filter((ticket) => ticket.id !== activeId).length;
+    const targetPosition =
+      overPosition >= 0
+        ? overPosition
+        : targetTickets.filter((ticket) => ticket.id !== activeId).length;
 
     try {
       const boardVersion = await moveTicket(
@@ -179,17 +239,23 @@ export function TicketBoardView() {
   };
 
   const openCreate = () => {
-    setEditingTicket(null);
+    modalTrigger.current = null;
+    setSelectedTicket(null);
     setIsModalOpen(true);
   };
 
-  const openEdit = (ticket: Ticket) => {
-    setEditingTicket(ticket);
+  const openDetails = (ticket: Ticket, trigger: HTMLButtonElement) => {
+    modalTrigger.current = trigger;
+    setSelectedTicket(ticket);
     setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedTicket(null);
   };
 
   const handleDelete = async (ticket: Ticket) => {
-    if (!window.confirm(`${ticket.issueKey ?? ticket.title} を削除しますか？`)) return;
     await deleteTicket(ticket.id);
     await refreshProjects();
   };
@@ -211,7 +277,9 @@ export function TicketBoardView() {
       />
 
       {(error || projectError) && <p role="alert">{error || projectError}</p>}
-      {projects.length === 0 && !projectError && <p>利用可能なプロジェクトがありません。</p>}
+      {projects.length === 0 && !projectError && (
+        <p>利用可能なプロジェクトがありません。</p>
+      )}
 
       <DndContext
         sensors={sensors}
@@ -227,29 +295,40 @@ export function TicketBoardView() {
           assigneeFilter={assigneeFilter}
           currentUserId={currentUserId}
           onStatusChange={handleStatusChange}
-          onEdit={openEdit}
-          onDelete={handleDelete}
+          onOpenDetails={openDetails}
           canWrite={canWrite}
           canDrag={canDrag}
         />
 
         <DragOverlay>
-          {activeTicket && canDrag ? <Card ticket={activeTicket} projectKey={selectedProject?.projectKey} isOverlay canWrite canDrag /> : null}
+          {activeTicket && canDrag ? (
+            <Card
+              ticket={activeTicket}
+              projectKey={selectedProject?.projectKey}
+              isOverlay
+              canWrite
+              canDrag
+            />
+          ) : null}
         </DragOverlay>
       </DndContext>
 
       {isModalOpen && (
         <TicketModal
-          key={editingTicket?.id ?? 'create'}
-          ticket={editingTicket}
+          key={selectedTicket?.id ?? 'create'}
+          ticket={selectedTicket}
           currentUserId={currentUserId}
           currentUserRole={currentUser?.role}
-          projectId={editingTicket?.projectId ?? selectedProjectId}
-          projectMembers={membersProjectId === selectedProjectId ? projectMembers : []}
+          projectId={selectedTicket?.projectId ?? selectedProjectId}
+          projectKey={selectedProject?.projectKey}
+          projectMembers={
+            membersProjectId === selectedProjectId ? projectMembers : []
+          }
           readOnly={!canWrite}
-          onClose={() => setIsModalOpen(false)}
+          onClose={closeModal}
           onCreate={handleCreate}
           onUpdate={handleUpdate}
+          onDelete={handleDelete}
         />
       )}
       {managingMembers && selectedProject && (
@@ -259,7 +338,13 @@ export function TicketBoardView() {
             setManagingMembers(false);
             void fetchProjectMembers(selectedProject.id)
               .then(setProjectMembers)
-              .catch((reason) => setProjectError(reason instanceof Error ? reason.message : 'メンバーを取得できませんでした。'));
+              .catch((reason) =>
+                setProjectError(
+                  reason instanceof Error
+                    ? reason.message
+                    : 'メンバーを取得できませんでした。',
+                ),
+              );
           }}
         />
       )}
