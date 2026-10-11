@@ -123,45 +123,53 @@ it('persists a board drop with the selected project version', async () => {
   );
 });
 
-it('keeps a failed drag visible after deferred revalidation and clears it on retry', async () => {
-  const ticket = api.toTicket(responseTicket);
-  const created = { ...ticket, id: '2', title: 'Concurrent created' };
-  vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
-  let rejectMove!: (error: Error) => void;
-  vi.mocked(api.moveTicket).mockReturnValueOnce(
-    new Promise((_resolve, reject) => {
-      rejectMove = reject;
-    }),
-  );
-  vi.mocked(api.createTicket).mockResolvedValue(created);
-  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-  render(<TicketBoardView />);
-  await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' });
-  fireEvent.click(screen.getByText('drop DONE'));
-  await waitFor(() => expect(api.moveTicket).toHaveBeenCalled());
-  await act(async () => {
-    await useTicketStore
-      .getState()
-      .addTicket({ projectId: '1', title: created.title });
-  });
-  vi.mocked(api.fetchTickets).mockResolvedValue([ticket, created]);
-  await act(async () => {
-    rejectMove(new Error('real drag rejected'));
-  });
-  await waitFor(() => expect(useTicketStore.getState().error).toBeNull());
-  expect(await screen.findByRole('alert')).toHaveTextContent(
-    'real drag rejected',
-  );
-  expect(screen.getByText('Concurrent created')).toBeInTheDocument();
-  vi.mocked(api.moveTicket).mockResolvedValueOnce({
-    ticket: { ...ticket, status: 'DONE' },
-    boardVersion: 4,
-  });
-  fireEvent.click(screen.getByText('drop DONE'));
-  await waitFor(() =>
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument(),
-  );
-});
+it.each([false, true])(
+  'keeps a failed drag visible after deferred revalidation (project refresh fails: %s) and clears it on retry',
+  async (projectRefreshFails) => {
+    const ticket = api.toTicket(responseTicket);
+    const created = { ...ticket, id: '2', title: 'Concurrent created' };
+    vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
+    let rejectMove!: (error: Error) => void;
+    vi.mocked(api.moveTicket).mockReturnValueOnce(
+      new Promise((_resolve, reject) => {
+        rejectMove = reject;
+      }),
+    );
+    vi.mocked(api.createTicket).mockResolvedValue(created);
+    useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+    render(<TicketBoardView />);
+    await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' });
+    fireEvent.click(screen.getByText('drop DONE'));
+    await waitFor(() => expect(api.moveTicket).toHaveBeenCalled());
+    await act(async () => {
+      await useTicketStore
+        .getState()
+        .addTicket({ projectId: '1', title: created.title });
+    });
+    vi.mocked(api.fetchTickets).mockResolvedValue([ticket, created]);
+    if (projectRefreshFails) {
+      vi.mocked(projectApi.fetchProjects).mockRejectedValueOnce(
+        new Error('project refresh failed'),
+      );
+    }
+    await act(async () => {
+      rejectMove(new Error('real drag rejected'));
+    });
+    await waitFor(() => expect(useTicketStore.getState().error).toBeNull());
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'real drag rejected',
+    );
+    expect(screen.getByText('Concurrent created')).toBeInTheDocument();
+    vi.mocked(api.moveTicket).mockResolvedValueOnce({
+      ticket: { ...ticket, status: 'DONE' },
+      boardVersion: 4,
+    });
+    fireEvent.click(screen.getByText('drop DONE'));
+    await waitFor(() =>
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument(),
+    );
+  },
+);
 
 it('shows tickets assigned to the signed-in user in the ME filter', async () => {
   const mine = api.toTicket(responseTicket);

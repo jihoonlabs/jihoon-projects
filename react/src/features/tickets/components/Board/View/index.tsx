@@ -235,13 +235,17 @@ export function TicketBoardView() {
       );
       setProjectError(null);
     } catch (reason) {
-      await refreshProjects();
       // 並行書き込み後の再取得がstoreのエラーを消しても、移動失敗を表示する。
       setProjectError(
         reason instanceof Error
           ? reason.message
           : 'チケットを移動できませんでした。',
       );
+      try {
+        await refreshProjects();
+      } catch {
+        // Project再取得も失敗した場合は、元の移動エラーを保持する。
+      }
     }
   };
 
