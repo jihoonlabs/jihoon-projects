@@ -20,4 +20,4 @@ Backend API・DB schema・権限を変更しない。renameはadmin、archive/re
 - archive後に古いProject GETが到着してもactive一覧へ復活させないことを確認した。dialogの保存中dismiss抑止、focus復帰/Tab循環/Escapeにも対応する。
 - `next start --hostname 127.0.0.1 --port 3002`で起動成功。hostname指定で既知のnetworkInterfaces制限を回避した。`/login`と`/tickets`のproduction HTTP 200・HTML/Next assetsを確認した。これはbrowserや実backend検証ではない。
 - 未検証: 実browserの表示/pointer DnD、frontend→Laravel→DB、MySQL migration・複数接続/row lock。Backend変更はない。モック検証を実接続結果とは扱わない。
-- 検証コードSHAは後続handoffに記録する。社内基本機能・利用者指摘・実画面確認が満たされるまでV1全体の完了とは扱わない。
+- アプリ検証SHA: `9c511b34d814e293d339d05f60399025a9d2bcf7`。公開Git treeと検証済みローカルファイルの一致を確認した。社内基本機能・利用者指摘・実画面確認が満たされるまでV1全体の完了とは扱わない。

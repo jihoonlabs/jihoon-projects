@@ -18,7 +18,9 @@
 
 - Board Usability Child `feature/ticket-board-polish` のアプリ検証SHA `1dcaf449e949396caf5de89cb7fba78d64830f7b` を含む単独候補を採用した。ログアウト、Projectのカード背景色、タイトルクリック/カード余白ダブルクリック、重複詳細ボタンの整理、Project・操作権限の表示、コメントの改行・折返し・投稿日時を対象とする。API・権限・データモデルは変更していない。
 
-- Project Entry Child `feature/ticket-project-entry` のアプリ検証SHA `79f2a8e36012621e5fb6150703263459c435ac21` を採用する。Project一覧・名前/key検索・選択と作成を既存APIにつなぎ、Projectがない利用者もleader membership取得後にTicket作成へ進める。Ticket作成成功後のProject再取得失敗は保存失敗として扱わない。
+- Project Entry Child `feature/ticket-project-entry` のアプリ検証SHA `79f2a8e36012621e5fb6150703263459c435ac21` を採用した。Project一覧・名前/key検索・選択と作成を既存APIにつなぎ、Projectがない利用者もleader membership取得後にTicket作成へ進める。Ticket作成成功後のProject再取得失敗は保存失敗として扱わない。
+
+- Project Operations Child `feature/ticket-project-operations` のアプリ検証SHA `9c511b34d814e293d339d05f60399025a9d2bcf7` を採用する。Project名変更（admin）、終了・復元（admin/leader）、終了一覧と閲覧専用ボード、専用leader譲渡を画面に接続した。直接role変更/leader追加/leader削除を画面から除き、保存成功後の再取得失敗と遅延Project応答を安全に扱う。Backend API・DB schema・権限は変更していない。
 
 ## 採用Child SHA
 - Project Lifecycle: `a52c78cfbb9c1d70d724adc06aa593ae0e67f0f3`
@@ -38,6 +40,8 @@
 - Board Usability Child / アプリ検証SHA: `1dcaf449e949396caf5de89cb7fba78d64830f7b`（基準: `cd6ada3aafdcdd6d2e561e1180880e44a77be271`）。
 
 - Project Entry Child / アプリ検証SHA: `79f2a8e36012621e5fb6150703263459c435ac21`（基準: `ed67f6edbaa8369ef7059ec6fe43f9ee91a19350`）。
+
+- Project Operations Child / アプリ検証SHA: `9c511b34d814e293d339d05f60399025a9d2bcf7`（基準: `07db066adb8b9171531680c5b297d25c88cbd02f`）。
 
 ## 統合検証
 - Project関連Laravel tests: 33 tests / 186 assertions、Laravel全件: 136 tests / 638 assertions passed。Pintと変更PHPのsyntax checkもpassed。
@@ -63,8 +67,12 @@
 - Project EntryはReact全体27 files / 180 tests、TypeScript、ESLint、変更ファイルのPrettier、production buildに成功した。CSRF付き作成、二重送信防止、入力保持・再試行、初期読み込み中の作成抑止、一覧検索/選択、最初のProject作成→leader権限取得→Ticket作成画面、Ticket保存成功後のProject GET失敗を検証した。公開Git treeとローカル検証済みファイルは一致する。
 - 今回のbackend API・DB schema・権限変更はない。実browser/実Laravel接続/MySQLは未検証であり、モックによる画面・API境界検証を実DB検証とは扱わない。現行WORK: `docs/ticket/BOARD_POLISH_WORK.md`。
 
+- Project Operationsは対象58 tests、React全体29 files / 194 tests、TypeScript、ESLint、変更ファイルのPrettier、production buildに成功した。名前変更のadmin制限、archive確認/未完了Ticket拒否/再試行、restore/二重要求抑止、終了一覧、adminを含む終了ProjectのTicket・コメント変更抑止、leader譲渡直後の旧leader権限消失を確認した。
+- archive後に古いProject GETが到着してもactive一覧に戻さないこと、メンバー変更成功後GET失敗で操作を凍結し再取得のみ提供すること、保存中dismiss抑止を検証した。公開Git treeとローカル検証済みファイルは一致する。現行WORK: `docs/ticket/BOARD_POLISH_WORK.md`。
+- production serverはhostname指定で起動し、同じ実行内で `/login`・`/tickets` のHTTP 200、HTML/Next assetsを確認した。以前のnetworkInterfaces起動失敗はhostname指定で回避できる。実browserや実backend接続を確認した結果ではない。
+
 ## 次の作業
-- Project Entryの実browser確認と、実Laravelに接続した最初のProject作成・メンバー追加・Ticket作成の確認。Project rename/archive/restore・leader譲渡はAPI実装済みだが、利用者向けの操作画面接続は未完了。
+- 実browser・実LaravelでProject作成→メンバー追加→leader譲渡→Ticket完了→Project終了→閲覧→復元を確認する。rename/archive/restore・leader譲渡の画面接続は上記Childで実装済み。
 - Board Usabilityの実browser確認（背景色、コメントの折返し、詳細focus復帰、pointer DnD、Laravel logout）。Ticket V1全体は未完了。
 - MySQL migrationと複数接続の同時作成/row lock検証は未検証。SQLiteや制御した要求順序で検証済みとは扱わず、専用環境で確認する。
 - keyboard DnDは未検証・未実装の範囲として残る。詳細の最新取得・編集競合防止は上記候補から採用済みだが、Ticket V1全体は未完了。
