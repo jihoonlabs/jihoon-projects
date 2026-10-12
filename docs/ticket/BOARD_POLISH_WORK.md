@@ -20,7 +20,7 @@ Backend API、データモデル、管理者・leader権限を変更しない。
 - Ticket保存成功後のProject GET失敗は保存失敗として扱わず、一覧エラーを表示して作成画面を閉じる。
 - API・権限・DB schemaは変更なし。単独Childのため、親基準との差分に全React回帰を実行した。
 - 未検証: 実browserの見た目・pointer DnD、frontend→Laravel→DBの実接続、MySQL。今回は既知の環境制限を理由に同じbrowser installを反復していない。
-- 検証済みコードSHAは後続handoffで記録する。社内基本機能と利用者指摘の修正を満たすまではV1完了と扱わない。
+- アプリ検証SHA: `79f2a8e36012621e5fb6150703263459c435ac21`。公開Git treeと検証済みローカルファイルの一致を確認した。社内基本機能と利用者指摘の修正を満たすまではV1完了と扱わない。
 
 ## Previous adopted validation / Handoff
 - 対象テスト37件、React全体26 files / 172 tests、TypeScript、ESLint、変更ファイルのPrettier、production buildは成功。

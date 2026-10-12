@@ -3,6 +3,9 @@
 ## 目的
 小規模チームが、ログインからTicketの作成・担当・優先度設定・ボード運用・協業・完了まで行えるProject単位の業務フローを提供する。
 
+## 完了基準
+社内利用に必要な基本機能を揃え、利用者が実画面で指摘した修正を反映してから次の段階に進む。自動テストだけでV1完了と扱わない。
+
 ## 現在の状態
 - Epic branch: `feature/ticket`。Project管理Integration Child `feature/ticket-project-integration` を `083e11c8b70e4f2e53ed13360567bb33300bdbe9` までfast-forward統合した。
 - Ticket V1のログイン、Project切替/メンバー権限、Ticket CRUD、コメント、検索/担当者filter、DnD/順序保存、Project別Ticket keyを含む。
@@ -13,7 +16,9 @@
 
 - Ticketの最新詳細取得・編集競合防止を検証候補 `07b0f0088798f1180879c46dcdd2fc3443401370` からローカルfast-forwardで採用した。取得中・失敗・削除・権限喪失を区別し、version条件付き保存で古い編集を拒否する。競合入力を保持し、明示再取得・再編集と遅延応答破棄に対応する。Ticket V1全体は未完了。
 
-- Board Usability Child `feature/ticket-board-polish` のアプリ検証SHA `1dcaf449e949396caf5de89cb7fba78d64830f7b` を含む単独候補を採用する。ログアウト、Projectのカード背景色、タイトルクリック/カード余白ダブルクリック、重複詳細ボタンの整理、Project・操作権限の表示、コメントの改行・折返し・投稿日時を対象とする。API・権限・データモデルは変更していない。
+- Board Usability Child `feature/ticket-board-polish` のアプリ検証SHA `1dcaf449e949396caf5de89cb7fba78d64830f7b` を含む単独候補を採用した。ログアウト、Projectのカード背景色、タイトルクリック/カード余白ダブルクリック、重複詳細ボタンの整理、Project・操作権限の表示、コメントの改行・折返し・投稿日時を対象とする。API・権限・データモデルは変更していない。
+
+- Project Entry Child `feature/ticket-project-entry` のアプリ検証SHA `79f2a8e36012621e5fb6150703263459c435ac21` を採用する。Project一覧・名前/key検索・選択と作成を既存APIにつなぎ、Projectがない利用者もleader membership取得後にTicket作成へ進める。Ticket作成成功後のProject再取得失敗は保存失敗として扱わない。
 
 ## 採用Child SHA
 - Project Lifecycle: `a52c78cfbb9c1d70d724adc06aa593ae0e67f0f3`
@@ -31,6 +36,8 @@
 - Ticket Detail Concurrency採用候補: `07b0f0088798f1180879c46dcdd2fc3443401370`（採用前Epic基準: `1d0af6114d2b354f64e4bc179a2eec94ce0c43a9`、fast-forward採用済み）。UX・先行修正は既に基準に含まれ、重複適用なし。
 
 - Board Usability Child / アプリ検証SHA: `1dcaf449e949396caf5de89cb7fba78d64830f7b`（基準: `cd6ada3aafdcdd6d2e561e1180880e44a77be271`）。
+
+- Project Entry Child / アプリ検証SHA: `79f2a8e36012621e5fb6150703263459c435ac21`（基準: `ed67f6edbaa8369ef7059ec6fe43f9ee91a19350`）。
 
 ## 統合検証
 - Project関連Laravel tests: 33 tests / 186 assertions、Laravel全件: 136 tests / 638 assertions passed。Pintと変更PHPのsyntax checkもpassed。
@@ -53,7 +60,11 @@
 - Board UsabilityのReact全体26 files / 172 tests、TypeScript、ESLint、変更ファイルのPrettier、production buildは成功。対象37 testsでlogout成功/失敗/再試行/重複防止、titleとdouble click、status操作の分離、既存詳細・権限フローを確認した。公開Git treeと検証済みファイルの一致を確認し、採用記録のみを追加する。
 - 実browser表示、pointer DnD、frontend→Laravelのlogoutは今回未検証。Chromium downloadと実行環境のnetworkInterfaces制限により検証できなかった。PHP/MySQL環境は存在せず、過去のbackend検証を今回の実行結果として扱わない。詳細: `docs/ticket/BOARD_POLISH_WORK.md`。
 
+- Project EntryはReact全体27 files / 180 tests、TypeScript、ESLint、変更ファイルのPrettier、production buildに成功した。CSRF付き作成、二重送信防止、入力保持・再試行、初期読み込み中の作成抑止、一覧検索/選択、最初のProject作成→leader権限取得→Ticket作成画面、Ticket保存成功後のProject GET失敗を検証した。公開Git treeとローカル検証済みファイルは一致する。
+- 今回のbackend API・DB schema・権限変更はない。実browser/実Laravel接続/MySQLは未検証であり、モックによる画面・API境界検証を実DB検証とは扱わない。現行WORK: `docs/ticket/BOARD_POLISH_WORK.md`。
+
 ## 次の作業
+- Project Entryの実browser確認と、実Laravelに接続した最初のProject作成・メンバー追加・Ticket作成の確認。Project rename/archive/restore・leader譲渡はAPI実装済みだが、利用者向けの操作画面接続は未完了。
 - Board Usabilityの実browser確認（背景色、コメントの折返し、詳細focus復帰、pointer DnD、Laravel logout）。Ticket V1全体は未完了。
 - MySQL migrationと複数接続の同時作成/row lock検証は未検証。SQLiteや制御した要求順序で検証済みとは扱わず、専用環境で確認する。
 - keyboard DnDは未検証・未実装の範囲として残る。詳細の最新取得・編集競合防止は上記候補から採用済みだが、Ticket V1全体は未完了。
