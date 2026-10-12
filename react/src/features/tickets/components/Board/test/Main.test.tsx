@@ -2,7 +2,10 @@ import { render, screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 import { toTicket } from '../../../api/ticketApi';
 import { responseTicket } from '../../../api/test/ticketFixture';
-import { getProjectBorderColor } from '../../../utils/projectColor';
+import {
+  getProjectBackgroundColor,
+  getProjectBorderColor,
+} from '../../../utils/projectColor';
 import Main from '../Main';
 
 it('renders null issue keys safely and searches actual ticket numbers', () => {
@@ -113,7 +116,7 @@ it('filters assigned tickets by the signed-in user ID', () => {
   expect(screen.queryByText('Mine')).not.toBeInTheDocument();
 });
 
-it('uses the selected project key for subtle card borders without replacing ticket cues', () => {
+it('uses the selected project key for card colors without replacing ticket cues', () => {
   const tickets = [
     toTicket(responseTicket),
     toTicket({
@@ -139,6 +142,12 @@ it('uses the selected project key for subtle card borders without replacing tick
   const secondCard = screen
     .getByText('Second ticket')
     .closest('[aria-roledescription="sortable"]');
+  expect(firstCard?.getAttribute('style')).toContain(
+    getProjectBackgroundColor('ABC'),
+  );
+  expect(
+    screen.queryByRole('button', { name: '詳細' }),
+  ).not.toBeInTheDocument();
   expect(firstCard).not.toBeNull();
   expect(secondCard).not.toBeNull();
   expect(firstCard).toHaveAttribute('role', 'group');

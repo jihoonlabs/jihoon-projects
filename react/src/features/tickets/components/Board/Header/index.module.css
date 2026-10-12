@@ -2,6 +2,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
   background-color: #ffffff;
   padding: 1rem 1.5rem;
   border-radius: 8px;
@@ -10,6 +12,7 @@
 }
 
 .leftSection {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 1.5rem;
@@ -45,6 +48,7 @@
 }
 
 .selectFilter {
+  max-width: 100%;
   padding: 0.45rem 0.75rem;
   border: 1px solid #d1d5db;
   border-radius: 6px;
@@ -56,6 +60,7 @@
 }
 
 .createBtn {
+  min-height: 2.5rem;
   padding: 0.5rem 1rem;
   background-color: #0052cc;
   color: #ffffff;
@@ -75,4 +80,39 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  align-items: center;
+}
+
+.secondaryBtn {
+  min-height: 2.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  background: #fff;
+  color: #334155;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.container button:focus-visible,
+.container input:focus-visible,
+.container select:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 1rem;
+  }
+  .leftSection,
+  .filterGroup,
+  .rightSection {
+    width: 100%;
+  }
+  .searchInput {
+    min-width: 0;
+    width: 100%;
+  }
 }

@@ -4,7 +4,10 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { CSSProperties } from 'react';
 import { Ticket, TicketStatus } from '@/features/tickets/types/ticket';
-import { getProjectBorderColor } from '@/features/tickets/utils/projectColor';
+import {
+  getProjectBackgroundColor,
+  getProjectBorderColor,
+} from '@/features/tickets/utils/projectColor';
 import styles from './index.module.css';
 
 interface CardProps {
@@ -51,11 +54,16 @@ export default function Card({
     isDragging,
   } = useSortable({ id: ticket.id, disabled: !canDrag });
 
-  const style: CSSProperties & { '--project-border-color'?: string } = {
+  const style: CSSProperties & {
+    '--project-border-color'?: string;
+    '--project-background-color'?: string;
+  } = {
     transform: CSS.Translate.toString(transform),
     transition,
     opacity: isDragging ? 0.3 : 1,
     '--project-border-color': getProjectBorderColor(projectKey) ?? undefined,
+    '--project-background-color':
+      getProjectBackgroundColor(projectKey) ?? undefined,
   };
 
   return (
@@ -74,6 +82,7 @@ export default function Card({
       <div className={styles.heading}>
         <button
           type="button"
+          disabled={isOverlay}
           className={styles.title}
           aria-label={`${ticket.issueKey ?? ticket.title} の詳細を開く`}
           onPointerDown={(event) => event.stopPropagation()}
@@ -85,20 +94,6 @@ export default function Card({
         >
           {ticket.title}
         </button>
-        {!isOverlay && (
-          <button
-            type="button"
-            className={styles.detailsButton}
-            onPointerDown={(event) => event.stopPropagation()}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ')
-                event.stopPropagation();
-            }}
-            onClick={(event) => onOpenDetails?.(ticket, event.currentTarget)}
-          >
-            詳細
-          </button>
-        )}
       </div>
 
       {!isOverlay && (

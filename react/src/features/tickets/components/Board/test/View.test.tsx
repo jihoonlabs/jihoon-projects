@@ -16,6 +16,8 @@ import { useTicketStore } from '../../../store/useTicketStore';
 import { TicketBoardView } from '../View';
 import * as projectApi from '@/features/tickets/api/projectApi';
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 vi.mock('../../../api/ticketApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../api/ticketApi')>()),
   fetchTickets: vi.fn(),
@@ -315,7 +317,7 @@ it('keeps read members read-only while allowing Ticket details and comments', as
     ticketTitle.closest('[aria-roledescription="sortable"]'),
   ).not.toHaveAttribute('aria-disabled', 'true');
   expect(
-    await screen.findByRole('button', { name: '詳細' }),
+    await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' }),
   ).toBeInTheDocument();
   expect(
     screen.queryByRole('button', { name: '編集' }),
@@ -332,7 +334,7 @@ it('keeps read members read-only while allowing Ticket details and comments', as
   expect(
     screen.queryByRole('combobox', { name: 'First ticket のステータス' }),
   ).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: '詳細' }));
+  fireEvent.click(screen.getByRole('button', { name: 'TICK-1 の詳細を開く' }));
   expect(
     await screen.findByRole('heading', { name: 'チケット詳細' }),
   ).toBeInTheDocument();
@@ -486,7 +488,7 @@ it('keeps the edit modal open and shows the save error when editing fails', asyn
 
   render(<TicketBoardView />);
   await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' });
-  fireEvent.click(screen.getByRole('button', { name: '詳細' }));
+  fireEvent.click(screen.getByRole('button', { name: 'TICK-1 の詳細を開く' }));
   await screen.findByRole('heading', { name: 'チケット詳細' });
   fireEvent.click(screen.getByRole('button', { name: '編集' }));
   fireEvent.change(screen.getByLabelText('タイトル'), {
@@ -532,7 +534,7 @@ it('saves edits from detail and returns to the refreshed detail view', async () 
 
   render(<TicketBoardView />);
   await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' });
-  fireEvent.click(screen.getByRole('button', { name: '詳細' }));
+  fireEvent.click(screen.getByRole('button', { name: 'TICK-1 の詳細を開く' }));
   fireEvent.click(await screen.findByRole('button', { name: '編集' }));
   fireEvent.change(screen.getByLabelText('タイトル'), {
     target: { value: 'Saved title' },
@@ -627,7 +629,7 @@ it('deletes a ticket from detail only after confirmation', async () => {
   expect(
     screen.queryByRole('button', { name: '削除' }),
   ).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: '詳細' }));
+  fireEvent.click(screen.getByRole('button', { name: 'TICK-1 の詳細を開く' }));
   fireEvent.click(await screen.findByRole('button', { name: '削除' }));
 
   await waitFor(() => expect(api.deleteTicket).toHaveBeenCalledWith('1'));
@@ -644,7 +646,7 @@ it('keeps detail open and reports a failed delete', async () => {
 
   render(<TicketBoardView />);
   await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' });
-  fireEvent.click(screen.getByRole('button', { name: '詳細' }));
+  fireEvent.click(screen.getByRole('button', { name: 'TICK-1 の詳細を開く' }));
   fireEvent.click(await screen.findByRole('button', { name: '削除' }));
 
   expect(await screen.findByRole('alert')).toHaveTextContent('delete failed');

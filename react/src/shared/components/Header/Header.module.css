@@ -19,6 +19,8 @@
   display: flex;
   align-items: center;
   gap: 1.25rem;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .userInfo span {
@@ -27,6 +29,7 @@
 }
 
 .logoutBtn {
+  min-height: 2.5rem;
   padding: 0.45rem 0.9rem;
   border-radius: 6px;
   border: 1px solid #e5e7eb;
@@ -36,6 +39,46 @@
   font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.2s;
+}
+
+.compact {
+  min-width: 0;
+  border-left: 1px solid #e5e7eb;
+  padding-left: 0.75rem;
+}
+
+.compact .userInfo {
+  gap: 0.6rem;
+}
+
+.userInfo span {
+  overflow-wrap: anywhere;
+}
+
+.logoutBtn:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.logoutBtn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.error {
+  width: 100%;
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 600px) {
+  .compact {
+    width: 100%;
+    border-left: 0;
+    border-top: 1px solid #e5e7eb;
+    padding: 0.6rem 0 0;
+  }
 }
 
 .logoutBtn:hover {

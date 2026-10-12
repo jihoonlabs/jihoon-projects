@@ -2,6 +2,7 @@
 
 import styles from './index.module.css';
 import type { Project } from '@/features/tickets/types/project';
+import { Header as AccountHeader } from '@/shared/components/Header';
 
 interface HeaderProps {
   searchQuery: string;
@@ -35,8 +36,22 @@ export default function Header({
       <div className={styles.leftSection}>
         <h1 className={styles.title}>チケットボード</h1>
 
-        <select aria-label="プロジェクト" className={styles.selectFilter} value={selectedProjectId} onChange={(event) => onProjectChange(event.target.value)} disabled={projects.length === 0}>
-          {projects.length === 0 ? <option value="">利用可能なプロジェクトがありません</option> : projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+        <select
+          aria-label="プロジェクト"
+          className={styles.selectFilter}
+          value={selectedProjectId}
+          onChange={(event) => onProjectChange(event.target.value)}
+          disabled={projects.length === 0}
+        >
+          {projects.length === 0 ? (
+            <option value="">利用可能なプロジェクトがありません</option>
+          ) : (
+            projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))
+          )}
         </select>
 
         <div className={styles.filterGroup}>
@@ -62,10 +77,21 @@ export default function Header({
       </div>
 
       <div className={styles.rightSection}>
-        {canManageMembers && <button type="button" onClick={onManageMembers}>メンバー管理</button>}
-        {canWrite && <button type="button" className={styles.createBtn} onClick={onCreate}>
-          + チケット作成
-        </button>}
+        {canManageMembers && (
+          <button
+            className={styles.secondaryBtn}
+            type="button"
+            onClick={onManageMembers}
+          >
+            メンバー管理
+          </button>
+        )}
+        {canWrite && (
+          <button type="button" className={styles.createBtn} onClick={onCreate}>
+            + チケット作成
+          </button>
+        )}
+        <AccountHeader compact />
       </div>
     </header>
   );

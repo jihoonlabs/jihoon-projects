@@ -4,7 +4,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/test/mocks/server';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
-import { Header } from '..';
+import BoardHeader from '@/features/tickets/components/Board/Header';
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 const api = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
@@ -29,7 +29,22 @@ it('keeps auth state on a rejected logout, reports failure and permits successfu
       HttpResponse.json({}, { status: 500 }),
     ),
   );
-  render(<Header />);
+  render(
+    <BoardHeader
+      searchQuery=""
+      onSearchChange={() => {}}
+      assigneeFilter="ALL"
+      onAssigneeChange={() => {}}
+      onCreate={() => {}}
+      projects={[]}
+      selectedProjectId=""
+      onProjectChange={() => {}}
+      canWrite={false}
+      canManageMembers={false}
+      onManageMembers={() => {}}
+    />,
+  );
+  expect(screen.getByText('User')).toBeInTheDocument();
   const user = userEvent.setup();
   await user.click(screen.getByRole('button', { name: 'ログアウト' }));
   expect(await screen.findByRole('alert')).toHaveTextContent(

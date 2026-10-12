@@ -1,5 +1,5 @@
 .card {
-  background-color: #ffffff;
+  background-color: var(--project-background-color, #ffffff);
   border-radius: 10px;
   padding: 0.8rem;
   border: 1px solid var(--project-border-color, #e5e7eb);
@@ -41,6 +41,7 @@
 }
 
 .title {
+  width: 100%;
   min-width: 0;
   border: 0;
   padding: 0;
@@ -61,22 +62,9 @@
 }
 
 .title:focus-visible,
-.detailsButton:focus-visible,
 .controls select:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: 2px;
-}
-
-.detailsButton {
-  flex: none;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  padding: 0.25rem 0.5rem;
-  background: #fff;
-  color: #374151;
-  font-size: 0.7rem;
-  font-weight: 600;
-  cursor: pointer;
 }
 
 .footer {

@@ -8,7 +8,7 @@ import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
 import styles from './Header.module.css';
 
-export function Header() {
+export function Header({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
@@ -37,8 +37,8 @@ export function Header() {
   };
 
   return (
-    <header className={styles.header}>
-      <h1>タスク管理ボード (Task Board)</h1>
+    <div className={compact ? styles.compact : styles.header}>
+      {!compact && <h1>タスク管理ボード (Task Board)</h1>}
 
       <div className={styles.userInfo}>
         <span>
@@ -53,8 +53,12 @@ export function Header() {
         >
           {pending ? 'ログアウト中...' : 'ログアウト'}
         </button>
-        {error && <p role="alert">{error}</p>}
+        {error && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
       </div>
-    </header>
+    </div>
   );
 }

@@ -357,7 +357,7 @@ function TicketModalContent({
       }}
     >
       <section
-        className={styles.modal}
+        className={`${styles.modal} ${styles.contentModal}`}
         style={projectColorStyle}
         role="dialog"
         aria-modal="true"
@@ -381,197 +381,207 @@ function TicketModalContent({
           </h2>
         </header>
 
-        {isDetail && ticket ? (
-          <div className={styles.detailContent}>
-            <h3 className={styles.detailTitle}>{title}</h3>
-            <dl className={styles.detailGrid}>
-              <div className={styles.detailItem}>
-                <dt>ステータス</dt>
-                <dd>
-                  {STATUSES.find((item) => item.value === status)?.label ??
-                    status}
-                </dd>
-              </div>
-              <div className={styles.detailItem}>
-                <dt>優先度</dt>
-                <dd>
-                  {PRIORITIES.find((item) => item.value === priority)?.label ??
-                    priority}
-                </dd>
-              </div>
-              <div className={styles.detailItem}>
-                <dt>担当者</dt>
-                <dd>{assigneeName}</dd>
-              </div>
-            </dl>
-            <section
-              className={styles.descriptionSection}
-              aria-labelledby="ticket-description-title"
-            >
-              <h3 id="ticket-description-title">説明</h3>
-              <p>{description.trim() || '説明はありません。'}</p>
-            </section>
-            <div className={styles.actions}>
-              <button type="button" onClick={onClose} disabled={submitting}>
-                閉じる
-              </button>
-              {canEdit && (
-                <button
-                  type="button"
-                  className={styles.primaryButton}
-                  onClick={() => {
-                    setSaveError(null);
-                    setMode('edit');
-                  }}
-                >
-                  編集
-                </button>
+        <div className={styles.modalBody}>
+          {isDetail && ticket ? (
+            <div className={styles.detailContent}>
+              <h3 className={styles.detailTitle}>{title}</h3>
+              <dl className={styles.detailGrid}>
+                <div className={styles.detailItem}>
+                  <dt>ステータス</dt>
+                  <dd>
+                    {STATUSES.find((item) => item.value === status)?.label ??
+                      status}
+                  </dd>
+                </div>
+                <div className={styles.detailItem}>
+                  <dt>優先度</dt>
+                  <dd>
+                    {PRIORITIES.find((item) => item.value === priority)
+                      ?.label ?? priority}
+                  </dd>
+                </div>
+                <div className={styles.detailItem}>
+                  <dt>担当者</dt>
+                  <dd>{assigneeName}</dd>
+                </div>
+              </dl>
+              <section
+                className={styles.descriptionSection}
+                aria-labelledby="ticket-description-title"
+              >
+                <h3 id="ticket-description-title">説明</h3>
+                <p tabIndex={0} role="region" aria-label="説明本文">
+                  {description.trim() || '説明はありません。'}
+                </p>
+              </section>
+              {saveError && (
+                <p className={styles.error} role="alert">
+                  {saveError}
+                </p>
               )}
-              {canEdit && (
+            </div>
+          ) : (
+            <form onSubmit={submit} className={styles.form}>
+              <label>
+                タイトル
+                <input
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  required
+                  maxLength={255}
+                  autoFocus
+                />
+              </label>
+              <label>
+                説明
+                <textarea
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  rows={5}
+                />
+              </label>
+              <label>
+                ステータス
+                <select
+                  value={status}
+                  onChange={(event) =>
+                    setStatus(event.target.value as TicketStatus)
+                  }
+                >
+                  {STATUSES.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                優先度
+                <select
+                  value={priority}
+                  onChange={(event) =>
+                    setPriority(event.target.value as TicketPriority)
+                  }
+                >
+                  {PRIORITIES.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                担当者
+                <select
+                  value={assigneeId}
+                  onChange={(event) => setAssigneeId(event.target.value)}
+                >
+                  <option value="">未割り当て</option>
+                  {ticket?.assignee &&
+                    !projectMembers.some(
+                      (member) => member.id === ticket.assignee?.id,
+                    ) && (
+                      <option value={ticket.assignee.id}>
+                        {ticket.assignee.name}
+                      </option>
+                    )}
+                  {projectMembers.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {saveError && (
+                <p className={styles.error} role="alert">
+                  {saveError}
+                </p>
+              )}
+              {conflict && (
+                <section aria-label="競合の解決">
+                  <button
+                    type="button"
+                    onClick={() => void loadLatest()}
+                    disabled={reloading}
+                  >
+                    {reloading ? '取得中...' : '最新情報を再取得'}
+                  </button>
+                  {reloadError && <p role="alert">{reloadError}</p>}
+                  {latest && (
+                    <div>
+                      <h3>最新情報</h3>
+                      <p>タイトル: {latest.title}</p>
+                      <p>説明: {latest.description || '説明はありません。'}</p>
+                      <p>
+                        ステータス: {latest.status} / 優先度: {latest.priority}
+                      </p>
+                      <p>担当者: {latest.assignee?.name ?? '未割り当て'}</p>
+                      <button
+                        type="button"
+                        onClick={useLatest}
+                        disabled={unavailable}
+                      >
+                        最新情報で編集し直す（入力を置き換える）
+                      </button>
+                    </div>
+                  )}
+                </section>
+              )}
+              <div className={styles.actions}>
                 <button
                   type="button"
-                  className={styles.dangerButton}
-                  onClick={() => void remove()}
+                  onClick={cancelEdit}
                   disabled={submitting}
                 >
-                  削除
+                  {ticket ? 'キャンセル' : '閉じる'}
                 </button>
-              )}
-            </div>
-            {saveError && (
-              <p className={styles.error} role="alert">
-                {saveError}
-              </p>
+                <button
+                  type="submit"
+                  disabled={
+                    submitting || conflict || unavailable || !title.trim()
+                  }
+                >
+                  {submitting ? '保存中...' : '保存'}
+                </button>
+              </div>
+            </form>
+          )}
+          {ticket && (
+            <TicketComments
+              ticketId={ticket.id}
+              currentUserId={currentUserId}
+              currentUserRole={currentUserRole}
+            />
+          )}
+        </div>
+        {isDetail && ticket && (
+          <div className={styles.actions}>
+            <button type="button" onClick={onClose} disabled={submitting}>
+              閉じる
+            </button>
+            {canEdit && (
+              <button
+                type="button"
+                className={styles.primaryButton}
+                onClick={() => {
+                  setSaveError(null);
+                  setMode('edit');
+                }}
+              >
+                編集
+              </button>
+            )}
+            {canEdit && (
+              <button
+                type="button"
+                className={styles.dangerButton}
+                onClick={() => void remove()}
+                disabled={submitting}
+              >
+                削除
+              </button>
             )}
           </div>
-        ) : (
-          <form onSubmit={submit} className={styles.form}>
-            <label>
-              タイトル
-              <input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                required
-                maxLength={255}
-                autoFocus
-              />
-            </label>
-            <label>
-              説明
-              <textarea
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                rows={5}
-              />
-            </label>
-            <label>
-              ステータス
-              <select
-                value={status}
-                onChange={(event) =>
-                  setStatus(event.target.value as TicketStatus)
-                }
-              >
-                {STATUSES.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              優先度
-              <select
-                value={priority}
-                onChange={(event) =>
-                  setPriority(event.target.value as TicketPriority)
-                }
-              >
-                {PRIORITIES.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              担当者
-              <select
-                value={assigneeId}
-                onChange={(event) => setAssigneeId(event.target.value)}
-              >
-                <option value="">未割り当て</option>
-                {ticket?.assignee &&
-                  !projectMembers.some(
-                    (member) => member.id === ticket.assignee?.id,
-                  ) && (
-                    <option value={ticket.assignee.id}>
-                      {ticket.assignee.name}
-                    </option>
-                  )}
-                {projectMembers.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {saveError && (
-              <p className={styles.error} role="alert">
-                {saveError}
-              </p>
-            )}
-            {conflict && (
-              <section aria-label="競合の解決">
-                <button
-                  type="button"
-                  onClick={() => void loadLatest()}
-                  disabled={reloading}
-                >
-                  {reloading ? '取得中...' : '最新情報を再取得'}
-                </button>
-                {reloadError && <p role="alert">{reloadError}</p>}
-                {latest && (
-                  <div>
-                    <h3>最新情報</h3>
-                    <p>タイトル: {latest.title}</p>
-                    <p>説明: {latest.description || '説明はありません。'}</p>
-                    <p>
-                      ステータス: {latest.status} / 優先度: {latest.priority}
-                    </p>
-                    <p>担当者: {latest.assignee?.name ?? '未割り当て'}</p>
-                    <button
-                      type="button"
-                      onClick={useLatest}
-                      disabled={unavailable}
-                    >
-                      最新情報で編集し直す（入力を置き換える）
-                    </button>
-                  </div>
-                )}
-              </section>
-            )}
-            <div className={styles.actions}>
-              <button type="button" onClick={cancelEdit} disabled={submitting}>
-                {ticket ? 'キャンセル' : '閉じる'}
-              </button>
-              <button
-                type="submit"
-                disabled={
-                  submitting || conflict || unavailable || !title.trim()
-                }
-              >
-                {submitting ? '保存中...' : '保存'}
-              </button>
-            </div>
-          </form>
-        )}
-        {ticket && (
-          <TicketComments
-            ticketId={ticket.id}
-            currentUserId={currentUserId}
-            currentUserRole={currentUserRole}
-          />
         )}
       </section>
     </div>
