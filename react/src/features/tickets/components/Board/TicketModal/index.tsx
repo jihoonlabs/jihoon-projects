@@ -43,6 +43,7 @@ interface TicketModalProps {
   projectKey?: string | null;
   projectMembers: ProjectMember[];
   readOnly?: boolean;
+  commentsReadOnly?: boolean;
 }
 
 function detailError(error: unknown): string {
@@ -143,6 +144,7 @@ function TicketModalContent({
   projectKey,
   projectMembers,
   readOnly = false,
+  commentsReadOnly = false,
 }: TicketModalProps) {
   const [ticket, setTicket] = useState(initialTicket);
   const initialValues = {
@@ -571,6 +573,7 @@ function TicketModalContent({
             ticketId={ticket.id}
             currentUserId={currentUserId}
             currentUserRole={currentUserRole}
+            readOnly={commentsReadOnly}
           />
         )}
       </section>

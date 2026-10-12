@@ -15,6 +15,9 @@ interface HeaderProps {
   canWrite: boolean;
   canManageMembers: boolean;
   onManageMembers: () => void;
+  canManageProject: boolean;
+  operationsOpen: boolean;
+  onToggleOperations: () => void;
   projectsOpen: boolean;
   projectsBusy: boolean;
   onToggleProjects: () => void;
@@ -32,6 +35,9 @@ export default function Header({
   canWrite,
   canManageMembers,
   onManageMembers,
+  canManageProject,
+  operationsOpen,
+  onToggleOperations,
   projectsOpen,
   projectsBusy,
   onToggleProjects,
@@ -49,7 +55,7 @@ export default function Header({
           className={styles.selectFilter}
           value={selectedProjectId}
           onChange={(event) => onProjectChange(event.target.value)}
-          disabled={projects.length === 0}
+          disabled={projects.length === 0 || projectsBusy}
         >
           {projects.length === 0 ? (
             <option value="">利用可能なプロジェクトがありません</option>
@@ -68,6 +74,9 @@ export default function Header({
             {selectedProject.projectKey && (
               <span>{selectedProject.projectKey}</span>
             )}
+            <span>
+              {selectedProject.archivedAt ? '終了済み・閲覧のみ' : '稼働中'}
+            </span>
             <span>
               {canManageMembers
                 ? 'メンバー管理可'
@@ -110,13 +119,33 @@ export default function Header({
         >
           プロジェクト一覧・作成
         </button>
+        {selectedProject && canManageProject && (
+          <button
+            type="button"
+            disabled={projectsBusy}
+            aria-expanded={operationsOpen}
+            aria-controls="project-operations"
+            onClick={onToggleOperations}
+          >
+            プロジェクト設定
+          </button>
+        )}
         {selectedProject && canManageMembers && (
-          <button type="button" onClick={onManageMembers}>
+          <button
+            type="button"
+            disabled={projectsBusy}
+            onClick={onManageMembers}
+          >
             メンバー管理
           </button>
         )}
         {selectedProject && canWrite && (
-          <button type="button" className={styles.createBtn} onClick={onCreate}>
+          <button
+            type="button"
+            className={styles.createBtn}
+            disabled={projectsBusy}
+            onClick={onCreate}
+          >
             + チケット作成
           </button>
         )}

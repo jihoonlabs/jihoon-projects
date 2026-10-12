@@ -19,6 +19,7 @@ import Header from '../Header';
 import Main from '../Main';
 import Card from '../Card';
 import TicketModal from '../TicketModal';
+import ProjectOperations from '../ProjectOperations';
 import ProjectDirectory from '../ProjectDirectory';
 import ProjectMembersDialog from '../ProjectMembersDialog';
 import {
@@ -48,12 +49,17 @@ export function TicketBoardView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const modalTrigger = useRef<HTMLButtonElement | null>(null);
+  const projectRevision = useRef(0);
+  const projectListSequence = useRef(0);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const [membersProjectId, setMembersProjectId] = useState('');
   const [projectError, setProjectError] = useState<string | null>(null);
   const [managingMembers, setManagingMembers] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [projectListAttempt, setProjectListAttempt] = useState(0);
+  const [operationsOpen, setOperationsOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(false);
   const [projectsBusy, setProjectsBusy] = useState(false);
   const [projectsLoading, setProjectsLoading] = useState(true);
@@ -76,10 +82,18 @@ export function TicketBoardView() {
 
   useEffect(() => {
     let active = true;
-    fetchProjects()
+    const revision = projectRevision.current;
+    const sequence = ++projectListSequence.current;
+    fetchProjects(showArchived ? { archived: true } : undefined)
       .then((items) => {
-        if (!active) return;
+        if (
+          !active ||
+          revision !== projectRevision.current ||
+          sequence !== projectListSequence.current
+        )
+          return;
         setProjects(items);
+        setProjectError(null);
         setSelectedProjectId((current) =>
           current && items.some((item) => item.id === current)
             ? current
@@ -87,7 +101,11 @@ export function TicketBoardView() {
         );
       })
       .catch((reason) => {
-        if (active)
+        if (
+          active &&
+          revision === projectRevision.current &&
+          sequence === projectListSequence.current
+        )
           setProjectError(
             reason instanceof Error
               ? reason.message
@@ -100,7 +118,7 @@ export function TicketBoardView() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [showArchived, projectListAttempt]);
 
   useEffect(() => {
     if (!selectedProjectId) return;
@@ -133,8 +151,15 @@ export function TicketBoardView() {
       ? projectMembers.find((member) => member.id === String(currentUserId))
       : undefined;
   const isAdmin = currentUser?.role === 'admin';
-  const canWrite = isAdmin || currentMembership?.permission === 'write';
-  const canManageMembers = isAdmin || currentMembership?.role === 'leader';
+  const isArchived = Boolean(selectedProject?.archivedAt);
+  const canManageProject =
+    Boolean(selectedProject) &&
+    (isAdmin || currentMembership?.role === 'leader');
+  const canWrite =
+    Boolean(selectedProject) &&
+    !isArchived &&
+    (isAdmin || currentMembership?.permission === 'write');
+  const canManageMembers = !isArchived && canManageProject;
   const projectTickets = tickets.filter(
     (ticket) => ticket.projectId === selectedProjectId,
   );
@@ -142,7 +167,16 @@ export function TicketBoardView() {
     canWrite && searchQuery.trim() === '' && assigneeFilter === 'ALL';
 
   const refreshProjects = async () => {
-    const items = await fetchProjects();
+    const revision = projectRevision.current;
+    const sequence = ++projectListSequence.current;
+    const items = await fetchProjects(
+      showArchived ? { archived: true } : undefined,
+    );
+    if (
+      revision !== projectRevision.current ||
+      sequence !== projectListSequence.current
+    )
+      return;
     setProjects(items);
     setSelectedProjectId((current) =>
       current && items.some((item) => item.id === current)
@@ -180,19 +214,58 @@ export function TicketBoardView() {
   };
 
   const selectProject = (projectId: string) => {
+    if (projectsBusy) return;
     setSelectedProjectId(projectId);
+    setOperationsOpen(false);
     setSearchQuery('');
     setAssigneeFilter('ALL');
     setProjectNotice(null);
   };
 
+  const changeProjectScope = (archived: boolean) => {
+    if (projectsBusy) return;
+    projectRevision.current += 1;
+    setShowArchived(archived);
+    setProjects([]);
+    setSelectedProjectId('');
+    setOperationsOpen(false);
+    setProjectNotice(null);
+    setProjectError(null);
+    setProjectsLoading(true);
+  };
+
+  const handleProjectChanged = (project: Project) => {
+    projectRevision.current += 1;
+    const sameScope = Boolean(project.archivedAt) === showArchived;
+    const items = projects.filter((item) => item.id !== project.id);
+    if (sameScope) items.push(project);
+    items.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+    setProjects(items);
+    if (!sameScope) {
+      setSelectedProjectId(items[0]?.id ?? '');
+      setOperationsOpen(false);
+      setSearchQuery('');
+      setAssigneeFilter('ALL');
+    }
+    setProjectNotice(
+      project.archivedAt
+        ? `${project.name} を終了しました。終了したプロジェクトの一覧から確認・復元できます。`
+        : showArchived
+          ? `${project.name} を復元しました。稼働中の一覧から開けます。`
+          : `${project.name} の変更を保存しました。`,
+    );
+  };
+
   const handleProjectCreated = (project: Project) => {
+    projectRevision.current += 1;
     setProjects((items) =>
       [...items.filter((item) => item.id !== project.id), project].sort(
         (a, b) => a.name.localeCompare(b.name, 'ja'),
       ),
     );
-    selectProject(project.id);
+    setSelectedProjectId(project.id);
+    setSearchQuery('');
+    setAssigneeFilter('ALL');
     setProjectNotice(
       `${project.name} を作成しました。メンバーを追加してチケット作成を開始できます。`,
     );
@@ -331,6 +404,9 @@ export function TicketBoardView() {
         canWrite={canWrite}
         canManageMembers={canManageMembers}
         onManageMembers={() => setManagingMembers(true)}
+        canManageProject={canManageProject}
+        operationsOpen={operationsOpen}
+        onToggleOperations={() => setOperationsOpen((open) => !open)}
         projectsBusy={projectsBusy}
         projectsOpen={projectsOpen}
         onToggleProjects={() => setProjectsOpen((open) => !open)}
@@ -338,6 +414,13 @@ export function TicketBoardView() {
 
       {projectsOpen && (
         <ProjectDirectory
+          showArchived={showArchived}
+          externalBusy={projectsBusy}
+          onArchivedChange={changeProjectScope}
+          onRetry={() => {
+            setProjectsLoading(true);
+            setProjectListAttempt((attempt) => attempt + 1);
+          }}
           loading={projectsLoading}
           projects={projects}
           selectedProjectId={selectedProjectId}
@@ -345,6 +428,18 @@ export function TicketBoardView() {
           onCreated={handleProjectCreated}
           onPendingChange={setProjectsBusy}
         />
+      )}
+      {operationsOpen && selectedProject && canManageProject && (
+        <ProjectOperations
+          key={selectedProject.id}
+          project={selectedProject}
+          canRename={isAdmin}
+          onChanged={handleProjectChanged}
+          onPendingChange={setProjectsBusy}
+        />
+      )}
+      {isArchived && (
+        <p>終了したプロジェクトです。チケットとコメントは閲覧のみです。</p>
       )}
       {projectNotice && <p role="status">{projectNotice}</p>}
 
@@ -398,6 +493,7 @@ export function TicketBoardView() {
           projectMembers={
             membersProjectId === selectedProjectId ? projectMembers : []
           }
+          commentsReadOnly={isArchived}
           readOnly={!canWrite}
           onClose={closeModal}
           onCreate={handleCreate}
@@ -407,7 +503,13 @@ export function TicketBoardView() {
       )}
       {managingMembers && selectedProject && (
         <ProjectMembersDialog
+          key={selectedProject.id}
           project={selectedProject}
+          canManage={canManageMembers}
+          onMembersChanged={(items) => {
+            setProjectMembers(items);
+            setMembersProjectId(selectedProject.id);
+          }}
           onClose={() => {
             setManagingMembers(false);
             void fetchProjectMembers(selectedProject.id)

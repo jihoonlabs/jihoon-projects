@@ -8,6 +8,10 @@ import styles from './index.module.css';
 interface Props {
   projects: Project[];
   loading: boolean;
+  showArchived?: boolean;
+  externalBusy?: boolean;
+  onArchivedChange?: (archived: boolean) => void;
+  onRetry?: () => void;
   selectedProjectId: string;
   onSelect: (id: string) => void;
   onCreated: (project: Project) => void;
@@ -17,6 +21,10 @@ interface Props {
 export default function ProjectDirectory({
   projects,
   loading,
+  showArchived = false,
+  externalBusy = false,
+  onArchivedChange,
+  onRetry,
   selectedProjectId,
   onSelect,
   onCreated,
@@ -36,7 +44,14 @@ export default function ProjectDirectory({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!name.trim() || loading || submitting.current) return;
+    if (
+      !name.trim() ||
+      loading ||
+      externalBusy ||
+      showArchived ||
+      submitting.current
+    )
+      return;
     submitting.current = true;
     setBusy(true);
     onPendingChange?.(true);
@@ -77,6 +92,26 @@ export default function ProjectDirectory({
           />
         </label>
       </div>
+      {onArchivedChange && (
+        <label>
+          <input
+            type="checkbox"
+            checked={showArchived}
+            disabled={busy || externalBusy}
+            onChange={(event) => onArchivedChange(event.target.checked)}
+          />{' '}
+          終了したプロジェクトを表示
+        </label>
+      )}
+      {onRetry && (
+        <button
+          type="button"
+          disabled={loading || busy || externalBusy}
+          onClick={onRetry}
+        >
+          一覧を再取得
+        </button>
+      )}
       {loading ? (
         <p role="status">プロジェクトを読み込み中...</p>
       ) : visible.length === 0 ? (
@@ -91,6 +126,7 @@ export default function ProjectDirectory({
             <li key={project.id}>
               <button
                 type="button"
+                disabled={busy || externalBusy || loading}
                 onClick={() => onSelect(project.id)}
                 aria-pressed={project.id === selectedProjectId}
                 aria-label={`${project.name} ${project.projectKey ?? ''} ${project.id === selectedProjectId ? '表示中' : 'ボードを開く'}`}
@@ -106,30 +142,35 @@ export default function ProjectDirectory({
           ))}
         </ul>
       )}
-      <form onSubmit={submit} className={styles.form}>
-        <h3>プロジェクトを作成</h3>
-        <p>作成者がリーダーになります。メンバーは作成後に追加できます。</p>
-        <div className={styles.createRow}>
-          <label className={styles.field}>
-            プロジェクト名
-            <input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              required
-              maxLength={255}
-              disabled={busy}
-            />
-          </label>
-          <button type="submit" disabled={busy || loading || !name.trim()}>
-            {busy ? '作成中...' : 'プロジェクトを作成'}
-          </button>
-        </div>
-        {error && (
-          <p role="alert" className={styles.error}>
-            {error}
-          </p>
-        )}
-      </form>
+      {!showArchived && (
+        <form onSubmit={submit} className={styles.form}>
+          <h3>プロジェクトを作成</h3>
+          <p>作成者がリーダーになります。メンバーは作成後に追加できます。</p>
+          <div className={styles.createRow}>
+            <label className={styles.field}>
+              プロジェクト名
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                required
+                maxLength={255}
+                disabled={busy}
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={busy || loading || externalBusy || !name.trim()}
+            >
+              {busy ? '作成中...' : 'プロジェクトを作成'}
+            </button>
+          </div>
+          {error && (
+            <p role="alert" className={styles.error}>
+              {error}
+            </p>
+          )}
+        </form>
+      )}
     </section>
   );
 }

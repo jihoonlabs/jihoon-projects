@@ -14,12 +14,14 @@ interface TicketCommentsProps {
   ticketId: string;
   currentUserId: number | null;
   currentUserRole?: 'user' | 'admin';
+  readOnly?: boolean;
 }
 
 export default function TicketComments({
   ticketId,
   currentUserId,
   currentUserRole,
+  readOnly = false,
 }: TicketCommentsProps) {
   const [comments, setComments] = useState<TicketComment[]>([]);
   const [body, setBody] = useState('');
@@ -53,7 +55,7 @@ export default function TicketComments({
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const value = body.trim();
-    if (!value || busy) return;
+    if (readOnly || !value || busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -73,7 +75,7 @@ export default function TicketComments({
 
   const saveEdit = async (commentId: string) => {
     const value = editingBody.trim();
-    if (!value || busy) return;
+    if (readOnly || !value || busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -95,7 +97,7 @@ export default function TicketComments({
   };
 
   const remove = async (commentId: string) => {
-    if (busy) return;
+    if (readOnly || busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -133,7 +135,7 @@ export default function TicketComments({
                     </time>
                   )}
               </div>
-              {editingId === comment.id ? (
+              {!readOnly && editingId === comment.id ? (
                 <>
                   <textarea
                     aria-label="コメント編集"
@@ -159,49 +161,52 @@ export default function TicketComments({
               ) : (
                 <>
                   <p className={styles.body}>{comment.body}</p>
-                  {(String(currentUserId) === comment.author.id ||
-                    currentUserRole === 'admin') && (
-                    <div className={styles.actions}>
-                      {String(currentUserId) === comment.author.id && (
+                  {!readOnly &&
+                    (String(currentUserId) === comment.author.id ||
+                      currentUserRole === 'admin') && (
+                      <div className={styles.actions}>
+                        {String(currentUserId) === comment.author.id && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => {
+                              setEditingId(comment.id);
+                              setEditingBody(comment.body);
+                            }}
+                          >
+                            編集
+                          </button>
+                        )}
                         <button
                           type="button"
                           disabled={busy}
-                          onClick={() => {
-                            setEditingId(comment.id);
-                            setEditingBody(comment.body);
-                          }}
+                          onClick={() => remove(comment.id)}
                         >
-                          編集
+                          削除
                         </button>
-                      )}
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => remove(comment.id)}
-                      >
-                        削除
-                      </button>
-                    </div>
-                  )}
+                      </div>
+                    )}
                 </>
               )}
             </li>
           ))}
         </ul>
       )}
-      <form className={styles.form} onSubmit={submit}>
-        <label>
-          コメントを追加
-          <textarea
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-            maxLength={5000}
-          />
-        </label>
-        <button type="submit" disabled={busy || !body.trim()}>
-          {busy ? '送信中...' : '送信'}
-        </button>
-      </form>
+      {!readOnly && (
+        <form className={styles.form} onSubmit={submit}>
+          <label>
+            コメントを追加
+            <textarea
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+              maxLength={5000}
+            />
+          </label>
+          <button type="submit" disabled={busy || !body.trim()}>
+            {busy ? '送信中...' : '送信'}
+          </button>
+        </form>
+      )}
       {error && (
         <p className={styles.error} role="alert">
           {error}

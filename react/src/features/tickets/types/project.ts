@@ -6,6 +6,7 @@ export interface Project {
   name: string;
   projectKey: string | null;
   boardVersion: number;
+  archivedAt?: string | null;
 }
 
 export interface ProjectMember {

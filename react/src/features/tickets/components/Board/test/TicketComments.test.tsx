@@ -39,14 +39,20 @@ it('shows edit and delete actions only for the signed-in author', async () => {
   expect(otherComment.querySelectorAll('button')).toHaveLength(0);
 });
 
-it('allows an application admin to delete another user\'s comment without editing it', async () => {
+it("allows an application admin to delete another user's comment without editing it", async () => {
   vi.mocked(api.deleteTicketComment).mockResolvedValue();
-  render(<TicketComments ticketId="1" currentUserId={7} currentUserRole="admin" />);
+  render(
+    <TicketComments ticketId="1" currentUserId={7} currentUserRole="admin" />,
+  );
 
-  const otherComment = (await screen.findByText('other comment')).closest('li')!;
+  const otherComment = (await screen.findByText('other comment')).closest(
+    'li',
+  )!;
   expect(otherComment.querySelectorAll('button')).toHaveLength(1);
   fireEvent.click(otherComment.querySelector('button')!);
-  await waitFor(() => expect(api.deleteTicketComment).toHaveBeenCalledWith('1', '11'));
+  await waitFor(() =>
+    expect(api.deleteTicketComment).toHaveBeenCalledWith('1', '11'),
+  );
   expect(screen.queryByText('other comment')).not.toBeInTheDocument();
 });
 
@@ -116,4 +122,23 @@ it('keeps content and shows an error when creation fails', async () => {
 
   expect(await screen.findByRole('alert')).toHaveTextContent('create failed');
   expect(input).toHaveValue('keep me');
+});
+
+it('keeps archived comments visible without mutation controls, including for admins', async () => {
+  render(
+    <TicketComments
+      ticketId="1"
+      currentUserId={7}
+      currentUserRole="admin"
+      readOnly
+    />,
+  );
+  expect(await screen.findByText('my comment')).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: '編集' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: '削除' }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('コメントを追加')).not.toBeInTheDocument();
 });
