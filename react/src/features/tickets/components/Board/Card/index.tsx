@@ -2,7 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { CSSProperties } from 'react';
+import { useRef, type CSSProperties } from 'react';
 import { Ticket, TicketStatus } from '@/features/tickets/types/ticket';
 import { getProjectBorderColor } from '@/features/tickets/utils/projectColor';
 import styles from './index.module.css';
@@ -42,6 +42,7 @@ export default function Card({
   canWrite = true,
   canDrag = canWrite,
 }: CardProps) {
+  const titleButton = useRef<HTMLButtonElement>(null);
   const {
     attributes,
     listeners,
@@ -51,11 +52,12 @@ export default function Card({
     isDragging,
   } = useSortable({ id: ticket.id, disabled: !canDrag });
 
-  const style: CSSProperties & { '--project-border-color'?: string } = {
+  const style: CSSProperties & { '--project-background-color'?: string } = {
     transform: CSS.Translate.toString(transform),
     transition,
     opacity: isDragging ? 0.3 : 1,
-    '--project-border-color': getProjectBorderColor(projectKey) ?? undefined,
+    '--project-background-color':
+      getProjectBorderColor(projectKey) ?? undefined,
   };
 
   return (
@@ -64,6 +66,16 @@ export default function Card({
       style={style}
       {...attributes}
       {...listeners}
+      onDoubleClick={(event) => {
+        if (
+          isOverlay ||
+          (event.target as HTMLElement).closest(
+            'button, select, input, textarea, a',
+          )
+        )
+          return;
+        if (titleButton.current) onOpenDetails?.(ticket, titleButton.current);
+      }}
       aria-disabled={undefined}
       role="group"
       aria-label={
@@ -73,6 +85,7 @@ export default function Card({
     >
       <div className={styles.heading}>
         <button
+          ref={titleButton}
           type="button"
           className={styles.title}
           aria-label={`${ticket.issueKey ?? ticket.title} の詳細を開く`}
@@ -85,20 +98,6 @@ export default function Card({
         >
           {ticket.title}
         </button>
-        {!isOverlay && (
-          <button
-            type="button"
-            className={styles.detailsButton}
-            onPointerDown={(event) => event.stopPropagation()}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ')
-                event.stopPropagation();
-            }}
-            onClick={(event) => onOpenDetails?.(ticket, event.currentTarget)}
-          >
-            詳細
-          </button>
-        )}
       </div>
 
       {!isOverlay && (

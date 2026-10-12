@@ -7,6 +7,7 @@ import {
   fetchTicketComments,
   updateTicketComment,
 } from '@/features/tickets/api/ticketCommentApi';
+import styles from './index.module.css';
 import type { TicketComment } from '@/features/tickets/types/ticket';
 
 interface TicketCommentsProps {
@@ -112,15 +113,26 @@ export default function TicketComments({
   };
 
   return (
-    <section aria-labelledby="ticket-comments-title">
+    <section
+      className={styles.container}
+      aria-labelledby="ticket-comments-title"
+    >
       <h3 id="ticket-comments-title">コメント</h3>
       {comments.length === 0 ? (
         <p>コメントはまだありません。</p>
       ) : (
-        <ul>
+        <ul className={styles.list}>
           {comments.map((comment) => (
-            <li key={comment.id}>
-              <strong>{comment.author.name}</strong>
+            <li key={comment.id} className={styles.comment}>
+              <div className={styles.meta}>
+                <strong>{comment.author.name}</strong>
+                {comment.createdAt &&
+                  !Number.isNaN(Date.parse(comment.createdAt)) && (
+                    <time dateTime={comment.createdAt}>
+                      {new Date(comment.createdAt).toLocaleString('ja-JP')}
+                    </time>
+                  )}
+              </div>
               {editingId === comment.id ? (
                 <>
                   <textarea
@@ -146,19 +158,22 @@ export default function TicketComments({
                 </>
               ) : (
                 <>
-                  <p>{comment.body}</p>
-                  {(String(currentUserId) === comment.author.id || currentUserRole === 'admin') && (
-                    <div>
-                      {String(currentUserId) === comment.author.id && <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => {
-                          setEditingId(comment.id);
-                          setEditingBody(comment.body);
-                        }}
-                      >
-                        編集
-                      </button>}
+                  <p className={styles.body}>{comment.body}</p>
+                  {(String(currentUserId) === comment.author.id ||
+                    currentUserRole === 'admin') && (
+                    <div className={styles.actions}>
+                      {String(currentUserId) === comment.author.id && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => {
+                            setEditingId(comment.id);
+                            setEditingBody(comment.body);
+                          }}
+                        >
+                          編集
+                        </button>
+                      )}
                       <button
                         type="button"
                         disabled={busy}
@@ -174,7 +189,7 @@ export default function TicketComments({
           ))}
         </ul>
       )}
-      <form onSubmit={submit}>
+      <form className={styles.form} onSubmit={submit}>
         <label>
           コメントを追加
           <textarea
@@ -187,7 +202,11 @@ export default function TicketComments({
           {busy ? '送信中...' : '送信'}
         </button>
       </form>
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
     </section>
   );
 }

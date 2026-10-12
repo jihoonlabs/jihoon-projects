@@ -76,3 +76,34 @@
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+
+.projectContext {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  color: #374151;
+  font-size: 0.85rem;
+}
+
+.projectContext span {
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+  background: #f3f4f6;
+}
+
+@media (max-width: 760px) {
+  .container {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .leftSection {
+    gap: 0.75rem;
+    min-width: 0;
+  }
+  .selectFilter,
+  .searchInput {
+    max-width: 100%;
+  }
+}

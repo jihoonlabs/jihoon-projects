@@ -113,7 +113,7 @@ it('filters assigned tickets by the signed-in user ID', () => {
   expect(screen.queryByText('Mine')).not.toBeInTheDocument();
 });
 
-it('uses the selected project key for subtle card borders without replacing ticket cues', () => {
+it('uses the selected project key for card backgrounds while retaining ticket cues', () => {
   const tickets = [
     toTicket(responseTicket),
     toTicket({

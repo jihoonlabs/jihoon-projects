@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { Header } from '@/shared/components/Header';
+
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
 export default function DashboardLayout({
@@ -31,5 +33,10 @@ export default function DashboardLayout({
     return null;
   }
 
-  return children;
+  return (
+    <>
+      <Header />
+      {children}
+    </>
+  );
 }

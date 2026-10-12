@@ -30,14 +30,47 @@ export default function Header({
   canManageMembers,
   onManageMembers,
 }: HeaderProps) {
+  const selectedProject = projects.find(
+    (project) => project.id === selectedProjectId,
+  );
   return (
     <header className={styles.container}>
       <div className={styles.leftSection}>
         <h1 className={styles.title}>チケットボード</h1>
 
-        <select aria-label="プロジェクト" className={styles.selectFilter} value={selectedProjectId} onChange={(event) => onProjectChange(event.target.value)} disabled={projects.length === 0}>
-          {projects.length === 0 ? <option value="">利用可能なプロジェクトがありません</option> : projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+        <select
+          aria-label="プロジェクト"
+          className={styles.selectFilter}
+          value={selectedProjectId}
+          onChange={(event) => onProjectChange(event.target.value)}
+          disabled={projects.length === 0}
+        >
+          {projects.length === 0 ? (
+            <option value="">利用可能なプロジェクトがありません</option>
+          ) : (
+            projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))
+          )}
         </select>
+
+        {selectedProject && (
+          <p className={styles.projectContext}>
+            <strong>{selectedProject.name}</strong>
+            {selectedProject.projectKey && (
+              <span>{selectedProject.projectKey}</span>
+            )}
+            <span>
+              {canManageMembers
+                ? 'メンバー管理可'
+                : canWrite
+                  ? '編集可'
+                  : '閲覧のみ'}
+            </span>
+          </p>
+        )}
 
         <div className={styles.filterGroup}>
           <input
@@ -62,10 +95,16 @@ export default function Header({
       </div>
 
       <div className={styles.rightSection}>
-        {canManageMembers && <button type="button" onClick={onManageMembers}>メンバー管理</button>}
-        {canWrite && <button type="button" className={styles.createBtn} onClick={onCreate}>
-          + チケット作成
-        </button>}
+        {canManageMembers && (
+          <button type="button" onClick={onManageMembers}>
+            メンバー管理
+          </button>
+        )}
+        {canWrite && (
+          <button type="button" className={styles.createBtn} onClick={onCreate}>
+            + チケット作成
+          </button>
+        )}
       </div>
     </header>
   );
