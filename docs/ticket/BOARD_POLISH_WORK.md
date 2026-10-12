@@ -20,4 +20,4 @@ API、データモデル、管理者・leader権限、Projectの作成・監査�
 - Projectの不変keyから求める既存色をカード背景に適用する。Project切替と既存権限は維持し、コメントは改行・長文折返し・投稿日時を表示する。
 - 未検証: 実browserの表示・pointer DnD・frontend→Laravelのログアウト。Chromium downloadが失敗し、Next serverも環境のnetworkInterfaces制限で起動できなかった。PHP/MySQL環境は存在しない。
 - API・データモデル・権限は変更していない。コメント編集は本人、削除は本人またはadminという既存契約を維持する。leaderの権限拡張は含めない。
-- テスト済みコードSHAは後続handoffで記録する。Ticket V1全体の完了とは扱わない。
+- アプリ検証SHA: `1dcaf449e949396caf5de89cb7fba78d64830f7b`。公開Git treeとローカルの検証済みファイルが一致することを確認した。Ticket V1全体の完了とは扱わない。
