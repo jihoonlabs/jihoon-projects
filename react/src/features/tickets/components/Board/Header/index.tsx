@@ -15,6 +15,9 @@ interface HeaderProps {
   canWrite: boolean;
   canManageMembers: boolean;
   onManageMembers: () => void;
+  projectsOpen: boolean;
+  projectsBusy: boolean;
+  onToggleProjects: () => void;
 }
 
 export default function Header({
@@ -29,6 +32,9 @@ export default function Header({
   canWrite,
   canManageMembers,
   onManageMembers,
+  projectsOpen,
+  projectsBusy,
+  onToggleProjects,
 }: HeaderProps) {
   const selectedProject = projects.find(
     (project) => project.id === selectedProjectId,
@@ -95,12 +101,21 @@ export default function Header({
       </div>
 
       <div className={styles.rightSection}>
-        {canManageMembers && (
+        <button
+          type="button"
+          disabled={projectsBusy}
+          aria-expanded={projectsOpen}
+          aria-controls="project-directory"
+          onClick={onToggleProjects}
+        >
+          プロジェクト一覧・作成
+        </button>
+        {selectedProject && canManageMembers && (
           <button type="button" onClick={onManageMembers}>
             メンバー管理
           </button>
         )}
-        {canWrite && (
+        {selectedProject && canWrite && (
           <button type="button" className={styles.createBtn} onClick={onCreate}>
             + チケット作成
           </button>

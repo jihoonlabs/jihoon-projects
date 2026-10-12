@@ -47,6 +47,7 @@ vi.mock('@/features/tickets/api/projectApi', () => ({
       permission: 'write',
     },
   ]),
+  createProject: vi.fn(),
   addProjectMember: vi.fn(),
   updateProjectMember: vi.fn(),
   removeProjectMember: vi.fn(),
@@ -722,4 +723,83 @@ it('keeps a failed manual status update visible and allows retry', async () => {
       screen.getByRole('combobox', { name: 'First ticket のステータス' }),
     ).toHaveValue('DONE'),
   );
+});
+
+it('creates the first project and loads its leader membership before enabling Ticket creation', async () => {
+  vi.mocked(projectApi.fetchProjects).mockResolvedValue([]);
+  vi.mocked(api.fetchTickets).mockResolvedValue([]);
+  vi.mocked(projectApi.createProject).mockResolvedValue({
+    id: '2',
+    name: 'New team',
+    projectKey: 'NEW',
+    boardVersion: 1,
+  });
+  vi.mocked(projectApi.fetchProjectMembers).mockResolvedValue([
+    {
+      id: '7',
+      name: 'Tester',
+      email: 'tester@example.com',
+      role: 'leader',
+      permission: 'write',
+    },
+  ]);
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+  render(<TicketBoardView />);
+  expect(
+    screen.queryByRole('button', { name: '+ チケット作成' }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole('button', { name: 'プロジェクト一覧・作成' }),
+  );
+  fireEvent.change(screen.getByLabelText('プロジェクト名'), {
+    target: { value: 'New team' },
+  });
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'プロジェクトを作成' }),
+    ).toBeEnabled(),
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'プロジェクトを作成' }));
+  expect(await screen.findByRole('status')).toHaveTextContent(
+    'New team を作成しました',
+  );
+  await waitFor(() =>
+    expect(screen.getByRole('combobox', { name: 'プロジェクト' })).toHaveValue(
+      '2',
+    ),
+  );
+  expect(projectApi.fetchProjectMembers).toHaveBeenCalledWith('2');
+  expect(
+    await screen.findByRole('button', { name: 'メンバー管理' }),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '+ チケット作成' }));
+  expect(
+    await screen.findByRole('heading', { name: 'チケット作成' }),
+  ).toBeInTheDocument();
+});
+
+it('does not turn a saved Ticket into a failed creation when Project refresh fails', async () => {
+  const ticket = api.toTicket(responseTicket);
+  vi.mocked(api.fetchTickets)
+    .mockResolvedValueOnce([])
+    .mockResolvedValue([ticket]);
+  vi.mocked(api.createTicket).mockClear().mockResolvedValue(ticket);
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+  render(<TicketBoardView />);
+  fireEvent.click(
+    await screen.findByRole('button', { name: '+ チケット作成' }),
+  );
+  vi.mocked(projectApi.fetchProjects).mockRejectedValueOnce(
+    new Error('一覧更新失敗'),
+  );
+  fireEvent.change(screen.getByLabelText('タイトル'), {
+    target: { value: ticket.title },
+  });
+  fireEvent.click(screen.getByRole('button', { name: '保存' }));
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+  );
+  expect(await screen.findByRole('alert')).toHaveTextContent('一覧更新失敗');
+  expect(useTicketStore.getState().tickets).toContainEqual(ticket);
+  expect(api.createTicket).toHaveBeenCalledTimes(1);
 });

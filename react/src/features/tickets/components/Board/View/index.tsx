@@ -19,6 +19,7 @@ import Header from '../Header';
 import Main from '../Main';
 import Card from '../Card';
 import TicketModal from '../TicketModal';
+import ProjectDirectory from '../ProjectDirectory';
 import ProjectMembersDialog from '../ProjectMembersDialog';
 import {
   fetchProjects,
@@ -53,6 +54,10 @@ export function TicketBoardView() {
   const [membersProjectId, setMembersProjectId] = useState('');
   const [projectError, setProjectError] = useState<string | null>(null);
   const [managingMembers, setManagingMembers] = useState(false);
+  const [projectsOpen, setProjectsOpen] = useState(false);
+  const [projectsBusy, setProjectsBusy] = useState(false);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+  const [projectNotice, setProjectNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (isModalOpen || !modalTrigger.current) return;
@@ -88,6 +93,9 @@ export function TicketBoardView() {
               ? reason.message
               : 'プロジェクトを取得できませんでした。',
           );
+      })
+      .finally(() => {
+        if (active) setProjectsLoading(false);
       });
     return () => {
       active = false;
@@ -159,7 +167,35 @@ export function TicketBoardView() {
 
   const handleCreate = async (input: Parameters<typeof addTicket>[0]) => {
     await addTicket(input);
-    await refreshProjects();
+    // 保存済みTicketの再作成を誘発しないよう、一覧更新の失敗を分けて扱う。
+    try {
+      await refreshProjects();
+    } catch (reason) {
+      setProjectError(
+        reason instanceof Error
+          ? reason.message
+          : 'プロジェクトを取得できませんでした。',
+      );
+    }
+  };
+
+  const selectProject = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setSearchQuery('');
+    setAssigneeFilter('ALL');
+    setProjectNotice(null);
+  };
+
+  const handleProjectCreated = (project: Project) => {
+    setProjects((items) =>
+      [...items.filter((item) => item.id !== project.id), project].sort(
+        (a, b) => a.name.localeCompare(b.name, 'ja'),
+      ),
+    );
+    selectProject(project.id);
+    setProjectNotice(
+      `${project.name} を作成しました。メンバーを追加してチケット作成を開始できます。`,
+    );
   };
 
   const handleUpdate = async (
@@ -291,15 +327,32 @@ export function TicketBoardView() {
         onCreate={openCreate}
         projects={projects}
         selectedProjectId={selectedProjectId}
-        onProjectChange={setSelectedProjectId}
+        onProjectChange={selectProject}
         canWrite={canWrite}
         canManageMembers={canManageMembers}
         onManageMembers={() => setManagingMembers(true)}
+        projectsBusy={projectsBusy}
+        projectsOpen={projectsOpen}
+        onToggleProjects={() => setProjectsOpen((open) => !open)}
       />
 
+      {projectsOpen && (
+        <ProjectDirectory
+          loading={projectsLoading}
+          projects={projects}
+          selectedProjectId={selectedProjectId}
+          onSelect={selectProject}
+          onCreated={handleProjectCreated}
+          onPendingChange={setProjectsBusy}
+        />
+      )}
+      {projectNotice && <p role="status">{projectNotice}</p>}
+
       {(error || projectError) && <p role="alert">{error || projectError}</p>}
-      {projects.length === 0 && !projectError && (
-        <p>利用可能なプロジェクトがありません。</p>
+      {projects.length === 0 && !projectsLoading && !projectError && (
+        <p>
+          利用可能なプロジェクトがありません。「プロジェクト一覧・作成」から作成するか、リーダーにメンバー追加を依頼してください。
+        </p>
       )}
 
       <DndContext
