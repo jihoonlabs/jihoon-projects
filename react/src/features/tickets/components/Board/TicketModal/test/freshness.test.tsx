@@ -7,6 +7,7 @@ import {
   within,
 } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import * as api from '../../../../api/ticketApi';
 import { responseTicket } from '../../../../api/test/ticketFixture';
 import TicketModal from '..';
@@ -329,3 +330,41 @@ it.each(['success', 'forbidden'])(
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   },
 );
+
+it('keeps Tab and Shift+Tab inside loading, detail and edit dialogs', async () => {
+  const request = deferred<typeof ticket>();
+  vi.mocked(api.fetchTicket).mockReturnValueOnce(request.promise);
+  render(
+    <>
+      <button>Before modal</button>
+      <TicketModal {...props} />
+      <button>After modal</button>
+    </>,
+  );
+  const user = userEvent.setup();
+  const close = screen.getByRole('button', { name: '閉じる' });
+  close.focus();
+  await user.tab();
+  expect(screen.getByRole('dialog')).toContainElement(
+    document.activeElement as HTMLElement,
+  );
+  await user.tab({ shift: true });
+  expect(screen.getByRole('dialog')).toContainElement(
+    document.activeElement as HTMLElement,
+  );
+  await act(async () => request.resolve(ticket));
+  await screen.findByRole('heading', { name: 'チケット詳細' });
+  const first = screen.getByRole('region', { name: '説明本文' });
+  first.focus();
+  await user.tab({ shift: true });
+  expect(screen.getByRole('button', { name: '削除' })).toHaveFocus();
+  await user.tab();
+  expect(first).toHaveFocus();
+  await user.click(screen.getByRole('button', { name: '編集' }));
+  const title = screen.getByRole('textbox', { name: 'タイトル' });
+  title.focus();
+  await user.tab({ shift: true });
+  expect(screen.getByRole('button', { name: '保存' })).toHaveFocus();
+  await user.tab();
+  expect(title).toHaveFocus();
+});

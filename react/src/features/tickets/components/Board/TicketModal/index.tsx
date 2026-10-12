@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
+import type { KeyboardEvent } from 'react';
 import type {
   CreateTicketInput,
   Ticket,
@@ -56,8 +57,55 @@ function detailError(error: unknown): string {
 }
 
 export default function TicketModal(props: TicketModalProps) {
-  if (!props.ticket) return <TicketModalContent {...props} />;
-  return <TicketDetailLoader key={props.ticket.id} {...props} />;
+  const boundaryRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const dialog =
+      boundaryRef.current?.querySelector<HTMLElement>('[role="dialog"]');
+    if (dialog && !dialog.contains(document.activeElement)) {
+      dialog.querySelector<HTMLElement>('h2')?.focus();
+    }
+  }, []);
+
+  const keepFocusInside = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Tab') return;
+    const dialog =
+      event.currentTarget.querySelector<HTMLElement>('[role="dialog"]');
+    if (!dialog) return;
+    const candidates = [
+      ...dialog.querySelectorAll<HTMLElement>(
+        'button, input, select, textarea, a[href], [tabindex]',
+      ),
+    ].filter(
+      (element) =>
+        element.tabIndex >= 0 &&
+        !element.matches(':disabled') &&
+        !element.closest('[hidden], [inert], [aria-hidden="true"]'),
+    );
+    event.preventDefault();
+    if (!candidates.length) {
+      dialog.querySelector<HTMLElement>('h2')?.focus();
+      return;
+    }
+    const current = candidates.indexOf(document.activeElement as HTMLElement);
+    const next =
+      current === -1
+        ? event.shiftKey
+          ? candidates.length - 1
+          : 0
+        : (current + (event.shiftKey ? -1 : 1) + candidates.length) %
+          candidates.length;
+    candidates[next].focus();
+  };
+
+  return (
+    <div ref={boundaryRef} onKeyDown={keepFocusInside}>
+      {props.ticket ? (
+        <TicketDetailLoader key={props.ticket.id} {...props} />
+      ) : (
+        <TicketModalContent {...props} />
+      )}
+    </div>
+  );
 }
 
 function TicketDetailLoader(props: TicketModalProps) {
@@ -368,11 +416,7 @@ function TicketModalContent({
           {isDetail && (
             <span className={styles.issueKey}>{ticket.issueKey ?? '—'}</span>
           )}
-          <h2
-            ref={headingRef}
-            id="ticket-modal-title"
-            tabIndex={isDetail ? -1 : undefined}
-          >
+          <h2 ref={headingRef} id="ticket-modal-title" tabIndex={-1}>
             {isDetail
               ? 'チケット詳細'
               : ticket

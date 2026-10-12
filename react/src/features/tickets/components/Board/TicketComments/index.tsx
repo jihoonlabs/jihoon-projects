@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import {
   createTicketComment,
   deleteTicketComment,
@@ -16,7 +16,11 @@ interface TicketCommentsProps {
   currentUserRole?: 'user' | 'admin';
 }
 
-export default function TicketComments({
+export default function TicketComments(props: TicketCommentsProps) {
+  return <TicketCommentsContent key={props.ticketId} {...props} />;
+}
+
+function TicketCommentsContent({
   ticketId,
   currentUserId,
   currentUserRole,
@@ -27,14 +31,24 @@ export default function TicketComments({
   const [editingBody, setEditingBody] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pendingList = useRef(true);
+  const changesDuringLoad = useRef(new Map<string, TicketComment | null>());
+  const inputRevision = useRef(0);
 
   useEffect(() => {
     let active = true;
     fetchTicketComments(ticketId)
       .then((items) => {
         if (active) {
-          setComments(items);
-          setError(null);
+          // 初期GETより新しい成功済みの投稿・編集・削除を優先する。
+          const merged = new Map(items.map((item) => [item.id, item]));
+          for (const [id, comment] of changesDuringLoad.current) {
+            if (comment) merged.set(id, comment);
+            else merged.delete(id);
+          }
+          pendingList.current = false;
+          changesDuringLoad.current.clear();
+          setComments([...merged.values()]);
         }
       })
       .catch((reason) => {
@@ -54,12 +68,15 @@ export default function TicketComments({
     event.preventDefault();
     const value = body.trim();
     if (!value || busy) return;
+    const submittedRevision = inputRevision.current;
     setBusy(true);
     setError(null);
     try {
       const comment = await createTicketComment(ticketId, value);
+      if (pendingList.current)
+        changesDuringLoad.current.set(comment.id, comment);
       setComments((items) => [...items, comment]);
-      setBody('');
+      if (inputRevision.current === submittedRevision) setBody('');
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -78,6 +95,8 @@ export default function TicketComments({
     setError(null);
     try {
       const updated = await updateTicketComment(ticketId, commentId, value);
+      if (pendingList.current)
+        changesDuringLoad.current.set(commentId, updated);
       setComments((items) =>
         items.map((item) => (item.id === commentId ? updated : item)),
       );
@@ -100,6 +119,7 @@ export default function TicketComments({
     setError(null);
     try {
       await deleteTicketComment(ticketId, commentId);
+      if (pendingList.current) changesDuringLoad.current.set(commentId, null);
       setComments((items) => items.filter((item) => item.id !== commentId));
     } catch (reason) {
       setError(
@@ -188,7 +208,10 @@ export default function TicketComments({
           コメントを追加
           <textarea
             value={body}
-            onChange={(event) => setBody(event.target.value)}
+            onChange={(event) => {
+              inputRevision.current += 1;
+              setBody(event.target.value);
+            }}
             maxLength={5000}
           />
         </label>

@@ -24,13 +24,16 @@ Apply the approved board UX changes: full-card project tint, title-only detail e
 
 ## Verification
 
-- Here, in the assistant's isolated checkout: related 127 tests passed initially; final full React suite 25 files / 180 tests passed. TypeScript, changed TS/TSX ESLint and production build passed. Changed source files were formatted with the existing Prettier configuration; final diff whitespace check passed.
+- Here, in the assistant's isolated checkout: final full React suite 25 files / 184 tests passed. TypeScript, changed TS/TSX ESLint and production build passed. Changed source files were formatted with the existing Prettier configuration; final diff whitespace check passed.
 - Reuse the failed-logout/retry regression against the actual mounted Board Header. Card test verifies the retained cues and removal of the redundant action. Freshness/conflict, comments/permissions, project filtering, DnD rollback and dashboard guard regression suites pass.
-- These are author checks, not an independent review or a Mac browser/API test. Local development environment and database on the Mac were not accessed.
+- Mac Codex independently reviewed revision 77203006643b8e73d336e1680be54dedaaf2f45f with actual isolated frontend/Laravel/SQLite: project/color separation, title access, mobile detail, comment CRUD/permissions/error input preservation, logout/auth boundaries, freshness/conflict, assignee and pointer DnD recovery passed. Three P2 blockers remained: newer comment draft erased by earlier send completion; delayed initial GET replacing successful comments; Tab escaping the modal.
+- Reproduced the draft loss, stale list overwriting a new edited comment, stale list resurrecting a deleted comment and modal Tab escape in four focused author regressions before fixing them. All four pass after correction; focused comment/detail suite: 25 tests passed.
+- Sending captures the draft revision and only clears unchanged input. A temporary mutation journal overlays successful create/edit/delete results on the delayed initial list, then clears. Comment state is keyed by Ticket ID. The dialog boundary contains Tab/Shift+Tab during loading, detail and edit, includes focusable description/comments and ignores disabled/hidden controls. Existing return-to-trigger handling is preserved.
+- The 184-test run, type/lint/build and regression fixes are author checks. Mac actual-API reproduction and independent re-review of these fixes remain pending. The assistant did not access the Mac database.
 
 ## Mac Codex handoff
 
-Verify the exact Child commit, ownership and dependency before testing. Review the authentication/logout attachment and modal keyboard/scroll boundaries independently. Run actual frontend-to-Laravel scenarios with isolated temporary data: title entry; no duplicate detail button; long description/comment readability; visible close/edit/delete at desktop and narrow mobile sizes; comment create/edit/delete/error input preservation and author/admin permissions; logout success/failure/retry, reload and protected-route back navigation; latest detail/edit conflict; assignee and pointer DnD recovery. Preserve ai/, env and the existing database.
+Verify the exact updated Child commit, ownership and dependency before testing. Prioritize the three independent P2 blockers with real delayed requests; also check edited/deleted comments are not replaced/resurrected by delayed initial GET, successful unchanged input clears, and Tab/Shift+Tab stay inside loading/error/detail/edit dialogs with disabled controls and return focus on close. Do not repeat unrelated passed scenarios without a changed boundary or new uncertainty. Review the authentication/logout attachment and modal keyboard/scroll boundaries independently. Run actual frontend-to-Laravel scenarios with isolated temporary data: title entry; no duplicate detail button; long description/comment readability; visible close/edit/delete at desktop and narrow mobile sizes; comment create/edit/delete/error input preservation and author/admin permissions; logout success/failure/retry, reload and protected-route back navigation; latest detail/edit conflict; assignee and pointer DnD recovery. Preserve ai/, env and the existing database.
 
 For user preview, retain Login UI plus this Child together. Use isolated UX projects with distinct keys to check project switching/data isolation and card colors; do not grant access to unrelated existing projects or rewrite their data. Include at least two project colors in preview evidence. Clearly label the running branch/SHA and API/data target so preview cannot silently revert to Epic.
 
@@ -38,7 +41,7 @@ The implementation dependency is already contained in this Child's history. In a
 
 ## Remaining boundaries
 
-Mac visual/API verification and independent Test Review are pending. Color persistence and exact duplicate-color rejection are a separate unfinished responsibility; the existing hue algorithm can collide and this change does not claim uniqueness. Similar colors remain allowed. Full project-management UI adoption, external Google/LINE completion and MySQL concurrency/row locks are not verified by this Child. Ticket V1 is not declared complete.
+Independent re-review and Mac actual-API verification of the three P2 fixes are pending; Epic adoption remains blocked until those pass. Color persistence and exact duplicate-color rejection are a separate unfinished responsibility; the existing hue algorithm can collide and this change does not claim uniqueness. Similar colors remain allowed. Full project-management UI adoption, external Google/LINE completion and MySQL concurrency/row locks are not verified by this Child. Ticket V1 is not declared complete.
 
 ## Improvement note
 
