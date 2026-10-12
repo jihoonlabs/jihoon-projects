@@ -183,7 +183,7 @@ class TestAdapter(unittest.TestCase):
                 self.assertTrue(not value or all(type(v) is type(value[0]) for v in value))
 
     def test_case_6(self):
-        original = state(money=55,screen_state='safe',menu_selection=3)
+        original = state(money=55,screen_state='safe',menu_selection=3,menu_scroll=1)
         before = deepcopy(original)
         fake_thumby.saveData.save.side_effect = OSError('저장 실패')
         with patch.object(ThumbyGrowth,'handle_inputs',return_value=inputs(A=True)), \
