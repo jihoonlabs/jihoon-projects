@@ -51,16 +51,19 @@ class EditConcurrencyTest extends TestCase
     {
         $this->actingAs($this->writer());
         $ticket = Ticket::factory()->create();
+        $grammar = DB::connection()->getQueryGrammar();
+        $table = $grammar->wrapTable('tickets');
+        $versionColumn = $grammar->wrap('version');
         $updates = [];
-        DB::listen(function ($query) use (&$updates) {
-            if (str_starts_with(strtolower($query->sql), 'update "tickets"')) {
+        DB::listen(function ($query) use (&$updates, $table) {
+            if (str_starts_with(strtolower($query->sql), 'update '.$table)) {
                 $updates[] = $query;
             }
         });
         $this->patchJson('/api/tickets/'.$ticket->id, ['title' => 'Atomic', 'expected_version' => 1])->assertOk();
         $this->assertCount(1, $updates);
-        $this->assertStringContainsString('"version" = version + 1', $updates[0]->sql);
-        $this->assertStringContainsString('and "version" = ?', $updates[0]->sql);
+        $this->assertStringContainsString($versionColumn.' = version + 1', $updates[0]->sql);
+        $this->assertStringContainsString('and '.$versionColumn.' = ?', $updates[0]->sql);
         $this->assertSame(1, end($updates[0]->bindings));
     }
 

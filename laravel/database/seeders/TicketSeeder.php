@@ -18,13 +18,6 @@ class TicketSeeder extends Seeder
             ['name' => 'パク・ジフン', 'password' => bcrypt('password')]
         );
         $project = Project::firstOrCreate(['name' => 'General']);
-        $members = User::where('status', 'active')
-            ->pluck('id')
-            ->mapWithKeys(fn ($id) => [
-                $id => ['role' => 'member', 'permission' => 'write'],
-            ])
-            ->all();
-        $project->members()->syncWithoutDetaching($members);
 
         $tickets = [
             [
@@ -66,6 +59,17 @@ class TicketSeeder extends Seeder
 
         DB::transaction(function () use ($project, $tickets) {
             $lockedProject = Project::query()->lockForUpdate()->findOrFail($project->id);
+            // 再seedで既存leaderや閲覧権限を変更せず、未参加のactive userだけを追加する。
+            $memberIds = $lockedProject->members()->pluck('users.id');
+            $members = User::where('status', 'active')
+                ->whereNotIn('id', $memberIds)
+                ->pluck('id')
+                ->mapWithKeys(fn ($id) => [
+                    $id => ['role' => 'member', 'permission' => 'write'],
+                ])
+                ->all();
+            $lockedProject->members()->syncWithoutDetaching($members);
+
             $nextNumber = (int) $lockedProject->next_ticket_number;
             $keyPattern = '/^'.preg_quote($lockedProject->project_key, '/').'-(\d+)$/';
 

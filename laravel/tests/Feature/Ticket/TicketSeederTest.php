@@ -81,4 +81,32 @@ class TicketSeederTest extends TestCase
         ])->assertCreated()
             ->assertJsonPath('data.issue_key', sprintf('%s-%02d', $project->project_key, $deletedNumber + 1));
     }
+
+    public function test_reseeding_preserves_existing_member_roles_and_permissions(): void
+    {
+        $project = Project::query()->where('name', 'General')->firstOrFail();
+        $leader = User::factory()->create();
+        $reader = User::factory()->create();
+        $project->members()->attach($leader->id, ['role' => 'leader', 'permission' => 'write']);
+        $project->members()->attach($reader->id, ['role' => 'member', 'permission' => 'read']);
+
+        $seeder = app(TicketSeeder::class);
+        $seeder->run();
+        $seeder->run();
+
+        $this->assertDatabaseHas('project_members', [
+            'project_id' => $project->id, 'user_id' => $leader->id,
+            'role' => 'leader', 'permission' => 'write',
+        ]);
+        $this->assertDatabaseHas('project_members', [
+            'project_id' => $project->id, 'user_id' => $reader->id,
+            'role' => 'member', 'permission' => 'read',
+        ]);
+        $this->assertSame(1, $project->members()->wherePivot('role', 'leader')->count());
+        $sampleUser = User::query()->where('email', 'jihoon@example.com')->firstOrFail();
+        $this->assertDatabaseHas('project_members', [
+            'project_id' => $project->id, 'user_id' => $sampleUser->id,
+            'role' => 'member', 'permission' => 'write',
+        ]);
+    }
 }

@@ -5,13 +5,14 @@ namespace Tests\Feature\Ticket;
 use App\Models\Project;
 use App\Models\Ticket;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class ProjectAuditHistoryTest extends TestCase
 {
-    use RefreshDatabase;
+    // MySQLのtrigger DDLは暗黙commitするため、テストを外側のtransactionで包まない。
+    use DatabaseMigrations;
 
     public function test_creation_and_rename_preserve_project_identity_and_actor(): void
     {
@@ -191,6 +192,12 @@ class ProjectAuditHistoryTest extends TestCase
     private function failAuditAction(string $action): void
     {
         $quotedAction = DB::connection()->getPdo()->quote($action);
+        if (DB::connection()->getDriverName() === 'mysql') {
+            DB::unprepared("CREATE TRIGGER fail_project_audit_event BEFORE INSERT ON project_audit_events FOR EACH ROW BEGIN IF NEW.action = {$quotedAction} THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'forced audit failure'; END IF; END;");
+
+            return;
+        }
+
         DB::unprepared("CREATE TRIGGER fail_project_audit_event BEFORE INSERT ON project_audit_events WHEN NEW.action = {$quotedAction} BEGIN SELECT RAISE(ABORT, 'forced audit failure'); END;");
     }
 }

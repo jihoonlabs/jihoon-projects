@@ -4,6 +4,7 @@
   gap: 1.5rem;
   padding: 1.5rem;
   background-color: #f4f6f8;
+  color: #111827;
   min-height: calc(100vh - 64px);
 }
 
