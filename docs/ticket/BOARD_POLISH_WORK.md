@@ -1,19 +1,17 @@
-# Ticket Member Recovery Child
+# Ticket List Recovery Child
 
 owner_repo: jihoonlabs/jihoon-projects
-owner_branch: feature/ticket-member-recovery
+owner_branch: feature/ticket-list-recovery
 role: child
 status: validated-user-review-pending
 parent_branch: feature/ticket
-base_sha: 6f744b2b2c924938b2f6c69f3c87f361997c5993
+base_sha: 1e5f5e8660af43a9cd6518f25674217434fbfba6
 
 ## Responsibility / Boundary
-既存のProject member取得失敗からボード上で再試行できるようにし、Project切替とメンバー管理後の遅延取得が権限・担当者候補を上書きしないようにする。API・DB・権限仕様は変更しない。
+Ticket削除成功と後続Project取得失敗を区別し、Ticket一覧取得失敗から画面上で再試行できるようにする。API・DB・権限仕様は変更しない。
 
 ## Validation / Handoff
-- アプリ検証SHA: `da7ef46235416c57dd9086af39a7a685eb6bcded`。公開treeと検証済みローカルファイルの一致を確認した。
-- member取得のerrorをProject一覧errorから分離し、同じProjectで再試行できる。取得成功で無関係なProject一覧errorを消さない。
-- dialogを閉じた後の再取得もeffectの遅延応答guardへ統一した。再確認中は古いmembershipを操作判断に使用せず、別Projectへの遅延応答を無視する。
-- dialogによるmember変更のrevisionを記録し、変更前のboard取得が最新memberを上書きしない。
-- 修正前コードで新規4 testsの失敗を確認。対象View 32 tests、React全29 files / 204 tests、TypeScript、ESLint、変更TSX/CSSのPrettier、最終コードのproduction buildが成功。
-- 今回は実browser/実Laravel接続を再実行していない。React/API境界の遅延promiseで検証した。利用者の実画面確認と指摘修正は残る。
+- Ticket削除後のProject取得失敗はboardに表示し、削除済みdetailは閉じる。削除APIそのものの失敗時は既存どおりdetailとTicketを維持する。
+- Ticket取得errorに再取得ボタンを接続した。取得中をstatus表示し、再取得失敗時も既存一覧を維持する。Project取得errorとは別に表示する。
+- 対象View 36 tests、React全29 files / 208 tests、TypeScript、ESLint、変更TSXのPrettier、production buildが成功。削除成功後のmetadata失敗、初回取得失敗/再試行、再試行の失敗/既存一覧保持、遅延取得中の案内を検証した。
+- 今回の実browser/実Laravel接続は未実行。API・DB・権限変更はない。利用者の実画面確認と指摘修正は残る。

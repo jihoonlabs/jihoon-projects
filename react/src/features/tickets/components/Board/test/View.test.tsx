@@ -1126,3 +1126,95 @@ it('does not clear a project list error when a pending member lookup succeeds', 
     'project list unavailable',
   );
 });
+
+it('closes a successfully deleted Ticket even when the Project refresh fails', async () => {
+  const ticket = api.toTicket(responseTicket);
+  vi.mocked(api.fetchTickets)
+    .mockResolvedValueOnce([ticket])
+    .mockResolvedValue([]);
+  vi.mocked(api.deleteTicket).mockResolvedValue(undefined);
+  vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+  render(<TicketBoardView />);
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' }),
+  );
+  const remove = await screen.findByRole('button', { name: '削除' });
+  vi.mocked(projectApi.fetchProjects).mockRejectedValueOnce(
+    new Error('metadata unavailable'),
+  );
+  fireEvent.click(remove);
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+  );
+  expect(screen.getByRole('alert')).toHaveTextContent('metadata unavailable');
+  expect(useTicketStore.getState().tickets).toHaveLength(0);
+  expect(
+    screen.queryByRole('button', { name: 'TICK-1 の詳細を開く' }),
+  ).not.toBeInTheDocument();
+});
+
+it('retries a failed initial Ticket list from the board', async () => {
+  vi.mocked(api.fetchTickets)
+    .mockRejectedValueOnce(new Error('ticket list unavailable'))
+    .mockResolvedValueOnce([api.toTicket(responseTicket)]);
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+  render(<TicketBoardView />);
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'ticket list unavailable',
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'チケット一覧を再取得' }));
+  await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' });
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});
+
+it('preserves the existing Ticket list and permits another retry after a failed refresh', async () => {
+  vi.mocked(api.fetchTickets)
+    .mockRejectedValueOnce(new Error('first list failure'))
+    .mockRejectedValueOnce(new Error('retry list failure'));
+  const ticket = api.toTicket(responseTicket);
+  useTicketStore.setState({ tickets: [ticket], error: null, isLoading: false });
+  render(<TicketBoardView />);
+  await screen.findByText('first list failure');
+  fireEvent.click(screen.getByRole('button', { name: 'チケット一覧を再取得' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'retry list failure',
+  );
+  expect(
+    screen.getByRole('button', { name: 'TICK-1 の詳細を開く' }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: 'チケット一覧を再取得' }),
+  ).toBeEnabled();
+});
+
+it('announces a pending Ticket list retry without offering another retry request', async () => {
+  let resolveList!: (tickets: ReturnType<typeof api.toTicket>[]) => void;
+  const pendingList = new Promise<ReturnType<typeof api.toTicket>[]>(
+    (resolve) => {
+      resolveList = resolve;
+    },
+  );
+  vi.mocked(api.fetchTickets)
+    .mockRejectedValueOnce(new Error('list failed'))
+    .mockReturnValueOnce(pendingList);
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+  render(<TicketBoardView />);
+  await screen.findByText('list failed');
+  fireEvent.click(screen.getByRole('button', { name: 'チケット一覧を再取得' }));
+  expect(screen.getByText('チケット一覧を更新中...')).toHaveAttribute(
+    'role',
+    'status',
+  );
+  expect(
+    screen.queryByRole('button', { name: 'チケット一覧を再取得' }),
+  ).not.toBeInTheDocument();
+  await act(async () => {
+    resolveList([api.toTicket(responseTicket)]);
+    await pendingList;
+  });
+  expect(screen.queryByText('チケット一覧を更新中...')).not.toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: 'TICK-1 の詳細を開く' }),
+  ).toBeInTheDocument();
+});

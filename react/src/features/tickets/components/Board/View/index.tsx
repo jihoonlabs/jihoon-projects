@@ -33,6 +33,7 @@ export function TicketBoardView() {
   const {
     tickets,
     error,
+    isLoading,
     fetchTickets,
     updateStatus,
     moveTicket,
@@ -405,7 +406,16 @@ export function TicketBoardView() {
 
   const handleDelete = async (ticket: Ticket) => {
     await deleteTicket(ticket.id);
-    await refreshProjects();
+    // 削除済みTicketへの再操作を誘発しないよう、後続の取得失敗を分離する。
+    try {
+      await refreshProjects();
+    } catch (reason) {
+      setProjectError(
+        reason instanceof Error
+          ? reason.message
+          : 'プロジェクトを取得できませんでした。',
+      );
+    }
   };
 
   return (
@@ -461,6 +471,8 @@ export function TicketBoardView() {
       )}
       {projectNotice && <p role="status">{projectNotice}</p>}
 
+      {isLoading && <p role="status">チケット一覧を更新中...</p>}
+
       {memberError?.projectId === selectedProjectId && (
         <div className={styles.memberRecovery}>
           <p role="alert">{memberError.message}</p>
@@ -469,7 +481,19 @@ export function TicketBoardView() {
           </button>
         </div>
       )}
-      {(error || projectError) && <p role="alert">{error || projectError}</p>}
+      {error && (
+        <div className={styles.memberRecovery}>
+          <p role="alert">{error}</p>
+          <button
+            type="button"
+            disabled={isLoading}
+            onClick={() => void fetchTickets()}
+          >
+            チケット一覧を再取得
+          </button>
+        </div>
+      )}
+      {projectError && <p role="alert">{projectError}</p>}
       {projects.length === 0 && !projectsLoading && !projectError && (
         <p>
           利用可能なプロジェクトがありません。「プロジェクト一覧・作成」から作成するか、リーダーにメンバー追加を依頼してください。
