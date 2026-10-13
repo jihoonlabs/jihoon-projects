@@ -1,7 +1,7 @@
 {
   "repository_root": "../..",
-  "expected_branch": "work/thumby-rpg-first-20261008",
-  "branch_document": "docs/personal-game-ai/THUMBY_GROWTH_FIRST.md",
+  "expected_branch": "epic/thumby-growth",
+  "branch_document": "docs/personal-game-ai/THUMBY_GROWTH_EPIC.md",
   "code_files": [],
   "max_context_chars": 12000,
   "generation_profile": "thumby",
