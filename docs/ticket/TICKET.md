@@ -20,7 +20,9 @@
 
 - Project Entry Child `feature/ticket-project-entry` のアプリ検証SHA `79f2a8e36012621e5fb6150703263459c435ac21` を採用した。Project一覧・名前/key検索・選択と作成を既存APIにつなぎ、Projectがない利用者もleader membership取得後にTicket作成へ進める。Ticket作成成功後のProject再取得失敗は保存失敗として扱わない。
 
-- Project Operations Child `feature/ticket-project-operations` のアプリ検証SHA `9c511b34d814e293d339d05f60399025a9d2bcf7` を採用する。Project名変更（admin）、終了・復元（admin/leader）、終了一覧と閲覧専用ボード、専用leader譲渡を画面に接続した。直接role変更/leader追加/leader削除を画面から除き、保存成功後の再取得失敗と遅延Project応答を安全に扱う。Backend API・DB schema・権限は変更していない。
+- Project Operations Child `feature/ticket-project-operations` のアプリ検証SHA `9c511b34d814e293d339d05f60399025a9d2bcf7` を採用した。Project名変更（admin）、終了・復元（admin/leader）、終了一覧と閲覧専用ボード、専用leader譲渡を画面に接続した。直接role変更/leader追加/leader削除を画面から除き、保存成功後の再取得失敗と遅延Project応答を安全に扱う。Backend API・DB schema・権限は変更していない。
+
+- Runtime Verification Child `feature/ticket-runtime-verification` の検証SHA `a44f832067b77ea16fb7e98c063088ca9f5276b6` を採用した。実browser/Laravel/SQLite/MySQLの検証を実行し、再seedで既存role/permissionを上書きする回帰、MySQLで動かないテストの前提、追加Projectボタンとsystem dark時の案内表示を修正した。API・DB schema・権限仕様の拡張はない。V1全体は利用者の実ローカル画面確認前であり未完了。
 
 ## 採用Child SHA
 - Project Lifecycle: `a52c78cfbb9c1d70d724adc06aa593ae0e67f0f3`
@@ -42,6 +44,8 @@
 - Project Entry Child / アプリ検証SHA: `79f2a8e36012621e5fb6150703263459c435ac21`（基準: `ed67f6edbaa8369ef7059ec6fe43f9ee91a19350`）。
 
 - Project Operations Child / アプリ検証SHA: `9c511b34d814e293d339d05f60399025a9d2bcf7`（基準: `07db066adb8b9171531680c5b297d25c88cbd02f`）。
+
+- Runtime Verification Child / 検証SHA: `a44f832067b77ea16fb7e98c063088ca9f5276b6`（基準: `1fcc0cce1d8403629af6efbb6c93587036c249cb`）。
 
 ## 統合検証
 - Project関連Laravel tests: 33 tests / 186 assertions、Laravel全件: 136 tests / 638 assertions passed。Pintと変更PHPのsyntax checkもpassed。
@@ -71,11 +75,14 @@
 - archive後に古いProject GETが到着してもactive一覧に戻さないこと、メンバー変更成功後GET失敗で操作を凍結し再取得のみ提供すること、保存中dismiss抑止を検証した。公開Git treeとローカル検証済みファイルは一致する。現行WORK: `docs/ticket/BOARD_POLISH_WORK.md`。
 - production serverはhostname指定で起動し、同じ実行内で `/login`・`/tickets` のHTTP 200、HTML/Next assetsを確認した。以前のnetworkInterfaces起動失敗はhostname指定で回避できる。実browserや実backend接続を確認した結果ではない。
 
+- Runtime Verification: Laravel全145 tests / 707 assertionsがSQLite・MySQL両方で成功、React全29 files / 194 tests、TypeScript、ESLint、Pint、変更PHPのsyntax、変更CSSのPrettier、production buildも成功。PHP 8.4.24・MySQL 8.0.36・Chromium 153を使った。現在のcomposer.lockのSymfony 8依存はPHP 8.4以上を必要とする。
+- 実frontend→Laravel→一時SQLiteで16 browser scenarios、最終Header CSSを含むMySQLで17 scenariosが成功した。APP_ENV=localでCSRFを有効にし、無効token419、実login、Project作成/初期leader/member追加、Ticket key/背景色、pointer DnD保存/reload、詳細click/double click/focus、コメント改行/編集、read memberの投稿、2 sessionの200/409/入力保持、leader譲渡後の権限消失、admin rename、Project終了409拒否/終了/閲覧/復元、Ticket削除、実session logoutを確認した。MySQL側は393px mobileの収まりも確認し、pageerrorは0件。最終View CSSはsystem darkの実browser smoke 4 scenariosで案内の可読性を追加確認した。
+- MySQLの複数PHPプロセス/別接続でProject 6件の同時作成（unique key/creator/leader/write/audit）とTicket 6件の同時作成（連番key/position/counter）を確認した。別PDOの行lockが1205 timeoutになり、明示rollback後に取得できた。全migrationと、version追加前の既存Ticket 5件の全フィールド保持・version=1を確認した。上記環境・対象の検証結果として扱い、その他のDB設定・分離レベルの結果とは扱わない。
+- TicketSeederのrole/read permission破壊を修正前に再現し、繰り返しseedでも保全する回帰テストを追加した。検証用DB・runtime・profileのみを使用し、既存DB・.envは変更していない。公開Git treeと検証済みローカルファイルは一致する。現行WORK: `docs/ticket/BOARD_POLISH_WORK.md`。
+
 ## 次の作業
-- 実browser・実LaravelでProject作成→メンバー追加→leader譲渡→Ticket完了→Project終了→閲覧→復元を確認する。rename/archive/restore・leader譲渡の画面接続は上記Childで実装済み。
-- Board Usabilityの実browser確認（背景色、コメントの折返し、詳細focus復帰、pointer DnD、Laravel logout）。Ticket V1全体は未完了。
-- MySQL migrationと複数接続の同時作成/row lock検証は未検証。SQLiteや制御した要求順序で検証済みとは扱わず、専用環境で確認する。
-- keyboard DnDは未検証・未実装の範囲として残る。詳細の最新取得・編集競合防止は上記候補から採用済みだが、Ticket V1全体は未完了。
+- 利用者の実ローカル環境で画面を確認し、指摘を修正する。社内基本機能と指摘修正が満たされるまでV1完了とは扱わない。
+- keyboard DnDは未実装・未検証。pointer DnD/保存・reconnectionと既存status selectは上記実接続で検証済み。
 
 ## 今後の候補
 - 監査記録の画面表示、Activity / Historyの利用者向け機能は別途優先度を判断する。
