@@ -1,20 +1,22 @@
-# Ticket Board Design Child
+# Ticket Project Order Isolation Child
 
 owner_repo: jihoonlabs/jihoon-projects
-owner_branch: feature/ticket-board-design
+owner_branch: feature/ticket-project-order-isolation
 role: child
-status: validated-user-review-pending
+status: validated-adoption-pending
 parent_branch: feature/ticket
-base_sha: a02f37781e0c2fbc5d8852e1f26fcaecb2edf582
+base_sha: 9269be437b16cfe9e2a9db55e1f7deec558d3faa
 
 ## Responsibility / Boundary
-利用者の実画面指摘に合わせ、Header/toolbarの階層と余白、Project色の強さ、カードの可読性、dark-system下の入力を調整する。既存機能・権限・API・DBは変更しない。
+Project間でTicketのDnD楽観更新の順序を分離する。別Projectの同じ状態のTicketを並べ替えない。既存API・DB・権限・承認済みデザイン・Project色は変更しない。
 
 ## Validation / Handoff
-- アプリ検証SHA: `c5417c648f1380dd673b26f1c8317c26ad817346`。公開treeと検証済みローカルファイルの一致を確認した。
-- 共通Headerを小さくし、board toolbarをProject/操作とcontext/filterの2段に整理。管理ボタンの表示を短くし、既存accessible nameと操作を維持した。
-- Project keyから決まる色を維持し、card背景をwhiteと混色して淡くした。タイトルのweight/line-heightと列の幅・間隔を調整した。
-- boardとheaderをlight color-schemeとし、dark-systemでも検索入力の背景/文字を明示した。
-- React全29 files / 208 tests、TypeScript、ESLint、変更TSX/CSSのPrettier、production buildが成功。
-- 実Chromiumのdark-systemで1440/940/393pxを確認。ページ横overflowなし、検索背景/文字、8 cards、mobile detailの画面内収まり、pageerror 0件を確認。1440pxは全5列を表示し、940/393pxはboard内で横scrollする。画像も目視確認した。API fixtureによる表示検証であり、実Laravel接続ではない。
-- 利用者による修正後画面の確認は残る。API・DB・権限変更はない。
+- Application commit: `f8ad6e4513c272503b30c741382cd2032fe8f7d1`.
+- Reproduced both regressions before the fix: a successful drag with failed refresh changed another Project's position, and a rejected drag left another Project's position changed.
+- Restrict the optimistic target column to the moving Ticket's Project. Keep unrelated objects untouched, including during rollback and failed revalidation.
+- React: 29 files / 210 tests passed, including 24 store tests. TypeScript, ESLint, changed TypeScript Prettier, production build and git diff check passed.
+- Real browser / Laravel / MySQL integration was not executed for this Child. Store tests simulate deferred API responses and failures; they are not database verification.
+- Application changes are limited to `react/src/features/tickets/store/useTicketStore.ts` and its existing test. No database, environment or backend files were changed.
+- The reported local Epic `5af147b` is not available remotely or in this environment. The remote Epic starting point is the SHA above; this Child has not been adopted into either Epic.
+- When the local adoption is available, compare the two application files and apply this application commit in an isolated integration candidate. Preserve the palette migration, seeded examples and local adoption records. Run relevant tests before Epic adoption.
+- V1 remains pending actual user workflow confirmation. Keyboard DnD, OAuth and additional database configurations are outside this Child.
