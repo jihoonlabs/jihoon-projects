@@ -1,11 +1,18 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.1rem;
   padding: 1.5rem;
-  background-color: #f4f6f8;
+  background-color: #f7f9fc;
+  color-scheme: light;
   color: #111827;
   min-height: calc(100vh - 64px);
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 1rem;
+  }
 }
 
 .headerArea {

@@ -47,27 +47,76 @@ export default function Header({
   );
   return (
     <header className={styles.container}>
-      <div className={styles.leftSection}>
-        <h1 className={styles.title}>チケットボード</h1>
+      <div className={styles.topRow}>
+        <div className={styles.leftSection}>
+          <h1 className={styles.title}>チケットボード</h1>
 
-        <select
-          aria-label="プロジェクト"
-          className={styles.selectFilter}
-          value={selectedProjectId}
-          onChange={(event) => onProjectChange(event.target.value)}
-          disabled={projects.length === 0 || projectsBusy}
-        >
-          {projects.length === 0 ? (
-            <option value="">利用可能なプロジェクトがありません</option>
-          ) : (
-            projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))
+          <select
+            aria-label="プロジェクト"
+            className={styles.selectFilter}
+            value={selectedProjectId}
+            onChange={(event) => onProjectChange(event.target.value)}
+            disabled={projects.length === 0 || projectsBusy}
+          >
+            {projects.length === 0 ? (
+              <option value="">利用可能なプロジェクトがありません</option>
+            ) : (
+              projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+
+        <div className={styles.rightSection}>
+          <button
+            type="button"
+            disabled={projectsBusy}
+            aria-label="プロジェクト一覧・作成"
+            aria-expanded={projectsOpen}
+            aria-controls="project-directory"
+            onClick={onToggleProjects}
+          >
+            一覧・作成
+          </button>
+          {selectedProject && canManageProject && (
+            <button
+              type="button"
+              disabled={projectsBusy}
+              aria-label="プロジェクト設定"
+              aria-expanded={operationsOpen}
+              aria-controls="project-operations"
+              onClick={onToggleOperations}
+            >
+              設定
+            </button>
           )}
-        </select>
-
+          {selectedProject && canManageMembers && (
+            <button
+              type="button"
+              disabled={projectsBusy}
+              aria-label="メンバー管理"
+              onClick={onManageMembers}
+            >
+              メンバー
+            </button>
+          )}
+          {selectedProject && canWrite && (
+            <button
+              type="button"
+              className={styles.createBtn}
+              disabled={projectsBusy}
+              aria-label="+ チケット作成"
+              onClick={onCreate}
+            >
+              + チケット作成
+            </button>
+          )}
+        </div>
+      </div>
+      <div className={styles.bottomRow}>
         {selectedProject && (
           <p className={styles.projectContext}>
             <strong>{selectedProject.name}</strong>
@@ -107,48 +156,6 @@ export default function Header({
             <option value="UNASSIGNED">未割り当て</option>
           </select>
         </div>
-      </div>
-
-      <div className={styles.rightSection}>
-        <button
-          type="button"
-          disabled={projectsBusy}
-          aria-expanded={projectsOpen}
-          aria-controls="project-directory"
-          onClick={onToggleProjects}
-        >
-          プロジェクト一覧・作成
-        </button>
-        {selectedProject && canManageProject && (
-          <button
-            type="button"
-            disabled={projectsBusy}
-            aria-expanded={operationsOpen}
-            aria-controls="project-operations"
-            onClick={onToggleOperations}
-          >
-            プロジェクト設定
-          </button>
-        )}
-        {selectedProject && canManageMembers && (
-          <button
-            type="button"
-            disabled={projectsBusy}
-            onClick={onManageMembers}
-          >
-            メンバー管理
-          </button>
-        )}
-        {selectedProject && canWrite && (
-          <button
-            type="button"
-            className={styles.createBtn}
-            disabled={projectsBusy}
-            onClick={onCreate}
-          >
-            + チケット作成
-          </button>
-        )}
       </div>
     </header>
   );
