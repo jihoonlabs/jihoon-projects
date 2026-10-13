@@ -41,6 +41,7 @@ interface TicketModalProps {
   onDelete: (ticket: Ticket) => Promise<void>;
   projectId: string;
   projectKey?: string | null;
+  projectColor?: string | null;
   projectMembers: ProjectMember[];
   readOnly?: boolean;
   commentsReadOnly?: boolean;
@@ -141,7 +142,7 @@ function TicketModalContent({
   onUpdate,
   onDelete,
   projectId,
-  projectKey,
+  projectColor,
   projectMembers,
   readOnly = false,
   commentsReadOnly = false,
@@ -347,7 +348,7 @@ function TicketModalContent({
     '--project-border-color'?: string;
   } = {
     '--project-border-color':
-      getProjectBorderColor(projectKey ?? null) ?? undefined,
+      getProjectBorderColor(projectColor ?? null) ?? undefined,
   };
 
   return (

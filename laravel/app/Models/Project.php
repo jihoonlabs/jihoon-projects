@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ProjectPalette;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -15,6 +16,7 @@ class Project extends Model
     protected static function booted(): void
     {
         static::creating(function (Project $project) {
+            $project->color = ProjectPalette::next();
             if ($project->project_key !== null) {
                 // Explicit keys (e.g. factories/imports) cannot revive deleted identities.
                 if (DB::table('project_audit_events')->where('project_key', $project->project_key)->exists()) {

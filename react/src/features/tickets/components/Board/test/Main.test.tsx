@@ -113,7 +113,7 @@ it('filters assigned tickets by the signed-in user ID', () => {
   expect(screen.queryByText('Mine')).not.toBeInTheDocument();
 });
 
-it('uses the selected project key for card backgrounds while retaining ticket cues', () => {
+it('uses the stored project color for card backgrounds while retaining ticket cues', () => {
   const tickets = [
     toTicket(responseTicket),
     toTicket({
@@ -127,6 +127,7 @@ it('uses the selected project key for card backgrounds while retaining ticket cu
     <Main
       tickets={tickets}
       projectKey="ABC"
+      projectColor="#e3f2fd"
       searchQuery=""
       assigneeFilter="ALL"
       currentUserId={7}
@@ -144,10 +145,10 @@ it('uses the selected project key for card backgrounds while retaining ticket cu
   expect(firstCard).toHaveAttribute('role', 'group');
   expect(firstCard).toHaveAttribute('tabindex', '0');
   expect(firstCard?.getAttribute('style')).toContain(
-    getProjectBorderColor('ABC'),
+    getProjectBorderColor('#e3f2fd'),
   );
   expect(secondCard?.getAttribute('style')).toContain(
-    getProjectBorderColor('ABC'),
+    getProjectBorderColor('#e3f2fd'),
   );
   expect(screen.getByText('TICK-1')).toBeInTheDocument();
   expect(screen.getByText('ABC-2')).toBeInTheDocument();
@@ -160,6 +161,7 @@ it('uses the selected project key for card backgrounds while retaining ticket cu
     <Main
       tickets={tickets}
       projectKey="XYZ"
+      projectColor="#dff6f2"
       searchQuery=""
       assigneeFilter="ALL"
       currentUserId={7}
@@ -170,5 +172,5 @@ it('uses the selected project key for card backgrounds while retaining ticket cu
       .getByText('First ticket')
       .closest('[aria-roledescription="sortable"]')
       ?.getAttribute('style'),
-  ).toContain(getProjectBorderColor('XYZ'));
+  ).toContain(getProjectBorderColor('#dff6f2'));
 });

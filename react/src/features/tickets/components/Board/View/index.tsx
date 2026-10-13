@@ -510,6 +510,7 @@ export function TicketBoardView() {
         <Main
           tickets={projectTickets}
           projectKey={selectedProject?.projectKey}
+          projectColor={selectedProject?.color}
           searchQuery={searchQuery}
           assigneeFilter={assigneeFilter}
           currentUserId={currentUserId}
@@ -524,6 +525,7 @@ export function TicketBoardView() {
             <Card
               ticket={activeTicket}
               projectKey={selectedProject?.projectKey}
+              projectColor={selectedProject?.color}
               isOverlay
               canWrite
               canDrag
@@ -540,6 +542,7 @@ export function TicketBoardView() {
           currentUserRole={currentUser?.role}
           projectId={selectedTicket?.projectId ?? selectedProjectId}
           projectKey={selectedProject?.projectKey}
+          projectColor={selectedProject?.color}
           projectMembers={
             membersProjectId === selectedProjectId ? projectMembers : []
           }

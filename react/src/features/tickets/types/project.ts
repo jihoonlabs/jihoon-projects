@@ -5,6 +5,7 @@ export interface Project {
   id: string;
   name: string;
   projectKey: string | null;
+  color?: string | null;
   boardVersion: number;
   archivedAt?: string | null;
 }

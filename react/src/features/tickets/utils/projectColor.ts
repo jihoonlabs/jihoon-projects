@@ -1,11 +1,8 @@
-export function getProjectBorderColor(projectKey: string | null): string | null {
-  if (!projectKey?.trim()) return null;
-
-  // Derive the accent from the immutable key so renames and reloads keep it stable.
-  let hash = 2166136261;
-  for (const character of projectKey.trim().toUpperCase()) {
-    hash = Math.imul(hash ^ character.charCodeAt(0), 16777619);
-  }
-
-  return `hsl(${(hash >>> 0) % 360} 42% 80%)`;
+// Missing colors stay neutral while older API clients are upgraded; never hash keys.
+export function getProjectBorderColor(
+  projectColor: string | null,
+): string | null {
+  return projectColor && /^#[0-9a-f]{6}$/i.test(projectColor)
+    ? projectColor
+    : null;
 }

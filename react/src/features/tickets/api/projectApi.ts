@@ -13,6 +13,7 @@ interface ProjectResponse {
   name: string;
   project_key: string | null;
   board_version: number;
+  color?: string;
   archived_at?: string | null;
 }
 
@@ -55,6 +56,7 @@ function toProject({
   id,
   name,
   project_key,
+  color,
   board_version,
   archived_at,
 }: ProjectResponse): Project {
@@ -62,6 +64,7 @@ function toProject({
     id: String(id),
     name,
     projectKey: project_key,
+    ...(color !== undefined ? { color } : {}),
     boardVersion: board_version,
     ...(archived_at !== undefined ? { archivedAt: archived_at } : {}),
   };

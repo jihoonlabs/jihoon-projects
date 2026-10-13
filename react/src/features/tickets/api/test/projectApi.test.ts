@@ -18,7 +18,13 @@ describe('Project API boundary', () => {
       http.get(`${url}/api/projects`, () =>
         HttpResponse.json({
           data: [
-            { id: 4, name: 'Product', project_key: 'PRD', board_version: 3 },
+            {
+              id: 4,
+              name: 'Product',
+              project_key: 'PRD',
+              board_version: 3,
+              color: '#e3f2fd',
+            },
           ],
         }),
       ),
@@ -37,7 +43,13 @@ describe('Project API boundary', () => {
       ),
     );
     await expect(fetchProjects()).resolves.toEqual([
-      { id: '4', name: 'Product', projectKey: 'PRD', boardVersion: 3 },
+      {
+        id: '4',
+        name: 'Product',
+        projectKey: 'PRD',
+        boardVersion: 3,
+        color: '#e3f2fd',
+      },
     ]);
     await expect(fetchProjectMembers('4')).resolves.toEqual([
       {

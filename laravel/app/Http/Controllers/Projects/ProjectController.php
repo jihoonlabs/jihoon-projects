@@ -65,9 +65,9 @@ class ProjectController extends Controller
                 }));
             } catch (UniqueConstraintViolationException $exception) {
                 // A concurrent insert can claim the generated key after the existence check.
-                // Retry only project_key collisions; other unique constraints must still fail.
+                // Retry only project_key/color collisions; other unique constraints must still fail.
                 $attempts++;
-                if ($attempts >= 5 || ! str_contains(strtolower($exception->getMessage()), 'project_key')) {
+                if ($attempts >= 5 || (! str_contains(strtolower($exception->getMessage()), 'project_key') && ! str_contains(strtolower($exception->getMessage()), 'color'))) {
                     throw $exception;
                 }
             }

@@ -10,6 +10,7 @@ import styles from './index.module.css';
 interface CardProps {
   ticket: Ticket;
   projectKey?: string | null;
+  projectColor?: string | null;
   isOverlay?: boolean;
   onStatusChange?: (id: string, status: TicketStatus) => void;
   onOpenDetails?: (ticket: Ticket, trigger: HTMLButtonElement) => void;
@@ -35,7 +36,7 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
 
 export default function Card({
   ticket,
-  projectKey = null,
+  projectColor = null,
   isOverlay,
   onStatusChange,
   onOpenDetails,
@@ -57,7 +58,7 @@ export default function Card({
     transition,
     opacity: isDragging ? 0.3 : 1,
     '--project-background-color':
-      getProjectBorderColor(projectKey) ?? undefined,
+      getProjectBorderColor(projectColor) ?? undefined,
   };
 
   return (
