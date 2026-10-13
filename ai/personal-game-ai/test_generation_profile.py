@@ -11,7 +11,7 @@ class GenerationProfileTests(unittest.TestCase):
     def setUp(self):
         # Legacy checks must not inherit features selected by a local game target.
         context = patch.object(generation_profile, "CONFIG_PATH",
-                               self.config(edit_directory="micropython/ThumbyDodge"))
+                               self.config(edit_directory="micropython/Thumby/ThumbyDodge"))
         context.start()
         self.addCleanup(context.stop)
 
@@ -212,7 +212,7 @@ class GenerationProfileTests(unittest.TestCase):
     def test_thumby_entry_implementation_prompt_uses_exact_game_path(self):
         with patch.object(
             generation_profile, "CONFIG_PATH",
-            self.config(edit_directory="micropython/ThumbyDodge"),
+            self.config(edit_directory="micropython/Thumby/ThumbyDodge"),
         ):
             prompt = generation_profile.implementation_prompt("game", "ThumbyDodge.py")
         self.assertIn("CPython import", prompt)
@@ -231,7 +231,7 @@ class GenerationProfileTests(unittest.TestCase):
     def test_thumby_rules_implementation_prompt_stays_device_free(self):
         with patch.object(
             generation_profile, "CONFIG_PATH",
-            self.config(edit_directory="micropython/ThumbyDodge"),
+            self.config(edit_directory="micropython/Thumby/ThumbyDodge"),
         ):
             prompt = generation_profile.implementation_prompt("game", "rules.py")
         self.assertIn("순수 게임 규칙 모듈", prompt)
@@ -251,7 +251,7 @@ class GenerationProfileTests(unittest.TestCase):
         code = "import sys\nimport thumby\n\ndef run():\n    pass\n"
         with patch.object(
             generation_profile, "CONFIG_PATH",
-            self.config(edit_directory="micropython/ThumbyDodge"),
+            self.config(edit_directory="micropython/Thumby/ThumbyDodge"),
         ):
             with self.assertRaises(ValueError):
                 generation_profile.validate_code("game", code, "ThumbyDodge.py")
@@ -264,7 +264,7 @@ class GenerationProfileTests(unittest.TestCase):
         )
         with patch.object(
             generation_profile, "CONFIG_PATH",
-            self.config(edit_directory="micropython/ThumbyDodge"),
+            self.config(edit_directory="micropython/Thumby/ThumbyDodge"),
         ):
             generation_profile.validate_code("game", code, "ThumbyDodge.py")
 
@@ -276,7 +276,7 @@ class GenerationProfileTests(unittest.TestCase):
         )
         with patch.object(
             generation_profile, "CONFIG_PATH",
-            self.config(edit_directory="micropython/ThumbyDodge"),
+            self.config(edit_directory="micropython/Thumby/ThumbyDodge"),
         ):
             with self.assertRaises(ValueError):
                 generation_profile.validate_code("game", code, "ThumbyDodge.py")
@@ -290,7 +290,7 @@ class GenerationProfileTests(unittest.TestCase):
         )
         with patch.object(
             generation_profile, "CONFIG_PATH",
-            self.config(edit_directory="micropython/ThumbyDodge"),
+            self.config(edit_directory="micropython/Thumby/ThumbyDodge"),
         ):
             with self.assertRaises(ValueError):
                 generation_profile.validate_code("game", code, "ThumbyDodge.py")
@@ -299,7 +299,7 @@ class GenerationProfileTests(unittest.TestCase):
         code = "import thumby\n\ndef read_input():\n    return thumby.buttonL.pressed()\n"
         with patch.object(
             generation_profile, "CONFIG_PATH",
-            self.config(edit_directory="micropython/ThumbyDodge"),
+            self.config(edit_directory="micropython/Thumby/ThumbyDodge"),
         ):
             with self.assertRaises(ValueError):
                 generation_profile.validate_code("game", code, "device.py")
@@ -311,7 +311,7 @@ class GenerationProfileTests(unittest.TestCase):
         )
         with patch.object(
             generation_profile, "CONFIG_PATH",
-            self.config(edit_directory="micropython/ThumbyDodge"),
+            self.config(edit_directory="micropython/Thumby/ThumbyDodge"),
         ):
             for branch in ("else:\n    run()\n", "elif True:\n    run()\n"):
                 with self.subTest(branch=branch), self.assertRaises(ValueError):
@@ -325,7 +325,7 @@ class GenerationProfileTests(unittest.TestCase):
         )
         with patch.object(
             generation_profile, "CONFIG_PATH",
-            self.config(edit_directory="micropython/ThumbyDodge"),
+            self.config(edit_directory="micropython/Thumby/ThumbyDodge"),
         ):
             generation_profile.validate_code("game", code, "ThumbyDodge.py")
 
@@ -333,7 +333,7 @@ class GenerationProfileTests(unittest.TestCase):
         code = "def step():\n    return 1\n"
         with patch.object(
             generation_profile, "CONFIG_PATH",
-            self.config(edit_directory="micropython/ThumbyDodge"),
+            self.config(edit_directory="micropython/Thumby/ThumbyDodge"),
         ):
             generation_profile.validate_code("game", code, "rules.py")
 

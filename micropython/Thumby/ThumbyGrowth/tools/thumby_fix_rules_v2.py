@@ -10,7 +10,7 @@ import create_loop
 import edit_loop
 import implementation_link
 
-BASE = Path(__file__).resolve().parents[3] / "ai" / "personal-game-ai"
+BASE = Path(__file__).resolve().parents[4] / "ai" / "personal-game-ai"
 
 def save(path, value):
     with path.open("x", encoding="utf-8") as stream:
@@ -20,7 +20,7 @@ def main():
     branch = subprocess.check_output(
         ["git", "branch", "--show-current"], text=True
     ).strip()
-    if branch != "work/thumby-rpg-first-20261008":
+    if branch != json.loads((BASE / "target.json").read_text(encoding="utf-8"))["expected_branch"]:
         raise SystemExit("작업 브랜치가 달라 중단합니다.")
     if ask_ai.payload.get("model") != "qwen3-coder:30b":
         raise SystemExit("요청 모델이 달라 중단합니다.")
@@ -40,7 +40,7 @@ def main():
     }
     context = edit_loop.read_context()
     directory, _ = edit_loop.game_location()
-    expected_directory = BASE.parent.parent / "micropython/ThumbyGrowth"
+    expected_directory = BASE.parent.parent / "micropython/Thumby/ThumbyGrowth"
     if directory.resolve() != expected_directory.resolve():
         raise SystemExit("게임 대상 경로가 달라 중단합니다.")
 

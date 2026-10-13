@@ -75,7 +75,7 @@ class ProductionRequestTests(unittest.TestCase):
             self.prepare(record)
 
     def test_wrong_target_config_or_actual_branch_blocks(self):
-        for key, value in (("edit_directory", "micropython/ThumbyDodge"),
+        for key, value in (("edit_directory", "micropython/Thumby/ThumbyDodge"),
                            ("expected_branch", "other"), ("generation_profile", None)):
             config = {**self.data, key: value}
             self.config.write_text(json.dumps(config))

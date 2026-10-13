@@ -8,7 +8,7 @@ def main():
     import hashlib
     import subprocess
     from pathlib import Path
-    base = Path('/Users/parkjihoon/workspace/thumby-rpg-first-20261008/ai/personal-game-ai')
+    base = Path(__file__).resolve().parents[4] / "ai" / "personal-game-ai"
     if not base.is_dir():
         raise SystemExit('작업 폴더가 없어 중단합니다.')
     os.chdir(str(base))
@@ -16,10 +16,10 @@ def main():
     import test_plan
     import generation_profile
     branch = subprocess.check_output(['git','branch','--show-current'],text=True).strip()
-    if branch != 'work/thumby-rpg-first-20261008':
+    if branch != json.loads((base / "target.json").read_text(encoding="utf-8"))["expected_branch"]:
         raise SystemExit('작업 브랜치가 달라 중단합니다.')
     target = json.loads((base/'target.json').read_text(encoding='utf-8'))
-    if target.get('generation_profile') != 'thumby' or target.get('edit_directory') != 'micropython/ThumbyGrowth':
+    if target.get('generation_profile') != 'thumby' or target.get('edit_directory') != 'micropython/Thumby/ThumbyGrowth':
         raise SystemExit('작업 대상 설정이 달라 중단합니다.')
     design = base/'outputs/design_20261011_232344_146552/design.json'
     expected = 'bd989e114e8f469dd092ae97417bb4bee8005dfe95d5c3ff3523f932767774e2'

@@ -3,7 +3,7 @@
 적용:
 1. 기존 Mac 폴더의 두 파일을 백업하세요.
 2. 이 압축파일의 ThumbyGrowth.py와 rules.py를 함께 다음 위치에 복사하세요.
-   /Users/parkjihoon/workspace/thumby-rpg-first-20261008/micropython/ThumbyGrowth/
+   /Users/parkjihoon/workspace/My PRJ/micropython/Thumby/ThumbyGrowth/
 3. 에뮬레이터에서도 두 파일 모두 교체 후 게임을 재시작하세요.
 4. 기기에는 /Games/ThumbyGrowth/에 두 파일만 넣으세요.
 

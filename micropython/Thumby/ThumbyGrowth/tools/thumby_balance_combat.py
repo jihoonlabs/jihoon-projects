@@ -6,7 +6,7 @@ import json
 import os
 import subprocess
 import sys
-BASE=Path('/Users/parkjihoon/workspace/thumby-rpg-first-20261008/ai/personal-game-ai')
+BASE=Path(__file__).resolve().parents[4] / "ai" / "personal-game-ai"
 QA="import unittest\nfrom test_rules import state, inputs\nfrom rules import update_state\n\nclass CombatPlaythrough(unittest.TestCase):\n    def contact(self, progress):\n        current = update_state(state(progress=progress, money=20*progress), inputs(A=True))\n        current['enemy_x'] = 24\n        hits = 0\n        for frame in range(1, 241):\n            old = current\n            current = update_state(current, inputs(A=(frame-1)%18 == 0))\n            if current['enemy_hp'] < old['enemy_hp']:\n                hits += 1\n            if current['screen_state'] != 'battle':\n                break\n        return current, hits\n\n    def test_first_enemy_can_be_defeated_at_contact(self):\n        current, hits = self.contact(0)\n        self.assertEqual((current['screen_state'], current['HP'], current['money'], current['progress'], hits), ('safe', 10, 20, 1, 3))\n\n    def test_second_enemy_contact_wins_with_repeated_hits(self):\n        current, hits = self.contact(1)\n        self.assertEqual((current['screen_state'], current['HP'], current['enemy_hp'], current['money'], hits), ('safe', 10, 0, 50, 10))\n\n    def test_second_enemy_can_be_defeated_by_spacing(self):\n        current = update_state(state(progress=1, money=20), inputs(A=True))\n        for frame in range(1, 401):\n            gap = current['enemy_x']-current['player_x']-8\n            ready = current['player_attack_cooldown'] <= 1\n            if ready and gap <= 8:\n                keys = inputs(A=True, R=True)\n            elif gap < 5:\n                keys = inputs(L=True)\n            elif gap > 8 and current['player_x'] < 65:\n                keys = inputs(R=True)\n            else:\n                keys = inputs()\n            current = update_state(current, keys)\n            if current['screen_state'] != 'battle':\n                break\n        self.assertEqual((current['screen_state'], current['HP'], current['money'], current['progress']), ('safe', 10, 50, 2))\n\n    def test_enemy_attacks_again_only_after_60_battle_frames(self):\n        current = update_state(state(progress=1), inputs(A=True))\n        current['enemy_x'] = 24\n        current = update_state(current, inputs())\n        self.assertEqual((current['HP'], current['enemy_attack_cooldown']), (7, 60))\n        for _ in range(59):\n            current = update_state(current, inputs())\n        self.assertEqual((current['HP'], current['enemy_attack_cooldown']), (7, 1))\n        current = update_state(current, inputs())\n        self.assertEqual((current['HP'], current['enemy_attack_cooldown']), (4, 60))\n\n    def test_waiting_without_attacking_still_causes_defeat(self):\n        current = update_state(state(progress=1), inputs(A=True))\n        current['enemy_x'] = 24\n        for _ in range(181):\n            current = update_state(current, inputs())\n            if current['screen_state'] == 'defeat':\n                break\n        self.assertEqual((current['screen_state'], current['HP'], current['enemy_hp']), ('defeat', 0, 10))\n"
 def sha(data):
     return hashlib.sha256(data).hexdigest()
@@ -15,10 +15,10 @@ def main():
     import edit_loop
     def git(*args):
         return subprocess.check_output(['git']+list(args),text=True).strip()
-    if git('branch','--show-current')!='work/thumby-rpg-first-20261008':
+    if git('branch','--show-current')!=json.loads((BASE / "target.json").read_text(encoding="utf-8"))["expected_branch"]:
         raise SystemExit('작업 브랜치가 달라 중단합니다.')
     root=Path(git('rev-parse','--show-toplevel'))
-    game=root/'micropython/ThumbyGrowth'
+    game=root/'micropython/Thumby/ThumbyGrowth'
     design=BASE/'outputs/design_20261011_232344_146552/design.json'
     approval=design.with_name('approval.json')
     originals={design:design.read_bytes(),approval:approval.read_bytes()}

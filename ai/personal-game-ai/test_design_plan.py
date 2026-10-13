@@ -68,7 +68,7 @@ class DesignPlanTests(unittest.TestCase):
         game.mkdir()
         config = self.root / "target.json"
         config.write_text(json.dumps({"generation_profile": "thumby",
-                                      "edit_directory": "micropython/ThumbyGrowth"}))
+                                      "edit_directory": "micropython/Thumby/ThumbyGrowth"}))
         requirements = ["Return state.", "Use a finite device frame."]
         valid = copy.deepcopy(self.proposal)
         valid["files"][0]["checks"].append({"requirement": "R2", "case": "state", "expected": "state"})

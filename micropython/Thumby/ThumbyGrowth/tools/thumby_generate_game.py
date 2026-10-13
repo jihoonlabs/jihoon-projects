@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-BASE = Path('/Users/parkjihoon/workspace/thumby-rpg-first-20261008/ai/personal-game-ai')
+BASE = Path(__file__).resolve().parents[4] / "ai" / "personal-game-ai"
 DESIGN_SHA = 'bd989e114e8f469dd092ae97417bb4bee8005dfe95d5c3ff3523f932767774e2'
 TESTS_SHA = '23ea8a184a374aa7f1cc62300e0025124c828ea66b79b0af7061d1825a11c8d6'
 
@@ -33,7 +33,7 @@ def main():
     import implementation_link
 
     branch = subprocess.check_output(['git','branch','--show-current'],text=True).strip()
-    if branch != 'work/thumby-rpg-first-20261008':
+    if branch != json.loads((BASE / "target.json").read_text(encoding="utf-8"))["expected_branch"]:
         raise SystemExit('작업 브랜치가 달라 중단합니다.')
     if ask_ai.payload.get('model') != 'qwen3-coder:30b':
         raise SystemExit('요청 모델이 달라 중단합니다.')
@@ -47,7 +47,7 @@ def main():
         raise SystemExit('승인 설계가 달라 중단합니다.')
     generation_profile.validate_tests('game',candidate,envelope['design'])
     directory,_ = edit_loop.game_location()
-    expected_directory = BASE.parent.parent/'micropython/ThumbyGrowth'
+    expected_directory = BASE.parent.parent/'micropython/Thumby/ThumbyGrowth'
     if directory.resolve() != expected_directory.resolve():
         raise SystemExit('게임 생성 대상이 달라 중단합니다.')
     fixed = {item['id']:item for item in candidate['files']}

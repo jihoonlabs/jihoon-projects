@@ -18,17 +18,17 @@ class ReviewWorkflowTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name).resolve()
         self.base = self.root / "ai" / "personal-game-ai"
-        self.game = self.root / "micropython" / "ThumbyDodge"
+        self.game = self.root / "micropython" / "Thumby" / "ThumbyDodge"
         self.base.mkdir(parents=True)
         self.game.mkdir(parents=True)
         self.config = self.base / "target.json"
         self.config.write_text(json.dumps({
-            "repository_root": "../..", "edit_directory": "micropython/ThumbyDodge",
+            "repository_root": "../..", "edit_directory": "micropython/Thumby/ThumbyDodge",
         }))
         self.git("init", "-q")
         self.fixed = self.game / "test_rules.py"
         self.fixed.write_text("# fixed test fixture\n")
-        self.git("add", "micropython/ThumbyDodge/test_rules.py")
+        self.git("add", "micropython/Thumby/ThumbyDodge/test_rules.py")
         self.git("-c", "user.name=Test", "-c", "user.email=test@example.invalid",
                  "-c", "commit.gpgsign=false", "commit", "-qm", "fixture")
         self.target = self.game / "rules.py"
@@ -135,7 +135,7 @@ class ReviewWorkflowTests(unittest.TestCase):
 
     def test_pending_create_with_ignored_target_is_blocked(self):
         self.target.unlink()
-        (self.root / ".gitignore").write_text("micropython/ThumbyDodge/rules.py\n")
+        (self.root / ".gitignore").write_text("micropython/Thumby/ThumbyDodge/rules.py\n")
         self.task["status"] = "pending"
         self.plan.write_text(json.dumps([self.task]))
         self.state["stage"] = "execute"
@@ -182,10 +182,10 @@ class ReviewWorkflowTests(unittest.TestCase):
         self.assertFalse(candidate.with_name("approval.json").exists())
 
     def test_completed_record_with_untracked_fixed_test_is_blocked(self):
-        self.git("rm", "--cached", "micropython/ThumbyDodge/test_rules.py")
+        self.git("rm", "--cached", "micropython/Thumby/ThumbyDodge/test_rules.py")
         result = self.inspect()
         self.assertEqual(result["result"], "blocked")
-        self.assertEqual(result["commit_required"], ["micropython/ThumbyDodge/test_rules.py"])
+        self.assertEqual(result["commit_required"], ["micropython/Thumby/ThumbyDodge/test_rules.py"])
 
     def test_oversized_pending_request_is_blocked_without_model(self):
         self.task.update(status="pending", prompt="x" * 4001)

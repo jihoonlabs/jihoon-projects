@@ -5,7 +5,7 @@
   "code_files": [],
   "max_context_chars": 12000,
   "generation_profile": "thumby",
-  "edit_directory": "micropython/ThumbyGrowth",
+  "edit_directory": "micropython/Thumby/ThumbyGrowth",
   "thumby_features": [
     "controls",
     "save_data"

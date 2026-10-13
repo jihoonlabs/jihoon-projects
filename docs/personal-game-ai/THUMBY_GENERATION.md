@@ -3,7 +3,7 @@
 ## 목적·범위
 - 현재 Child: feature/personal-game-ai-thumby-generation
 - 작은 일반 Thumby 게임의 자동 생성·검사 연결만 담당한다.
-- 첫 검증 게임: `micropython/ThumbyDodge/`의 좌우 이동·장애물 충돌·점수·재시작 게임.
+- 첫 검증 게임: `micropython/Thumby/ThumbyDodge/`의 좌우 이동·장애물 충돌·점수·재시작 게임.
 - 규칙은 순수 Python, 기기 입력·표시는 별도 어댑터로 나눈다.
 - Color·StarCraft와 기존 게임 수정은 이번 범위 밖이다.
 
@@ -25,7 +25,7 @@
   - expected_branch: feature/personal-game-ai-thumby-generation
   - branch_document: docs/personal-game-ai/THUMBY_GENERATION.md
   - generation_profile: thumby
-  - edit_directory: micropython/ThumbyDodge
+  - edit_directory: micropython/Thumby/ThumbyDodge
   - code_files: [] (다른 기능 MD를 추가하지 않는다)
 - 첫 요청 파일: ai/personal-game-ai/thumby_dodge_request.json.
 - workflow.py: 요청→설계 검토→테스트 검토→설치→Git 준비→계획→구현.
@@ -46,7 +46,7 @@
 
 ## 현재 진단·검증
 - 2026-10-08 원격 작업 환경 확인: Child HEAD는 `bca53184833a1d353e0c08a656be6087cc48c76c`, 시작 시 clean이었다. GitHub에서 `7370036`은 조회되지 않았다.
-- 집의 미커밋 도구 수정·MANUAL·생성 코드·고정 테스트·outputs는 이 checkout에 없다. `micropython/ThumbyDodge/`에는 README만 있으므로 집 workflow의 `rules.py: tests_passed`, 어댑터 `pending`은 이 환경에서 재개·검증할 수 없다.
+- 집의 미커밋 도구 수정·MANUAL·생성 코드·고정 테스트·outputs는 이 checkout에 없다. `micropython/Thumby/ThumbyDodge/`에는 README만 있으므로 집 workflow의 `rules.py: tests_passed`, 어댑터 `pending`은 이 환경에서 재개·검증할 수 없다.
 - 이 환경에서 요청 초과 시 전달용 계약 JSON 공백 축약과 AST가 동일한 선행 코드 재출력을 적용했다. 원본 task prompt·코드·artifact digest는 바꾸지 않으며, 축약 후에도 4000자를 넘으면 기존대로 거부한다. 집의 실제 요청 3988자는 자료 부재로 미확인이다.
 - MicroPython 시작 guard의 else/elif에서도 진입 함수를 호출하는 후보를 거부한다. 정상적인 비시작 else는 허용한다. 직접 호출 AST 검사이며 간접 호출 전체를 증명하지 않는다.
 - 도구 폴더 밖 게임 고정 테스트는 도구 기준 상대 경로로 기록하고, 검사 시 경로를 정규화해 지정 게임 폴더·파일 digest·Git 보호를 확인한다. 설치가 이미 중단된 집 기록의 자동 복구는 이번 변경에 포함하지 않았다.
@@ -60,7 +60,7 @@
 - 아래 과거 원격 handoff의 미검증 항목 중 unittest는 위 288개 결과로 갱신한다. 현재 미완성은 실제 어댑터 생성·검증과 기기 실행이다. 이 환경의 도구 수정·읽기 전용 검토 도구·회귀 테스트·문서를 사용자 요청에 따라 현재 Child에 커밋해 전달한다. 사용자가 현재 Child의 commit·일반 push를 승인했다. merge는 승인 없이 하지 않는다. 집의 dirty 변경을 보존하고 새 커밋과 비교해 필요한 수정을 반영한다.
 - 잘 작동함: 원격 Child/설정/문서와 thumby 프로필 일치.
 - 잘 작동함: 필요한 원격 파일만 가져온 임시 Git 환경에서 문맥 검사 및 프로필 단위 테스트 16개 통과.
-- 첫 생성 경로와 요청 계약을 `micropython/ThumbyDodge/`로 고정했고, 실기 런처 규칙에 맞춰 `ThumbyDodge.py`를 필수 엔트리로 요구한다.
+- 첫 생성 경로와 요청 계약을 `micropython/Thumby/ThumbyDodge/`로 고정했고, 실기 런처 규칙에 맞춰 `ThumbyDodge.py`를 필수 엔트리로 요구한다.
 - game + thumby 설계 validator가 게임 폴더와 같은 이름의 엔트리 Python 파일을 구조적으로 강제한다.
 - 미검증 Thumby 하위 모듈 import(`import thumby.*`, `from thumby.* import ...`)를 gate에서 차단하고 회귀 테스트 2개를 추가했다.
 - 엔트리 고정 테스트는 `import sys` → `sys.modules` fake `thumby` 등록 → 엔트리 모듈 import 순서를 profile gate에서 강제해 CPython/Docker의 기기 모듈 부재를 후보 단계에서 차단한다.
@@ -127,7 +127,7 @@
   6. 통과하면 `python workflow.py --request thumby_dodge_request.json`
   7. 설계 후보를 검토해 SHA로 승인하고, 고정 테스트도 검토 후 SHA로 확정한다.
   8. workflow가 요구하는 고정 테스트 commit 후 같은 요청을 재개해 구현·Docker 검사를 끝낸다.
-  9. `micropython/ThumbyDodge/` 결과를 실제 Thumby에서 플레이한다.
+  9. `micropython/Thumby/ThumbyDodge/` 결과를 실제 Thumby에서 플레이한다.
 - 실패 시 다음 작업자는 **처음 실패한 명령의 전체 오류 + workflow stage/record/review SHA**부터 확인한다. 실제 실패가 없는 상태에서 새 gate나 추측성 호환 규칙을 추가하지 않는다.
 - 첫 플레이 이후 자연어 피드백 수정은 다음 책임 단위다. 새 수정 엔진을 만들기보다 기존 `edit_loop`/plan 엔진에 “플레이 의견 → 수정 대상 선택 → 수정/검사”를 연결한다.
 
