@@ -32,3 +32,29 @@
   border-radius: 10px;
   min-height: 400px;
 }
+
+.memberRecovery {
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.memberRecovery p {
+  color: #b91c1c;
+}
+
+.memberRecovery button {
+  padding: 0.5rem 0.85rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #374151;
+  font: inherit;
+  cursor: pointer;
+}
+
+.memberRecovery button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}

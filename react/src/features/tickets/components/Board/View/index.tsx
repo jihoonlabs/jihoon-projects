@@ -54,6 +54,12 @@ export function TicketBoardView() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
+  const memberRevision = useRef(0);
+  const [memberAttempt, setMemberAttempt] = useState(0);
+  const [memberError, setMemberError] = useState<{
+    projectId: string;
+    message: string;
+  } | null>(null);
   const [membersProjectId, setMembersProjectId] = useState('');
   const [projectError, setProjectError] = useState<string | null>(null);
   const [managingMembers, setManagingMembers] = useState(false);
@@ -123,26 +129,38 @@ export function TicketBoardView() {
   useEffect(() => {
     if (!selectedProjectId) return;
     let active = true;
+    const revision = memberRevision.current;
     fetchProjectMembers(selectedProjectId)
       .then((items) => {
-        if (active) {
+        if (active && revision === memberRevision.current) {
           setProjectMembers(items);
           setMembersProjectId(selectedProjectId);
-          setProjectError(null);
+          setMemberError(null);
         }
       })
       .catch((reason) => {
-        if (active)
-          setProjectError(
-            reason instanceof Error
-              ? reason.message
-              : 'メンバーを取得できませんでした。',
-          );
+        if (active && revision === memberRevision.current) {
+          setMembersProjectId('');
+          setMemberError({
+            projectId: selectedProjectId,
+            message:
+              reason instanceof Error
+                ? reason.message
+                : 'メンバーを取得できませんでした。',
+          });
+        }
       });
     return () => {
       active = false;
     };
-  }, [selectedProjectId]);
+  }, [selectedProjectId, memberAttempt]);
+
+  const retryMembers = () => {
+    memberRevision.current += 1;
+    setMembersProjectId('');
+    setMemberError(null);
+    setMemberAttempt((attempt) => attempt + 1);
+  };
 
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) ?? null;
@@ -443,6 +461,14 @@ export function TicketBoardView() {
       )}
       {projectNotice && <p role="status">{projectNotice}</p>}
 
+      {memberError?.projectId === selectedProjectId && (
+        <div className={styles.memberRecovery}>
+          <p role="alert">{memberError.message}</p>
+          <button type="button" onClick={retryMembers}>
+            メンバーと権限を再取得
+          </button>
+        </div>
+      )}
       {(error || projectError) && <p role="alert">{error || projectError}</p>}
       {projects.length === 0 && !projectsLoading && !projectError && (
         <p>
@@ -507,20 +533,14 @@ export function TicketBoardView() {
           project={selectedProject}
           canManage={canManageMembers}
           onMembersChanged={(items) => {
+            memberRevision.current += 1;
+            setMemberError(null);
             setProjectMembers(items);
             setMembersProjectId(selectedProject.id);
           }}
           onClose={() => {
             setManagingMembers(false);
-            void fetchProjectMembers(selectedProject.id)
-              .then(setProjectMembers)
-              .catch((reason) =>
-                setProjectError(
-                  reason instanceof Error
-                    ? reason.message
-                    : 'メンバーを取得できませんでした。',
-                ),
-              );
+            retryMembers();
           }}
         />
       )}

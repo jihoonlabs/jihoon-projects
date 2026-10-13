@@ -1,19 +1,18 @@
-# Ticket Comment Reliability Child
+# Ticket Member Recovery Child
 
 owner_repo: jihoonlabs/jihoon-projects
-owner_branch: feature/ticket-comment-reliability
+owner_branch: feature/ticket-member-recovery
 role: child
 status: validated-user-review-pending
 parent_branch: feature/ticket
-base_sha: dd5d547430511234336a1c5278244adc14dd39e8
+base_sha: 6f744b2b2c924938b2f6c69f3c87f361997c5993
 
 ## Responsibility / Boundary
-既存コメントの取得・投稿・編集で遅延応答による表示や入力の消失を防ぐ。取得中/失敗/空一覧を区別し、取得失敗から再試行できるようにする。API・DB・権限仕様は変更しない。
+既存のProject member取得失敗からボード上で再試行できるようにし、Project切替とメンバー管理後の遅延取得が権限・担当者候補を上書きしないようにする。API・DB・権限仕様は変更しない。
 
 ## Validation / Handoff
-- アプリ検証SHA: `768a438461051b77d117059315771947295bc060`。公開treeと検証済みローカルファイルの一致を確認した。
-- 取得中は投稿を抑止し、遅い一覧応答が投稿結果を消す競合を防ぐ。取得失敗は空一覧と区別し、下書きを保持したまま再試行する。
-- 投稿成功で消すのは送信時点と同じ下書きだけ。編集中の保存待ちは入力を無効化し、失敗時に入力を維持する。ref guardで重複送信を抑止する。
-- Ticket IDごとにコメントstateを分離し、切替前の下書き・遅延GET/POST応答が次のTicketへ混入しない。
-- 対象13 tests、React全29 files / 200 tests、TypeScript、ESLint、変更TSXのPrettier、production buildが成功。遅延GET、取得失敗/再試行、POST中の次の下書き、重複送信、Ticket切替後の遅延GET/POST、編集失敗を確認した。
-- 今回は実browser/実Laravel接続を再実行していない。前回の一時runtimeは現環境に残っておらず、今回の結果はReactの遅延promiseによる検証。Backend変更はない。利用者の実画面確認と指摘修正は残る。
+- member取得のerrorをProject一覧errorから分離し、同じProjectで再試行できる。取得成功で無関係なProject一覧errorを消さない。
+- dialogを閉じた後の再取得もeffectの遅延応答guardへ統一した。再確認中は古いmembershipを操作判断に使用せず、別Projectへの遅延応答を無視する。
+- dialogによるmember変更のrevisionを記録し、変更前のboard取得が最新memberを上書きしない。
+- 修正前コードで新規4 testsの失敗を確認。対象View 32 tests、React全29 files / 204 tests、TypeScript、ESLint、変更TSX/CSSのPrettier、最終コードのproduction buildが成功。
+- 今回は実browser/実Laravel接続を再実行していない。React/API境界の遅延promiseで検証した。利用者の実画面確認と指摘修正は残る。
