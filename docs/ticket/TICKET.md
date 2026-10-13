@@ -89,6 +89,9 @@
 - List Recovery Child / アプリ検証SHA: `739c51d0f01a9bc601f178280d82715308d8aeb8`（基準: `1e5f5e8660af43a9cd6518f25674217434fbfba6`）を採用した。Ticket削除成功後のProject取得失敗を削除失敗と扱わずdetailを閉じる。Ticket一覧の取得失敗はboard上で再取得でき、取得中の案内と既存一覧の保全に対応する。
 - 対象View 36 tests、React全29 files / 208 tests、TypeScript、ESLint、変更TSXのPrettier、production buildが成功。実browser/実Laravel接続は今回未実行。API・DB・権限仕様の変更はない。現行WORK: `docs/ticket/BOARD_POLISH_WORK.md`。
 
+- Board Design Child / アプリ検証SHA: `c5417c648f1380dd673b26f1c8317c26ad817346`（基準: `a02f37781e0c2fbc5d8852e1f26fcaecb2edf582`）を採用した。利用者の実画面指摘に合わせ、Header/toolbarを圧縮・整理し、Project色を維持しながらcard背景を淡くした。文字・列幅・間隔、dark-systemの検索入力を調整した。既存accessible nameと機能・API・DB・権限を維持する。
+- React 208 tests、TypeScript、ESLint、Prettier、production buildが成功。実Chromiumのdark-systemで1440/940/393px、ページ横overflowなし、検索可読性、mobile detail、pageerror 0件を確認。API fixtureによる表示検証であり、実Laravel接続ではない。修正後の利用者画面確認は残る。現行WORK: `docs/ticket/BOARD_POLISH_WORK.md`。
+
 ## 次の作業
 - 利用者の実ローカル環境で画面を確認し、指摘を修正する。社内基本機能と指摘修正が満たされるまでV1完了とは扱わない。
 - keyboard DnDは未実装・未検証。pointer DnD/保存・reconnectionと既存status selectは上記実接続で検証済み。

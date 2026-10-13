@@ -11,6 +11,7 @@ base_sha: a02f37781e0c2fbc5d8852e1f26fcaecb2edf582
 利用者の実画面指摘に合わせ、Header/toolbarの階層と余白、Project色の強さ、カードの可読性、dark-system下の入力を調整する。既存機能・権限・API・DBは変更しない。
 
 ## Validation / Handoff
+- アプリ検証SHA: `c5417c648f1380dd673b26f1c8317c26ad817346`。公開treeと検証済みローカルファイルの一致を確認した。
 - 共通Headerを小さくし、board toolbarをProject/操作とcontext/filterの2段に整理。管理ボタンの表示を短くし、既存accessible nameと操作を維持した。
 - Project keyから決まる色を維持し、card背景をwhiteと混色して淡くした。タイトルのweight/line-heightと列の幅・間隔を調整した。
 - boardとheaderをlight color-schemeとし、dark-systemでも検索入力の背景/文字を明示した。
