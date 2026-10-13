@@ -167,7 +167,7 @@ class DesignRevisionTests(unittest.TestCase):
         model = Mock(return_value="invalid")
         with self.assertRaises(RuntimeError):
             design_plan.revise_design(self.original, "Fix the condition.", model)
-        self.assertEqual(model.call_count, 3)
+        self.assertEqual(model.call_count, 2)
         self.assertEqual(self.original.read_bytes(), self.original_bytes)
         folders = [
             folder for folder in (self.root / "outputs").iterdir()
@@ -177,7 +177,7 @@ class DesignRevisionTests(unittest.TestCase):
         self.assertTrue((folders[0] / "revision.json").is_file())
         self.assertTrue((folders[0] / "request.json").is_file())
         self.assertFalse((folders[0] / "design.json").exists())
-        self.assertEqual(len(list(folders[0].glob("answer_*.txt"))), 3)
+        self.assertEqual(len(list(folders[0].glob("answer_*.txt"))), 2)
 
     def test_revised_design_can_be_revised_again(self):
         first = design_plan.revise_design(
@@ -223,3 +223,4 @@ class DesignRevisionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

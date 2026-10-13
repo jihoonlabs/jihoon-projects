@@ -1,6 +1,8 @@
 def update_state(state, inputs):
     new_state = dict(state)
     new_state['owned'] = list(state['owned'])
+    new_state.setdefault('player_y', 28)
+    new_state.setdefault('enemy_y', 28)
     screen = state['screen_state']
     r_new = inputs['R'] and not state['menu_r_held']
     new_state['menu_r_held'] = inputs['R']
@@ -47,6 +49,8 @@ def update_state(state, inputs):
         new_state['HP'] = new_state['maxHP']
         new_state['player_x'] = 16
         new_state['enemy_x'] = 112
+        new_state['player_y'] = 28
+        new_state['enemy_y'] = 28
         new_state['direction'] = 'R'
         new_state['combat_frame'] = 0
         new_state['player_attack_cooldown'] = 0
@@ -111,31 +115,39 @@ def update_state(state, inputs):
     new_state['combat_frame'] += 1
     new_state['player_attack_cooldown'] = max(0, state['player_attack_cooldown'] - 1)
     new_state['enemy_attack_cooldown'] = max(0, state['enemy_attack_cooldown'] - 1)
+    # World 144x40. Top-left body coordinates; HUD occupies y=0..13.
     player = state['player_x']
     enemy = state['enemy_x']
-    moved = player
-    if inputs['L'] and not inputs['R']:
-        moved = max(0, player - 1)
-        if new_state['active_enemy'] and enemy < player:
-            moved = max(moved, enemy + 8)
-    elif inputs['R'] and not inputs['L']:
-        moved = min(136, player + 1)
-        if new_state['active_enemy'] and enemy > player:
-            moved = min(moved, enemy - 8)
-    if moved != player:
-        new_state['direction'] = 'R' if moved > player else 'L'
+    py = new_state['player_y']
+    ey = new_state['enemy_y']
+    dx = int(bool(inputs['R'])) - int(bool(inputs['L']))
+    dy = int(bool(inputs.get('D_held', inputs['D']))) - int(bool(inputs.get('U_held', inputs['U'])))
+    if dx:
+        new_state['direction'] = 'R' if dx > 0 else 'L'
+    moved = max(0, min(138, player + dx))
+    moved_y = max(15, min(33, py + dy))
+    # Resolve each axis separately so actors can slide past one another.
+    if new_state['active_enemy'] and abs(moved-enemy) < 6 and abs(py-ey) < 7:
+        moved = player
+    if new_state['active_enemy'] and abs(moved-enemy) < 6 and abs(moved_y-ey) < 7:
+        moved_y = py
     new_state['player_x'] = moved
+    new_state['player_y'] = moved_y
     if new_state['active_enemy'] and new_state['combat_frame'] % 2 == 0:
-        if enemy > moved:
-            enemy = max(moved + 8, enemy - 1)
-        else:
-            enemy = min(moved - 8, enemy + 1)
+        next_enemy = max(0, min(138, enemy + (1 if moved > enemy else -1 if moved < enemy else 0)))
+        if not (abs(next_enemy-moved) < 6 and abs(ey-moved_y) < 7):
+            enemy = next_enemy
+        next_y = max(15, min(33, ey + (1 if moved_y > ey else -1 if moved_y < ey else 0)))
+        if not (abs(enemy-moved) < 6 and abs(next_y-moved_y) < 7):
+            ey = next_y
         new_state['enemy_x'] = enemy
+        new_state['enemy_y'] = ey
+    same_lane = abs(moved_y-ey) <= 3
 
     if inputs['A'] and new_state['player_attack_cooldown'] == 0:
         new_state['player_attack_cooldown'] = 15
-        gap = enemy - (moved + 8) if new_state['direction'] == 'R' else moved - (enemy + 8)
-        if new_state['active_enemy'] and 0 <= gap <= 8:
+        gap = enemy - (moved + 6) if new_state['direction'] == 'R' else moved - (enemy + 6)
+        if new_state['active_enemy'] and same_lane and 0 <= gap <= 8:
             damage = calculate_damage(new_state, {'defense': new_state['enemy_defense']})
             new_state['enemy_hp'] = max(0, new_state['enemy_hp'] - damage)
             if new_state['enemy_hp'] == 0:
@@ -151,11 +163,11 @@ def update_state(state, inputs):
                 new_state['menu_scroll'] = 0
                 return new_state
 
-    gap = max(moved, enemy) - (min(moved, enemy) + 8)
-    if new_state['active_enemy'] and 0 <= gap <= 2 and new_state['enemy_attack_cooldown'] == 0:
+    gap = max(moved, enemy) - (min(moved, enemy) + 6)
+    if new_state['active_enemy'] and same_lane and 0 <= gap <= 2 and new_state['enemy_attack_cooldown'] == 0:
         damage = calculate_damage({'attack': new_state['enemy_attack']}, new_state)
         new_state['HP'] = max(0, new_state['HP'] - damage)
-        new_state['enemy_attack_cooldown'] = 30
+        new_state['enemy_attack_cooldown'] = 120
     if new_state['HP'] == 0:
         new_state['screen_state'] = 'defeat'
         new_state['menu_selection'] = 0
@@ -236,6 +248,8 @@ def decode_save_data(data):
         equipped_weapon=data['equipped_weapon'],
         equipped_armor=data['equipped_armor'],
         player_x=16,
+        player_y=28,
+        enemy_y=28,
         enemy_x=112,
         screen_state='safe',
         menu_selection=0,

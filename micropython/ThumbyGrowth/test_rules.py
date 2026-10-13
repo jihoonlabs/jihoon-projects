@@ -136,9 +136,9 @@ class TestRules(unittest.TestCase):
     def test_case_10(self):
         result = self.advance(battle(enemy_x=26),A=True)
         self.assertEqual((result['HP'],result['enemy_hp']), (8,4))
-        self.assertEqual((result['player_attack_cooldown'],result['enemy_attack_cooldown']), (15,30))
+        self.assertEqual((result['player_attack_cooldown'],result['enemy_attack_cooldown']), (15,120))
         later = self.advance(result)
-        self.assertEqual((later['player_attack_cooldown'],later['enemy_attack_cooldown']), (14,29))
+        self.assertEqual((later['player_attack_cooldown'],later['enemy_attack_cooldown']), (14,119))
         distant = self.advance(battle(enemy_x=27))
         self.assertEqual((distant['HP'],distant['enemy_attack_cooldown']), (10,0))
         killed = self.advance(battle(enemy_x=24,enemy_hp=2,HP=1),A=True)

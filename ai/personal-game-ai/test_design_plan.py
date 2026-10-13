@@ -208,7 +208,39 @@ class DesignPlanTests(unittest.TestCase):
         folders = list((self.root / "outputs").glob("design_*"))
         self.assertEqual(len(folders), 1)
         self.assertFalse((folders[0] / "design.json").exists())
-        self.assertEqual(len(list(folders[0].glob("answer_*.txt"))), 3)
+        self.assertEqual(len(list(folders[0].glob("answer_*.txt"))), 2)
+
+    def test_length_failure_keeps_partial_response_and_prompt(self):
+        from ask_ai import ModelLengthError
+        result = {"done_reason": "length", "message": {"content": '{"files":['}}
+        model = Mock(side_effect=ModelLengthError(result))
+        with self.assertRaisesRegex(RuntimeError, "출력 한도 중단"):
+            self.generate(model)
+        folder = next((self.root / "outputs").glob("design_*"))
+        self.assertEqual(model.call_count, 1)
+        self.assertEqual(json.loads((folder / "response_1.json").read_text()), result)
+        self.assertTrue((folder / "prompt_1.txt").is_file())
+        self.assertEqual((folder / "context.txt").read_text(), "CONTEXT")
+        self.assertEqual(json.loads((folder / "attempt_1.json").read_text())["status"], "output_limit")
+        self.assertFalse((folder / "design.json").exists())
+        self.assertFalse((folder / "approval.json").exists())
+
+    def test_different_invalid_responses_retain_three_attempt_bound(self):
+        model = Mock(side_effect=["bad one", "bad two", "bad three"])
+        with self.assertRaisesRegex(RuntimeError, "설계 생성 실패"):
+            self.generate(model)
+        self.assertEqual(model.call_count, 3)
+        self.assertIn("Expecting value", model.call_args_list[1].args[0])
+
+    def test_model_error_is_recorded_without_automatic_retry(self):
+        model = Mock(side_effect=RuntimeError("connection failed"))
+        with self.assertRaisesRegex(RuntimeError, "connection failed"):
+            self.generate(model)
+        folder = next((self.root / "outputs").glob("design_*"))
+        self.assertEqual(model.call_count, 1)
+        record = json.loads((folder / "attempt_1.json").read_text())
+        self.assertEqual(record["status"], "model_error")
+        self.assertFalse(record["automatic_approval"])
 
     def test_directory_change_during_generation_stops(self):
         def model(prompt):
@@ -261,3 +293,4 @@ class DesignPlanTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

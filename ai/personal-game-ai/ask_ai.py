@@ -1,5 +1,6 @@
 import re
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from urllib.request import Request, urlopen
@@ -34,10 +35,38 @@ payload = {
     "keep_alive": 0,
 }
 
+class ModelLengthError(RuntimeError):
+    """Keep the incomplete response available to the caller for diagnostics."""
+
+    def __init__(self, result):
+        super().__init__("AI 응답이 길이 제한으로 중단됐습니다.")
+        self.result = result
+
+
+def model_options():
+    options = payload["options"].copy()
+    for name, minimum, maximum in (
+        ("num_ctx", 1024, 131072), ("num_predict", 1, 32768)
+    ):
+        value = os.environ.get("GAME_AI_" + name.upper())
+        if value is not None:
+            try:
+                number = int(value)
+            except ValueError:
+                raise ValueError(f"GAME_AI_{name.upper()}는 정수여야 합니다.") from None
+            if not minimum <= number <= maximum:
+                raise ValueError(f"GAME_AI_{name.upper()} 범위: {minimum}..{maximum}")
+            options[name] = number
+    if options["num_predict"] >= options["num_ctx"]:
+        raise ValueError("num_predict는 num_ctx보다 작아야 합니다.")
+    return options
+
+
 def ask_model(prompt):
     # 호출할 때마다 독립된 요청 데이터를 만든다.
     data = {
         **payload,
+        "options": model_options(),
         "messages": [
             payload["messages"][0].copy(),
             {"role": "user", "content": prompt},
@@ -56,7 +85,7 @@ def ask_model(prompt):
 
     # 응답 한도에 도달하면 완성된 결과로 취급하지 않는다.
     if result.get("done_reason") == "length":
-        raise RuntimeError("AI 응답이 길이 제한으로 중단됐습니다.")
+        raise ModelLengthError(result)
 
     return result["message"]["content"]
 

@@ -1,9 +1,13 @@
 {
   "repository_root": "../..",
-  "expected_branch": "feature/personal-game-ai-thumby-generation",
-  "branch_document": "docs/personal-game-ai/THUMBY_GENERATION.md",
+  "expected_branch": "work/thumby-rpg-first-20261008",
+  "branch_document": "docs/personal-game-ai/THUMBY_GROWTH_FIRST.md",
   "code_files": [],
   "max_context_chars": 12000,
   "generation_profile": "thumby",
-  "edit_directory": "micropython/ThumbyDodge"
+  "edit_directory": "micropython/ThumbyGrowth",
+  "thumby_features": [
+    "controls",
+    "save_data"
+  ]
 }
