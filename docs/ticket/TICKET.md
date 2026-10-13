@@ -80,6 +80,9 @@
 - MySQLの複数PHPプロセス/別接続でProject 6件の同時作成（unique key/creator/leader/write/audit）とTicket 6件の同時作成（連番key/position/counter）を確認した。別PDOの行lockが1205 timeoutになり、明示rollback後に取得できた。全migrationと、version追加前の既存Ticket 5件の全フィールド保持・version=1を確認した。上記環境・対象の検証結果として扱い、その他のDB設定・分離レベルの結果とは扱わない。
 - TicketSeederのrole/read permission破壊を修正前に再現し、繰り返しseedでも保全する回帰テストを追加した。検証用DB・runtime・profileのみを使用し、既存DB・.envは変更していない。公開Git treeと検証済みローカルファイルは一致する。現行WORK: `docs/ticket/BOARD_POLISH_WORK.md`。
 
+- Comment Reliability Child / アプリ検証SHA: `768a438461051b77d117059315771947295bc060`（基準: `dd5d547430511234336a1c5278244adc14dd39e8`）を採用した。コメント取得中の投稿を抑止し、取得失敗の再試行、POST待ちで入力した次の下書きの保全、重複送信防止、Ticket切替前の遅延GET/POST応答の分離を修正した。API・DB・権限変更はない。
+- 対象13 tests、React全29 files / 200 tests、TypeScript、ESLint、変更TSXのPrettier、production buildが成功した。今回の実browser/実Laravel接続は未実行。前回の接続検証と今回のReact遅延応答検証を区別する。現行WORK: `docs/ticket/BOARD_POLISH_WORK.md`。
+
 ## 次の作業
 - 利用者の実ローカル環境で画面を確認し、指摘を修正する。社内基本機能と指摘修正が満たされるまでV1完了とは扱わない。
 - keyboard DnDは未実装・未検証。pointer DnD/保存・reconnectionと既存status selectは上記実接続で検証済み。
