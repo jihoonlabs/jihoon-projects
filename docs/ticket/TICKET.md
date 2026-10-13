@@ -86,6 +86,9 @@
 - Member Recovery Child / アプリ検証SHA: `da7ef46235416c57dd9086af39a7a685eb6bcded`（基準: `6f744b2b2c924938b2f6c69f3c87f361997c5993`）を採用した。member取得失敗時に同じProjectで権限を再取得できる。dialogを閉じた後も遅延応答guardを使用し、再確認中の古いmembership使用と別Projectへの応答混入を防ぐ。member取得でProject一覧errorを消さない。API・DB・権限仕様は変更しない。
 - 修正前で新規4 testsの失敗を確認し、対象View 32 tests、React全29 files / 204 tests、TypeScript、ESLint、変更TSX/CSSのPrettier、最終production buildが成功した。今回の実browser/実Laravel接続は未実行。現行WORK: `docs/ticket/BOARD_POLISH_WORK.md`。
 
+- List Recovery Child / アプリ検証SHA: `739c51d0f01a9bc601f178280d82715308d8aeb8`（基準: `1e5f5e8660af43a9cd6518f25674217434fbfba6`）を採用した。Ticket削除成功後のProject取得失敗を削除失敗と扱わずdetailを閉じる。Ticket一覧の取得失敗はboard上で再取得でき、取得中の案内と既存一覧の保全に対応する。
+- 対象View 36 tests、React全29 files / 208 tests、TypeScript、ESLint、変更TSXのPrettier、production buildが成功。実browser/実Laravel接続は今回未実行。API・DB・権限仕様の変更はない。現行WORK: `docs/ticket/BOARD_POLISH_WORK.md`。
+
 ## 次の作業
 - 利用者の実ローカル環境で画面を確認し、指摘を修正する。社内基本機能と指摘修正が満たされるまでV1完了とは扱わない。
 - keyboard DnDは未実装・未検証。pointer DnD/保存・reconnectionと既存status selectは上記実接続で検証済み。
