@@ -5,6 +5,9 @@ try:
 except ImportError:
     import json
 import thumby
+# The device launcher need not add the game's sibling-module directory.
+if sys.implementation.name == 'micropython':
+    sys.path.append('/Games/ThumbyGrowth')
 from rules import update_state, encode_save_data, decode_save_data, GOAL_STAGES, ENCOUNTERS
 
 

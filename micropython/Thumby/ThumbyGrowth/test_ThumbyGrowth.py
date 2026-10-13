@@ -118,7 +118,9 @@ class TestAdapter(unittest.TestCase):
         self.assertEqual(fake_thumby.saveData.mock_calls,[])
 
     def test_case_3(self):
+        paths = list(sys.path)
         importlib.reload(ThumbyGrowth)
+        self.assertEqual(sys.path, paths)
         for name in ('L','R','A','B','U','D'):
             self.assertEqual(getattr(fake_thumby,'button'+name).mock_calls,[])
         self.assertEqual(fake_thumby.saveData.mock_calls,[])
