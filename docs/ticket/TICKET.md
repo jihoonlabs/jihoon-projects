@@ -83,6 +83,9 @@
 - Comment Reliability Child / アプリ検証SHA: `768a438461051b77d117059315771947295bc060`（基準: `dd5d547430511234336a1c5278244adc14dd39e8`）を採用した。コメント取得中の投稿を抑止し、取得失敗の再試行、POST待ちで入力した次の下書きの保全、重複送信防止、Ticket切替前の遅延GET/POST応答の分離を修正した。API・DB・権限変更はない。
 - 対象13 tests、React全29 files / 200 tests、TypeScript、ESLint、変更TSXのPrettier、production buildが成功した。今回の実browser/実Laravel接続は未実行。前回の接続検証と今回のReact遅延応答検証を区別する。現行WORK: `docs/ticket/BOARD_POLISH_WORK.md`。
 
+- Member Recovery Child / アプリ検証SHA: `da7ef46235416c57dd9086af39a7a685eb6bcded`（基準: `6f744b2b2c924938b2f6c69f3c87f361997c5993`）を採用した。member取得失敗時に同じProjectで権限を再取得できる。dialogを閉じた後も遅延応答guardを使用し、再確認中の古いmembership使用と別Projectへの応答混入を防ぐ。member取得でProject一覧errorを消さない。API・DB・権限仕様は変更しない。
+- 修正前で新規4 testsの失敗を確認し、対象View 32 tests、React全29 files / 204 tests、TypeScript、ESLint、変更TSX/CSSのPrettier、最終production buildが成功した。今回の実browser/実Laravel接続は未実行。現行WORK: `docs/ticket/BOARD_POLISH_WORK.md`。
+
 ## 次の作業
 - 利用者の実ローカル環境で画面を確認し、指摘を修正する。社内基本機能と指摘修正が満たされるまでV1完了とは扱わない。
 - keyboard DnDは未実装・未検証。pointer DnD/保存・reconnectionと既存status selectは上記実接続で検証済み。
