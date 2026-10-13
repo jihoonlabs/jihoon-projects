@@ -22,7 +22,7 @@ import ThumbyGrowth
 def state(**changes):
     value = dict(HP=10,maxHP=10,money=0,attack=2,defense=0,progress=0,
         owned=[False]*4,equipped_weapon=None,equipped_armor=None,
-        player_x=16,enemy_x=112,screen_state='safe',menu_selection=0,
+        player_x=16,enemy_x=112,player_y=28,enemy_y=28,screen_state='safe',menu_selection=0,
         menu_scroll=0,direction='R',player_attack_cooldown=0,
         enemy_attack_cooldown=0,active_enemy=False,enemy_hp=0,
         enemy_attack=0,enemy_defense=0,combat_frame=0,
@@ -32,7 +32,7 @@ def state(**changes):
 
 
 def inputs(**changes):
-    value = dict.fromkeys(('L','R','A','B','U','D'),False)
+    value = dict.fromkeys(('L','R','A','B','U','D','U_held','D_held'),False)
     value.update(changes)
     return value
 
@@ -54,17 +54,23 @@ class TestAdapter(unittest.TestCase):
         return [str(call.args[0]) for call in fake_thumby.display.drawText.call_args_list]
 
     def test_case_1(self):
-        for key in ('L','R','A','B','U','D'):
-            button = getattr(fake_thumby,'button'+key)
-            method = 'pressed' if key in ('L','R') else 'justPressed'
-            other = 'justPressed' if method == 'pressed' else 'pressed'
+        # Vertical held input moves in battle; edges still navigate menus.
+        for key in ('L','R','A','B','U','D','U_held','D_held'):
+            button = getattr(fake_thumby, 'button'+key.split('_')[0])
+            method = 'pressed' if key in ('L','R','U_held','D_held') else 'justPressed'
             getattr(button,method).return_value = True
             result = ThumbyGrowth.handle_inputs()
             self.assertEqual(result,inputs(**{key:True}))
             self.assertTrue(all(type(value) is bool for value in result.values()))
             self.assertGreater(getattr(button,method).call_count,0)
-            self.assertEqual(getattr(button,other).call_count,0)
             getattr(button,method).return_value = False
+        for key in ('U','D'):
+            button = getattr(fake_thumby, 'button'+key)
+            button.pressed.return_value = True
+            button.justPressed.return_value = True
+            self.assertEqual(ThumbyGrowth.handle_inputs(),inputs(**{key:True,key+'_held':True}))
+            button.pressed.return_value = False
+            button.justPressed.return_value = False
         self.assertEqual(ThumbyGrowth.handle_inputs(),inputs())
         self.assertEqual(fake_thumby.saveData.mock_calls,[])
 

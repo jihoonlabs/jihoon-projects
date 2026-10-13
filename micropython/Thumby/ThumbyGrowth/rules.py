@@ -1,3 +1,8 @@
+GOAL_STAGES = 5
+# HP, attack, defense. The last encounter is the boss.
+ENCOUNTERS = ((6, 2, 0), (10, 3, 1), (8, 3, 0), (12, 3, 1), (16, 4, 2))
+
+
 def update_state(state, inputs):
     new_state = dict(state)
     new_state['owned'] = list(state['owned'])
@@ -7,6 +12,15 @@ def update_state(state, inputs):
     r_new = inputs['R'] and not state['menu_r_held']
     new_state['menu_r_held'] = inputs['R']
     new_state['save_requested'] = False
+
+    # A completed save opens the ending, rather than an endless next fight.
+    if screen == 'safe' and state['progress'] >= GOAL_STAGES:
+        if inputs['B']:
+            new_state['save_requested'] = True
+        elif inputs['A']:
+            return decode_save_data(dict(version=1, money=0, progress=0,
+                owned=[False]*4, equipped_weapon=None, equipped_armor=None))
+        return new_state
 
     # 복귀 입력은 전환한 화면에서 다시 처리하지 않는다.
     if inputs['B']:
@@ -56,10 +70,10 @@ def update_state(state, inputs):
         new_state['player_attack_cooldown'] = 0
         new_state['enemy_attack_cooldown'] = 0
         new_state['active_enemy'] = True
-        odd = new_state['progress'] % 2
-        new_state['enemy_hp'] = 10 if odd else 6
-        new_state['enemy_attack'] = 3 if odd else 2
-        new_state['enemy_defense'] = 1 if odd else 0
+        hp, attack, defense = ENCOUNTERS[min(new_state['progress'], GOAL_STAGES-1)]
+        new_state['enemy_hp'] = hp
+        new_state['enemy_attack'] = attack
+        new_state['enemy_defense'] = defense
         weapon = new_state['equipped_weapon']
         armor = new_state['equipped_armor']
         new_state['attack'] = 2 + (0 if weapon is None else (2 if weapon == 0 else 4))

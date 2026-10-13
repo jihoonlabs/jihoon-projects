@@ -5,14 +5,35 @@ try:
 except ImportError:
     import json
 import thumby
-from rules import update_state, encode_save_data, decode_save_data
+from rules import update_state, encode_save_data, decode_save_data, GOAL_STAGES, ENCOUNTERS
 
 
 def main_loop():
     thumby.display.setFPS(30)
-    state = load_save_data()
+    action = None
+    while action is None:
+        action = title_frame()
+    state = (load_save_data() if action == 'load' else
+             decode_save_data(dict(version=1, money=0, progress=0,
+                 owned=[False]*4, equipped_weapon=None, equipped_armor=None)))
     while True:
         state = step_frame(state)
+
+
+def title_frame():
+    display = thumby.display
+    display.fill(0)
+    display.drawText('GROWTH', 18, 2, 1)
+    display.drawText('5 DUELS', 15, 12, 1)
+    display.drawText('A:NEW', 0, 23, 1)
+    display.drawText('B:LOAD', 0, 33, 1)
+    display.update()
+    # Loading takes priority if both buttons are pressed; it cannot erase a save.
+    if thumby.buttonB.justPressed():
+        return 'load'
+    if thumby.buttonA.justPressed():
+        return 'new'
+    return None
 
 
 def step_frame(state):
@@ -34,11 +55,17 @@ def draw_game(state):
     display.fill(0)
     screen = state['screen_state']
     status = state['save_status']
-    if screen == 'battle':
+    if screen == 'safe' and state['progress'] >= GOAL_STAGES:
+        display.drawText('QUEST CLEAR', 3, 0, 1)
+        display.drawText('$'+str(state['money']), 0, 10, 1)
+        display.drawText('A:NEW', 0, 20, 1)
+        display.drawText(status if status in ('SAVED','SAVE ERR') else 'B:SAVE', 0, 30, 1)
+    elif screen == 'battle':
         display.drawText('HP'+str(state['HP']), 0, 0, 1)
-        display.drawText('E'+str(state['enemy_hp']), 42, 0, 1)
+        display.drawText(str(state['progress']+1)+'/5', 24, 0, 1)
+        display.drawText('E'+str(state['enemy_hp']), 48, 0, 1)
         for x, hp, maximum in ((0, state['HP'], state['maxHP']),
-                                (42, state['enemy_hp'], 10 if state['progress']%2 else 6)):
+                                (42, state['enemy_hp'], ENCOUNTERS[min(state['progress'],GOAL_STAGES-1)][0])):
             display.drawFilledRectangle(x, 9, 30, 4, 1)
             display.drawFilledRectangle(x+1, 10, 28, 2, 0)
             width = max(0, min(28, 28*hp//max(1,maximum)))
@@ -99,7 +126,7 @@ def draw_game(state):
             choices = ('RESUME', 'SAVE')
         else:
             choices = ('Blade', 'Sword', 'Vest', 'Armor')
-        header = screen.upper()
+        header = 'STAGE '+str(state['progress']+1) if screen == 'safe' else screen.upper()
         if screen in ('shop','equip'):
             chosen = state['menu_selection']
             if screen == 'shop':

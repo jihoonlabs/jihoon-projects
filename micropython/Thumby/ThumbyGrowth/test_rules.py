@@ -6,7 +6,7 @@ from rules import update_state, calculate_damage, get_item_price, get_item_type,
 def state(**changes):
     value = dict(HP=10, maxHP=10, money=0, attack=2, defense=0, progress=0,
         owned=[False]*4, equipped_weapon=None, equipped_armor=None,
-        player_x=16, enemy_x=112, screen_state='safe', menu_selection=0,
+        player_x=16, enemy_x=112, player_y=28, enemy_y=28, screen_state='safe', menu_selection=0,
         menu_scroll=0, direction='R', player_attack_cooldown=0,
         enemy_attack_cooldown=0, active_enemy=False, enemy_hp=0,
         enemy_attack=0, enemy_defense=0, combat_frame=0,
@@ -16,7 +16,7 @@ def state(**changes):
 
 
 def inputs(**changes):
-    value = dict.fromkeys(('L','R','A','B','U','D'), False)
+    value = dict.fromkeys(('L','R','A','B','U','D','U_held','D_held'), False)
     value.update(changes)
     return value
 
@@ -112,34 +112,34 @@ class TestRules(unittest.TestCase):
     def test_case_8(self):
         for original, buttons, expected in (
             (battle(),dict(L=True,R=True),(16,'R')),
-            (battle(player_x=0),dict(L=True),(0,'R')),
-            (battle(player_x=136,enemy_x=0),dict(R=True),(136,'R')),
-            (battle(enemy_x=24),dict(R=True),(16,'R')),
-            (battle(player_x=24,enemy_x=16),dict(L=True),(24,'R'))):
+            (battle(player_x=0),dict(L=True),(0,'L')),
+            (battle(player_x=138,enemy_x=0),dict(R=True),(138,'R')),
+            (battle(enemy_x=22),dict(R=True),(16,'R')),
+            (battle(player_x=24,enemy_x=18),dict(L=True),(24,'L'))):
             result = self.advance(original,**buttons)
             self.assertEqual((result['player_x'],result['direction']),expected)
 
     def test_case_9(self):
         for changes, keys, hp, wait in (
-            ({'enemy_x':32},dict(A=True),4,15),
-            ({'enemy_x':32,'direction':'L'},dict(A=True),6,15),
-            ({'enemy_x':33},dict(A=True),6,15),
-            ({'enemy_x':32,'player_attack_cooldown':2},dict(A=True),6,1),
-            ({'enemy_x':32},dict(),6,0),
-            ({'enemy_x':32,'player_attack_cooldown':1},dict(A=True),4,15)):
+            ({'enemy_x':30},dict(A=True),4,15),
+            ({'enemy_x':30,'direction':'L'},dict(A=True),6,15),
+            ({'enemy_x':31},dict(A=True),6,15),
+            ({'enemy_x':30,'player_attack_cooldown':2},dict(A=True),6,1),
+            ({'enemy_x':30},dict(),6,0),
+            ({'enemy_x':30,'player_attack_cooldown':1},dict(A=True),4,15)):
             result = self.advance(battle(**changes),**keys)
             self.assertEqual(result['enemy_hp'],hp)
             self.assertEqual(result['player_attack_cooldown'],wait)
-        result = self.advance(battle(player_x=32,enemy_x=16,direction='L'),A=True)
+        result = self.advance(battle(player_x=30,enemy_x=16,direction='L'),A=True)
         self.assertEqual(result['enemy_hp'],4)
 
     def test_case_10(self):
-        result = self.advance(battle(enemy_x=26),A=True)
+        result = self.advance(battle(enemy_x=24),A=True)
         self.assertEqual((result['HP'],result['enemy_hp']), (8,4))
         self.assertEqual((result['player_attack_cooldown'],result['enemy_attack_cooldown']), (15,120))
         later = self.advance(result)
         self.assertEqual((later['player_attack_cooldown'],later['enemy_attack_cooldown']), (14,119))
-        distant = self.advance(battle(enemy_x=27))
+        distant = self.advance(battle(enemy_x=25))
         self.assertEqual((distant['HP'],distant['enemy_attack_cooldown']), (10,0))
         killed = self.advance(battle(enemy_x=24,enemy_hp=2,HP=1),A=True)
         self.assertEqual((killed['HP'],killed['screen_state']), (10,'safe'))
@@ -153,7 +153,7 @@ class TestRules(unittest.TestCase):
             self.assertEqual(result,expected)
             self.assertIs(type(result),int)
             self.assertEqual((a,d),({'attack':attack},{'defense':1}))
-        result = self.advance(battle(enemy_x=32,enemy_defense=1,attack=4,
+        result = self.advance(battle(enemy_x=30,enemy_defense=1,attack=4,
             owned=[True,False,False,False],equipped_weapon=0),A=True)
         self.assertEqual(result['enemy_hp'],3)
 
@@ -169,7 +169,7 @@ class TestRules(unittest.TestCase):
             self.assertEqual((result['money'],result['progress']),(reward,progress+1))
             self.assertFalse(result['active_enemy'])
             result = self.advance(result,A=True)
-            expected = (10,3,1) if progress == 0 else (6,2,0)
+            expected = (10,3,1) if progress == 0 else (8,3,0)
             self.assertEqual(tuple(result[k] for k in ('enemy_hp','enemy_attack','enemy_defense')),expected)
 
     def test_case_13(self):
