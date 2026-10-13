@@ -24,6 +24,8 @@
 
 - Runtime Verification Child `feature/ticket-runtime-verification` の検証SHA `a44f832067b77ea16fb7e98c063088ca9f5276b6` を採用した。実browser/Laravel/SQLite/MySQLの検証を実行し、再seedで既存role/permissionを上書きする回帰、MySQLで動かないテストの前提、追加Projectボタンとsystem dark時の案内表示を修正した。API・DB schema・権限仕様の拡張はない。V1全体は利用者の実ローカル画面確認前であり未完了。
 
+- Persistent Project Paletteを検証候補 `972051af5e1ebb3c26963df1256d4a07cdd48182` からローカルfast-forward採用した（採用前Epic: `9269be437b16cfe9e2a9db55e1f7deec558d3faa`）。最終Child: `4ed28c96d27756f6fa746d1962cd9194cc951abc`、アプリ検証SHA: `0b953a72f54f9426b3b28d6fb7414069c23c6a73`。key hashを廃止し、216種類の明るい黄・緑・ミント・青系の色をProjectに保存する。DB unique制約と生成再試行で重複を防ぎ、名前変更・別ユーザー・再接続でもカード全面の同色を保つ。デザインは利用者承認済み、V1は実使用確認待ち。
+
 ## 採用Child SHA
 - Project Lifecycle: `a52c78cfbb9c1d70d724adc06aa593ae0e67f0f3`
 - Project Creation: `f401c960c0d125f07569cda775b7bc28f581d5e5`
@@ -98,3 +100,9 @@
 
 ## 今後の候補
 - 監査記録の画面表示、Activity / Historyの利用者向け機能は別途優先度を判断する。
+
+## Persistent Palette採用検証
+- MySQL 8.4.11専用DBの既存3 Project・3 user・4 membership・4 Ticket・4 commentの全fieldを保持してcolor migration成功。非null/unique、直接重複UPDATEの1062拒否、6実session/複数PHP workerの同時生成で6色、別PDO row lockの1205とrollback解放を確認。この環境以外のDB設定・分離レベルまで保証しない。
+- 候補の実frontend→Laravel→MySQLで作成・version付き編集・担当者再編集・pointer状態移動/reload・comment CRUD/権限・Project切替/色分離・確認付き削除を検証。6 grouped scenarios、Parent React208 testsが成功。アプリコード修正なしで承認済みデザインを維持した。
+- 元のユーザーSQLite・envと4デザインProject/20 Ticketを保持。採用後のアプリtreeは検証SHAと同一。追加変更はこの採用記録のみ。Child149 Laravel tests、type/lint/buildの同一コード検証は反復しない。
+- 詳細: `PROJECT_PALETTE_WORK.md` / `PROJECT_PALETTE_INTEGRATION_WORK.md`。最終採用状態の正本は本Epic文書。Child/candidateは保持する。外部OAuth完了・keyboard DnDと利用者による実使用確認は残り、V1全体は未完了。
