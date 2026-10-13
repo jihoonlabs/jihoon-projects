@@ -6,6 +6,7 @@ import {
   deleteTicket,
   fetchTicket,
   fetchTickets,
+  moveTicket,
   toTicket,
   updateTicket,
   updateTicketStatus,
@@ -16,16 +17,23 @@ const url = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 describe('Ticket API boundary', () => {
   it.each(['not-an-id', '', '0', '1.5'])(
+    'rejects invalid project ID %j',
+    async (projectId) => {
+      await expect(createTicket({ projectId, title: 'New' })).rejects.toThrow('プロジェクトID');
+    },
+  );
+  it.each(['not-an-id', '', '0', '1.5'])(
     'rejects invalid assignee ID %j rather than sending null',
     async (assigneeId) => {
-      await expect(createTicket({ title: 'New', assigneeId })).rejects.toThrow(
+      await expect(createTicket({ projectId: '1', title: 'New', assigneeId })).rejects.toThrow(
         '担当者ID',
       );
     },
   );
   it('maps snake_case, nullable fields, and numeric assignee IDs', () => {
-    expect(toTicket(responseTicket, 12)).toEqual({
+    expect(toTicket({ ...responseTicket, position: 12 })).toEqual({
       id: '1',
+      projectId: '1',
       issueKey: 'TICK-1',
       title: 'First ticket',
       description: null,
@@ -56,7 +64,7 @@ describe('Ticket API boundary', () => {
       http.get(`${url}/api/tickets`, ({ request }) => {
         expect(request.credentials).toBe('include');
         return HttpResponse.json({
-          data: [responseTicket, { ...responseTicket, id: '2' }],
+          data: [responseTicket, { ...responseTicket, id: '2', position: 1 }],
         });
       }),
     );
@@ -92,6 +100,7 @@ describe('Ticket API boundary', () => {
         expect(request.credentials).toBe('include');
         expect(request.headers.get('X-XSRF-TOKEN')).toBe('test-csrf-token');
         expect(await request.json()).toEqual({
+          project_id: 1,
           title: 'New',
           description: null,
           assignee_id: 7,
@@ -103,7 +112,7 @@ describe('Ticket API boundary', () => {
       }),
     );
     expect(
-      await createTicket({ title: 'New', description: null, assigneeId: '7' }),
+      await createTicket({ projectId: '1', title: 'New', description: null, assigneeId: '7' }),
     ).toMatchObject({ title: 'New', issueKey: 'TICK-1' });
   });
   it('sends editable ticket fields through PATCH', async () => {
@@ -161,6 +170,38 @@ describe('Ticket API boundary', () => {
       ),
     );
     await expect(deleteTicket('1')).resolves.toBeUndefined();
+  });
+  it('sends a versioned move and maps the authoritative board version', async () => {
+    server.use(
+      http.patch(`${url}/api/tickets/1/move`, async ({ request }) => {
+        expect(request.headers.get('X-XSRF-TOKEN')).toBe('test-csrf-token');
+        expect(await request.json()).toEqual({
+          status: 'IN_PROGRESS',
+          position: 2,
+          board_version: 4,
+        });
+        return HttpResponse.json({
+          data: { ...responseTicket, status: 'IN_PROGRESS', position: 2 },
+          board_version: 5,
+        });
+      }),
+    );
+
+    await expect(moveTicket('1', 'IN_PROGRESS', 2, 4)).resolves.toEqual({
+      ticket: toTicket({ ...responseTicket, status: 'IN_PROGRESS', position: 2 }),
+      boardVersion: 5,
+    });
+  });
+  it('preserves a stale board conflict as a 409 API error', async () => {
+    server.use(
+      http.patch(`${url}/api/tickets/1/move`, () =>
+        HttpResponse.json({ message: 'stale' }, { status: 409 }),
+      ),
+    );
+
+    await expect(moveTicket('1', 'DONE', 0, 4)).rejects.toMatchObject({
+      status: 409,
+    });
   });
   it.each([401, 403, 422, 500])('rejects HTTP %s', async (status) => {
     server.use(

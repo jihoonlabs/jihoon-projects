@@ -22,6 +22,7 @@ const user: User = {
   name: 'Session User',
   email: 'session@example.com',
   status: 'active',
+  role: 'user',
   createdAt: '2026-09-30T00:00:00.000Z',
 };
 

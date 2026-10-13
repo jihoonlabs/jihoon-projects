@@ -12,11 +12,13 @@ import type { TicketComment } from '@/features/tickets/types/ticket';
 interface TicketCommentsProps {
   ticketId: string;
   currentUserId: number | null;
+  currentUserRole?: 'user' | 'admin';
 }
 
 export default function TicketComments({
   ticketId,
   currentUserId,
+  currentUserRole,
 }: TicketCommentsProps) {
   const [comments, setComments] = useState<TicketComment[]>([]);
   const [body, setBody] = useState('');
@@ -145,9 +147,9 @@ export default function TicketComments({
               ) : (
                 <>
                   <p>{comment.body}</p>
-                  {String(currentUserId) === comment.author.id && (
+                  {(String(currentUserId) === comment.author.id || currentUserRole === 'admin') && (
                     <div>
-                      <button
+                      {String(currentUserId) === comment.author.id && <button
                         type="button"
                         disabled={busy}
                         onClick={() => {
@@ -156,7 +158,7 @@ export default function TicketComments({
                         }}
                       >
                         編集
-                      </button>
+                      </button>}
                       <button
                         type="button"
                         disabled={busy}

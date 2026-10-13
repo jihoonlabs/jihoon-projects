@@ -4,94 +4,288 @@ namespace App\Http\Controllers\Tickets;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Tickets\TicketResource;
+use App\Models\Project;
 use App\Models\Ticket;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class TicketController extends Controller
 {
-    /**
-     * GET /api/tickets
-     */
-    public function index()
+    private const STATUSES = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
+
+    public function index(Request $request)
     {
-        $tickets = Ticket::with('assignee:id,name')
-            ->orderBy('id', 'asc')
+        $user = $request->user();
+
+        $tickets = Ticket::query()
+            ->with(['project:id,name', 'assignee:id,name'])
+            ->when(
+                $user->role !== 'admin',
+                fn ($query) => $query->whereHas(
+                    'project.members',
+                    fn ($members) => $members->where('users.id', $user->id)
+                )
+            )
+            ->orderBy('project_id')
+            ->orderBy('status')
+            ->orderBy('position')
+            ->orderBy('id')
             ->get();
 
         return TicketResource::collection($tickets);
     }
 
-    /**
-     * POST /api/tickets
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'status' => 'sometimes|in:BACKLOG,TODO,IN_PROGRESS,IN_REVIEW,DONE',
-            'priority' => 'sometimes|in:HIGHEST,HIGH,MEDIUM,LOW,LOWEST',
-            'assignee_id' => 'nullable|exists:users,id',
+            'project_id' => ['required', 'integer', 'exists:projects,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'status' => ['sometimes', Rule::in(self::STATUSES)],
+            'priority' => ['sometimes', Rule::in(['HIGHEST', 'HIGH', 'MEDIUM', 'LOW', 'LOWEST'])],
+            'assignee_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
 
+        $project = Project::findOrFail($validated['project_id']);
+        $this->authorizeProjectWrite($request, $project);
+        $this->validateAssignee($project, $validated['assignee_id'] ?? null);
+
         $ticket = DB::transaction(function () use ($validated) {
+            $project = Project::query()->lockForUpdate()->findOrFail($validated['project_id']);
+            $this->ensureActive($project);
+            $status = $validated['status'] ?? 'TODO';
+            $ticketNumber = (int) $project->next_ticket_number;
+            $position = ((int) (Ticket::query()
+                ->where('project_id', $project->id)
+                ->where('status', $status)
+                ->max('position') ?? -1)) + 1;
+
             $ticket = Ticket::create([
+                'project_id' => $project->id,
+                'issue_key' => sprintf('%s-%02d', $project->project_key, $ticketNumber),
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? null,
-                'status' => $validated['status'] ?? 'TODO',
+                'status' => $status,
+                'position' => $position,
                 'priority' => $validated['priority'] ?? 'MEDIUM',
                 'assignee_id' => $validated['assignee_id'] ?? null,
             ]);
 
-            $ticket->update([
-                'issue_key' => 'TICK-'.$ticket->id,
-            ]);
+            $project->increment('next_ticket_number');
+            $project->increment('board_version');
 
             return $ticket;
         });
 
-        return (new TicketResource($ticket->load('assignee:id,name')))
+        return (new TicketResource($ticket->load(['project:id,name', 'assignee:id,name'])))
             ->response()
             ->setStatusCode(201);
     }
 
-    /**
-     * GET /api/tickets/{ticket}
-     */
-    public function show(Ticket $ticket)
+    public function show(Request $request, Ticket $ticket)
     {
-        return new TicketResource($ticket->load('assignee:id,name'));
+        $this->authorizeProjectRead($request, $ticket->project);
+
+        return new TicketResource($ticket->load(['project:id,name', 'assignee:id,name']));
     }
 
-    /**
-     * PATCH /api/tickets/{ticket}
-     */
     public function updateStatus(Request $request, Ticket $ticket)
     {
+        $this->authorizeProjectWrite($request, $ticket->project);
+
         $validated = $request->validate([
-            'title' => 'sometimes|required|string|max:255',
-            'description' => 'sometimes|nullable|string',
-            'status' => 'sometimes|required|in:BACKLOG,TODO,IN_PROGRESS,IN_REVIEW,DONE',
-            'priority' => 'sometimes|required|in:HIGHEST,HIGH,MEDIUM,LOW,LOWEST',
-            'assignee_id' => 'sometimes|nullable|exists:users,id',
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'description' => ['sometimes', 'nullable', 'string'],
+            'status' => ['sometimes', 'required', Rule::in(self::STATUSES)],
+            'priority' => ['sometimes', 'required', Rule::in(['HIGHEST', 'HIGH', 'MEDIUM', 'LOW', 'LOWEST'])],
+            'assignee_id' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
         ]);
 
-        $ticket->update($validated);
+        if (array_key_exists('assignee_id', $validated)) {
+            $this->validateAssignee($ticket->project, $validated['assignee_id']);
+        }
 
-        return new TicketResource($ticket->load('assignee:id,name'));
+        if (! array_key_exists('status', $validated)) {
+            DB::transaction(function () use ($ticket, $validated) {
+                $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
+                $this->ensureActive($project);
+                $ticket->update($validated);
+            });
+
+            return new TicketResource($ticket->load(['project:id,name', 'assignee:id,name']));
+        }
+
+        DB::transaction(function () use ($ticket, $validated) {
+            $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
+            $this->ensureActive($project);
+            $ticket->refresh();
+
+            if ($validated['status'] === $ticket->status) {
+                $ticket->update($validated);
+
+                return;
+            }
+
+            $sourceStatus = $ticket->status;
+            $newPosition = ((int) (Ticket::query()
+                ->where('project_id', $project->id)
+                ->where('status', $validated['status'])
+                ->max('position') ?? -1)) + 1;
+
+            $ticket->update([...$validated, 'position' => $newPosition]);
+            $this->compactColumn($project->id, $sourceStatus);
+            $project->increment('board_version');
+        });
+
+        return new TicketResource($ticket->refresh()->load(['project:id,name', 'assignee:id,name']));
+    }
+
+    public function move(Request $request, Ticket $ticket)
+    {
+        $this->authorizeProjectWrite($request, $ticket->project);
+
+        $validated = $request->validate([
+            'status' => ['required', Rule::in(self::STATUSES)],
+            'position' => ['required', 'integer', 'min:0'],
+            'board_version' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $project = DB::transaction(function () use ($ticket, $validated) {
+            $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
+            $this->ensureActive($project);
+
+            abort_if(
+                (int) $project->board_version !== (int) $validated['board_version'],
+                409,
+                'The ticket board has changed. Refresh and try again.'
+            );
+
+            $ticket->refresh();
+            $sourceStatus = $ticket->status;
+            $targetStatus = $validated['status'];
+
+            $sourceIds = Ticket::query()
+                ->where('project_id', $project->id)
+                ->where('status', $sourceStatus)
+                ->where('id', '!=', $ticket->id)
+                ->orderBy('position')
+                ->orderBy('id')
+                ->pluck('id')
+                ->all();
+
+            if ($sourceStatus === $targetStatus) {
+                $targetIds = $sourceIds;
+            } else {
+                $targetIds = Ticket::query()
+                    ->where('project_id', $project->id)
+                    ->where('status', $targetStatus)
+                    ->orderBy('position')
+                    ->orderBy('id')
+                    ->pluck('id')
+                    ->all();
+                $this->writePositions($sourceIds);
+            }
+
+            $position = min((int) $validated['position'], count($targetIds));
+            array_splice($targetIds, $position, 0, [$ticket->id]);
+
+            $ticket->update(['status' => $targetStatus]);
+            $this->writePositions($targetIds);
+            $project->increment('board_version');
+
+            return $project->refresh();
+        });
+
+        return (new TicketResource($ticket->refresh()->load(['project:id,name', 'assignee:id,name'])))
+            ->additional(['board_version' => (int) $project->board_version]);
+    }
+
+    public function destroy(Request $request, Ticket $ticket): JsonResponse
+    {
+        $this->authorizeProjectWrite($request, $ticket->project);
+
+        DB::transaction(function () use ($ticket) {
+            $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
+            $this->ensureActive($project);
+            $ticket->refresh();
+            $status = $ticket->status;
+
+            $ticket->delete();
+            $this->compactColumn($project->id, $status);
+            $project->increment('board_version');
+        });
+
+        return response()->json(['message' => 'Ticket deleted successfully'], 200);
+    }
+
+    private function compactColumn(int $projectId, string $status): void
+    {
+        $ids = Ticket::query()
+            ->where('project_id', $projectId)
+            ->where('status', $status)
+            ->orderBy('position')
+            ->orderBy('id')
+            ->pluck('id')
+            ->all();
+
+        $this->writePositions($ids);
     }
 
     /**
-     * DELETE /api/tickets/{ticket}
+     * @param  array<int, int>  $ticketIds
      */
-    public function destroy(Ticket $ticket): JsonResponse
+    private function writePositions(array $ticketIds): void
     {
-        $ticket->delete();
+        foreach ($ticketIds as $position => $ticketId) {
+            DB::table('tickets')->where('id', $ticketId)->update(['position' => $position]);
+        }
+    }
 
-        return response()->json([
-            'message' => 'Ticket deleted successfully',
-        ], 200);
+    private function authorizeProjectRead(Request $request, Project $project): void
+    {
+        if ($request->user()->role === 'admin') {
+            return;
+        }
+
+        abort_unless(
+            $project->members()->where('users.id', $request->user()->id)->exists(),
+            403
+        );
+    }
+
+    private function authorizeProjectWrite(Request $request, Project $project): void
+    {
+        $this->ensureActive($project);
+        if ($request->user()->role === 'admin') {
+            return;
+        }
+
+        abort_unless(
+            $project->members()
+                ->where('users.id', $request->user()->id)
+                ->wherePivot('permission', 'write')
+                ->exists(),
+            403
+        );
+    }
+
+    private function ensureActive(Project $project): void
+    {
+        abort_if($project->archived_at !== null, 409, 'Restore this project before editing tickets.');
+    }
+
+    private function validateAssignee(Project $project, ?int $assigneeId): void
+    {
+        if ($assigneeId === null) {
+            return;
+        }
+
+        abort_unless(
+            $project->members()->where('users.id', $assigneeId)->exists(),
+            422,
+            'The assignee must be a member of the project.'
+        );
     }
 }

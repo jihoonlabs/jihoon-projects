@@ -5,22 +5,30 @@ import styles from './index.module.css';
 
 interface MainProps {
   tickets: Ticket[];
+  projectKey?: string | null;
+  projectKeys?: Record<string, string | null>;
   searchQuery: string;
   assigneeFilter: string;
   currentUserId: number | null;
   onStatusChange?: (id: string, status: TicketStatus) => void;
   onEdit?: (ticket: Ticket) => void;
   onDelete?: (ticket: Ticket) => void;
+  canWrite?: boolean;
+  canDrag?: boolean;
 }
 
 export default function Main({
   tickets,
+  projectKey,
+  projectKeys,
   searchQuery,
   assigneeFilter,
   currentUserId,
   onStatusChange,
   onEdit,
   onDelete,
+  canWrite = true,
+  canDrag = canWrite,
 }: MainProps) {
   const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch =
@@ -50,9 +58,13 @@ export default function Main({
             key={column.id}
             column={column}
             tickets={columnTickets}
+            projectKey={projectKey}
+            projectKeys={projectKeys}
             onStatusChange={onStatusChange}
             onEdit={onEdit}
             onDelete={onDelete}
+            canWrite={canWrite}
+            canDrag={canDrag}
           />
         );
       })}

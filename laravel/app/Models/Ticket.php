@@ -12,13 +12,20 @@ class Ticket extends Model
     use HasFactory;
 
     protected $fillable = [
+        'project_id',
         'issue_key',
         'title',
         'description',
         'status',
+        'position',
         'priority',
         'assignee_id',
     ];
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
 
     public function assignee(): BelongsTo
     {

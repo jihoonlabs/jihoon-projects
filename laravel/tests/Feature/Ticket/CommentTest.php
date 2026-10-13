@@ -5,15 +5,18 @@ namespace Tests\Feature\Ticket;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Feature\Ticket\Concerns\UsesGeneralProject;
 use Tests\TestCase;
 
 class CommentTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesGeneralProject;
 
     public function test_authenticated_user_can_create_and_list_comments(): void
     {
         $user = User::factory()->create();
+        $this->addToGeneralProject($user);
         $ticket = Ticket::factory()->create();
 
         $this->actingAs($user)
@@ -32,6 +35,7 @@ class CommentTest extends TestCase
     public function test_comment_body_is_required(): void
     {
         $user = User::factory()->create();
+        $this->addToGeneralProject($user);
         $ticket = Ticket::factory()->create();
 
         $this->actingAs($user)
@@ -43,6 +47,7 @@ class CommentTest extends TestCase
     public function test_whitespace_only_body_is_rejected(): void
     {
         $user = User::factory()->create();
+        $this->addToGeneralProject($user);
         $ticket = Ticket::factory()->create();
 
         $this->actingAs($user)
@@ -55,6 +60,7 @@ class CommentTest extends TestCase
     {
         $user = User::factory()->create();
         $other = User::factory()->create();
+        $this->addToGeneralProject($user);
         $ticket = Ticket::factory()->create();
 
         $this->actingAs($user)
@@ -84,6 +90,8 @@ class CommentTest extends TestCase
     {
         $author = User::factory()->create();
         $other = User::factory()->create();
+        $this->addToGeneralProject($author);
+        $this->addToGeneralProject($other);
         $ticket = Ticket::factory()->create();
         $comment = $ticket->comments()->make(['body' => 'original']);
         $comment->user()->associate($author);
@@ -112,6 +120,7 @@ class CommentTest extends TestCase
     public function test_comment_from_another_ticket_is_not_accessible_through_route(): void
     {
         $user = User::factory()->create();
+        $this->addToGeneralProject($user);
         $ticket = Ticket::factory()->create();
         $otherTicket = Ticket::factory()->create();
         $comment = $otherTicket->comments()->make(['body' => 'other ticket']);

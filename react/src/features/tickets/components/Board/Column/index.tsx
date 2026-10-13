@@ -13,17 +13,25 @@ import styles from './index.module.css';
 interface ColumnProps {
   column: ColumnConfig;
   tickets: Ticket[];
+  projectKey?: string | null;
+  projectKeys?: Record<string, string | null>;
   onStatusChange?: (id: string, status: TicketStatus) => void;
   onEdit?: (ticket: Ticket) => void;
   onDelete?: (ticket: Ticket) => void;
+  canWrite?: boolean;
+  canDrag?: boolean;
 }
 
 export default function Column({
   column,
   tickets,
+  projectKey,
+  projectKeys,
   onStatusChange,
   onEdit,
   onDelete,
+  canWrite,
+  canDrag,
 }: ColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
@@ -44,9 +52,12 @@ export default function Column({
             <Card
               key={ticket.id}
               ticket={ticket}
+              projectKey={projectKeys ? projectKeys[ticket.projectId] : projectKey}
               onStatusChange={onStatusChange}
               onEdit={onEdit}
               onDelete={onDelete}
+              canWrite={canWrite}
+              canDrag={canDrag}
             />
           ))}
         </div>

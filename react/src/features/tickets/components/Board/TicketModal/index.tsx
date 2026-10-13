@@ -9,6 +9,7 @@ import type {
   UpdateTicketInput,
 } from '@/features/tickets/types/ticket';
 import TicketComments from '../TicketComments';
+import type { ProjectMember } from '@/features/tickets/types/project';
 import styles from './index.module.css';
 
 const STATUSES: Array<{ value: TicketStatus; label: string }> = [
@@ -30,19 +31,25 @@ const PRIORITIES: Array<{ value: TicketPriority; label: string }> = [
 interface TicketModalProps {
   ticket: Ticket | null;
   currentUserId: number | null;
-  currentUserName?: string | null;
+  currentUserRole?: 'user' | 'admin';
   onClose: () => void;
   onCreate: (input: CreateTicketInput) => Promise<void>;
   onUpdate: (id: string, input: UpdateTicketInput) => Promise<void>;
+  projectId: string;
+  projectMembers: ProjectMember[];
+  readOnly?: boolean;
 }
 
 export default function TicketModal({
   ticket,
   currentUserId,
-  currentUserName,
+  currentUserRole,
   onClose,
   onCreate,
   onUpdate,
+  projectId,
+  projectMembers,
+  readOnly = false,
 }: TicketModalProps) {
   const [title, setTitle] = useState(ticket?.title ?? '');
   const [description, setDescription] = useState(ticket?.description ?? '');
@@ -56,19 +63,24 @@ export default function TicketModal({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!title.trim() || submitting) return;
+    if (readOnly || !title.trim() || submitting) return;
     setSubmitting(true);
     setSaveError(null);
     try {
-      const input = {
+      const fields = {
         title: title.trim(),
         description: description.trim() || null,
         status,
         priority,
-        assigneeId: assigneeId || null,
+        ...(ticket && assigneeId === (ticket.assignee?.id ?? '')
+          ? {}
+          : { assigneeId: assigneeId || null }),
       };
-      if (ticket) await onUpdate(ticket.id, input);
-      else await onCreate(input);
+      if (ticket) {
+        await onUpdate(ticket.id, fields);
+      } else {
+        await onCreate({ projectId, ...fields });
+      }
       onClose();
     } catch (error) {
       setSaveError(
@@ -94,46 +106,45 @@ export default function TicketModal({
         aria-labelledby="ticket-modal-title"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <h2 id="ticket-modal-title">{ticket ? 'チケット編集' : 'チケット作成'}</h2>
+        <h2 id="ticket-modal-title">{ticket ? (readOnly ? 'チケット詳細' : 'チケット編集') : 'チケット作成'}</h2>
         <form onSubmit={submit} className={styles.form}>
           <label>
             タイトル
-            <input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={255} autoFocus />
+            <input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={255} autoFocus={!readOnly} readOnly={readOnly} />
           </label>
           <label>
             説明
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} />
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} readOnly={readOnly} />
           </label>
           <label>
             ステータス
-            <select value={status} onChange={(e) => setStatus(e.target.value as TicketStatus)}>
+            <select value={status} onChange={(e) => setStatus(e.target.value as TicketStatus)} disabled={readOnly}>
               {STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
           </label>
           <label>
             優先度
-            <select value={priority} onChange={(e) => setPriority(e.target.value as TicketPriority)}>
+            <select value={priority} onChange={(e) => setPriority(e.target.value as TicketPriority)} disabled={readOnly}>
               {PRIORITIES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
           </label>
           <label>
             担当者
-            <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+            <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} disabled={readOnly}>
               <option value="">未割り当て</option>
-              {currentUserId !== null && (
-                <option value={String(currentUserId)}>{currentUserName ?? '自分'}</option>
-              )}
+              {ticket?.assignee && !projectMembers.some((member) => member.id === ticket.assignee?.id) && <option value={ticket.assignee.id}>{ticket.assignee.name}</option>}
+              {projectMembers.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}
             </select>
           </label>
           {saveError && <p className={styles.error} role="alert">{saveError}</p>}
           <div className={styles.actions}>
-            <button type="button" onClick={onClose} disabled={submitting}>キャンセル</button>
-            <button type="submit" disabled={submitting || !title.trim()}>
+            <button type="button" onClick={onClose} disabled={submitting}>{readOnly ? '閉じる' : 'キャンセル'}</button>
+            {!readOnly && <button type="submit" disabled={submitting || !title.trim()}>
               {submitting ? '保存中...' : '保存'}
-            </button>
+            </button>}
           </div>
         </form>
-        {ticket && <TicketComments ticketId={ticket.id} currentUserId={currentUserId} />}
+        {ticket && <TicketComments ticketId={ticket.id} currentUserId={currentUserId} currentUserRole={currentUserRole} />}
       </section>
     </div>
   );

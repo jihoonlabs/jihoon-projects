@@ -2,15 +2,20 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import type { CSSProperties } from 'react';
 import { Ticket, TicketStatus } from '@/features/tickets/types/ticket';
+import { getProjectBorderColor } from '@/features/tickets/utils/projectColor';
 import styles from './index.module.css';
 
 interface CardProps {
   ticket: Ticket;
+  projectKey?: string | null;
   isOverlay?: boolean;
   onStatusChange?: (id: string, status: TicketStatus) => void;
   onEdit?: (ticket: Ticket) => void;
   onDelete?: (ticket: Ticket) => void;
+  canWrite?: boolean;
+  canDrag?: boolean;
 }
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -27,18 +32,22 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
 
 export default function Card({
   ticket,
+  projectKey = null,
   isOverlay,
   onStatusChange,
   onEdit,
   onDelete,
+  canWrite = true,
+  canDrag = canWrite,
 }: CardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: ticket.id });
+    useSortable({ id: ticket.id, disabled: !canDrag });
 
-  const style = {
+  const style: CSSProperties & { '--project-border-color'?: string } = {
     transform: CSS.Translate.toString(transform),
     transition,
     opacity: isDragging ? 0.3 : 1,
+    '--project-border-color': getProjectBorderColor(projectKey) ?? undefined,
   };
 
   return (
@@ -46,6 +55,7 @@ export default function Card({
       ref={setNodeRef}
       style={style}
       {...attributes}
+      aria-disabled={undefined}
       {...listeners}
       className={`${styles.card} ${isOverlay ? styles.overlayCard : ''}`}
     >
@@ -56,7 +66,7 @@ export default function Card({
           className={styles.controls}
           onPointerDown={(event) => event.stopPropagation()}
         >
-          <select
+          {canWrite && <select
             aria-label={`${ticket.title} のステータス`}
             value={ticket.status}
             onChange={(event) =>
@@ -66,9 +76,9 @@ export default function Card({
             {Object.entries(STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}
-          </select>
-          <button type="button" onClick={() => onEdit?.(ticket)}>編集</button>
-          <button type="button" onClick={() => onDelete?.(ticket)}>削除</button>
+          </select>}
+          <button type="button" onClick={() => onEdit?.(ticket)}>{canWrite ? '編集' : '詳細'}</button>
+          {canWrite && <button type="button" onClick={() => onDelete?.(ticket)}>削除</button>}
         </div>
       )}
 

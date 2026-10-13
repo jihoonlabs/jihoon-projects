@@ -5,11 +5,13 @@ namespace Tests\Feature\Ticket;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Feature\Ticket\Concerns\UsesGeneralProject;
 use Tests\TestCase;
 
 class UpdateStatusTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesGeneralProject;
 
     protected function setUp(): void
     {
@@ -20,6 +22,7 @@ class UpdateStatusTest extends TestCase
         ]);
 
         $this->actingAs($user);
+        $this->addToGeneralProject($user);
     }
 
     public function test_チケットのステータスを更新できる(): void
@@ -66,6 +69,7 @@ class UpdateStatusTest extends TestCase
     public function test_チケットの内容を更新できる(): void
     {
         $assignee = User::factory()->create();
+        $this->addToGeneralProject($assignee);
         $ticket = Ticket::factory()->create([
             'title' => '更新前',
             'description' => null,

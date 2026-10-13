@@ -1,0 +1,62 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(17 24 39 / 45%);
+}
+
+.dialog {
+  width: min(720px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 1.25rem;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 20px 45px rgb(0 0 0 / 20%);
+}
+
+.memberList {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.member,
+.addForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.65rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.memberName {
+  flex: 1 1 180px;
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+}
+
+.field input,
+.field select {
+  min-width: 120px;
+  padding: 0.4rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.error {
+  color: #b91c1c;
+}
