@@ -36,6 +36,17 @@ class ThumbyCapabilitiesTests(unittest.TestCase):
             generation_profile.validate_code("game", self.entry(
                 "    thumby.saveData." + method + "(" + args + ")"), "Rpg.py")
 
+    def test_audio_is_opt_in_and_only_nonblocking_methods_are_allowed(self):
+        with self.assertRaises(ValueError):
+            generation_profile.validate_code('game','thumby.audio.play(440,160)')
+        self.set_features(['audio'])
+        for code in ('thumby.audio.play(440,160)','thumby.audio.stop()'):
+            generation_profile.validate_code('game',self.entry('    '+code),'Rpg.py')
+        for code in ('thumby.audio.playBlocking(440,160)','thumby.audio.set_enabled(True)'):
+            with self.assertRaises(ValueError):
+                generation_profile.validate_code('game',code)
+        self.assertIn('비차단',thumby_capabilities.prompt({'generation_profile':'thumby','thumby_features':['audio']}))
+
     def test_default_keeps_existing_api_restrictions(self):
         self.set_features([])
         for code in ("thumby.buttonA.pressed()", "thumby.buttonU.pressed()",

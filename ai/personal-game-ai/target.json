@@ -8,6 +8,7 @@
   "edit_directory": "micropython/Thumby/ThumbyGrowth",
   "thumby_features": [
     "controls",
-    "save_data"
+    "save_data",
+    "audio"
   ]
 }

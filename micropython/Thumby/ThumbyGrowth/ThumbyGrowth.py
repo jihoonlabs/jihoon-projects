@@ -148,12 +148,88 @@ def draw_background(display, progress, camera):
 
 def main_loop():
     thumby.display.setFPS(30)
+    music = {'track': None, 'tick': 0}
     action = None
     while action is None:
         action = title_frame()
+        music = step_music(music, {'screen_state':'title'})
     state = load_save_data() if action == 'load' else new_game_state()
     while True:
+        previous = state
         state = step_frame(state)
+        kind = None
+        if previous['screen_state']=='country_select' and state['screen_state']=='safe' and state['progress']==0:
+            kind = 'opening'
+        elif state['progress'] != previous['progress'] and state['progress']%5==0:
+            kind = 'ending' if state['progress']==GOAL_STAGES else 'event'
+        if kind:
+            for frame in range(45 if kind=='event' else 90):
+                music = step_music(music,dict(state,screen_state='clear' if kind=='ending' else 'title'))
+                if cutscene_frame(kind,frame,state):
+                    break
+        music = step_music(music,state)
+
+
+# Original single-channel note patterns: rest is 0. No sampled music assets.
+NOTES = (262,294,330,349,392,440,494,523)
+TUNES = (b'\x01\x03\x05\x08\x05\x03\x02\x00',
+         b'\x01\x03\x04\x05\x03\x02\x01\x00',
+         b'\x01\x02\x03\x05\x06\x05\x03\x00',
+         b'\x01\x02\x04\x05\x04\x02\x01\x00',
+         b'\x01\x01\x05\x04\x03\x02\x05\x00',
+         b'\x01\x03\x05\x08\x00\x08\x05\x08')
+
+
+def step_music(music,state):
+    screen = state['screen_state']
+    track = None
+    if screen in ('title','country_select'):
+        track = 0
+    elif screen=='clear' or (screen=='safe' and state['progress']>=GOAL_STAGES):
+        track = 5
+    elif screen in ('battle','safe','shop','shop_detail','equip','equip_detail'):
+        track = 4 if screen=='battle' and state['progress']%5==4 else 1+stage_index(state)//5
+    changed = track != music['track']
+    if changed:
+        thumby.audio.stop()
+    tick = 0 if changed else music['tick']
+    if track is None:
+        return {'track':None,'tick':0}
+    if track==5 and tick>=48:
+        if tick==48:
+            thumby.audio.stop()
+        return {'track':track,'tick':49}
+    if tick%6==0:
+        note = TUNES[track][(tick//6)%8]
+        if note:
+            thumby.audio.play(NOTES[note-1],160)
+        else:
+            thumby.audio.stop()
+    return {'track':track,'tick':tick+1 if track==5 else (tick+1)%48}
+
+
+def cutscene_frame(kind,frame,state):
+    display = thumby.display
+    display.fill(0)
+    second = frame>=45
+    titles = {'opening':('ON THE ROAD','A NEW QUEST'),
+              'ending':('THREE LANDS','HOME AGAIN'),
+              'event':('LAND CLEAR','LAND CLEAR')}
+    display.drawText(titles[kind][int(second)],0,0,1)
+    stage = stage_index(state)
+    if kind=='event':
+        stage = stage//5*5+4
+    draw_background(display,stage,0)
+    # Reuse existing city and actor pixels; no image/video file or frame buffer.
+    x = 33 if second else 12+min(21,frame//2)
+    scene_rect(display,x-1,24,8,9,0)
+    rows = HERO_ROWS if (frame//5)%2==0 else HERO_ROWS[:5]+b'\x0c\x12'
+    draw_rows(display,rows,x,25,6)
+    if second:
+        draw_rows(display,FOE_ROWS,46,25,6,True)
+    display.drawText('A/B:SKIP',12,33,1)
+    display.update()
+    return bool(thumby.buttonA.justPressed() or thumby.buttonB.justPressed())
 
 
 def title_frame():

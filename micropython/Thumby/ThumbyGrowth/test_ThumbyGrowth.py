@@ -12,6 +12,7 @@ for name in ('L','R','A','B','U','D'):
     button.justPressed.return_value = False
     setattr(fake_thumby,'button'+name,button)
 fake_thumby.display = Mock(spec=['fill','drawFilledRectangle','drawText','update','setFPS'])
+fake_thumby.audio = Mock(spec=['play','stop'])
 fake_thumby.saveData = Mock(spec=['setName','setItem','getItem','hasItem','save'])
 fake_thumby.saveData.hasItem.return_value = False
 fake_thumby.saveData.getItem.side_effect = KeyError('저장 없음')
