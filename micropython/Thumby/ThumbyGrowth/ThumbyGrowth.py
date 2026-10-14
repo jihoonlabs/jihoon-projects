@@ -12,6 +12,29 @@ from rules import (update_state, encode_save_data, decode_save_data,
                    GOAL_STAGES, ENCOUNTERS, REGIONS, STAGES_PER_REGION,
                    CITY_NAMES, stage_index, new_game_state)
 
+# Original 6x7 silhouettes: headband/robe, hood, then three boss helmets.
+# Visuals stay inside the existing collision body; no source-game assets used.
+HERO_ROWS = (14,62,10,28,62,20,54)
+FOE_ROWS = (30,18,30,30,18,20,54)
+BOSS_ROWS = (
+    (21,63,18,63,30,20,54),
+    (63,45,18,30,63,20,54),
+    (33,63,18,51,30,20,54),
+)
+
+
+def character_rows(state, player):
+    if player:
+        rows = HERO_ROWS
+    elif state['progress']%STAGES_PER_REGION == STAGES_PER_REGION-1:
+        rows = BOSS_ROWS[stage_index(state)//STAGES_PER_REGION]
+    else:
+        rows = FOE_ROWS
+    if (state['combat_frame']//5)%2:
+        return rows[:5]+(12,18)
+    return rows
+
+
 # Original monochrome scenery, stored once. These are decoration, not obstacles.
 # x, y, width, height in the distant layer; battle HUD ends at y=13.
 SCENERY = (
@@ -186,9 +209,7 @@ def draw_game(state):
             scene_rect(display, x-1, y-1, 8, 9, 0)
             rightward = state['direction']=='R' if player else world_x<state['player_x']
             flashing = state.get('player_hit_flash' if player else 'enemy_hit_flash',0)>0 and state['combat_frame']%2==0
-            rows = (12,30,26,12,31,18,33) if player else (30,18,30,12,63,18,33)
-            if player and (state['combat_frame']//5)%2:
-                rows = rows[:5]+(12,18)
+            rows = character_rows(state,player)
             if not flashing:
                 for row, mask in enumerate(rows):
                     for column in range(6):
