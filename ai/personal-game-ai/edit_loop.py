@@ -174,8 +174,14 @@ def run_test(log_path, test_module="test_clamp", work_dir=None):
         f"type=bind,source={directory.resolve()},target=/work,readonly",
         "--workdir", "/work",
         "python:3.11-slim",
-        "python", "-B", "-m", "unittest", "-v", test_module,
+        "python", "-B", "-m", "unittest",
     ]
+    if test_module == "discover":
+        command += ["discover", "-s", ".", "-p", "test_*.py", "-v"]
+    elif isinstance(test_module,str) and test_module.startswith("test_") and test_module.isidentifier():
+        command += ["-v",test_module]
+    else:
+        raise ValueError("허용된 테스트 모듈 또는 discover만 실행할 수 있습니다.")
     try:
         with log_path.open("w", encoding="utf-8") as log:
             result = subprocess.run(

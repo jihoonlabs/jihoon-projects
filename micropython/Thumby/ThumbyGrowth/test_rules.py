@@ -11,6 +11,7 @@ def state(**changes):
         enemy_attack_cooldown=0, active_enemy=False, enemy_hp=0,
         enemy_attack=0, enemy_defense=0, combat_frame=0,
         save_requested=False, save_status='', menu_r_held=False)
+    value.update(dict(gun_owned=False,skill_owned=False,potions=0,hp_growth=0,atk_growth=0,def_growth=0,command_timer=0,command_ready=0))
     value.update(changes)
     from rules import legacy_route
     value.setdefault('route', legacy_route(value['progress']))
@@ -199,7 +200,7 @@ class TestRules(unittest.TestCase):
             result = self.advance(result,U=True,D=True)
             self.assertEqual(result['menu_selection'],0)
             for _ in range(5): result = self.advance(result,D=True)
-            self.assertEqual((result['menu_selection'],result['menu_scroll']),(3,1))
+            self.assertEqual((result['menu_selection'],result['menu_scroll']), (5,3) if screen=='shop' else (4,2) if screen=='equip' else (3,1))
         for screen in ('shop','equip'):
             original = state(screen_state=screen,menu_selection=3,menu_scroll=1)
             detail = self.advance(original,R=True)
@@ -234,7 +235,7 @@ class TestRules(unittest.TestCase):
             equipped_weapon=1,equipped_armor=3,attack=6,defense=2)
         before = deepcopy(original)
         data = encode_save_data(original)
-        expected = dict(version=2,route=[0],money=100,progress=5,owned=[False,True,False,True],equipped_weapon=1,equipped_armor=3)
+        expected = dict(version=3,gun_owned=False,skill_owned=False,potions=0,hp_growth=0,atk_growth=0,def_growth=0,route=[0],money=100,progress=5,owned=[False,True,False,True],equipped_weapon=1,equipped_armor=3)
         self.assertEqual(data,expected)
         self.assertEqual(original,before)
         self.assertIsNot(data['owned'],original['owned'])
@@ -245,7 +246,7 @@ class TestRules(unittest.TestCase):
         invalid = [None,[],{},dict(data,extra=1)]
         for key in data:
             copy = deepcopy(data); del copy[key]; invalid.append(copy)
-        for key,values in (('version',(True,3,2.0)),('money',(True,-1,1.0)),('progress',(False,-1,'5')),
+        for key,values in (('version',(True,4,2.0)),('money',(True,-1,1.0)),('progress',(False,-1,'5')),
                            ('owned',([0,1,0,1],[True]*3,tuple([True]*4))),
                            ('equipped_weapon',(True,2,-1,0)),('equipped_armor',(True,1,4,2))):
             for value in values: invalid.append(dict(data,**{key:value}))

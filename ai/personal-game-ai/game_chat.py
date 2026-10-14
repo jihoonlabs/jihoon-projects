@@ -9,6 +9,7 @@ import uuid
 import ask_ai
 import edit_loop
 import generation_profile
+import game_resume
 from read_context import git_output, read_context
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -25,6 +26,7 @@ def validate_action(value, allowed):
         "read": {"action", "target"},
         "edit": {"action", "target", "instruction"},
         "question": {"action", "question"},
+        "continue": {"action"},
     }
     if not isinstance(action, str) or action not in fields or set(value) != fields[action]:
         raise ValueError("허용된 단일 작업과 정확한 필드만 사용할 수 있습니다.")
@@ -54,6 +56,9 @@ class GameChat:
         self.pending = None
         self.folder = None
 
+    def docker_check(self):
+        docker_ready()
+
     def location(self):
         context = read_context(self.config_path)
         config = json.loads(self.config_path.read_text(encoding="utf-8"))
@@ -79,6 +84,8 @@ class GameChat:
         shortcuts = {"/status": "status", "/test": "test"}
         if text in shortcuts:
             return {"action": shortcuts[text]}
+        if text in ('/continue','이어서 해','이어서 작업해','썸비 이어서 해','썸비 작업 이어서 해','계속해','계속 해'):
+            return {'action':'continue'}
         if text.startswith("/read "):
             return validate_action({"action": "read", "target": text[6:].strip()}, allowed)
         summaries = {}
@@ -89,11 +96,13 @@ class GameChat:
             "최상위 목적: " + GOAL + "\n"
             "사용자 지시를 실행 가능한 단일 작업으로 해석하세요. 실제 실행 결과를 주장하지 마세요.\n"
             "상태 확인=status, 현재 고정 검사=test, 코드 확인=read, 명시적 코드 수정=edit.\n"
+            "현재 게임 작업을 이어서/계속하라는 요청은 continue. 이때 status/read로 종료하지 마세요.\n"
             "코드 확인이나 설명 요청을 edit로 바꾸지 마세요. 모호하거나 여러 파일 수정이 필요하면 question.\n"
             "게임 새로 생성, 테스트 변경, Git/폴더/셸 작업, 외부 API는 아직 지원하지 않습니다.\n"
             "수정 지시는 사용자 의도를 보존하고 새 수치/기능을 임의로 정하지 마세요.\n"
             "Markdown 없이 다음 형식 중 JSON 객체 하나만 반환하세요:\n"
             '{"action":"status"} 또는 {"action":"test"}\n'
+            '{"action":"continue"}\n'
             '{"action":"read","target":"rules.py"}\n'
             '{"action":"edit","target":"rules.py","instruction":"수정 요청"}\n'
             '{"action":"question","question":"한국어 질문 또는 지원 범위 설명"}\n'
@@ -177,21 +186,29 @@ class GameChat:
             else:
                 if self.pending is not None and not text.startswith("/"):
                     previous = self.pending
-                    instruction = previous["instruction"] + "\n질문: " + previous["question"] + "\n사용자 답변: " + text
-                    action = validate_action({"action": "edit", "target": previous["target"],
-                                              "instruction": instruction}, allowed)
+                    if 'resume_request' in previous:
+                        text=previous['resume_request']+'\n질문: '+previous['question']+'\n사용자 답변: '+text
+                        action={'action':'continue'}
+                    else:
+                        instruction = previous["instruction"] + "\n질문: " + previous["question"] + "\n사용자 답변: " + text
+                        action = validate_action({"action": "edit", "target": previous["target"],
+                                                  "instruction": instruction}, allowed)
                     self.pending = None
                 else:
                     action = self.route(text, directory, context, allowed)
                 # Never execute a model plan under a changed branch/context.
                 if read_context(self.config_path) != context:
                     raise RuntimeError("지시 해석 중 작업 문맥이 변경됐습니다.")
-                if action["action"] == "status":
+                if action["action"] == "continue":
+                    result = game_resume.run(self,directory,root,context,text)
+                    if result['status']=='waiting_for_user':
+                        self.pending={'resume_request':text,'question':result['question']}
+                elif action["action"] == "status":
                     result = {"status": "inspected", "goal": GOAL,
                               "branch": git_output(root, "branch", "--show-current"),
                               "game_directory": str(directory),
                               "git_changes": git_output(root, "status", "--short", "--", str(directory)),
-                              "supported": ["status", "read", "test", "edit"],
+                              "supported": ["status", "read", "test", "edit", "continue"],
                               "model": ask_ai.payload["model"],
                               "model_options": ask_ai.model_options(),
                               "fixed_test": FIXED_TEST,
@@ -227,8 +244,16 @@ class GameChat:
 def show(result):
     if "code" in result:
         print(result["code"])
+    elif result.get('status')=='inspected':
+        print('브랜치: '+result['branch']+' | 모델: '+result['model'])
+        print('Git 변경: '+(result['git_changes'] or '없음'))
+        print('작업 재개: 이어서 해 또는 /continue')
     else:
-        print(json.dumps(result, ensure_ascii=False, indent=2))
+        print(result.get('question',result.get('message',result['status'])))
+        if result.get('commit'):
+            print('커밋: '+result['commit']+(' | 푸시 완료' if result.get('pushed') else ''))
+        if result.get('feedback'):
+            print(result['feedback'][-2000:])
 
 
 def main():
@@ -237,7 +262,7 @@ def main():
     args = parser.parse_args()
     chat = GameChat()
     print("목표: " + GOAL)
-    print("상태·코드 확인·고정 검사·단일 파일 수정 | /status /test /read rules.py /cancel /exit")
+    print("이어서 해: WORK 기반 작업 하나 | /continue /status /test /read rules.py /cancel /exit")
     while True:
         try:
             text = args.once if args.once is not None else input("나> ")

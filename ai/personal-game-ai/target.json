@@ -3,7 +3,8 @@
   "expected_branch": "epic/thumby-growth",
   "branch_document": "docs/personal-game-ai/THUMBY_GROWTH_EPIC.md",
   "code_files": [],
-  "max_context_chars": 12000,
+  "max_context_chars": 18000,
+  "resume_publish": true,
   "generation_profile": "thumby",
   "edit_directory": "micropython/Thumby/ThumbyGrowth",
   "thumby_features": [

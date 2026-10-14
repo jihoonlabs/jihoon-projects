@@ -62,7 +62,7 @@ def model_options():
     return options
 
 
-def ask_model(prompt):
+def ask_model(prompt, timeout=600):
     # 호출할 때마다 독립된 요청 데이터를 만든다.
     data = {
         **payload,
@@ -80,7 +80,7 @@ def ask_model(prompt):
         method="POST",
     )
 
-    with urlopen(api_request, timeout=600) as response:
+    with urlopen(api_request, timeout=timeout) as response:
         result = json.load(response)
 
     # 응답 한도에 도달하면 완성된 결과로 취급하지 않는다.

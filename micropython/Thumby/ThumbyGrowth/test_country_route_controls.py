@@ -96,7 +96,7 @@ class CountryRouteTests(unittest.TestCase):
             self.assertEqual(restored['screen_state'],screen)
             self.assertEqual((restored['money'],restored['attack'],restored['defense']),(70,4,1))
             upgraded=encode_save_data(restored)
-            self.assertEqual(upgraded['version'],2)
+            self.assertEqual(upgraded['version'],3)
             self.assertEqual(encode_save_data(decode_save_data(upgraded)),upgraded)
 
     def test_invalid_route_records_are_rejected(self):

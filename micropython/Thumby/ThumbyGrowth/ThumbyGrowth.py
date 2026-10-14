@@ -10,21 +10,33 @@ if sys.implementation.name == 'micropython':
     sys.path.append('/Games/ThumbyGrowth')
 from rules import (update_state, encode_save_data, decode_save_data,
                    GOAL_STAGES, ENCOUNTERS, REGIONS, STAGES_PER_REGION,
-                   CITY_NAMES, stage_index, new_game_state)
+                   CITY_NAMES, stage_index, new_game_state, ITEM_NAMES,
+                   ITEM_EFFECTS, get_item_price, item_owned, can_buy)
 
 from scene_art import SCENE_BITMAPS
 
-# Shared 8x8 visual body; collision stays 6x7 with the same feet coordinates.
-HERO_HEAD = b'\x3c\x7e\x28'
-FOE_HEAD = b'\x3c\x42\x3c'
-BOSS_HEADS = (b'\x54\x7e\x24',b'\x7e\x5a\x24',b'\x42\x7e\x24')
+# Shared 8x10 visual body: larger face, same 6x7 collision and feet position.
+HERO_HEAD = b'\x3c\x7e\x5a\x42\x3c'
+FOE_HEAD = b'\x18\x3c\x7e\x5a\x3c'
+BOSS_HEADS = (b'\x54\x7e\x5a\x42\x3c',b'\x7e\x5a\x7e\x42\x3c',b'\x42\x7e\x66\x42\x3c')
 BODY_ROWS = b'\x7c\x54\x38\x28\x6c'
 WALK_BODY_ROWS = b'\x7c\x54\x38\x18\x24'
 HEART_ROWS = b'\x0a\x1f\x1f\x0e\x04'
 ENEMY_ICON_ROWS = b'\x0e\x1f\x15\x0e\x0a'
+# Original large face: shared outline, headband, eyebrows, eyes and collar.
+PORTRAIT_ROWS = (0x03c0,0x0ff0,0x1ff8,0x3ffc,0x3ffc,0x2004,0x3ffc,0x2aa4,
+                0x2224,0x2224,0x2004,0x2184,0x1008,0x0ff0,0x0660,0x0db0)
+MERCHANT_HEADS = ((0x03c0,0x0ff0,0x1ff8),(0x0ff0,0x1ff8,0x3ffc),(0x0240,0x0ff0,0x1ff8))
 
 
-def draw_rows(display, rows, x, y, width, mirror=False):
+def portrait_rows(state,merchant=False):
+    if not merchant:
+        return PORTRAIT_ROWS
+    # Share face/collar; regional hair and the smiling mouth are small parts.
+    return MERCHANT_HEADS[stage_index(state)//5]+PORTRAIT_ROWS[3:11]+(0x23c4,)+PORTRAIT_ROWS[12:]
+
+
+def draw_rows(display, rows, x, y, width, mirror=False, min_y=0):
     # Draw contiguous lit pixels in one call; keep the same monochrome bitmap.
     for row,mask in enumerate(rows):
         column = 0
@@ -36,7 +48,7 @@ def draw_rows(display, rows, x, y, width, mirror=False):
             while column < width and mask & (1 << (column if mirror else width-1-column)):
                 column += 1
             left,right = max(0,x+start),min(72,x+column)
-            if right>left and 0<=y+row<40:
+            if right>left and min_y<=y+row<40:
                 display.drawFilledRectangle(left,y+row,right-left,1,1)
 
 
@@ -153,6 +165,9 @@ def main_loop():
     while action is None:
         action = title_frame()
         music = step_music(music, {'screen_state':'title'})
+        if action in ('opening','ending'):
+            music = play_scene(action,new_game_state(),music)
+            action = None
     state = load_save_data() if action == 'load' else new_game_state()
     while True:
         previous = state
@@ -163,11 +178,17 @@ def main_loop():
         elif state['progress'] != previous['progress'] and state['progress']%5==0:
             kind = 'ending' if state['progress']==GOAL_STAGES else 'event'
         if kind:
-            for frame in range(45 if kind=='event' else 90):
-                music = step_music(music,dict(state,screen_state='clear' if kind=='ending' else 'title'))
-                if cutscene_frame(kind,frame,state):
-                    break
+            music = play_scene(kind,state,music)
         music = step_music(music,state)
+
+
+def play_scene(kind,state,music):
+    # Menu previews reuse the real scenes without touching progress or save data.
+    for frame in range(45 if kind=='event' else 90):
+        music = step_music(music,dict(state,screen_state='clear' if kind=='ending' else 'title'))
+        if cutscene_frame(kind,frame,state):
+            break
+    return music
 
 
 # Original single-channel note patterns: rest is 0. No sampled music assets.
@@ -214,6 +235,11 @@ def cutscene_frame(kind,frame,state):
     second = frame>=45
     picture = int(second) if kind=='opening' else 2+int(second) if kind=='ending' else 2
     display.blit(SCENE_BITMAPS[picture],0,0,72,32,-1,0,0)
+    # A tiny travelling silhouette animates the static cuts without frame buffers.
+    x = 8+(frame%45)//2 if picture in (0,1) else 48-(frame%45)//2
+    display.drawFilledRectangle(x-1,21,10,11,0)
+    draw_rows(display,HERO_HEAD,x,22,8,picture==3)
+    draw_rows(display,WALK_BODY_ROWS if (frame//5)%2 else BODY_ROWS,x,27,8,picture==3)
     if picture==1:
         for label,x,y in (('KR',3,18),('CN',30,2),('JP',57,18)):
             display.drawText(label,x,y,1)
@@ -226,8 +252,10 @@ def cutscene_frame(kind,frame,state):
 def title_frame():
     display = thumby.display
     display.fill(0)
-    display.drawText('GROWTH', 18, 2, 1)
-    display.drawText('15 DUELS', 12, 12, 1)
+    draw_rows(display,PORTRAIT_ROWS,1,0,16)
+    display.drawText('GROWTH', 24, 0, 1)
+    display.drawText('U:INTRO', 24, 8, 1)
+    display.drawText('D:ENDING', 24, 16, 1)
     display.drawText('A:NEW', 0, 23, 1)
     display.drawText('B:LOAD', 0, 33, 1)
     display.update()
@@ -236,6 +264,10 @@ def title_frame():
         return 'load'
     if thumby.buttonA.justPressed():
         return 'new'
+    if thumby.buttonU.justPressed():
+        return 'opening'
+    if thumby.buttonD.justPressed():
+        return 'ending'
     return None
 
 
@@ -295,11 +327,11 @@ def draw_game(state):
         for player, world_x, y in actors:
             x = world_x-camera
             # A black one-pixel backing separates white actors from white scenery.
-            scene_rect(display, x-2, y-1, 10, 9, 0)
+            scene_rect(display, x-2, y-4, 10, 11, 0)
             rightward = state['direction']=='R' if player else world_x<state['player_x']
             flashing = state.get('player_hit_flash' if player else 'enemy_hit_flash',0)>0 and state['combat_frame']%2==0
             if not flashing:
-                draw_rows(display,character_head(state,player),x-1,y-1,8,not rightward)
+                draw_rows(display,character_head(state,player),x-1,y-3,8,not rightward,14)
                 body = WALK_BODY_ROWS if (state['combat_frame']//5)%2 else BODY_ROWS
                 draw_rows(display,body,x-1,y+2,8,not rightward)
             if not player and state.get('enemy_windup',0):
@@ -309,43 +341,51 @@ def draw_game(state):
                 scene_rect(display,x+2,warning_y-5,1,2,1)
                 scene_rect(display,x+2,warning_y-2,1,1,1)
             kicking = state.get('attack_kind')=='kick'
-            if player and not flashing and state['player_attack_cooldown']>=(15 if kicking else 11):
-                length = 4 if kicking else (2 if state['equipped_weapon'] is None else (6 if state['equipped_weapon']==0 else 8))
+            shooting = state.get('attack_kind')=='shot'
+            special = state.get('attack_kind')=='skill'
+            if player and not flashing and state['player_attack_cooldown']>=(26 if shooting or special else 15 if kicking else 11):
+                length = 12 if special else 4 if kicking or shooting else (2 if state['equipped_weapon'] is None else (6 if state['equipped_weapon']==0 else 8))
                 front = x+6 if rightward else x-length
                 left, right = max(0,front), min(72,front+length)
                 if right>left:
                     display.drawFilledRectangle(left,y+(5 if kicking else 3),right-left,1,1)
+                if shooting:
+                    bullet = x+18 if rightward else x-14
+                    scene_rect(display,bullet,y+3,3,1)
     elif screen == 'pause':
-        display.drawText('HP'+str(state['HP'])+' AT'+str(state['attack'])+' DF'+str(state['defense']),0,0,1)
+        stats='HP'+str(state['HP'])+' AT'+str(state['attack'])+' DF'+str(state['defense'])
+        if len(stats)>12:
+            stats='H'+str(state['HP'])+' A'+str(state['attack'])+' D'+str(state['defense'])
+        display.drawText(stats,0,0,1)
         index=stage_index(state)
         display.drawText(CITY_NAMES[index//5][index%5],0,10,1)
-        display.drawText(status if status in ('SAVED','SAVE ERR') else '$'+str(state['money'])+' '+stage_code(state),0,20,1)
-        for row,label in enumerate(('BACK','SAVE')):
-            x=row*36
+        cash=str(state['money']) if state['money']<1000 else str(min(999,state['money']//1000))+'k'
+        display.drawText(status if status in ('SAVED','SAVE ERR') else '$'+cash+' '+stage_code(state),0,20,1)
+        display.drawText('P'+str(state.get('potions',0)),60,20,1)
+        for row,label in enumerate(('BACK','SAVE','HEAL')):
+            x=row*24
             selected=row==state['menu_selection']
             if selected:
-                display.drawFilledRectangle(x,30,36,8,1)
-            display.drawText(('>' if selected else ' ')+label,x,30,0 if selected else 1)
+                display.drawFilledRectangle(x,30,24,8,1)
+            display.drawText(label,x,30,0 if selected else 1)
     elif screen in ('shop_detail', 'equip_detail'):
         item = state['menu_selection']
-        names = ('Blade', 'Sword', 'Vest', 'Armor')
-        prices = (40, 80, 40, 80)
-        display.drawText(names[item], 0, 0, 1)
-        display.drawText('P:'+str(prices[item]), 0, 8, 1)
-        effect = ('ATK+2','ATK+4','DEF+1','DEF+2')[item]
-        display.drawText(effect, 36, 8, 1)
+        names = ITEM_NAMES
+        draw_rows(display,portrait_rows(state,True),0,0,16)
+        display.drawText(names[item], 20, 0, 1)
+        display.drawText('P:'+str(get_item_price(item)), 20, 8, 1)
+        effect = ITEM_EFFECTS[item]
+        display.drawText(effect, 0, 16, 1)
         money = str(state['money'])
-        display.drawText(money[:12], 0, 16, 1)
-        if len(money) > 12:
-            display.drawText(money[12:], 0, 24, 1)
-        owned = 'Y' if state['owned'][item] else 'N'
+        cash = money if len(money)<=6 else str(min(999,state['money']//1000))+'k'
+        display.drawText(cash, 36, 16, 1)
+        owned = 'Y' if item_owned(state,item) else 'N'
         equipped = item in (state['equipped_weapon'], state['equipped_armor'])
-        if len(money) <= 12:
-            if screen == 'shop_detail':
-                action = 'OWNED' if state['owned'][item] else ('A:BUY' if state['money']>=prices[item] else 'NO MONEY')
-            else:
-                action = 'BUY FIRST' if not state['owned'][item] else ('A:REMOVE' if equipped else 'A:EQUIP')
-            display.drawText(action, 0, 24, 1)
+        if screen == 'shop_detail':
+            action = 'OWNED' if item_owned(state,item) else ('A:BUY' if can_buy(state,item) else 'LIMIT/CASH')
+        else:
+            action = 'BUY FIRST' if not item_owned(state,item) else ('A:REMOVE' if equipped else 'A:EQUIP')
+        display.drawText(action, 0, 24, 1)
         display.drawText('O:'+owned+' E:'+('Y' if equipped else 'N'), 0, 32, 1)
     elif screen == 'defeat':
         display.drawText('DEFEAT', 0, 0, 1)
@@ -356,16 +396,16 @@ def draw_game(state):
         elif screen == 'pause':
             choices = ('RESUME', 'SAVE')
         else:
-            choices = ('Blade', 'Sword', 'Vest', 'Armor')
+            choices = ITEM_NAMES if screen=='shop' else ITEM_NAMES[:5]
         index=stage_index(state)
         header = CITY_NAMES[index//5][index%5] if screen == 'safe' else screen.upper()
         if screen in ('shop','equip'):
             chosen = state['menu_selection']
             if screen == 'shop':
-                header = 'BOUGHT' if state['owned'][chosen] else ('A:BUY' if state['money'] >= (40,80,40,80)[chosen] else 'NO MONEY')
+                header = 'BOUGHT' if item_owned(state,chosen) else ('A:BUY' if can_buy(state,chosen) else 'LIMIT/CASH')
             else:
                 on = chosen in (state['equipped_weapon'],state['equipped_armor'])
-                header = 'BUY FIRST' if not state['owned'][chosen] else ('ON ATK'+str(state['attack']) if on and chosen<2 else ('ON DEF'+str(state['defense']) if on else 'A:EQUIP'))
+                header = 'BUY FIRST' if not item_owned(state,chosen) else ('ON ATK'+str(state['attack']) if on and chosen in (0,1,4) else ('ON DEF'+str(state['defense']) if on else 'A:EQUIP'))
         if screen in ('shop','equip'):
             header = 'AT'+str(state['attack'])+' DF'+str(state['defense'])
         if status in ('SAVED','SAVE ERR'):
@@ -384,14 +424,14 @@ def draw_game(state):
                     display.drawFilledRectangle(0,10+row*10,72,8,1)
                 selected = '>' if active else ' '
                 label = selected+choices[index]
-                if screen in ('shop','equip') and state['owned'][index]:
+                if screen in ('shop','equip') and item_owned(state,index):
                     label += '+'
                 display.drawText(label, 0, 10+row*10, ink)
                 if screen == 'shop':
-                    display.drawText(str((40,80,40,80)[index]), 54, 10+row*10, ink)
+                    display.drawText(str(get_item_price(index)), 54, 10+row*10, ink)
                 elif screen == 'equip':
                     on = index in (state['equipped_weapon'],state['equipped_armor'])
-                    display.drawText('ON' if on else ('OK' if state['owned'][index] else '--'), 54, 10+row*10, ink)
+                    display.drawText('ON' if on else ('OK' if item_owned(state,index) else '--'), 54, 10+row*10, ink)
     if status in ('SAVED', 'SAVE ERR') and screen in ('shop_detail','equip_detail','defeat'):
         display.drawText(status, 0, 0, 1)
     display.update()

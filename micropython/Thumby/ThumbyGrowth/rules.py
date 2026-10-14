@@ -3,6 +3,39 @@ REGIONS = ('KR', 'CN', 'JP')
 GOAL_STAGES = 15
 ENEMY_WINDUP_FRAMES = 12
 HIT_FLASH_FRAMES = 6
+# Small demo economy; the first four equipment IDs remain save-compatible.
+ITEM_NAMES = ('Blade','Sword','Vest','Armor','Pistol','Potion','HP up','ATK up','DEF up','Skill')
+ITEM_PRICES = (40,80,40,80,60,15,50,60,60,80)
+ITEM_EFFECTS = ('ATK+2','ATK+4','DEF+1','DEF+2','RNG40','HEAL+6','HP+2','ATK+1','DEF+1','UU+A')
+GROWTH_LIMIT = 5
+COMMAND_WINDOW = 12
+
+
+def item_owned(state, item):
+    if item < 4:
+        return state['owned'][item]
+    if item == 4:
+        return state.get('gun_owned',False)
+    if item == 9:
+        return state.get('skill_owned',False)
+    return False
+
+
+def can_buy(state,item):
+    if item_owned(state,item) or state['money'] < get_item_price(item):
+        return False
+    if item == 5:
+        return state.get('potions',0) < 9
+    if item in (6,7,8):
+        return state.get(('hp_growth','atk_growth','def_growth')[item-6],0) < GROWTH_LIMIT
+    return True
+
+
+def apply_stats(state):
+    weapon,armor = state['equipped_weapon'],state['equipped_armor']
+    state['maxHP'] = 10+2*state.get('hp_growth',0)
+    state['attack'] = 2+state.get('atk_growth',0)+(2 if weapon==0 else 4 if weapon==1 else 0)
+    state['defense'] = state.get('def_growth',0)+(1 if armor==2 else 2 if armor==3 else 0)
 # HP, attack, defense. Each fifth encounter closes one region.
 ENCOUNTERS = (
     (6,2,0), (10,3,1), (8,3,0), (12,3,1), (16,4,2),
@@ -47,6 +80,8 @@ def update_state(state, inputs):
     new_state.setdefault('attack_kind', 'punch')
     for field in ('enemy_windup','enemy_stun','enemy_hit_flash','player_hit_flash'):
         new_state.setdefault(field,0)
+    for field in ('command_timer','command_ready'):
+        new_state.setdefault(field,0)
 
     if screen == 'country_select':
         choices = [region for region in range(3) if region not in new_state['route']]
@@ -84,6 +119,8 @@ def update_state(state, inputs):
         new_state['screen_state'] = 'pause'
         new_state['menu_selection'] = 0
         new_state['menu_scroll'] = 0
+        new_state['command_timer'] = 0
+        new_state['command_ready'] = 0
         return new_state
 
     # 복귀 입력은 전환한 화면에서 다시 처리하지 않는다.
@@ -102,7 +139,7 @@ def update_state(state, inputs):
         return new_state
 
     if screen in ('safe', 'pause', 'shop', 'equip'):
-        limit = 1 if screen == 'pause' else 3
+        limit = 2 if screen == 'pause' else 9 if screen == 'shop' else 4 if screen == 'equip' else 3
         selected = state['menu_selection']
         if inputs['U'] and not inputs['D']:
             selected = max(0, selected - 1)
@@ -139,10 +176,9 @@ def update_state(state, inputs):
         new_state['enemy_hp'] = hp
         new_state['enemy_attack'] = attack
         new_state['enemy_defense'] = defense
-        weapon = new_state['equipped_weapon']
-        armor = new_state['equipped_armor']
-        new_state['attack'] = 2 + (0 if weapon is None else (2 if weapon == 0 else 4))
-        new_state['defense'] = 0 if armor is None else (1 if armor == 2 else 2)
+        apply_stats(new_state)
+        new_state['command_timer'] = 0
+        new_state['command_ready'] = 0
         new_state['screen_state'] = 'battle'
         new_state['menu_selection'] = 0
         new_state['menu_scroll'] = 0
@@ -164,8 +200,11 @@ def update_state(state, inputs):
                 new_state['screen_state'] = 'battle'
                 new_state['menu_selection'] = 0
                 new_state['menu_scroll'] = 0
-            else:
+            elif new_state['menu_selection'] == 1:
                 new_state['save_requested'] = True
+            elif new_state.get('potions',0) and new_state['HP'] < new_state['maxHP']:
+                new_state['potions'] -= 1
+                new_state['HP'] = min(new_state['maxHP'],new_state['HP']+6)
         return new_state
     if screen == 'defeat':
         return new_state
@@ -175,18 +214,26 @@ def update_state(state, inputs):
             item_id = new_state['menu_selection']
             if screen in ('shop', 'shop_detail'):
                 price = get_item_price(item_id)
-                if not new_state['owned'][item_id] and new_state['money'] >= price:
+                if can_buy(new_state,item_id):
                     new_state['money'] -= price
-                    new_state['owned'][item_id] = True
-            elif new_state['owned'][item_id]:
-                if item_id < 2:
+                    if item_id < 4:
+                        new_state['owned'][item_id] = True
+                    elif item_id in (4,9):
+                        new_state['gun_owned' if item_id==4 else 'skill_owned'] = True
+                    elif item_id==5:
+                        new_state['potions'] = new_state.get('potions',0)+1
+                    else:
+                        field = ('hp_growth','atk_growth','def_growth')[item_id-6]
+                        new_state[field] = new_state.get(field,0)+1
+                        apply_stats(new_state)
+                        if item_id==6:
+                            new_state['HP'] = min(new_state['maxHP'],new_state['HP']+2)
+            elif item_owned(new_state,item_id):
+                if item_id in (0,1,4):
                     new_state['equipped_weapon'] = None if new_state['equipped_weapon'] == item_id else item_id
                 else:
                     new_state['equipped_armor'] = None if new_state['equipped_armor'] == item_id else item_id
-                weapon = new_state['equipped_weapon']
-                armor = new_state['equipped_armor']
-                new_state['attack'] = 2 + (0 if weapon is None else (2 if weapon == 0 else 4))
-                new_state['defense'] = 0 if armor is None else (1 if armor == 2 else 2)
+                apply_stats(new_state)
         return new_state
     if screen != 'battle':
         return new_state
@@ -196,6 +243,15 @@ def update_state(state, inputs):
         new_state[field] = max(0,new_state[field]-1)
     new_state['player_attack_cooldown'] = max(0, state['player_attack_cooldown'] - 1)
     new_state['enemy_attack_cooldown'] = max(0, state['enemy_attack_cooldown'] - 1)
+    # Direction edges, not held movement, arm the purchased UP UP + A skill.
+    new_state['command_timer'] = max(0,new_state['command_timer']-1)
+    new_state['command_ready'] = max(0,new_state['command_ready']-1)
+    if inputs['U'] and not inputs['D']:
+        if new_state['command_timer']:
+            new_state['command_ready'] = COMMAND_WINDOW
+            new_state['command_timer'] = 0
+        else:
+            new_state['command_timer'] = COMMAND_WINDOW
     # World 144x40. Top-left body coordinates; HUD occupies y=0..13.
     player = state['player_x']
     enemy = state['enemy_x']
@@ -228,11 +284,17 @@ def update_state(state, inputs):
 
     if (inputs['A'] or inputs['B']) and new_state['player_attack_cooldown'] == 0:
         kicking = bool(inputs['B'])
-        new_state['attack_kind'] = 'kick' if kicking else 'punch'
-        new_state['player_attack_cooldown'] = 20 if kicking else 15
+        skill = not kicking and new_state.get('skill_owned',False) and new_state['command_ready']>0
+        shooting = not kicking and not skill and new_state['equipped_weapon']==4
+        new_state['attack_kind'] = 'skill' if skill else 'shot' if shooting else 'kick' if kicking else 'punch'
+        new_state['player_attack_cooldown'] = 30 if skill or shooting else 20 if kicking else 15
+        new_state['command_ready'] = 0
+        new_state['command_timer'] = 0
         gap = enemy - (moved + 6) if new_state['direction'] == 'R' else moved - (enemy + 6)
-        if new_state['active_enemy'] and same_lane and 0 <= gap <= (10 if kicking else 8):
-            damage = calculate_damage(new_state, {'defense': new_state['enemy_defense']})
+        reach = 40 if shooting else 12 if skill else 10 if kicking else 8
+        if new_state['active_enemy'] and same_lane and 0 <= gap <= reach:
+            power = 1+new_state.get('atk_growth',0) if shooting else new_state['attack']+(4 if skill else 0)
+            damage = calculate_damage({'attack':power}, {'defense': new_state['enemy_defense']})
             new_state['enemy_hp'] = max(0, new_state['enemy_hp'] - damage)
             # A landed hit interrupts preparation; misses never cause stun.
             new_state['enemy_windup'] = 0
@@ -279,11 +341,10 @@ def calculate_damage(attacker_stats, defender_stats):
     return max(1, attacker_stats['attack'] - defender_stats['defense'])
 
 def get_item_price(item_id):
-    prices = [40, 80, 40, 80]
-    return prices[item_id]
+    return ITEM_PRICES[item_id]
 
 def get_item_type(item_id):
-    types = ['weapon', 'weapon', 'armor', 'armor']
+    types = ('weapon','weapon','armor','armor','weapon','potion','growth','growth','growth','skill')
     return types[item_id]
 
 def is_valid_save_data(data):
@@ -293,10 +354,18 @@ def is_valid_save_data(data):
     required_keys = {'version', 'money', 'progress', 'owned', 'equipped_weapon', 'equipped_armor'}
     if not required_keys.issubset(data):
         return False
-    if type(data['version']) is not int or data['version'] not in (1,2):
+    if type(data['version']) is not int or data['version'] not in (1,2,3):
         return False
-    if data['version'] == 2:
+    if data['version'] >= 2:
         required_keys.add('route')
+    if data['version']==3:
+        required_keys.update(('gun_owned','skill_owned','potions','hp_growth','atk_growth','def_growth'))
+        for field in ('gun_owned','skill_owned'):
+            if type(data.get(field)) is not bool:
+                return False
+        for field,maximum in (('potions',9),('hp_growth',5),('atk_growth',5),('def_growth',5)):
+            if type(data.get(field)) is not int or not 0<=data[field]<=maximum:
+                return False
     if set(data.keys()) != required_keys:
         return False
     
@@ -305,7 +374,7 @@ def is_valid_save_data(data):
     
     if type(data['progress']) is not int or data['progress'] < 0:
         return False
-    if data['version'] == 2:
+    if data['version'] >= 2:
         route = data['route']
         completed, city = divmod(data['progress'],5)
         if data['progress'] > 15 or not isinstance(route,list) or len(route)>3:
@@ -325,14 +394,14 @@ def is_valid_save_data(data):
         if not isinstance(item, bool):
             return False
     
-    if data['equipped_weapon'] is not None and (type(data['equipped_weapon']) is not int or data['equipped_weapon'] not in (0, 1)):
+    if data['equipped_weapon'] is not None and (type(data['equipped_weapon']) is not int or data['equipped_weapon'] not in ((0,1,4) if data['version']==3 else (0,1))):
         return False
     
     if data['equipped_armor'] is not None and (type(data['equipped_armor']) is not int or data['equipped_armor'] not in (2, 3)):
         return False
     
     # 장착된 아이템은 반드시 소유해야 함
-    if data['equipped_weapon'] is not None and not data['owned'][data['equipped_weapon']]:
+    if data['equipped_weapon'] is not None and not item_owned(data,data['equipped_weapon']):
         return False
     
     if data['equipped_armor'] is not None and not data['owned'][data['equipped_armor']]:
@@ -342,7 +411,7 @@ def is_valid_save_data(data):
 
 def encode_save_data(state):
     data = {
-        'version': 2,
+        'version': 3,
         'money': state['money'],
         'progress': state['progress'],
         'owned': list(state['owned']),
@@ -350,6 +419,8 @@ def encode_save_data(state):
         'equipped_armor': state['equipped_armor'],
         'route': list(state.get('route', legacy_route(state['progress'])))
     }
+    for field in ('gun_owned','skill_owned','potions','hp_growth','atk_growth','def_growth'):
+        data[field] = state.get(field,False if field.endswith('_owned') else 0)
     if not is_valid_save_data(data):
         raise ValueError('저장할 진행/국가 순서가 잘못됐습니다.')
     return data
@@ -359,7 +430,7 @@ def decode_save_data(data):
         return None
     
     progress = min(15,data['progress'])
-    route = list(data['route'] if data['version']==2 else legacy_route(progress))
+    route = list(data['route'] if data['version']>=2 else legacy_route(progress))
     selecting = progress<15 and len(route)==progress//5
     new_state = dict(
         HP=10,
@@ -397,11 +468,11 @@ def decode_save_data(data):
         menu_r_held=False
     )
     
-    # 장비 스탯 재계산
-    if new_state['equipped_weapon'] is not None:
-        new_state['attack'] += 2 if new_state['equipped_weapon'] == 0 else 4
-    
-    if new_state['equipped_armor'] is not None:
-        new_state['defense'] += 1 if new_state['equipped_armor'] == 2 else 2
+    for field in ('gun_owned','skill_owned','potions','hp_growth','atk_growth','def_growth'):
+        new_state[field] = data.get(field,False if field.endswith('_owned') else 0)
+    new_state['command_timer'] = 0
+    new_state['command_ready'] = 0
+    apply_stats(new_state)
+    new_state['HP'] = new_state['maxHP']
     
     return new_state

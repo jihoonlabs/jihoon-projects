@@ -76,10 +76,17 @@ if __name__=='__main__':
     state=decode_save_data(dict(version=2,money=0,progress=0,route=[0],
         owned=[False]*4,equipped_weapon=None,equipped_armor=None))
     state.update(screen_state='battle',player_x=28,enemy_x=49,active_enemy=True,enemy_hp=6)
-    old=ModuleType('old_graphics')
-    exec(subprocess.check_output(['git','show','1e0f5e5d4eecff69a440047ccbea8e17277973bf:micropython/Thumby/ThumbyGrowth/ThumbyGrowth.py'],text=True),old.__dict__)
-    old.draw_game(state);frames=[('Battle / previous',display.image.copy())]
-    game.draw_game(state);frames.append(('Battle / shared body',display.image.copy()))
+    frames=[]
+    game.title_frame();frames.append(('Title / scene previews',display.image.copy()))
+    for region,label in enumerate(('Korea / shared fighter','China / shared fighter','Japan / shared fighter')):
+        state.update(progress=4,route=[region],enemy_hp=16)
+        game.draw_game(state);frames.append((label,display.image.copy()))
+    state.update(screen_state='shop',menu_selection=9,menu_scroll=7,money=200)
+    game.draw_game(state);frames.append(('Shop / growth and skill',display.image.copy()))
+    state.update(screen_state='shop_detail',menu_selection=4)
+    game.draw_game(state);frames.append(('Merchant / shared portrait',display.image.copy()))
+    state.update(screen_state='pause',menu_selection=2,potions=2)
+    game.draw_game(state);frames.append(('Status / use healing',display.image.copy()))
     cuts=[]
     for kind,frame,label in (('opening',0,'Departure'),('opening',60,'Three destinations'),
                              ('ending',0,'Victory'),('ending',60,'Return home')):

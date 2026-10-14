@@ -71,12 +71,12 @@ class CombatFeedbackTests(unittest.TestCase):
         self.assertEqual(resumed['screen_state'],'battle')
         self.assertEqual(resumed['enemy_windup'],5)
 
-    def test_retry_and_load_clear_transient_effects_without_save_schema_change(self):
+    def test_retry_and_load_clear_transient_effects_without_saving_transient_effects(self):
         state=self.battle(enemy_windup=5,enemy_stun=3,enemy_hit_flash=4,player_hit_flash=2,
                           screen_state='defeat')
         retried=self.step(state,A=True)
         saved=encode_save_data(state)
-        self.assertEqual(set(saved),{'version','money','progress','owned','equipped_weapon','equipped_armor','route'})
+        self.assertEqual(set(saved),{'version','money','progress','owned','equipped_weapon','equipped_armor','route','gun_owned','skill_owned','potions','hp_growth','atk_growth','def_growth'})
         loaded=decode_save_data(saved)
         for field in ('enemy_windup','enemy_stun','enemy_hit_flash','player_hit_flash'):
             self.assertEqual((retried[field],loaded[field]),(0,0))

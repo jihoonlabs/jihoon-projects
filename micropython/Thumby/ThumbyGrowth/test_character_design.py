@@ -1,4 +1,4 @@
-"""Shared 8x8 visuals preserve the existing collision body and foot position."""
+"""Shared 8x10 visuals preserve the existing collision body and foot position."""
 import unittest
 from copy import deepcopy
 import test_ThumbyGrowth as fixtures
@@ -44,9 +44,9 @@ class CharacterDesignTests(unittest.TestCase):
             designs.append(game.character_rows(state,False))
         self.assertEqual(len(set(designs)),5)
         for rows in designs:
-            self.assertEqual(len(rows),8)
+            self.assertEqual(len(rows),10)
             self.assertTrue(all(type(mask) is int and 0<=mask<256 for mask in rows))
-            self.assertEqual(rows[3:],game.BODY_ROWS)
+            self.assertEqual(rows[5:],game.BODY_ROWS)
 
     def test_walk_changes_legs_not_identity_or_state(self):
         for player in (True,False):
@@ -57,8 +57,8 @@ class CharacterDesignTests(unittest.TestCase):
                 before=deepcopy(state)
                 walking=game.character_rows(state,player)
                 self.assertEqual(state,before)
-                self.assertEqual(still[:6],walking[:6])
-                self.assertNotEqual(still[6:],walking[6:])
+                self.assertEqual(still[:8],walking[:8])
+                self.assertNotEqual(still[8:],walking[8:])
 
     def test_boss_design_follows_selected_country_not_total_chapter(self):
         for progress in (4,9,14):
@@ -67,7 +67,7 @@ class CharacterDesignTests(unittest.TestCase):
                 route=others[:progress//5]+[country]
                 state=fixtures.state(progress=progress,route=route)
                 self.assertIs(game.character_head(state,False),game.BOSS_HEADS[country])
-                self.assertEqual(game.character_rows(state,False)[3:],game.BODY_ROWS)
+                self.assertEqual(game.character_rows(state,False)[5:],game.BODY_ROWS)
 
     def test_design_render_keeps_bounds_call_budget_and_state(self):
         fixtures.TestAdapter.setUp(self)

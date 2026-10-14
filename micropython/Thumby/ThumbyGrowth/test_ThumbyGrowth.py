@@ -28,6 +28,7 @@ def state(**changes):
         enemy_attack_cooldown=0,active_enemy=False,enemy_hp=0,
         enemy_attack=0,enemy_defense=0,combat_frame=0,
         save_requested=False,save_status='',menu_r_held=False)
+    value.update(dict(gun_owned=False,skill_owned=False,potions=0,hp_growth=0,atk_growth=0,def_growth=0,command_timer=0,command_ready=0))
     value.update(changes)
     from rules import legacy_route
     value.setdefault('route', legacy_route(value['progress']))
