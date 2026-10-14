@@ -151,8 +151,16 @@ export function LoginForm({
   return (
     <div className={styles.container}>
       <div className={styles.card}>
-        <h1>タスク管理</h1>
-        <p>チケット管理</p>
+        <header className={styles.heading}>
+          <div className={styles.identity}>
+            <span className={styles.mark} aria-hidden="true">
+              T
+            </span>
+            <span className={styles.eyebrow}>TICKET WORKSPACE</span>
+          </div>
+          <h1>タスク管理</h1>
+          <p>チケット管理</p>
+        </header>
 
         {successMessage && (
           <div className={styles.successMessage} role="status">
@@ -216,37 +224,42 @@ export function LoginForm({
           <div className={styles.inputGroup}>
             <label htmlFor="password">パスワード</label>
 
-            <input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              placeholder="••••••••"
-              aria-invalid={Boolean(errors.password)}
-              aria-describedby={errors.password ? 'password-error' : undefined}
-              value={password}
-              onChange={(event) => {
-                setPassword(event.target.value);
-
-                if (errors.password) {
-                  setErrors((prev) => ({
-                    ...prev,
-                    password: undefined,
-                  }));
+            <div className={styles.passwordField}>
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                aria-invalid={Boolean(errors.password)}
+                aria-describedby={
+                  errors.password ? 'password-error' : undefined
                 }
-              }}
-              required
-              disabled={loading}
-            />
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
 
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              aria-label={
-                showPassword ? 'パスワードを隠す' : 'パスワードを表示'
-              }
-            >
-              {showPassword ? '隠す' : '表示'}
-            </button>
+                  if (errors.password) {
+                    setErrors((prev) => ({
+                      ...prev,
+                      password: undefined,
+                    }));
+                  }
+                }}
+                required
+                disabled={loading}
+              />
+
+              <button
+                type="button"
+                className={styles.passwordToggle}
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={
+                  showPassword ? 'パスワードを隠す' : 'パスワードを表示'
+                }
+              >
+                {showPassword ? '隠す' : '表示'}
+              </button>
+            </div>
 
             {errors.password && (
               <span id="password-error" className={styles.fieldError}>
@@ -265,21 +278,26 @@ export function LoginForm({
             {loading ? 'ログイン中...' : 'ログイン'}
           </button>
 
-          <button
-            type="button"
-            onClick={() => handleSocialLogin('google')}
-            disabled={loading}
-          >
-            Googleでログイン
-          </button>
+          <div className={styles.alternativeLabel}>その他のログイン方法</div>
+          <div className={styles.socialGroup}>
+            <button
+              type="button"
+              className={styles.socialButton}
+              onClick={() => handleSocialLogin('google')}
+              disabled={loading}
+            >
+              Googleでログイン
+            </button>
 
-          <button
-            type="button"
-            onClick={() => handleSocialLogin('line')}
-            disabled={loading}
-          >
-            LINEでログイン
-          </button>
+            <button
+              type="button"
+              className={styles.socialButton}
+              onClick={() => handleSocialLogin('line')}
+              disabled={loading}
+            >
+              LINEでログイン
+            </button>
+          </div>
         </form>
 
         <div className={styles.registerGuide}>
