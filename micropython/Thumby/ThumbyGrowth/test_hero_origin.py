@@ -58,6 +58,11 @@ class HeroOriginTests(unittest.TestCase):
             self.assertEqual({(61-x,y) for x,y in versions[0]},versions[1])
             self.assertTrue(versions[0])
             self.assertEqual(max(y for _,y in versions[0]),34)
+            if region==0:
+                # Bow wings belong to the bottom three rows, not near the scalp.
+                self.assertEqual({x for x,y in versions[0] if y==34},{21,22,24,25})
+                self.assertEqual({x for x,y in versions[0] if y==33},{22,23,24})
+                self.assertEqual({x for x,y in versions[0] if y<32},{23})
             designs.append(frozenset(versions[0]))
         self.assertEqual(len(set(designs)),3)
         self.assertEqual(game.HERO_HEADS,original)

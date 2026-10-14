@@ -172,11 +172,11 @@ def draw_hero_hair(display,region,x,y,rightward):
         scene_rect(display,left,y+dy,width,height,color)
     rect(0,-6,5,12,0)
     if region==0:
-        # Long tied hair; a small butterfly bow distinguishes the daenggi.
-        rect(2,-2,1,8)
-        for dy in (-4,-2):
+        # Long tied hair; the butterfly bow sits at the very end.
+        rect(2,-2,1,5)
+        for dy in (3,5):
             rect(0,dy,2,1);rect(3,dy,2,1)
-        rect(2,-3,1,1)
+        rect(1,4,3,1)
     elif region==1:
         # A narrow long braid, alternating sides down to the shoulder.
         for row in range(8): rect(1+row%2,-3+row,1,1)
