@@ -10,8 +10,8 @@ def build(output):
     game = Path(__file__).resolve().parents[1]
     output = Path(output).resolve()
     files = {name: (game / name).read_bytes()
-             for name in ('ThumbyGrowth.py', 'rules.py', 'README.txt')}
-    for name in ('ThumbyGrowth.py', 'rules.py'):
+             for name in ('ThumbyGrowth.py', 'rules.py', 'scene_art.py', 'README.txt')}
+    for name in ('ThumbyGrowth.py', 'rules.py', 'scene_art.py'):
         compile(files[name], name, 'exec')
     files['BUILD.json'] = (json.dumps({
         'game': 'ThumbyGrowth', 'device_directory': '/Games/ThumbyGrowth',

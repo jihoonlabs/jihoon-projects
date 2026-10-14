@@ -12,15 +12,14 @@ from rules import (update_state, encode_save_data, decode_save_data,
                    GOAL_STAGES, ENCOUNTERS, REGIONS, STAGES_PER_REGION,
                    CITY_NAMES, stage_index, new_game_state)
 
-# Original 6x7 silhouettes: headband/robe, hood, then three boss helmets.
-# Visuals stay inside the existing collision body; no source-game assets used.
-HERO_ROWS = b'\x0e\x3e\x0a\x1c\x3e\x14\x36'
-FOE_ROWS = b'\x1e\x12\x1e\x1e\x12\x14\x36'
-BOSS_ROWS = (
-    b'\x15\x3f\x12\x3f\x1e\x14\x36',
-    b'\x3f\x2d\x12\x1e\x3f\x14\x36',
-    b'\x21\x3f\x12\x33\x1e\x14\x36',
-)
+from scene_art import SCENE_BITMAPS
+
+# Shared 8x8 visual body; collision stays 6x7 with the same feet coordinates.
+HERO_HEAD = b'\x3c\x7e\x28'
+FOE_HEAD = b'\x3c\x42\x3c'
+BOSS_HEADS = (b'\x54\x7e\x24',b'\x7e\x5a\x24',b'\x42\x7e\x24')
+BODY_ROWS = b'\x7c\x54\x38\x28\x6c'
+WALK_BODY_ROWS = b'\x7c\x54\x38\x18\x24'
 HEART_ROWS = b'\x0a\x1f\x1f\x0e\x04'
 ENEMY_ICON_ROWS = b'\x0e\x1f\x15\x0e\x0a'
 
@@ -41,16 +40,17 @@ def draw_rows(display, rows, x, y, width, mirror=False):
                 display.drawFilledRectangle(left,y+row,right-left,1,1)
 
 
-def character_rows(state, player):
+def character_head(state, player):
     if player:
-        rows = HERO_ROWS
+        return HERO_HEAD
     elif state['progress']%STAGES_PER_REGION == STAGES_PER_REGION-1:
-        rows = BOSS_ROWS[stage_index(state)//STAGES_PER_REGION]
-    else:
-        rows = FOE_ROWS
-    if (state['combat_frame']//5)%2:
-        return rows[:5]+b'\x0c\x12'
-    return rows
+        return BOSS_HEADS[stage_index(state)//STAGES_PER_REGION]
+    return FOE_HEAD
+
+
+def character_rows(state, player):
+    # Inspection helper; rendering draws shared parts directly without joining.
+    return character_head(state,player)+(WALK_BODY_ROWS if (state['combat_frame']//5)%2 else BODY_ROWS)
 
 
 # Original monochrome scenery, stored once. These are decoration, not obstacles.
@@ -212,22 +212,13 @@ def cutscene_frame(kind,frame,state):
     display = thumby.display
     display.fill(0)
     second = frame>=45
-    titles = {'opening':('ON THE ROAD','A NEW QUEST'),
-              'ending':('THREE LANDS','HOME AGAIN'),
-              'event':('LAND CLEAR','LAND CLEAR')}
-    display.drawText(titles[kind][int(second)],0,0,1)
-    stage = stage_index(state)
-    if kind=='event':
-        stage = stage//5*5+4
-    draw_background(display,stage,0)
-    # Reuse existing city and actor pixels; no image/video file or frame buffer.
-    x = 33 if second else 12+min(21,frame//2)
-    scene_rect(display,x-1,24,8,9,0)
-    rows = HERO_ROWS if (frame//5)%2==0 else HERO_ROWS[:5]+b'\x0c\x12'
-    draw_rows(display,rows,x,25,6)
-    if second:
-        draw_rows(display,FOE_ROWS,46,25,6,True)
-    display.drawText('A/B:SKIP',12,33,1)
+    picture = int(second) if kind=='opening' else 2+int(second) if kind=='ending' else 2
+    display.blit(SCENE_BITMAPS[picture],0,0,72,32,-1,0,0)
+    if picture==1:
+        for label,x,y in (('KR',3,18),('CN',30,2),('JP',57,18)):
+            display.drawText(label,x,y,1)
+    display.drawText('GO' if kind=='opening' else 'HOME' if picture==3 else 'CLEAR',0,33,1)
+    display.drawText('A/B',54,33,1)
     display.update()
     return bool(thumby.buttonA.justPressed() or thumby.buttonB.justPressed())
 
@@ -304,12 +295,13 @@ def draw_game(state):
         for player, world_x, y in actors:
             x = world_x-camera
             # A black one-pixel backing separates white actors from white scenery.
-            scene_rect(display, x-1, y-1, 8, 9, 0)
+            scene_rect(display, x-2, y-1, 10, 9, 0)
             rightward = state['direction']=='R' if player else world_x<state['player_x']
             flashing = state.get('player_hit_flash' if player else 'enemy_hit_flash',0)>0 and state['combat_frame']%2==0
-            rows = character_rows(state,player)
             if not flashing:
-                draw_rows(display,rows,x,y,6,not rightward)
+                draw_rows(display,character_head(state,player),x-1,y-1,8,not rightward)
+                body = WALK_BODY_ROWS if (state['combat_frame']//5)%2 else BODY_ROWS
+                draw_rows(display,body,x-1,y+2,8,not rightward)
             if not player and state.get('enemy_windup',0):
                 # Small outlined warning marker, kept below the HUD.
                 warning_y = max(20,y)

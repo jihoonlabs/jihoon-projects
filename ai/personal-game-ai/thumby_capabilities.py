@@ -1,6 +1,6 @@
 """Opt-in, documented monochrome Thumby APIs; no device or model imports."""
 
-FEATURES = {"controls", "save_data", "audio"}
+FEATURES = {"controls", "save_data", "audio", "bitmap"}
 DISPLAY = {"fill", "drawFilledRectangle", "drawText", "update", "setFPS"}
 SAVE = {"setName", "setItem", "getItem", "hasItem", "save"}
 
@@ -9,7 +9,7 @@ def selected(config):
     value = config.get("thumby_features", [])
     if (not isinstance(value, list) or any(not isinstance(item, str) or item not in FEATURES for item in value)
             or len(value) != len(set(value))):
-        raise ValueError("thumby_features는 중복 없는 controls/save_data/audio 목록이어야 합니다.")
+        raise ValueError("thumby_features는 중복 없는 controls/save_data/audio/bitmap 목록이어야 합니다.")
     if value and config.get("generation_profile") != "thumby":
         raise ValueError("Thumby 확장 기능은 일반 thumby 프로필에서만 사용할 수 있습니다.")
     return set(value)
@@ -25,6 +25,8 @@ def allowed(config):
         methods["saveData"] = set(SAVE)
     if "audio" in features:
         methods["audio"] = {"play", "stop"}
+    if "bitmap" in features:
+        methods["display"].add("blit")
     return methods
 
 
@@ -45,6 +47,8 @@ def prompt(config):
     if "audio" in features:
         text += ("음향은 audio.play(freq,duration)/stop만 사용하세요. play는 비차단 단음입니다. "
                  "playBlocking/sleep으로 게임 입력을 멈추지 마세요. 기기 음소거 설정을 강제로 켜지 마세요. ")
+    if "bitmap" in features:
+        text += "그림은 display.blit의 VLSB 흑백 바이트 데이터를 재사용하세요. 런타임 파일 변환/큰 프레임 목록을 만들지 마세요. "
     return text
 
 

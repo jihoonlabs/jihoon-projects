@@ -64,9 +64,9 @@ class BackgroundTests(unittest.TestCase):
         game.draw_game(state)
         self.assertEqual(state,before)
         calls=self.rectangles()
-        self.assertIn((15,14,8,9,0),calls)
-        self.assertIn((29,27,8,9,0),calls)
-        self.assertLess(calls.index((15,14,8,9,0)),calls.index((29,27,8,9,0)))
+        self.assertIn((14,14,10,9,0),calls)
+        self.assertIn((28,27,10,9,0),calls)
+        self.assertLess(calls.index((14,14,10,9,0)),calls.index((28,27,10,9,0)))
         for x,y,w,h,color in calls:
             if color==0 and h>2:
                 self.assertGreaterEqual(y,14)

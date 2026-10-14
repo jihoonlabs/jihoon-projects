@@ -25,9 +25,23 @@ class SceneAudioTests(unittest.TestCase):
                 for call in calls:
                     x,y,w,h,_=call.args
                     self.assertTrue(0<=x<x+w<=72 and 0<=y<y+h<=40)
-                frames.append(tuple(str(c) for c in calls))
+                blits=game.thumby.display.blit.call_args_list
+                self.assertEqual(len(blits),1)
+                bitmap,x,y,w,h,key,mx,my=blits[0].args
+                self.assertEqual((x,y,w,h,key,mx,my),(0,0,72,32,-1,0,0))
+                self.assertEqual(len(bitmap),288)
+                frames.append(bytes(bitmap))
             if kind!='event':
                 self.assertNotEqual(frames[0],frames[2])
+
+    def test_four_original_pictures_are_distinct_and_bounded_in_size(self):
+        self.assertEqual(sum(map(len,game.SCENE_BITMAPS)),1152)
+        self.assertEqual(len({bytes(b) for b in game.SCENE_BITMAPS}),4)
+        before=tuple(bytes(b) for b in game.SCENE_BITMAPS)
+        for kind in ('opening','ending','event'):
+            game.cutscene_frame(kind,0,f.state())
+            game.cutscene_frame(kind,60,f.state())
+        self.assertEqual(before,tuple(bytes(b) for b in game.SCENE_BITMAPS))
 
     def test_either_button_skips_and_does_not_touch_save(self):
         for button in ('A','B'):

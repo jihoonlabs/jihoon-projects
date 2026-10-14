@@ -9,6 +9,7 @@
   "thumby_features": [
     "controls",
     "save_data",
-    "audio"
+    "audio",
+    "bitmap"
   ]
 }

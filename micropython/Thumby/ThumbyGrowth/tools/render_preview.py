@@ -1,0 +1,89 @@
+"""Render actual game helpers on a CPython display shim; never a device capture."""
+import argparse
+import importlib
+import subprocess
+import sys
+from pathlib import Path
+from types import SimpleNamespace, ModuleType
+from PIL import Image, ImageDraw, ImageFont
+
+FONT={
+'A':[126,17,17,17,126],'B':[127,73,73,73,54],'C':[62,65,65,65,34],
+'D':[127,65,65,34,28],'E':[127,73,73,73,65],'F':[127,9,9,9,1],
+'G':[62,65,73,73,122],'H':[127,8,8,8,127],'I':[0,65,127,65,0],
+'J':[32,64,65,63,1],'K':[127,8,20,34,65],'L':[127,64,64,64,64],
+'M':[127,2,12,2,127],'N':[127,4,8,16,127],'O':[62,65,65,65,62],
+'P':[127,9,9,9,6],'Q':[62,65,81,33,94],'R':[127,9,25,41,70],
+'S':[70,73,73,73,49],'T':[1,1,127,1,1],'U':[63,64,64,64,63],
+'V':[31,32,64,32,31],'W':[63,64,56,64,63],'X':[99,20,8,20,99],
+'Y':[7,8,112,8,7],'Z':[97,81,73,69,67],
+'0':[62,81,73,69,62],'1':[0,66,127,64,0],'2':[66,97,81,73,70],
+'3':[33,65,69,75,49],'4':[24,20,18,127,16],'5':[39,69,69,69,57],
+'6':[60,74,73,73,48],'7':[1,113,9,5,3],'8':[54,73,73,73,54],
+'9':[6,73,73,41,30],':':[0,54,54,0,0],'/':[32,16,8,4,2],
+'$':[36,42,127,42,18],'>':[0,65,34,20,8],'-':[8]*5,' ':[0]*5}
+
+
+class Display:
+    def __init__(self):self.fill(0)
+    def fill(self,color):
+        self.image=Image.new('1',(72,40),color);self.draw=ImageDraw.Draw(self.image)
+    def drawFilledRectangle(self,x,y,w,h,color):
+        if w>0 and h>0:self.draw.rectangle((x,y,x+w-1,y+h-1),fill=color)
+    def drawText(self,text,x,y,color):
+        for i,ch in enumerate(str(text)):
+            for col,mask in enumerate(FONT.get(ch.upper(),[0]*5)):
+                for row in range(7):
+                    if mask&(1<<row):self.draw.point((x+i*6+col,y+row),fill=color)
+    def blit(self,data,x,y,w,h,key,mx,my):
+        for cy in range(h):
+            for cx in range(w):
+                sx=w-1-cx if mx else cx;sy=h-1-cy if my else cy
+                bit=(data[(sy//8)*w+sx]>>(sy%8))&1
+                if bit!=key and 0<=x+cx<72 and 0<=y+cy<40:
+                    self.draw.point((x+cx,y+cy),fill=bit)
+    def update(self):pass
+    def setFPS(self,fps):pass
+
+
+def setup():
+    display=Display();device=SimpleNamespace(display=display)
+    for name in 'LRABUD':
+        setattr(device,'button'+name,SimpleNamespace(pressed=lambda:False,justPressed=lambda:False))
+    sys.modules['thumby']=device
+    sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+    return importlib.import_module('ThumbyGrowth'),display
+
+
+def gallery(frames,path,columns=2):
+    rows=(len(frames)+columns-1)//columns
+    canvas=Image.new('RGB',(columns*325+25,rows*215+90),'#0b1120');d=ImageDraw.Draw(canvas)
+    font=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',17)
+    d.text((15,12),'ThumbyGrowth / original 72 x 40 pixels',font=font,fill='white')
+    d.text((15,42),'Actual game code; simulated font; nearest-neighbour enlargement.',font=font,fill='#94a3b8')
+    for i,(label,image) in enumerate(frames):
+        x=15+(i%columns)*325;y=80+(i//columns)*215
+        d.text((x,y),label,font=font,fill='#cbd5e1')
+        canvas.paste(image.convert('RGB').resize((288,160),Image.Resampling.NEAREST),(x,y+27))
+    canvas.save(path)
+
+
+if __name__=='__main__':
+    parser=argparse.ArgumentParser();parser.add_argument('--output',required=True)
+    parser.add_argument('--scenes',required=True);args=parser.parse_args()
+    game,display=setup()
+    from rules import new_game_state,decode_save_data
+    state=decode_save_data(dict(version=2,money=0,progress=0,route=[0],
+        owned=[False]*4,equipped_weapon=None,equipped_armor=None))
+    state.update(screen_state='battle',player_x=28,enemy_x=49,active_enemy=True,enemy_hp=6)
+    old=ModuleType('old_graphics')
+    exec(subprocess.check_output(['git','show','1e0f5e5d4eecff69a440047ccbea8e17277973bf:micropython/Thumby/ThumbyGrowth/ThumbyGrowth.py'],text=True),old.__dict__)
+    old.draw_game(state);frames=[('Battle / previous',display.image.copy())]
+    game.draw_game(state);frames.append(('Battle / shared body',display.image.copy()))
+    cuts=[]
+    for kind,frame,label in (('opening',0,'Departure'),('opening',60,'Three destinations'),
+                             ('ending',0,'Victory'),('ending',60,'Return home')):
+        game.cutscene_frame(kind,frame,state)
+        cuts.append((label,display.image.copy()))
+    gallery(cuts,args.scenes)
+    gallery(frames+cuts,args.output,3)

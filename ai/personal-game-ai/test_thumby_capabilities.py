@@ -55,6 +55,14 @@ class ThumbyCapabilitiesTests(unittest.TestCase):
                 generation_profile.validate_code("game", code)
         generation_profile.validate_code("game", "thumby.buttonL.pressed()")
 
+    def test_bitmap_enables_only_documented_blit(self):
+        with self.assertRaises(ValueError):
+            generation_profile.validate_code('game','thumby.display.blit(None,0,0,8,8,-1,0,0)')
+        self.set_features(['bitmap'])
+        generation_profile.validate_code('game',self.entry('    thumby.display.blit(bytearray(8),0,0,8,8,-1,0,0)'), 'Rpg.py')
+        with self.assertRaises(ValueError):
+            generation_profile.validate_code('game','thumby.display.blitWithMask(None)')
+
     def test_features_do_not_enable_each_other(self):
         self.set_features(["controls"])
         with self.assertRaises(ValueError):
