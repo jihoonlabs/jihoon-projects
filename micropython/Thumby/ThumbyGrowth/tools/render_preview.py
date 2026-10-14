@@ -113,12 +113,31 @@ def shop_gallery(game,display,path):
     gallery(frames,path,3)
 
 
+def hero_gallery(game,display,path):
+    from rules import new_game_state,update_state
+    frames=[]
+    for origin,country in enumerate(('KR','CN','JP')):
+        state=new_game_state()
+        keys=dict.fromkeys(('L','R','A','B','U','D','U_held','D_held','A_held','B_held'),False)
+        for _ in range(origin): state=update_state(state,dict(keys,D=True))
+        game.draw_game(state);frames.append((country+' / choose origin',display.image.copy()))
+        state=update_state(state,dict(keys,A=True))
+        state.update(screen_state='battle',player_x=28,enemy_x=44,active_enemy=True,enemy_hp=10)
+        game.draw_game(state);frames.append((country+' hero / home',display.image.copy()))
+        destination=(origin+1)%3
+        state.update(progress=5,route=[origin,destination])
+        game.draw_game(state)
+        frames.append((country+' hero / visiting '+('KR','CN','JP')[destination],display.image.copy()))
+    gallery(frames,path,3)
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--output',required=True)
     parser.add_argument('--scenes',required=True)
     parser.add_argument('--animation',help='PC-only GIF of the real scene helper')
     parser.add_argument('--title-animation',help='PC-only GIF of the frame-driven title blink')
     parser.add_argument('--shop-preview',help='Current cash, stock, growth and skill screens')
+    parser.add_argument('--hero-preview',help='First-country identity and unchanged hair abroad')
     args=parser.parse_args()
     game,display=setup()
     from rules import new_game_state,decode_save_data
@@ -149,3 +168,6 @@ if __name__=='__main__':
         title_animation(game,display,args.title_animation)
     if args.shop_preview:
         shop_gallery(game,display,args.shop_preview)
+
+    if args.hero_preview:
+        hero_gallery(game,display,args.hero_preview)

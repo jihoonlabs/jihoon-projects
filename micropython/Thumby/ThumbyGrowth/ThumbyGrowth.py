@@ -17,7 +17,10 @@ from rules import (update_state, encode_save_data, decode_save_data,
 from scene_art import SCENE_BITMAPS
 
 # Shared 10x14 period fighters; simulation collision remains 6x7.
-HERO_HEAD = (0x78,0xfc,0x1fe,0x1fe,0x1fe,0x132,0x1fe,0xfc)
+HERO_HEADS = ((0x30,0x78,0xfc,0x1fe,0x1fe,0x132,0x1fe,0xfc),
+              (0x78,0xfc,0x1fe,0x1fe,0x1fe,0x132,0x1fe,0xfc),
+              (0xc,0x3c,0xfc,0x1fe,0x1fe,0x132,0x1fe,0xfc))
+HERO_HEAD = HERO_HEADS[0]
 FOE_HEAD = (0x0,0x78,0xfc,0x1fe,0x17a,0x1fe,0x1ce,0xfc)
 BODY_ROWS = (0x3ff,0x1fe,0xdc,0xfc,0xcc,0x1ce)
 WALK_BODY_ROWS = (0x3ff,0x1fe,0xdc,0xfc,0x6c,0xe6)
@@ -75,9 +78,15 @@ def draw_portrait(display,rows,x,y,frame=0):
                     display.drawFilledRectangle(left,first,right-left,last-first,color)
 
 
+def hero_region(state):
+    # The first chosen country is identity; later route entries are destinations.
+    route=state.get('route',())
+    return route[0] if route else 0
+
+
 def character_head(state, player):
     if player:
-        return HERO_HEAD
+        return HERO_HEADS[hero_region(state)]
     elif state['progress']%STAGES_PER_REGION == STAGES_PER_REGION-1:
         return BOSS_HEADS[stage_index(state)//STAGES_PER_REGION]
     return FOE_HEAD
@@ -157,6 +166,22 @@ def fighter_positions(state,camera):
     return px,ex
 
 
+def draw_hero_hair(display,region,x,y,rightward):
+    if region==0: return  # Topknot is already in the head rows.
+    def rect(offset,dy,width,height,color=1):
+        left=x-2-offset-width if rightward else x+8+offset
+        scene_rect(display,left,y+dy,width,height,color)
+    rect(0,-6,4,12,0)
+    if region==1:
+        # A narrow long braid, alternating sides down to the shoulder.
+        for row in range(8): rect(row%2,-3+row,1,1)
+        rect(0,5,2,1)
+    else:
+        # A higher, thicker ponytail with a shorter pointed end.
+        for offset,dy,width,height in ((0,-6,2,2),(1,-4,2,3),(2,-1,2,3),(2,2,1,1)):
+            rect(offset,dy,width,height)
+
+
 def draw_fighter(display,state,player,x,y):
     rightward=state['direction']=='R' if player else state['player_x']>state['enemy_x']
     pose=character_pose(state,player)
@@ -164,6 +189,7 @@ def draw_fighter(display,state,player,x,y):
     # Visual recoil does not move the simulation hitbox.
     lean=(-2 if rightward else 2) if hurt else 0
     scene_rect(display,x-3,y-8,12,15,0)
+    if player: draw_hero_hair(display,hero_region(state),x+lean,y,rightward)
     draw_rows(display,character_head(state,player),x-2+lean,y-7,10,not rightward,14)
     draw_rows(display,character_body(state,player),x-2,y+1,10,not rightward,14)
     if hurt: draw_hurt_face(display,x-2+lean,y-7)
@@ -429,8 +455,9 @@ def cutscene_frame(kind,frame,state):
     draw_scene_details(display,picture,frame,stage_index(state)//STAGES_PER_REGION)
     # A tiny travelling silhouette animates the static cuts without frame buffers.
     x = 8+(frame%45)//2 if picture in (0,1) else 48-(frame%45)//2
-    display.drawFilledRectangle(x-1,21,10,11,0)
-    draw_rows(display,HERO_HEAD,x,18,10,picture==3)
+    display.drawFilledRectangle(x-2,17,13,15,0)
+    draw_hero_hair(display,hero_region(state),x+2,25,picture!=3)
+    draw_rows(display,character_head(state,True),x,18,10,picture==3)
     draw_rows(display,WALK_BODY_ROWS if (frame//5)%2 else BODY_ROWS,x,26,10,picture==3)
     if picture==1:
         for label,x,y in (('KR',3,18),('CN',30,2),('JP',57,18)):
@@ -493,7 +520,7 @@ def draw_game(state):
     screen = state['screen_state']
     status = state['save_status']
     if screen == 'country_select':
-        display.drawText('START WHERE?' if state['progress']==0 else 'NEXT COUNTRY',0,0,1)
+        display.drawText('YOUR COUNTRY' if not state['route'] else 'NEXT COUNTRY',0,0,1)
         choices = [region for region in range(3) if region not in state['route']]
         for row,region in enumerate(choices):
             y=10+row*10
@@ -501,6 +528,9 @@ def draw_game(state):
             if selected:
                 display.drawFilledRectangle(0,y,72,8,1)
             display.drawText(('>' if selected else ' ')+('KOREA','CHINA','JAPAN')[region],0,y,0 if selected else 1)
+            if not state['route']:
+                display.drawFilledRectangle(56,y,16,8,0)
+                draw_rows(display,HERO_HEADS[region],59,y,10)
         if len(choices)<3:
             display.drawText(status if status in ('SAVED','SAVE ERR') else 'B:SAVE',0,30,1)
     elif screen == 'safe' and state['progress'] >= GOAL_STAGES:
