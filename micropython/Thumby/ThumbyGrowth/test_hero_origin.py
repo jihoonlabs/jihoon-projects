@@ -22,7 +22,8 @@ class HeroOriginTests(unittest.TestCase):
             self.assertIs(game.character_head(state,True),game.HERO_HEADS[region])
             self.assertEqual(game.character_body(state,True),game.BODY_ROWS)
             stats.append((state['HP'],state['maxHP'],state['attack'],state['defense'],state['money']))
-        self.assertEqual(len(set(game.HERO_HEADS)),3)
+        self.assertEqual(game.HERO_HEADS[0],game.HERO_HEADS[1])
+        self.assertNotEqual(game.HERO_HEADS[0],game.HERO_HEADS[2])
         self.assertTrue(all(head[0]==0xfc and head[1]==0x1fe for head in game.HERO_HEADS))
         self.assertEqual(stats,[(10,10,2,0,0)]*3)
 
@@ -59,12 +60,12 @@ class HeroOriginTests(unittest.TestCase):
             self.assertTrue(versions[0])
             self.assertEqual(max(y for _,y in versions[0]),34)
             if region==0:
-                # Bow wings belong to the bottom three rows, not near the scalp.
-                self.assertEqual({x for x,y in versions[0] if y==34},{21,22,24,25})
-                self.assertEqual({x for x,y in versions[0] if y==33},{22,23,24})
-                self.assertEqual({x for x,y in versions[0] if y<32},{23})
+                self.assertEqual({x for x,y in versions[0] if y==34},{23,25})
+                self.assertEqual({x for x,y in versions[0] if y==33},{24})
             designs.append(frozenset(versions[0]))
         self.assertEqual(len(set(designs)),3)
+        self.assertEqual({p for p in designs[0] if p[1]<32},{p for p in designs[1] if p[1]<32})
+        self.assertTrue(all(23<=x<=25 and 32<=y<=34 for x,y in designs[0]^designs[1]))
         self.assertEqual(game.HERO_HEADS,original)
 
     def test_only_initial_country_menu_previews_different_hero_heads(self):

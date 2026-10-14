@@ -18,7 +18,7 @@ from scene_art import SCENE_BITMAPS
 
 # Shared 10x14 period fighters; simulation collision remains 6x7.
 HERO_HEADS = ((0xfc,0x1fe,0x1fe,0x1fe,0x1fe,0x132,0x1fe,0xfc),
-              (0xfc,0x1fe,0xfe,0x1fe,0x1fe,0x132,0x1fe,0xfc),
+              (0xfc,0x1fe,0x1fe,0x1fe,0x1fe,0x132,0x1fe,0xfc),
               (0xfc,0x1fe,0x1ff,0x1fe,0x1fe,0x132,0x1fe,0xfc))
 HERO_HEAD = HERO_HEADS[0]
 FOE_HEAD = (0x0,0x78,0xfc,0x1fe,0x17a,0x1fe,0x1ce,0xfc)
@@ -171,16 +171,16 @@ def draw_hero_hair(display,region,x,y,rightward):
         left=x-2-offset-width if rightward else x+8+offset
         scene_rect(display,left,y+dy,width,height,color)
     rect(0,-6,5,12,0)
-    if region==0:
-        # Long tied hair; the butterfly bow sits at the very end.
-        rect(2,-2,1,5)
-        for dy in (3,5):
-            rect(0,dy,2,1);rect(3,dy,2,1)
-        rect(1,4,3,1)
-    elif region==1:
-        # A narrow long braid, alternating sides down to the shoulder.
+    if region in (0,1):
+        # Both countries share the exact same braid and face.
         for row in range(8): rect(1+row%2,-3+row,1,1)
         rect(1,5,2,1)
+        if region==0:
+            # Only a tiny 3x3 bow at the tip distinguishes the Korean hair.
+            rect(0,3,3,3,0)
+            for dy in (3,5):
+                rect(0,dy,1,1);rect(2,dy,1,1)
+            rect(1,4,1,1)
     else:
         # Thick high ponytail, hanging as long as the other two styles.
         for offset,dy,width,height in ((0,-6,3,2),(1,-4,3,3),(2,-1,3,4),(3,3,2,3)):
