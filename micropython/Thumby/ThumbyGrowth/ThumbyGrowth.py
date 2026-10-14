@@ -472,9 +472,8 @@ def draw_game(state):
         display.drawText('P:'+str(get_item_price(item)), 20, 8, 1)
         effect = ITEM_EFFECTS[item]
         display.drawText(effect, 0, 16, 1)
-        money = str(state['money'])
-        cash = money if len(money)<=6 else str(min(999,state['money']//1000))+'k'
-        display.drawText(cash, 36, 16, 1)
+        cash = str(state['money']) if state['money']<1000 else str(min(999,state['money']//1000))+'k'
+        display.drawText('$'+cash, 72-6*(len(cash)+1), 16, 1)
         owned = 'Y' if item_owned(state,item) else 'N'
         equipped = item in (state['equipped_weapon'], state['equipped_armor'])
         if screen == 'shop_detail':

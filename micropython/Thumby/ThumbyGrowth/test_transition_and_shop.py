@@ -124,5 +124,18 @@ class TransitionAndShopTests(unittest.TestCase):
         for potions,hp,label in ((0,5,'NONE'),(1,10,'FULL'),(1,5,'HEAL')):
             self.assertIn(label,self.texts(f.state(screen_state='pause',potions=potions,HP=hp)))
 
+    def test_detail_effect_and_cash_are_separated_and_identified(self):
+        for screen in ('shop_detail','equip_detail'):
+            for item in range(10 if screen=='shop_detail' else 5):
+                for money in (0,5,999,1000,999999,10000000):
+                    self.texts(f.state(screen_state=screen,menu_selection=item,money=money))
+                    row=[c.args for c in game.thumby.display.drawText.call_args_list if c.args[2]==16]
+                    self.assertEqual(len(row),2)
+                    row.sort(key=lambda c:c[1])
+                    effect,cash=row
+                    self.assertTrue(cash[0].startswith('$'))
+                    self.assertLessEqual(effect[1]+6*len(effect[0])+6,cash[1])
+                    self.assertLessEqual(cash[1]+6*len(cash[0]),72)
+
 
 if __name__=='__main__':unittest.main()

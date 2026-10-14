@@ -1,0 +1,72 @@
+{
+  "kind": "silent PC simulation; selected frames, not device capture",
+  "source_sha256": {
+    "ThumbyGrowth.py": "2ed8c590e86c7fa70441a2ca8fab052147da888140b145fb70ae22e338442c09",
+    "rules.py": "ca12762b81210fe406b9201ac6195ae7e139dbf0b76272ea6addb0846d836d47",
+    "scene_art.py": "b339ba1c051c368b92f1a070584c71d8819659dedfd8caf576278aaa4f1dac38"
+  },
+  "input_frames": 4610,
+  "input_sha256": "17a62995ec8f085422b46489d672f55fced935b1a425e18e666ff321475449af",
+  "cleared_stages": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "route": [
+    0,
+    1,
+    2
+  ],
+  "earned_money": 370,
+  "purchases": [
+    {
+      "item": 4,
+      "price": 60,
+      "money_after": 10
+    },
+    {
+      "item": 6,
+      "price": 50,
+      "money_after": 10
+    },
+    {
+      "item": 7,
+      "price": 60,
+      "money_after": 0
+    },
+    {
+      "item": 8,
+      "price": 60,
+      "money_after": 20
+    },
+    {
+      "item": 5,
+      "price": 15,
+      "money_after": 5
+    },
+    {
+      "item": 9,
+      "price": 80,
+      "money_after": 25
+    }
+  ],
+  "final_money": 45,
+  "skill_used": true,
+  "healed": true,
+  "save_load_round_trips": 2,
+  "restart_progress": 0,
+  "audio_api_calls": 875,
+  "selected_visual_frames": 258
+}

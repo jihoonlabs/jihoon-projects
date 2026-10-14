@@ -117,7 +117,7 @@ class TestAdapter(unittest.TestCase):
                 rendered = ' '.join(self.texts())
                 self.assertIn(name,rendered)
                 self.assertIn(str(price),rendered)
-                self.assertIn('123456',rendered)
+                self.assertIn('$123k',rendered)
                 self.assertTrue(all(text.isascii() for text in self.texts()))
                 self.assertEqual(current,before)
         for status in ('SAVED','SAVE ERR'):
