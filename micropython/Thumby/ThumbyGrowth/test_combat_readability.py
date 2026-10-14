@@ -60,7 +60,7 @@ class CombatReadabilityTests(unittest.TestCase):
                 if target is not None: self.assertEqual(game.character_pose(after,target),'hurt')
             if target is None: self.assertEqual(after['enemy_hp'],before['enemy_hp'])
 
-    def test_one_wide_x_and_flat_mouth_have_the_expected_native_pixels(self):
+    def test_one_wide_x_has_no_mouth_at_native_resolution(self):
         game.thumby.display.reset_mock()
         game.draw_hurt_face(game.thumby.display,10,20)
         pixels={}
@@ -74,7 +74,7 @@ class CombatReadabilityTests(unittest.TestCase):
                 self.assertEqual(pixels[11+col,23+row],ink)
         for row in range(4):
             self.assertEqual((pixels[10,23+row],pixels[19,23+row]),(1,1))
-        self.assertEqual([pixels[x,26] for x in range(13,17)],[0]*4)
+        self.assertEqual([pixels[x,26] for x in range(10,20)],[1]*10)
 
     def test_hurt_face_expires_with_the_real_latch(self):
         state=update_state(self.state(),f.inputs(A=True))

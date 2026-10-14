@@ -112,13 +112,12 @@ def actor_screen_y(world_y):
 
 
 def draw_hurt_face(display,x,y):
-    # One wide cartoon X across the eye line, with a separate flat mouth.
+    # One wide cartoon X; leave the lower face plain.
     scene_rect(display,x,y+3,10,4,1)
     for row in (0,2):
         scene_rect(display,x+1,y+3+row,2,1,0)
         scene_rect(display,x+7,y+3+row,2,1,0)
     scene_rect(display,x+3,y+4,4,1,0)
-    scene_rect(display,x+3,y+6,4,1,0)
 
 
 def draw_weapon(display,weapon,x,y,rightward,swing=False):
