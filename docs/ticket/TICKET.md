@@ -119,3 +119,20 @@
 - project-order/auth/delayed-drag/save-input/login-designのアプリcommitは採用済みだが、Child tipの追加文書commitは独立して残る。コード不足と文書差分を区別し、重複mergeしない。
 - 旧project-ui/project-overview、login-ui/board-ux、audit-history、ui-modal、test-user-admin、preview等には独自commitがある。現行機能と同等か未採用かを個別照合するまで保持し、旧デザインの巻戻し・権限変更をまとめて適用しない。
 - 優先順: 統合基準の利用者確認 → 再現する問題と修正案の一覧 → 必要な責任のみ実装。過去branchを統合するためだけの新Childを作らない。
+
+## 安定性点検（2026-10-15）
+対象アプリSHA: `a616ce06e36c1f88dd609c7ea788cf01de00ed39`。新機能・新Childを追加せず、共通基準の問題と修正方針を整理した。今回の変更は本記録のみで、下記問題は未修正。
+
+| 優先度 | 確認結果 | 次の修正・確認 |
+| --- | --- | --- |
+| 高 | 同じTicketで2件のmoveを待機させ、先行moveを失敗させると後続も同じ失敗でrejectされ、APIは1回しか呼ばれない。storeの独立再現testが期待2回/実際1回で失敗。 | 先行失敗の利用者通知と個々のPromise結果を保ち、後から明示された操作を処理できる待機列へ修正する。古いboard_versionはserver409で拒否し、自動再試行・強制上書きをしない。UI経由の連続操作再現も追加する。 |
+| 中 | 実browserでdevのTicket一覧/Project一覧は各2 GET、詳細は2 GET（1件中断）、comment一覧は2 GET。productionは全て各1 GET。 | Strict Effect再実行に耐えるcleanup/同時取得共有を検討する。単純なonce flagやStrict Mode無効化は使わない。最新情報取得・再試行・権限喪失・遅延応答guardを維持する。 |
+| 中 | Ticket/Project/comment一覧が全件取得。小規模データで障害は未再現。Ticket一覧6件は3 SQL、計約2.39ms、response1855 bytes。これは単一測定で負荷・容量保証ではない。 | 想定人数/件数を定めてresponse size・query数・p95・同時更新を測る。必要ならProject絞込み/ページングを別途契約確認して導入する。TicketResourceで使わないproject eager loadも見直し候補。 |
+| 確認 | expected_versionは既存client互換で任意。詳細編集は送信するが、全API clientが競合保護されるとは限らない。 | 各更新経路のversion/board_version送信範囲を確認する。互換契約を無断変更しない。 |
+
+- 実frontend→Laravel→専用MySQLでwriter/別user/adminのlogin200、未認証401、存在しないTicket404、logout後401を確認。別userが閲覧できないTicket・comment・memberへの直接GETは403。一覧DTOの正version/一意ID、Project色の一意性を確認。今回の権限検証はread境界であり、全write権限・権限剥奪との並行実行の網羅検証ではない。
+- 専用MySQLの13 Project/6 user/15 membership/7 Ticket/4 commentを読取検査。不正version、孤立Ticket/comment、重複color/issue_key/Project内status-positionは全て0。元ユーザーDBを検査した結果ではない。
+- 実browserのlogin、reload、Project3件の切替、詳細、編集開始/取消、Project一覧表示でpageerror0。測定した変更APIはlogin1 POSTのみで、Ticketの二重作成を再現したものではない。CSRF取得・CORS preflight・変更後の再検証GETを同じ業務操作の重複と混同しない。
+- Remote Ticket branches45件を再確認。Epicに全commitが含まれる別branch28件（最新の比較候補2件を含む）、独自commitが残る16件。order/auth/drag/save/login-designの残差はhandoff文書、旧UI/preview/audit等の残差は個別比較が必要。未採用commit・比較基準・実行中worktreeは保持し、削除未実行。
+- ローカル証拠: `/private/tmp/ticket-recovery-local-check-20261014/request-audit-{production,development,production-detail,development-detail}.json`, `permission-audit.json`, `data-audit.json`。queue再現は `/private/tmp/ticket-readiness-audit-20261015/queue.test.ts`。これらは隔離検証用で公開しない。
+- 画面はproduction `http://127.0.0.1:3280`（検証候補branch、Epicと同じアプリcode）、API8180/専用MySQLへ復元した。元3000/8000、SQLite/.envは保持。負荷test・実社内SMTP・元ユーザー認証環境・今回の独立Test Reviewは未実行。既存全suiteはcode変更がないため反復しない。V1完了ではない。
