@@ -14,13 +14,31 @@ from rules import (update_state, encode_save_data, decode_save_data,
 
 # Original 6x7 silhouettes: headband/robe, hood, then three boss helmets.
 # Visuals stay inside the existing collision body; no source-game assets used.
-HERO_ROWS = (14,62,10,28,62,20,54)
-FOE_ROWS = (30,18,30,30,18,20,54)
+HERO_ROWS = b'\x0e\x3e\x0a\x1c\x3e\x14\x36'
+FOE_ROWS = b'\x1e\x12\x1e\x1e\x12\x14\x36'
 BOSS_ROWS = (
-    (21,63,18,63,30,20,54),
-    (63,45,18,30,63,20,54),
-    (33,63,18,51,30,20,54),
+    b'\x15\x3f\x12\x3f\x1e\x14\x36',
+    b'\x3f\x2d\x12\x1e\x3f\x14\x36',
+    b'\x21\x3f\x12\x33\x1e\x14\x36',
 )
+HEART_ROWS = b'\x0a\x1f\x1f\x0e\x04'
+ENEMY_ICON_ROWS = b'\x0e\x1f\x15\x0e\x0a'
+
+
+def draw_rows(display, rows, x, y, width, mirror=False):
+    # Draw contiguous lit pixels in one call; keep the same monochrome bitmap.
+    for row,mask in enumerate(rows):
+        column = 0
+        while column < width:
+            if not mask & (1 << (column if mirror else width-1-column)):
+                column += 1
+                continue
+            start = column
+            while column < width and mask & (1 << (column if mirror else width-1-column)):
+                column += 1
+            left,right = max(0,x+start),min(72,x+column)
+            if right>left and 0<=y+row<40:
+                display.drawFilledRectangle(left,y+row,right-left,1,1)
 
 
 def character_rows(state, player):
@@ -31,7 +49,7 @@ def character_rows(state, player):
     else:
         rows = FOE_ROWS
     if (state['combat_frame']//5)%2:
-        return rows[:5]+(12,18)
+        return rows[:5]+b'\x0c\x12'
     return rows
 
 
@@ -189,9 +207,10 @@ def draw_game(state):
     elif screen == 'battle':
         camera = max(0, min(72, state['player_x']-32))
         draw_background(display, stage_index(state), camera)
-        display.drawText('HP'+str(state['HP']), 0, 0, 1)
-        display.drawText(stage_code(state), 27, 0, 1)
-        display.drawText('E'+str(state['enemy_hp']), 48, 0, 1)
+        draw_rows(display,HEART_ROWS,0,1,5)
+        display.drawText(str(state['HP']),7,0,1)
+        draw_rows(display,ENEMY_ICON_ROWS,42,1,5)
+        display.drawText(str(state['enemy_hp']),49,0,1)
         for x, hp, maximum in ((0, state['HP'], state['maxHP']),
                                 (42, state['enemy_hp'], ENCOUNTERS[min(state['progress'],GOAL_STAGES-1)][0])):
             display.drawFilledRectangle(x, 9, 30, 4, 1)
@@ -211,11 +230,7 @@ def draw_game(state):
             flashing = state.get('player_hit_flash' if player else 'enemy_hit_flash',0)>0 and state['combat_frame']%2==0
             rows = character_rows(state,player)
             if not flashing:
-                for row, mask in enumerate(rows):
-                    for column in range(6):
-                        bit = 5-column if rightward else column
-                        if mask & (1<<bit) and 0<=x+column<72:
-                            display.drawFilledRectangle(x+column, y+row, 1, 1, 1)
+                draw_rows(display,rows,x,y,6,not rightward)
             if not player and state.get('enemy_windup',0):
                 # Small outlined warning marker, kept below the HUD.
                 warning_y = max(20,y)

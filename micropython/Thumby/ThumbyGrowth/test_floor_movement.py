@@ -111,7 +111,7 @@ class FloorTests(unittest.TestCase):
                     game.thumby.display.reset_mock();before=deepcopy(s);game.draw_game(s)
                     self.assertEqual(s,before)
                     texts=[c.args[0] for c in game.thumby.display.drawText.call_args_list]
-                    self.assertEqual(texts,['HP10','KR1','E6'])
+                    self.assertEqual(texts,['10','6'])
                     for c in game.thumby.display.drawFilledRectangle.call_args_list:
                         x,y,w,h,_=c.args
                         self.assertTrue(0<=x<x+w<=72 and 0<=y<y+h<=40)
