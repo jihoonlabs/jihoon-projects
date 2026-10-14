@@ -1,20 +1,24 @@
-# Ticket Board Design Child
+# Ticket Delayed Drag Recovery Child
 
 owner_repo: jihoonlabs/jihoon-projects
-owner_branch: feature/ticket-board-design
+owner_branch: feature/ticket-delayed-drag-recovery
 role: child
-status: validated-user-review-pending
+status: validated-adoption-pending
 parent_branch: feature/ticket
-base_sha: a02f37781e0c2fbc5d8852e1f26fcaecb2edf582
+base_sha: 9269be437b16cfe9e2a9db55e1f7deec558d3faa
 
 ## Responsibility / Boundary
-利用者の実画面指摘に合わせ、Header/toolbarの階層と余白、Project色の強さ、カードの可読性、dark-system下の入力を調整する。既存機能・権限・API・DBは変更しない。
+Prevent delayed successful drag responses from clearing a newer Project list failure. Existing operations, API, permissions, palette and approved design remain unchanged.
 
 ## Validation / Handoff
-- アプリ検証SHA: `c5417c648f1380dd673b26f1c8317c26ad817346`。公開treeと検証済みローカルファイルの一致を確認した。
-- 共通Headerを小さくし、board toolbarをProject/操作とcontext/filterの2段に整理。管理ボタンの表示を短くし、既存accessible nameと操作を維持した。
-- Project keyから決まる色を維持し、card背景をwhiteと混色して淡くした。タイトルのweight/line-heightと列の幅・間隔を調整した。
-- boardとheaderをlight color-schemeとし、dark-systemでも検索入力の背景/文字を明示した。
-- React全29 files / 208 tests、TypeScript、ESLint、変更TSX/CSSのPrettier、production buildが成功。
-- 実Chromiumのdark-systemで1440/940/393pxを確認。ページ横overflowなし、検索背景/文字、8 cards、mobile detailの画面内収まり、pageerror 0件を確認。1440pxは全5列を表示し、940/393pxはboard内で横scrollする。画像も目視確認した。API fixtureによる表示検証であり、実Laravel接続ではない。
-- 利用者による修正後画面の確認は残る。API・DB・権限変更はない。
+- Application commit: `ff1fb5da5aa9e3c06f1b0d17ef2237d4893cdb05`.
+- Reproduced two failing View regressions before the correction: a newer Project list error disappeared on delayed drag success, both with and without Project switching.
+- Capture Project list request sequence and revision at drag start. Clear the drag error on success only when no newer list request or Project lifecycle change has occurred.
+- Verified failure notice preservation and successful explicit list retry. Existing failed-drag notice and successful drag retry tests remain passing.
+- React: 29 files / 210 tests passed; focused View: 38 tests passed. TypeScript, ESLint, changed TypeScript Prettier, production build and git diff check passed.
+- Real browser/Laravel/MySQL integration is unverified for this Child. These are rendered React tests with simulated delayed API responses.
+- Application boundary: `react/src/features/tickets/components/Board/View/index.tsx` and its existing View test.
+- Separate sibling `feature/ticket-project-order-isolation` contains application commit `f8ad6e4513c272503b30c741382cd2032fe8f7d1`; it is not included here. The two fixes affect different application files.
+- The reported local Epic `5af147b` is unavailable here. No Epic/main adoption, palette reconstruction or user DB/environment modification was performed.
+- Next: compare with the actual local adoption and apply the application commits in an isolated integration candidate, then run related regression and connection checks before Epic adoption. Keep the local palette and its adoption record.
+- V1 remains pending actual user workflow confirmation. No new features were added.
