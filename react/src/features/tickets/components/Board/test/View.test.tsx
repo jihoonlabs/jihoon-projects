@@ -186,6 +186,63 @@ it.each([false, true])(
   },
 );
 
+it.each([false, true])(
+  'keeps a newer Project list failure after delayed drag success (switch Project: %s)',
+  async (switchProject) => {
+    const ticket = api.toTicket(responseTicket);
+    vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
+    vi.mocked(projectApi.fetchProjects).mockResolvedValue([
+      { id: '1', name: 'General', projectKey: 'GEN', boardVersion: 3 },
+      { id: '2', name: 'Other', projectKey: 'OTH', boardVersion: 1 },
+    ]);
+    let resolveMove!: (
+      result: Awaited<ReturnType<typeof api.moveTicket>>,
+    ) => void;
+    vi.mocked(api.moveTicket).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveMove = resolve;
+      }),
+    );
+    useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+    render(<TicketBoardView />);
+    await screen.findByRole('combobox', { name: 'First ticket のステータス' });
+    fireEvent.click(screen.getByText('drop DONE'));
+    await waitFor(() => expect(api.moveTicket).toHaveBeenCalled());
+
+    if (switchProject) {
+      fireEvent.change(screen.getByRole('combobox', { name: 'プロジェクト' }), {
+        target: { value: '2' },
+      });
+    }
+    fireEvent.click(
+      screen.getByRole('button', { name: 'プロジェクト一覧・作成' }),
+    );
+    vi.mocked(projectApi.fetchProjects).mockRejectedValueOnce(
+      new Error('newer project list failure'),
+    );
+    fireEvent.click(screen.getByRole('button', { name: '一覧を再取得' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'newer project list failure',
+    );
+
+    await act(async () => {
+      resolveMove({ ticket: { ...ticket, status: 'DONE' }, boardVersion: 4 });
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'newer project list failure',
+    );
+    expect(api.moveTicket).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('combobox', { name: 'プロジェクト' })).toHaveValue(
+      switchProject ? '2' : '1',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '一覧を再取得' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument(),
+    );
+  },
+);
+
 it('shows tickets assigned to the signed-in user in the ME filter', async () => {
   const mine = api.toTicket(responseTicket);
   const other = api.toTicket({
