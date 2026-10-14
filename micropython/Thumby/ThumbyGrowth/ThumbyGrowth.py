@@ -8,7 +8,97 @@ import thumby
 # The device launcher need not add the game's sibling-module directory.
 if sys.implementation.name == 'micropython':
     sys.path.append('/Games/ThumbyGrowth')
-from rules import update_state, encode_save_data, decode_save_data, GOAL_STAGES, ENCOUNTERS
+from rules import (update_state, encode_save_data, decode_save_data,
+                   GOAL_STAGES, ENCOUNTERS, REGIONS, STAGES_PER_REGION)
+
+# Original monochrome scenery, stored once. These are decoration, not obstacles.
+# x, y, width, height in the distant layer; battle HUD ends at y=13.
+SCENERY = (
+    # KR1: tiled-roof village street.
+    ((2,21,27,1),(6,20,19,1),(10,19,11,1),(15,18,2,1),
+     (7,22,2,8),(24,22,2,8),(50,20,29,1),(55,19,19,1),
+     (60,18,9,1),(63,17,3,1),(56,21,2,8),(72,21,2,8)),
+    # KR2: bamboo mountain pass.
+    ((8,14,1,15),(6,18,5,1),(7,23,4,1),(16,15,1,13),(14,19,5,1),
+     (35,14,1,16),(33,20,5,1),(40,16,1,13),(38,22,5,1),
+     (67,14,1,14),(65,17,5,1),(76,16,1,14),(74,23,5,1)),
+    # KR3: mountain fortress stones.
+    ((0,24,96,1),(0,30,96,1),(2,25,1,5),(18,25,1,5),(34,25,1,5),
+     (50,25,1,5),(66,25,1,5),(82,25,1,5),(9,22,5,2),(30,22,5,2),
+     (53,22,5,2),(74,22,5,2)),
+    # KR4: temple yard, broad eaves and bell frame.
+    ((5,19,32,1),(10,18,22,1),(14,17,14,1),(20,16,2,1),
+     (10,20,2,9),(30,20,2,9),(52,16,20,2),(54,18,2,13),
+     (68,18,2,13),(60,18,3,2),(58,20,7,4),(57,24,9,1)),
+    # KR5: fortress gate with raised pavilion.
+    ((23,18,34,2),(28,17,24,1),(33,16,14,1),(38,15,4,1),
+     (27,20,3,11),(50,20,3,11),(30,24,20,1),(35,25,1,6),(44,25,1,6),
+     (0,28,23,2),(57,28,39,2),(7,26,4,2),(72,26,4,2)),
+    # CN1: brick city avenue.
+    ((0,22,96,1),(0,28,96,1),(0,32,96,1),(6,23,1,5),(24,23,1,5),
+     (42,23,1,5),(60,23,1,5),(78,23,1,5),(15,20,5,2),(48,20,5,2),
+     (18,29,1,3),(54,29,1,3),(84,20,5,2)),
+    # CN2: river landing, boat mast and bridge rail.
+    ((1,30,28,1),(7,28,17,2),(16,16,1,12),(17,18,8,1),(17,19,7,5),
+     (44,22,45,1),(48,23,2,8),(69,23,2,8),(85,23,2,8),
+     (45,18,1,4),(59,18,1,4),(73,18,1,4),(45,18,29,1)),
+    # CN3: dense bamboo grove, but open combat lanes.
+    ((1,14,1,14),(10,16,1,15),(23,14,1,17),(29,18,1,12),
+     (46,14,1,15),(57,15,1,15),(70,14,1,17),(85,16,1,14),
+     (0,19,4,1),(8,22,5,1),(21,18,5,1),(44,21,5,1),(68,19,5,1)),
+    # CN4: layered pagoda silhouettes.
+    ((6,18,25,1),(10,16,17,1),(15,14,7,1),(11,19,15,1),(8,22,21,1),
+     (12,23,13,1),(10,26,17,1),(13,27,2,5),(23,27,2,5),
+     (56,17,25,1),(60,15,17,1),(64,14,9,1),(59,21,19,1),
+     (61,25,15,1),(63,26,2,5),(74,26,2,5)),
+    # CN5: stone courtyard gate and pillars.
+    ((24,15,32,2),(20,17,40,1),(25,18,3,13),(52,18,3,13),
+     (30,19,20,1),(32,20,1,10),(47,20,1,10),
+     (7,16,3,15),(5,14,7,2),(74,16,3,15),(72,14,7,2)),
+    # JP1: mountain hamlet with steep roofs.
+    ((3,23,25,1),(7,21,17,1),(11,19,9,1),(14,17,3,1),
+     (7,24,2,8),(23,24,2,8),(49,22,29,1),(54,20,19,1),
+     (60,18,7,1),(62,16,3,1),(55,23,2,8),(72,23,2,8)),
+    # JP2: pine ridge.
+    ((13,17,1,14),(10,17,7,1),(7,20,13,1),(4,23,19,1),
+     (36,14,1,16),(33,15,7,1),(30,18,13,1),(27,21,19,1),
+     (64,18,1,13),(61,18,7,1),(58,21,13,1),(55,24,19,1)),
+    # JP3: moat and stone bridge.
+    ((4,28,84,2),(7,23,1,5),(22,23,1,5),(37,23,1,5),(52,23,1,5),
+     (67,23,1,5),(82,23,1,5),(7,23,76,1),(11,30,4,3),(32,30,4,3),
+     (53,30,4,3),(74,30,4,3)),
+    # JP4: castle-town walls and storehouses.
+    ((0,25,96,1),(5,20,27,1),(10,18,17,1),(15,16,7,1),
+     (8,21,2,10),(27,21,2,10),(44,23,1,7),(46,23,1,7),
+     (56,18,25,1),(60,16,17,1),(65,14,7,1),(60,19,2,12),(76,19,2,12)),
+    # JP5: stepped castle keep.
+    ((18,29,46,2),(23,25,36,2),(27,21,28,2),(31,17,20,2),(36,14,10,1),
+     (27,27,2,2),(54,27,2,2),(31,23,2,2),(50,23,2,2),
+     (35,19,2,2),(46,19,2,2),(40,15,2,2)),
+)
+
+
+def stage_code(progress):
+    stage = min(max(0, progress), GOAL_STAGES-1)
+    return REGIONS[stage//STAGES_PER_REGION]+str(stage%STAGES_PER_REGION+1)
+
+
+def scene_rect(display, x, y, width, height, color=1):
+    # Clip decoration/actor backing to the world area; never paint over the HUD.
+    right, bottom = min(72, x+width), min(40, y+height)
+    left, top = max(0, x), max(14, y)
+    if right > left and bottom > top:
+        display.drawFilledRectangle(left, top, right-left, bottom-top, color)
+
+
+def draw_background(display, progress, camera):
+    stage = min(max(0, progress), GOAL_STAGES-1)
+    for x, y, width, height in SCENERY[stage]:
+        scene_rect(display, x-camera//3, y, width, height)
+    # Sparse floor marks scroll at world speed, making movement visible.
+    for world_x in range(0,144,16):
+        scene_rect(display,world_x-camera,38,3,1)
+        scene_rect(display,world_x+7-camera,35,1,1)
 
 
 def main_loop():
@@ -27,7 +117,7 @@ def title_frame():
     display = thumby.display
     display.fill(0)
     display.drawText('GROWTH', 18, 2, 1)
-    display.drawText('5 DUELS', 15, 12, 1)
+    display.drawText('15 DUELS', 12, 12, 1)
     display.drawText('A:NEW', 0, 23, 1)
     display.drawText('B:LOAD', 0, 33, 1)
     display.update()
@@ -64,8 +154,10 @@ def draw_game(state):
         display.drawText('A:NEW', 0, 20, 1)
         display.drawText(status if status in ('SAVED','SAVE ERR') else 'B:SAVE', 0, 30, 1)
     elif screen == 'battle':
+        camera = max(0, min(72, state['player_x']-32))
+        draw_background(display, state['progress'], camera)
         display.drawText('HP'+str(state['HP']), 0, 0, 1)
-        display.drawText(str(state['progress']+1)+'/5', 24, 0, 1)
+        display.drawText(stage_code(state['progress']), 27, 0, 1)
         display.drawText('E'+str(state['enemy_hp']), 48, 0, 1)
         for x, hp, maximum in ((0, state['HP'], state['maxHP']),
                                 (42, state['enemy_hp'], ENCOUNTERS[min(state['progress'],GOAL_STAGES-1)][0])):
@@ -74,13 +166,14 @@ def draw_game(state):
             width = max(0, min(28, 28*hp//max(1,maximum)))
             if width:
                 display.drawFilledRectangle(x+1, 10, width, 2, 1)
-        camera = max(0, min(72, state['player_x']-32))
         actors = [(True, state['player_x'], state.get('player_y',28))]
         if state['active_enemy']:
             actors.append((False, state['enemy_x'], state.get('enemy_y',28)))
         actors.sort(key=lambda actor: actor[2])
         for player, world_x, y in actors:
             x = world_x-camera
+            # A black one-pixel backing separates white actors from white scenery.
+            scene_rect(display, x-1, y-1, 8, 9, 0)
             rightward = state['direction']=='R' if player else world_x<state['player_x']
             flashing = player and state['enemy_attack_cooldown']>=115 and state['combat_frame']%2==0
             rows = (12,30,26,12,31,18,33) if player else (30,18,30,12,63,18,33)
@@ -129,7 +222,7 @@ def draw_game(state):
             choices = ('RESUME', 'SAVE')
         else:
             choices = ('Blade', 'Sword', 'Vest', 'Armor')
-        header = 'STAGE '+str(state['progress']+1) if screen == 'safe' else screen.upper()
+        header = stage_code(state['progress'])+'/5' if screen == 'safe' else screen.upper()
         if screen in ('shop','equip'):
             chosen = state['menu_selection']
             if screen == 'shop':

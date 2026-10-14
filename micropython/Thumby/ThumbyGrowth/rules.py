@@ -1,6 +1,12 @@
-GOAL_STAGES = 5
-# HP, attack, defense. The last encounter is the boss.
-ENCOUNTERS = ((6, 2, 0), (10, 3, 1), (8, 3, 0), (12, 3, 1), (16, 4, 2))
+STAGES_PER_REGION = 5
+REGIONS = ('KR', 'CN', 'JP')
+GOAL_STAGES = 15
+# HP, attack, defense. Each fifth encounter closes one region.
+ENCOUNTERS = (
+    (6,2,0), (10,3,1), (8,3,0), (12,3,1), (16,4,2),
+    (10,3,1), (12,3,1), (12,4,1), (16,4,2), (20,4,2),
+    (14,4,2), (16,4,2), (18,4,2), (18,5,2), (24,5,3),
+)
 
 
 def update_state(state, inputs):

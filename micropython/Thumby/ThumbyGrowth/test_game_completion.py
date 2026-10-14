@@ -1,4 +1,4 @@
-"""Title, five encounters, shopping, persistence and ending as one game."""
+"""Title, fifteen encounters, shopping, persistence and ending as one game."""
 from copy import deepcopy
 import unittest
 from unittest.mock import patch
@@ -28,49 +28,70 @@ class GameCompletionTests(unittest.TestCase):
             return game.step_frame(state)
 
     def finish_fight(self, state):
-        state = self.frame(state, A=True)
-        self.assertEqual(state['screen_state'], 'battle')
-        # Fight through the same inputs as a player; do not teleport or change HP.
-        for _ in range(2000):
-            state = self.frame(state, R=state['enemy_x'] > state['player_x']+6,
-                               L=state['enemy_x'] < state['player_x']-6, A=True)
-            self.assertNotEqual(state['screen_state'], 'defeat')
-            if state['screen_state'] == 'safe':
-                return state
-        self.fail('Encounter did not finish within 2000 frames')
+        # Exercise real input/rules/save flow; render only the resulting screen.
+        with patch.object(game, 'draw_game'):
+            state = self.frame(state, A=True)
+            self.assertEqual(state['screen_state'], 'battle')
+            for _ in range(2000):
+                state = self.frame(state, R=state['enemy_x'] > state['player_x']+6,
+                                   L=state['enemy_x'] < state['player_x']-6, A=True)
+                self.assertNotEqual(state['screen_state'], 'defeat')
+                if state['screen_state'] == 'safe':
+                    break
+            else:
+                self.fail('Encounter did not finish within 2000 frames')
+        game.draw_game(state)
+        return state
 
-    def test_five_stage_game_purchase_equip_save_load_and_ending(self):
+    def buy_and_equip(self, state, item):
+        state=self.frame(state,D=True)
+        state=self.frame(state,A=True)
+        for _ in range(item):
+            state=self.frame(state,D=True)
+        before=state['money']
+        state=self.frame(state,A=True)
+        self.assertTrue(state['owned'][item])
+        self.assertEqual(state['money'],before-(40,80,40,80)[item])
+        state=self.frame(state,B=True)
+        for _ in range(2):
+            state=self.frame(state,D=True)
+        state=self.frame(state,A=True)
+        for _ in range(item):
+            state=self.frame(state,D=True)
+        state=self.frame(state,A=True)
+        self.assertEqual(state['equipped_weapon' if item<2 else 'equipped_armor'],item)
+        return self.frame(state,B=True)
+
+    def test_fifteen_stage_game_purchase_equip_save_load_and_ending(self):
         state = initial()
-        rewards = (20, 30, 20, 30, 20)
+        rewards = (20,30,20,30,20,30,20,30,20,30,20,30,20,30,20)
+        shopping = {1:0, 3:2, 7:1, 11:3}
         expected_money = 0
-        for stage in range(5):
+        for stage in range(15):
             before = state['money']
             state = self.finish_fight(state)
             self.assertEqual(state['progress'], stage+1)
             self.assertEqual(state['money'], before+rewards[stage])
             self.assertEqual(state['HP'], 10)
             expected_money += rewards[stage]
-            if stage == 1:
-                # Use the real menu to buy/equip Blade, then save and reload.
-                state = self.frame(state, D=True)
-                state = self.frame(state, A=True)
-                state = self.frame(state, A=True)
-                self.assertEqual((state['owned'][0], state['money']), (True, 10))
-                state = self.frame(state, B=True)
-                for _ in range(2):
-                    state = self.frame(state, D=True)
-                state = self.frame(state, A=True)
-                state = self.frame(state, A=True)
-                self.assertEqual((state['equipped_weapon'],state['attack']), (0,4))
-                state = self.frame(state, B=True)
+            if stage in shopping:
+                item=shopping[stage]
+                state=self.buy_and_equip(state,item)
+                expected_money-=(40,80,40,80)[item]
+            if stage in (1,4,9):
                 for _ in range(3):
                     state = self.frame(state, D=True)
                 state = self.frame(state, A=True)
                 self.assertEqual(state['save_status'], 'SAVED')
                 state = game.load_save_data()
-                self.assertEqual((state['progress'],state['attack'],state['money']), (2,4,10))
-                expected_money -= 40
+                self.assertEqual(state['progress'], stage+1)
+                self.assertEqual(state['money'], expected_money)
+                if stage==4:
+                    self.assertEqual(game.stage_code(state['progress']),'CN1')
+                elif stage==9:
+                    self.assertEqual(game.stage_code(state['progress']),'JP1')
         self.assertEqual(state['money'], expected_money)
+        self.assertEqual((state['attack'],state['defense']),(6,2))
         texts = [c.args[0] for c in game.thumby.display.drawText.call_args_list]
         self.assertIn('QUEST CLEAR', texts)
         for _ in range(5):
@@ -80,11 +101,13 @@ class GameCompletionTests(unittest.TestCase):
         saved = self.frame(state, B=True)
         self.assertEqual(saved['save_status'], 'SAVED')
         restored = game.load_save_data()
-        self.assertEqual(restored['progress'], 5)
+        self.assertEqual(restored['progress'], 15)
         self.assertEqual(self.frame(restored, A=True), initial())
 
     def test_encounter_stats_and_boss(self):
-        expected = ((6,2,0),(10,3,1),(8,3,0),(12,3,1),(16,4,2))
+        expected = ((6,2,0),(10,3,1),(8,3,0),(12,3,1),(16,4,2),
+                    (10,3,1),(12,3,1),(12,4,1),(16,4,2),(20,4,2),
+                    (14,4,2),(16,4,2),(18,4,2),(18,5,2),(24,5,3))
         for progress, stats in enumerate(expected):
             state = initial()
             state['progress'] = progress
@@ -93,7 +116,7 @@ class GameCompletionTests(unittest.TestCase):
 
     def test_completed_game_new_resets_progress_equipment_and_money(self):
         state = initial()
-        state.update(progress=5,money=80,owned=[True]*4,equipped_weapon=1,
+        state.update(progress=15,money=80,owned=[True]*4,equipped_weapon=1,
                      equipped_armor=3,attack=6,defense=2)
         before = deepcopy(state)
         self.assertEqual(update_state(state, fixtures.inputs(A=True)),initial())
@@ -101,7 +124,7 @@ class GameCompletionTests(unittest.TestCase):
 
     def test_ending_save_is_one_pulse_and_load_still_shows_ending(self):
         state = initial()
-        state['progress'] = 5
+        state['progress'] = 15
         saved = self.frame(state, B=True)
         self.assertEqual(game.thumby.saveData.save.call_count,1)
         later = self.frame(saved)
@@ -146,6 +169,33 @@ class GameCompletionTests(unittest.TestCase):
             with self.assertRaises(StopIteration):
                 game.main_loop()
         self.assertEqual(captured,[3])
+
+    def test_old_five_stage_clear_save_continues_in_china(self):
+        state=initial()
+        state.update(progress=5,money=80,owned=[True,False,True,False],
+                     equipped_weapon=0,equipped_armor=2,attack=4,defense=1)
+        game.save_game(state)
+        restored=game.load_save_data()
+        self.assertEqual(encode_save_data(restored),encode_save_data(state))
+        self.assertEqual(game.stage_code(restored['progress']),'CN1')
+        entered=self.frame(restored,A=True)
+        self.assertEqual((entered['screen_state'],entered['progress'],entered['money']),
+                         ('battle',5,80))
+        self.assertEqual((entered['enemy_hp'],entered['enemy_attack'],entered['enemy_defense']),
+                         (10,3,1))
+
+    def test_region_boundaries_do_not_reset_equipment_or_show_final_ending(self):
+        for progress,code in ((4,'KR5'),(5,'CN1'),(9,'CN5'),(10,'JP1'),(14,'JP5')):
+            state=initial()
+            state.update(progress=progress,owned=[True,False,True,False],
+                         equipped_weapon=0,equipped_armor=2,attack=4,defense=1)
+            self.assertEqual(game.stage_code(progress),code)
+            entered=self.frame(state,A=True)
+            self.assertEqual(entered['screen_state'],'battle')
+            self.assertEqual((entered['attack'],entered['defense'],entered['progress']),(4,1,progress))
+            game.thumby.display.reset_mock()
+            game.draw_game(state)
+            self.assertNotIn('QUEST CLEAR',[c.args[0] for c in game.thumby.display.drawText.call_args_list])
 
     def test_retry_preserves_stage_and_equipment_without_granting_reward(self):
         state=initial()
