@@ -12,11 +12,16 @@ def state(**changes):
         enemy_attack=0, enemy_defense=0, combat_frame=0,
         save_requested=False, save_status='', menu_r_held=False)
     value.update(changes)
+    from rules import legacy_route
+    value.setdefault('route', legacy_route(value['progress']))
+    value.setdefault('attack_kind', 'punch')
+    if value['progress'] in (5,10) and 'screen_state' not in changes:
+        value['screen_state']='country_select'
     return value
 
 
 def inputs(**changes):
-    value = dict.fromkeys(('L','R','A','B','U','D','U_held','D_held'), False)
+    value = dict.fromkeys(('L','R','A','B','U','D','U_held','D_held','A_held','B_held'), False)
     value.update(changes)
     return value
 
@@ -227,7 +232,7 @@ class TestRules(unittest.TestCase):
             equipped_weapon=1,equipped_armor=3,attack=6,defense=2)
         before = deepcopy(original)
         data = encode_save_data(original)
-        expected = dict(version=1,money=100,progress=5,owned=[False,True,False,True],equipped_weapon=1,equipped_armor=3)
+        expected = dict(version=2,route=[0],money=100,progress=5,owned=[False,True,False,True],equipped_weapon=1,equipped_armor=3)
         self.assertEqual(data,expected)
         self.assertEqual(original,before)
         self.assertIsNot(data['owned'],original['owned'])
@@ -238,7 +243,7 @@ class TestRules(unittest.TestCase):
         invalid = [None,[],{},dict(data,extra=1)]
         for key in data:
             copy = deepcopy(data); del copy[key]; invalid.append(copy)
-        for key,values in (('version',(True,2,1.0)),('money',(True,-1,1.0)),('progress',(False,-1,'5')),
+        for key,values in (('version',(True,3,2.0)),('money',(True,-1,1.0)),('progress',(False,-1,'5')),
                            ('owned',([0,1,0,1],[True]*3,tuple([True]*4))),
                            ('equipped_weapon',(True,2,-1,0)),('equipped_armor',(True,1,4,2))):
             for value in values: invalid.append(dict(data,**{key:value}))

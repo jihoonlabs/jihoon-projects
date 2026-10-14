@@ -9,7 +9,8 @@ import thumby
 if sys.implementation.name == 'micropython':
     sys.path.append('/Games/ThumbyGrowth')
 from rules import (update_state, encode_save_data, decode_save_data,
-                   GOAL_STAGES, ENCOUNTERS, REGIONS, STAGES_PER_REGION)
+                   GOAL_STAGES, ENCOUNTERS, REGIONS, STAGES_PER_REGION,
+                   CITY_NAMES, stage_index, new_game_state)
 
 # Original monochrome scenery, stored once. These are decoration, not obstacles.
 # x, y, width, height in the distant layer; battle HUD ends at y=13.
@@ -79,7 +80,7 @@ SCENERY = (
 
 
 def stage_code(progress):
-    stage = min(max(0, progress), GOAL_STAGES-1)
+    stage = stage_index(progress) if isinstance(progress,dict) else min(max(0,progress),GOAL_STAGES-1)
     return REGIONS[stage//STAGES_PER_REGION]+str(stage%STAGES_PER_REGION+1)
 
 
@@ -106,9 +107,7 @@ def main_loop():
     action = None
     while action is None:
         action = title_frame()
-    state = (load_save_data() if action == 'load' else
-             decode_save_data(dict(version=1, money=0, progress=0,
-                 owned=[False]*4, equipped_weapon=None, equipped_armor=None)))
+    state = load_save_data() if action == 'load' else new_game_state()
     while True:
         state = step_frame(state)
 
@@ -148,16 +147,27 @@ def draw_game(state):
     display.fill(0)
     screen = state['screen_state']
     status = state['save_status']
-    if screen == 'safe' and state['progress'] >= GOAL_STAGES:
+    if screen == 'country_select':
+        display.drawText('START WHERE?' if state['progress']==0 else 'NEXT COUNTRY',0,0,1)
+        choices = [region for region in range(3) if region not in state['route']]
+        for row,region in enumerate(choices):
+            y=10+row*10
+            selected=row==state['menu_selection']
+            if selected:
+                display.drawFilledRectangle(0,y,72,8,1)
+            display.drawText(('>' if selected else ' ')+('KOREA','CHINA','JAPAN')[region],0,y,0 if selected else 1)
+        if len(choices)<3:
+            display.drawText(status if status in ('SAVED','SAVE ERR') else 'B:SAVE',0,30,1)
+    elif screen == 'safe' and state['progress'] >= GOAL_STAGES:
         display.drawText('QUEST CLEAR', 3, 0, 1)
         display.drawText('$'+str(state['money']), 0, 10, 1)
         display.drawText('A:NEW', 0, 20, 1)
         display.drawText(status if status in ('SAVED','SAVE ERR') else 'B:SAVE', 0, 30, 1)
     elif screen == 'battle':
         camera = max(0, min(72, state['player_x']-32))
-        draw_background(display, state['progress'], camera)
+        draw_background(display, stage_index(state), camera)
         display.drawText('HP'+str(state['HP']), 0, 0, 1)
-        display.drawText(stage_code(state['progress']), 27, 0, 1)
+        display.drawText(stage_code(state), 27, 0, 1)
         display.drawText('E'+str(state['enemy_hp']), 48, 0, 1)
         for x, hp, maximum in ((0, state['HP'], state['maxHP']),
                                 (42, state['enemy_hp'], ENCOUNTERS[min(state['progress'],GOAL_STAGES-1)][0])):
@@ -185,12 +195,24 @@ def draw_game(state):
                         bit = 5-column if rightward else column
                         if mask & (1<<bit) and 0<=x+column<72:
                             display.drawFilledRectangle(x+column, y+row, 1, 1, 1)
-            if player and not flashing and state['player_attack_cooldown']>=11:
-                length = 2 if state['equipped_weapon'] is None else (6 if state['equipped_weapon']==0 else 8)
+            kicking = state.get('attack_kind')=='kick'
+            if player and not flashing and state['player_attack_cooldown']>=(15 if kicking else 11):
+                length = 4 if kicking else (2 if state['equipped_weapon'] is None else (6 if state['equipped_weapon']==0 else 8))
                 front = x+6 if rightward else x-length
                 left, right = max(0,front), min(72,front+length)
                 if right>left:
-                    display.drawFilledRectangle(left,y+3,right-left,1,1)
+                    display.drawFilledRectangle(left,y+(5 if kicking else 3),right-left,1,1)
+    elif screen == 'pause':
+        display.drawText('HP'+str(state['HP'])+' AT'+str(state['attack'])+' DF'+str(state['defense']),0,0,1)
+        index=stage_index(state)
+        display.drawText(CITY_NAMES[index//5][index%5],0,10,1)
+        display.drawText(status if status in ('SAVED','SAVE ERR') else '$'+str(state['money'])+' '+stage_code(state),0,20,1)
+        for row,label in enumerate(('BACK','SAVE')):
+            x=row*36
+            selected=row==state['menu_selection']
+            if selected:
+                display.drawFilledRectangle(x,30,36,8,1)
+            display.drawText(('>' if selected else ' ')+label,x,30,0 if selected else 1)
     elif screen in ('shop_detail', 'equip_detail'):
         item = state['menu_selection']
         names = ('Blade', 'Sword', 'Vest', 'Armor')
@@ -222,7 +244,8 @@ def draw_game(state):
             choices = ('RESUME', 'SAVE')
         else:
             choices = ('Blade', 'Sword', 'Vest', 'Armor')
-        header = stage_code(state['progress'])+'/5' if screen == 'safe' else screen.upper()
+        index=stage_index(state)
+        header = CITY_NAMES[index//5][index%5] if screen == 'safe' else screen.upper()
         if screen in ('shop','equip'):
             chosen = state['menu_selection']
             if screen == 'shop':
@@ -271,12 +294,14 @@ def handle_inputs():
         'D': bool(thumby.buttonD.justPressed()),
         'U_held': bool(thumby.buttonU.pressed()),
         'D_held': bool(thumby.buttonD.pressed()),
+        'A_held': bool(thumby.buttonA.pressed()),
+        'B_held': bool(thumby.buttonB.pressed()),
     }
 
 
 def load_save_data():
     initial = {
-        'version': 1, 'money': 0, 'progress': 0, 'owned': [False]*4,
+        'version': 2, 'money': 0, 'progress': 0, 'route': [], 'owned': [False]*4,
         'equipped_weapon': None, 'equipped_armor': None,
     }
     try:

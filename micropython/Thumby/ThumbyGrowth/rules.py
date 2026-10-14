@@ -7,32 +7,84 @@ ENCOUNTERS = (
     (10,3,1), (12,3,1), (12,4,1), (16,4,2), (20,4,2),
     (14,4,2), (16,4,2), (18,4,2), (18,5,2), (24,5,3),
 )
+CITY_NAMES = (
+    ('GAEGYEONG','HANYANG','GYEONGJU','JEONJU','PYEONGYANG'),
+    ('KAIFENG','LUOYANG','HANGZHOU','SUZHOU','DADU'),
+    ('KAMAKURA','KYOTO','NARA','SAKAI','HAKATA'),
+)
+
+
+def legacy_route(progress):
+    completed = min(3, progress//5)
+    count = min(3, completed+(1 if progress%5 or progress==0 else 0))
+    return list(range(count))
+
+
+def stage_index(state):
+    route = state.get('route', legacy_route(state['progress']))
+    region = route[-1] if route else 0
+    city = 4 if state['progress'] >= GOAL_STAGES else state['progress']%5
+    return region*5+city
+
+
+def new_game_state():
+    return decode_save_data(dict(version=2, money=0, progress=0, route=[],
+        owned=[False]*4, equipped_weapon=None, equipped_armor=None))
 
 
 def update_state(state, inputs):
     new_state = dict(state)
     new_state['owned'] = list(state['owned'])
+    new_state['route'] = list(state.get('route', legacy_route(state['progress'])))
     new_state.setdefault('player_y', 28)
     new_state.setdefault('enemy_y', 28)
     screen = state['screen_state']
     r_new = inputs['R'] and not state['menu_r_held']
     new_state['menu_r_held'] = inputs['R']
     new_state['save_requested'] = False
+    new_state.setdefault('attack_kind', 'punch')
+
+    if screen == 'country_select':
+        choices = [region for region in range(3) if region not in new_state['route']]
+        if not choices:
+            new_state['screen_state'] = 'safe'
+            return new_state
+        selected = min(state['menu_selection'], len(choices)-1)
+        if inputs['U'] and not inputs['D']:
+            selected = max(0, selected-1)
+        elif inputs['D'] and not inputs['U']:
+            selected = min(len(choices)-1, selected+1)
+        new_state['menu_selection'] = selected
+        if inputs['B']:
+            new_state['save_requested'] = True
+        elif inputs['A']:
+            new_state['route'].append(choices[selected])
+            new_state['screen_state'] = 'safe'
+            new_state['menu_selection'] = 0
+            new_state['menu_scroll'] = 0
+        return new_state
 
     # A completed save opens the ending, rather than an endless next fight.
     if screen == 'safe' and state['progress'] >= GOAL_STAGES:
         if inputs['B']:
             new_state['save_requested'] = True
         elif inputs['A']:
-            return decode_save_data(dict(version=1, money=0, progress=0,
-                owned=[False]*4, equipped_weapon=None, equipped_armor=None))
+            return new_game_state()
+        return new_state
+
+    # Both attack buttons open the status screen and cannot also deal damage.
+    chord = (inputs['A'] and inputs['B']) or (
+        inputs.get('A_held', False) and inputs.get('B_held', False)
+        and (inputs['A'] or inputs['B']))
+    if screen == 'battle' and chord:
+        new_state['screen_state'] = 'pause'
+        new_state['menu_selection'] = 0
+        new_state['menu_scroll'] = 0
         return new_state
 
     # 복귀 입력은 전환한 화면에서 다시 처리하지 않는다.
-    if inputs['B']:
-        if screen == 'battle':
-            new_state['screen_state'] = 'pause'
-        elif screen == 'pause':
+    if inputs['B'] and screen != 'battle':
+        if screen == 'pause':
             new_state['screen_state'] = 'battle'
         elif screen in ('shop', 'equip'):
             new_state['screen_state'] = 'safe'
@@ -74,6 +126,7 @@ def update_state(state, inputs):
         new_state['direction'] = 'R'
         new_state['combat_frame'] = 0
         new_state['player_attack_cooldown'] = 0
+        new_state['attack_kind'] = 'punch'
         new_state['enemy_attack_cooldown'] = 0
         new_state['active_enemy'] = True
         hp, attack, defense = ENCOUNTERS[min(new_state['progress'], GOAL_STAGES-1)]
@@ -164,10 +217,12 @@ def update_state(state, inputs):
         new_state['enemy_y'] = ey
     same_lane = abs(moved_y-ey) <= 3
 
-    if inputs['A'] and new_state['player_attack_cooldown'] == 0:
-        new_state['player_attack_cooldown'] = 15
+    if (inputs['A'] or inputs['B']) and new_state['player_attack_cooldown'] == 0:
+        kicking = bool(inputs['B'])
+        new_state['attack_kind'] = 'kick' if kicking else 'punch'
+        new_state['player_attack_cooldown'] = 20 if kicking else 15
         gap = enemy - (moved + 6) if new_state['direction'] == 'R' else moved - (enemy + 6)
-        if new_state['active_enemy'] and same_lane and 0 <= gap <= 8:
+        if new_state['active_enemy'] and same_lane and 0 <= gap <= (10 if kicking else 8):
             damage = calculate_damage(new_state, {'defense': new_state['enemy_defense']})
             new_state['enemy_hp'] = max(0, new_state['enemy_hp'] - damage)
             if new_state['enemy_hp'] == 0:
@@ -178,7 +233,8 @@ def update_state(state, inputs):
                 new_state['enemy_hp'] = 0
                 new_state['enemy_attack'] = 0
                 new_state['enemy_defense'] = 0
-                new_state['screen_state'] = 'safe'
+                new_state['screen_state'] = ('country_select' if
+                    new_state['progress'] < GOAL_STAGES and new_state['progress']%5 == 0 else 'safe')
                 new_state['menu_selection'] = 0
                 new_state['menu_scroll'] = 0
                 return new_state
@@ -210,10 +266,13 @@ def is_valid_save_data(data):
         return False
     
     required_keys = {'version', 'money', 'progress', 'owned', 'equipped_weapon', 'equipped_armor'}
-    if set(data.keys()) != required_keys:
+    if not required_keys.issubset(data):
         return False
-    
-    if data['version'] != 1 or type(data['version']) is not int:
+    if type(data['version']) is not int or data['version'] not in (1,2):
+        return False
+    if data['version'] == 2:
+        required_keys.add('route')
+    if set(data.keys()) != required_keys:
         return False
     
     if type(data['money']) is not int or data['money'] < 0:
@@ -221,6 +280,19 @@ def is_valid_save_data(data):
     
     if type(data['progress']) is not int or data['progress'] < 0:
         return False
+    if data['version'] == 2:
+        route = data['route']
+        completed, city = divmod(data['progress'],5)
+        if data['progress'] > 15 or not isinstance(route,list) or len(route)>3:
+            return False
+        if any(type(region) is not int or region not in (0,1,2) for region in route):
+            return False
+        if len(set(route)) != len(route):
+            return False
+        if city and len(route) != completed+1:
+            return False
+        if not city and len(route) not in (completed,min(3,completed+1)):
+            return False
     
     if not isinstance(data['owned'], list) or len(data['owned']) != 4:
         return False
@@ -244,26 +316,34 @@ def is_valid_save_data(data):
     return True
 
 def encode_save_data(state):
-    return {
-        'version': 1,
+    data = {
+        'version': 2,
         'money': state['money'],
         'progress': state['progress'],
         'owned': list(state['owned']),
         'equipped_weapon': state['equipped_weapon'],
-        'equipped_armor': state['equipped_armor']
+        'equipped_armor': state['equipped_armor'],
+        'route': list(state.get('route', legacy_route(state['progress'])))
     }
+    if not is_valid_save_data(data):
+        raise ValueError('저장할 진행/국가 순서가 잘못됐습니다.')
+    return data
 
 def decode_save_data(data):
     if not is_valid_save_data(data):
         return None
     
+    progress = min(15,data['progress'])
+    route = list(data['route'] if data['version']==2 else legacy_route(progress))
+    selecting = progress<15 and len(route)==progress//5
     new_state = dict(
         HP=10,
         maxHP=10,
         money=data['money'],
         attack=2,
         defense=0,
-        progress=data['progress'],
+        progress=progress,
+        route=route,
         owned=list(data['owned']),
         equipped_weapon=data['equipped_weapon'],
         equipped_armor=data['equipped_armor'],
@@ -271,11 +351,12 @@ def decode_save_data(data):
         player_y=28,
         enemy_y=28,
         enemy_x=112,
-        screen_state='safe',
+        screen_state='country_select' if selecting else 'safe',
         menu_selection=0,
         menu_scroll=0,
         direction='R',
         player_attack_cooldown=0,
+        attack_kind='punch',
         enemy_attack_cooldown=0,
         active_enemy=False,
         enemy_hp=0,

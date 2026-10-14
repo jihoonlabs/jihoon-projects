@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import test_ThumbyGrowth as fixtures
 import ThumbyGrowth as game
-from rules import update_state, decode_save_data, encode_save_data
+from rules import update_state, decode_save_data, encode_save_data, new_game_state
 
 
 def initial():
@@ -36,7 +36,7 @@ class GameCompletionTests(unittest.TestCase):
                 state = self.frame(state, R=state['enemy_x'] > state['player_x']+6,
                                    L=state['enemy_x'] < state['player_x']-6, A=True)
                 self.assertNotEqual(state['screen_state'], 'defeat')
-                if state['screen_state'] == 'safe':
+                if state['screen_state'] in ('safe','country_select'):
                     break
             else:
                 self.fail('Encounter did not finish within 2000 frames')
@@ -79,9 +79,12 @@ class GameCompletionTests(unittest.TestCase):
                 state=self.buy_and_equip(state,item)
                 expected_money-=(40,80,40,80)[item]
             if stage in (1,4,9):
-                for _ in range(3):
-                    state = self.frame(state, D=True)
-                state = self.frame(state, A=True)
+                if state['screen_state']=='country_select':
+                    state=self.frame(state,B=True)
+                else:
+                    for _ in range(3):
+                        state = self.frame(state, D=True)
+                    state = self.frame(state, A=True)
                 self.assertEqual(state['save_status'], 'SAVED')
                 state = game.load_save_data()
                 self.assertEqual(state['progress'], stage+1)
@@ -90,6 +93,9 @@ class GameCompletionTests(unittest.TestCase):
                     self.assertEqual(game.stage_code(state['progress']),'CN1')
                 elif stage==9:
                     self.assertEqual(game.stage_code(state['progress']),'JP1')
+                if stage in (4,9):
+                    self.assertEqual(state['screen_state'],'country_select')
+                    state=self.frame(state,A=True)
         self.assertEqual(state['money'], expected_money)
         self.assertEqual((state['attack'],state['defense']),(6,2))
         texts = [c.args[0] for c in game.thumby.display.drawText.call_args_list]
@@ -102,7 +108,7 @@ class GameCompletionTests(unittest.TestCase):
         self.assertEqual(saved['save_status'], 'SAVED')
         restored = game.load_save_data()
         self.assertEqual(restored['progress'], 15)
-        self.assertEqual(self.frame(restored, A=True), initial())
+        self.assertEqual(self.frame(restored, A=True), new_game_state())
 
     def test_encounter_stats_and_boss(self):
         expected = ((6,2,0),(10,3,1),(8,3,0),(12,3,1),(16,4,2),
@@ -116,15 +122,16 @@ class GameCompletionTests(unittest.TestCase):
 
     def test_completed_game_new_resets_progress_equipment_and_money(self):
         state = initial()
-        state.update(progress=15,money=80,owned=[True]*4,equipped_weapon=1,
+        state.update(progress=15,route=[0,1,2],money=80,owned=[True]*4,equipped_weapon=1,
                      equipped_armor=3,attack=6,defense=2)
         before = deepcopy(state)
-        self.assertEqual(update_state(state, fixtures.inputs(A=True)),initial())
+        self.assertEqual(update_state(state, fixtures.inputs(A=True)),new_game_state())
         self.assertEqual(state, before)
 
     def test_ending_save_is_one_pulse_and_load_still_shows_ending(self):
         state = initial()
         state['progress'] = 15
+        state['route'] = [0,1,2]
         saved = self.frame(state, B=True)
         self.assertEqual(game.thumby.saveData.save.call_count,1)
         later = self.frame(saved)
@@ -152,7 +159,7 @@ class GameCompletionTests(unittest.TestCase):
              patch.object(game,'step_frame',side_effect=stop):
             with self.assertRaises(StopIteration):
                 game.main_loop()
-        self.assertEqual(captured,[initial()])
+        self.assertEqual(captured,[new_game_state()])
         self.assertEqual(game.thumby.saveData.mock_calls,[])
         game.thumby.display.setFPS.assert_called_once_with(30)
 
@@ -177,8 +184,11 @@ class GameCompletionTests(unittest.TestCase):
         game.save_game(state)
         restored=game.load_save_data()
         self.assertEqual(encode_save_data(restored),encode_save_data(state))
-        self.assertEqual(game.stage_code(restored['progress']),'CN1')
-        entered=self.frame(restored,A=True)
+        self.assertEqual(restored['screen_state'],'country_select')
+        chosen=self.frame(restored,A=True)
+        self.assertEqual(chosen['route'],[0,1])
+        self.assertEqual(game.stage_code(chosen),'CN1')
+        entered=self.frame(chosen,A=True)
         self.assertEqual((entered['screen_state'],entered['progress'],entered['money']),
                          ('battle',5,80))
         self.assertEqual((entered['enemy_hp'],entered['enemy_attack'],entered['enemy_defense']),

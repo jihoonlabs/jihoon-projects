@@ -28,11 +28,16 @@ def state(**changes):
         enemy_attack=0,enemy_defense=0,combat_frame=0,
         save_requested=False,save_status='',menu_r_held=False)
     value.update(changes)
+    from rules import legacy_route
+    value.setdefault('route', legacy_route(value['progress']))
+    value.setdefault('attack_kind', 'punch')
+    if value['progress'] in (5,10) and 'screen_state' not in changes:
+        value['screen_state']='country_select'
     return value
 
 
 def inputs(**changes):
-    value = dict.fromkeys(('L','R','A','B','U','D','U_held','D_held'),False)
+    value = dict.fromkeys(('L','R','A','B','U','D','U_held','D_held','A_held','B_held'),False)
     value.update(changes)
     return value
 
@@ -55,9 +60,9 @@ class TestAdapter(unittest.TestCase):
 
     def test_case_1(self):
         # Vertical held input moves in battle; edges still navigate menus.
-        for key in ('L','R','A','B','U','D','U_held','D_held'):
+        for key in ('L','R','A','B','U','D','U_held','D_held','A_held','B_held'):
             button = getattr(fake_thumby, 'button'+key.split('_')[0])
-            method = 'pressed' if key in ('L','R','U_held','D_held') else 'justPressed'
+            method = 'pressed' if key in ('L','R','U_held','D_held','A_held','B_held') else 'justPressed'
             getattr(button,method).return_value = True
             result = ThumbyGrowth.handle_inputs()
             self.assertEqual(result,inputs(**{key:True}))
@@ -217,7 +222,8 @@ class TestAdapter(unittest.TestCase):
             fake_thumby.saveData.getItem.side_effect = OSError('읽기 실패') if kind == '읽기실패' else None
             fake_thumby.saveData.getItem.return_value = '손상된 값'
             result = ThumbyGrowth.load_save_data()
-            expected = state()
+            from rules import new_game_state
+            expected = new_game_state()
             for key,value in expected.items():
                 self.assertEqual(result[key],value)
             self.assertEqual(fake_thumby.saveData.setItem.call_count,0)
