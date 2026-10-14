@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { LoginApiError, loginApi } from '@/features/auth/api/login';
 import { resendVerificationEmailApi } from '@/features/auth/api/resendVerificationEmail';
@@ -64,6 +64,7 @@ export function LoginForm({
     useState(false);
   const [resendingVerificationEmail, setResendingVerificationEmail] =
     useState(false);
+  const verificationRevision = useRef(0);
 
   useEffect(() => {
     // 表示済みのクエリパラメータをURLから削除する
@@ -78,6 +79,7 @@ export function LoginForm({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    verificationRevision.current += 1;
 
     setServerError('');
     setSuccessMessage('');
@@ -125,6 +127,7 @@ export function LoginForm({
   };
 
   const handleResendVerificationEmail = async () => {
+    const revision = verificationRevision.current;
     setServerError('');
     setSuccessMessage('');
     setResendingVerificationEmail(true);
@@ -134,9 +137,12 @@ export function LoginForm({
         email,
       });
 
+      // 入力変更・新しいログイン後に、古い再送応答を表示へ反映しない。
+      if (revision !== verificationRevision.current) return;
       setSuccessMessage(data.message);
       setVerificationEmailRequired(false);
     } catch (error) {
+      if (revision !== verificationRevision.current) return;
       if (error instanceof Error) {
         setServerError(error.message);
         return;
@@ -192,6 +198,7 @@ export function LoginForm({
               aria-describedby={errors.email ? 'email-error' : undefined}
               value={email}
               onChange={(event) => {
+                verificationRevision.current += 1;
                 setEmail(event.target.value);
                 setVerificationEmailRequired(false);
 
