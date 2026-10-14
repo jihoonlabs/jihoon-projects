@@ -1,20 +1,21 @@
-# Ticket Board Design Child
+# Ticket Save Input Child
 
 owner_repo: jihoonlabs/jihoon-projects
-owner_branch: feature/ticket-board-design
+owner_branch: feature/ticket-save-input
 role: child
-status: validated-user-review-pending
+status: validated-adoption-pending
 parent_branch: feature/ticket
-base_sha: a02f37781e0c2fbc5d8852e1f26fcaecb2edf582
+base_sha: 9269be437b16cfe9e2a9db55e1f7deec558d3faa
 
 ## Responsibility / Boundary
-利用者の実画面指摘に合わせ、Header/toolbarの階層と余白、Project色の強さ、カードの可読性、dark-system下の入力を調整する。既存機能・権限・API・DBは変更しない。
+Prevent unsent changes while Ticket create/edit saves are pending. Disable only the five existing draft fields while submitting; restore editing and retain the submitted draft after failure. API, database, permissions, palette and layout are unchanged.
 
 ## Validation / Handoff
-- アプリ検証SHA: `c5417c648f1380dd673b26f1c8317c26ad817346`。公開treeと検証済みローカルファイルの一致を確認した。
-- 共通Headerを小さくし、board toolbarをProject/操作とcontext/filterの2段に整理。管理ボタンの表示を短くし、既存accessible nameと操作を維持した。
-- Project keyから決まる色を維持し、card背景をwhiteと混色して淡くした。タイトルのweight/line-heightと列の幅・間隔を調整した。
-- boardとheaderをlight color-schemeとし、dark-systemでも検索入力の背景/文字を明示した。
-- React全29 files / 208 tests、TypeScript、ESLint、変更TSX/CSSのPrettier、production buildが成功。
-- 実Chromiumのdark-systemで1440/940/393pxを確認。ページ横overflowなし、検索背景/文字、8 cards、mobile detailの画面内収まり、pageerror 0件を確認。1440pxは全5列を表示し、940/393pxはboard内で横scrollする。画像も目視確認した。API fixtureによる表示検証であり、実Laravel接続ではない。
-- 利用者による修正後画面の確認は残る。API・DB・権限変更はない。
+- Application: `b8cfd8635df0975ffd1bfd2409286c4398a98b58`.
+- Reproduced both create/edit regressions before correction: all five draft fields remained editable during submission.
+- Focused detail tests: 17 passed, including pending create/edit field locking, preserved title/description after failure and restored retry controls.
+- Child frontend: 29 files / 210 tests passed; TypeScript, ESLint, changed TypeScript Prettier, production build and git diff check passed.
+- Real browser/Laravel/MySQL checks are unverified. Rendered tests use simulated save responses.
+- This Child does not include the three earlier fixes. Review snapshot remains `integration/ticket-recovery-20261014` at `c511635bd61c157073949bed94c4ed0d601f2443`.
+- No Epic adoption. The local palette adoption `5af147b` is still unavailable; preserve it and user DB/environment settings.
+- Next: integrate the application after comparison with local adoption and verify combined regression. Do not treat this Child's tests as V1 acceptance.
