@@ -12,18 +12,35 @@ export class AuthApiError extends Error {
   }
 }
 
+let pendingRestore: AbortController | null = null;
+
+export const cancelSessionRestore = () => {
+  pendingRestore?.abort();
+};
+
 export const fetchMe = async (): Promise<User> => {
-  const response = await fetch(`${API_URL}/api/auth/me`, {
-    method: 'GET',
-    credentials: 'include',
-    headers: {
-      Accept: 'application/json',
-    },
-  });
+  cancelSessionRestore();
+  const controller = new AbortController();
+  pendingRestore = controller;
+  try {
+    const response = await fetch(`${API_URL}/api/auth/me`, {
+      method: 'GET',
+      credentials: 'include',
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/json',
+      },
+    });
 
-  if (!response.ok) {
-    throw new AuthApiError('認証情報を取得できませんでした。', response.status);
+    if (!response.ok) {
+      throw new AuthApiError(
+        '認証情報を取得できませんでした。',
+        response.status,
+      );
+    }
+
+    return await response.json();
+  } finally {
+    if (pendingRestore === controller) pendingRestore = null;
   }
-
-  return response.json();
 };

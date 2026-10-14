@@ -77,6 +77,7 @@ describe('LoginForm メール認証処理', () => {
       const user = userEvent.setup();
       let release!: () => void;
       let started = false;
+      let resendSignal: AbortSignal | undefined;
       let loginCount = 0;
       const pending = new Promise<void>((resolve) => {
         release = resolve;
@@ -98,6 +99,7 @@ describe('LoginForm メール認証処理', () => {
         http.post(
           `${API_URL}/api/auth/email/verification-notification`,
           async ({ request }) => {
+            resendSignal = request.signal;
             expect(await request.json()).toEqual({
               email: 'first@example.com',
             });
@@ -129,6 +131,7 @@ describe('LoginForm メール認証処理', () => {
       expect(await screen.findByRole('alert')).toHaveTextContent(
         'New login needs verification',
       );
+      expect(resendSignal?.aborted).toBe(true);
       await act(async () => {
         release();
       });

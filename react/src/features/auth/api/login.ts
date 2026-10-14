@@ -1,3 +1,4 @@
+import { cancelSessionRestore } from './me';
 import { fetchWithCsrf } from '@/shared/api/fetchWithCsrf';
 
 import type { LoginRequest, LoginResponse } from '@/features/auth/types/auth';
@@ -15,6 +16,7 @@ export class LoginApiError extends Error {
 export const loginApi = async (
   params: LoginRequest,
 ): Promise<LoginResponse> => {
+  cancelSessionRestore();
   const response = await fetchWithCsrf('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify(params),

@@ -65,6 +65,16 @@ export function LoginForm({
   const [resendingVerificationEmail, setResendingVerificationEmail] =
     useState(false);
   const verificationRevision = useRef(0);
+  const verificationRequest = useRef<AbortController | null>(null);
+
+  // 古い再送応答のSet-Cookieで新しいログインを取り消さない。
+  const cancelVerificationRequest = () => {
+    verificationRequest.current?.abort();
+    verificationRequest.current = null;
+    setResendingVerificationEmail(false);
+  };
+
+  useEffect(() => () => verificationRequest.current?.abort(), []);
 
   useEffect(() => {
     // 表示済みのクエリパラメータをURLから削除する
@@ -79,6 +89,7 @@ export function LoginForm({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    cancelVerificationRequest();
     verificationRevision.current += 1;
 
     setServerError('');
@@ -127,15 +138,19 @@ export function LoginForm({
   };
 
   const handleResendVerificationEmail = async () => {
+    cancelVerificationRequest();
+    const controller = new AbortController();
+    verificationRequest.current = controller;
     const revision = verificationRevision.current;
     setServerError('');
     setSuccessMessage('');
     setResendingVerificationEmail(true);
 
     try {
-      const data = await resendVerificationEmailApi({
-        email,
-      });
+      const data = await resendVerificationEmailApi(
+        { email },
+        controller.signal,
+      );
 
       // 入力変更・新しいログイン後に、古い再送応答を表示へ反映しない。
       if (revision !== verificationRevision.current) return;
@@ -150,7 +165,10 @@ export function LoginForm({
 
       setServerError('認証メールの再送中にエラーが発生しました。');
     } finally {
-      setResendingVerificationEmail(false);
+      if (verificationRequest.current === controller) {
+        verificationRequest.current = null;
+        setResendingVerificationEmail(false);
+      }
     }
   };
 
@@ -206,6 +224,7 @@ export function LoginForm({
               aria-describedby={errors.email ? 'email-error' : undefined}
               value={email}
               onChange={(event) => {
+                cancelVerificationRequest();
                 verificationRevision.current += 1;
                 setEmail(event.target.value);
                 setVerificationEmailRequired(false);

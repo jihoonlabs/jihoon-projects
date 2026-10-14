@@ -28,6 +28,7 @@ export const fetchWithCsrf = async (
   // Sanctum の CSRF Cookie を取得
   const csrfResponse = await fetch(`${API_URL}/sanctum/csrf-cookie`, {
     credentials: 'include',
+    ...(init.signal ? { signal: init.signal } : {}),
   });
 
   if (!csrfResponse.ok) {
