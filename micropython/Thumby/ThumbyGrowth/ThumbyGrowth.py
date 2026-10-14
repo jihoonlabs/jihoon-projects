@@ -17,9 +17,9 @@ from rules import (update_state, encode_save_data, decode_save_data,
 from scene_art import SCENE_BITMAPS
 
 # Shared 10x14 period fighters; simulation collision remains 6x7.
-HERO_HEADS = ((0x30,0x78,0xfc,0x1fe,0x1fe,0x132,0x1fe,0xfc),
-              (0x78,0xfc,0x1fe,0x1fe,0x1fe,0x132,0x1fe,0xfc),
-              (0xc,0x3c,0xfc,0x1fe,0x1fe,0x132,0x1fe,0xfc))
+HERO_HEADS = ((0xfc,0x1fe,0x1fe,0x1fe,0x1fe,0x132,0x1fe,0xfc),
+              (0xfc,0x1fe,0xfe,0x1fe,0x1fe,0x132,0x1fe,0xfc),
+              (0xfc,0x1fe,0x1ff,0x1fe,0x1fe,0x132,0x1fe,0xfc))
 HERO_HEAD = HERO_HEADS[0]
 FOE_HEAD = (0x0,0x78,0xfc,0x1fe,0x17a,0x1fe,0x1ce,0xfc)
 BODY_ROWS = (0x3ff,0x1fe,0xdc,0xfc,0xcc,0x1ce)
@@ -167,18 +167,23 @@ def fighter_positions(state,camera):
 
 
 def draw_hero_hair(display,region,x,y,rightward):
-    if region==0: return  # Topknot is already in the head rows.
     def rect(offset,dy,width,height,color=1):
         left=x-2-offset-width if rightward else x+8+offset
         scene_rect(display,left,y+dy,width,height,color)
-    rect(0,-6,4,12,0)
-    if region==1:
+    rect(0,-6,5,12,0)
+    if region==0:
+        # Long tied hair; a small butterfly bow distinguishes the daenggi.
+        rect(2,-2,1,8)
+        for dy in (-4,-2):
+            rect(0,dy,2,1);rect(3,dy,2,1)
+        rect(2,-3,1,1)
+    elif region==1:
         # A narrow long braid, alternating sides down to the shoulder.
-        for row in range(8): rect(row%2,-3+row,1,1)
-        rect(0,5,2,1)
+        for row in range(8): rect(1+row%2,-3+row,1,1)
+        rect(1,5,2,1)
     else:
-        # A higher, thicker ponytail with a shorter pointed end.
-        for offset,dy,width,height in ((0,-6,2,2),(1,-4,2,3),(2,-1,2,3),(2,2,1,1)):
+        # Thick high ponytail, hanging as long as the other two styles.
+        for offset,dy,width,height in ((0,-6,3,2),(1,-4,3,3),(2,-1,3,4),(3,3,2,3)):
             rect(offset,dy,width,height)
 
 
@@ -528,9 +533,11 @@ def draw_game(state):
             if selected:
                 display.drawFilledRectangle(0,y,72,8,1)
             display.drawText(('>' if selected else ' ')+('KOREA','CHINA','JAPAN')[region],0,y,0 if selected else 1)
-            if not state['route']:
-                display.drawFilledRectangle(56,y,16,8,0)
-                draw_rows(display,HERO_HEADS[region],59,y,10)
+        if not state['route']:
+            # A full figure shows the long back hair; the real route stays empty.
+            preview=dict(state,route=[choices[state['menu_selection']]])
+            display.drawFilledRectangle(50,10,22,30,0)
+            draw_fighter(display,preview,True,59,25)
         if len(choices)<3:
             display.drawText(status if status in ('SAVED','SAVE ERR') else 'B:SAVE',0,30,1)
     elif screen == 'safe' and state['progress'] >= GOAL_STAGES:

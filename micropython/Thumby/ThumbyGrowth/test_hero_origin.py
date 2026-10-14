@@ -23,6 +23,7 @@ class HeroOriginTests(unittest.TestCase):
             self.assertEqual(game.character_body(state,True),game.BODY_ROWS)
             stats.append((state['HP'],state['maxHP'],state['attack'],state['defense'],state['money']))
         self.assertEqual(len(set(game.HERO_HEADS)),3)
+        self.assertTrue(all(head[0]==0xfc and head[1]==0x1fe for head in game.HERO_HEADS))
         self.assertEqual(stats,[(10,10,2,0,0)]*3)
 
     def test_six_routes_and_save_load_preserve_first_country_not_destination(self):
@@ -55,18 +56,27 @@ class HeroOriginTests(unittest.TestCase):
                     else:pixels.difference_update(area)
                 versions.append(pixels)
             self.assertEqual({(61-x,y) for x,y in versions[0]},versions[1])
+            self.assertTrue(versions[0])
+            self.assertEqual(max(y for _,y in versions[0]),34)
             designs.append(frozenset(versions[0]))
         self.assertEqual(len(set(designs)),3)
         self.assertEqual(game.HERO_HEADS,original)
 
     def test_only_initial_country_menu_previews_different_hero_heads(self):
-        for state,expected in ((new_game_state(),3),(f.state(progress=5,route=[2]),0)):
+        for state,expected in ((new_game_state(),1),(f.state(progress=5,route=[2]),0)):
             with patch.object(game,'draw_rows',wraps=game.draw_rows) as rows:
                 game.draw_game(state)
                 heads=[c.args[1] for c in rows.call_args_list if c.args[1] in game.HERO_HEADS]
                 self.assertEqual(len(heads),expected)
         texts=[c.args[0] for c in game.thumby.display.drawText.call_args_list]
         self.assertIn('YOUR COUNTRY',texts);self.assertIn('NEXT COUNTRY',texts)
+        for region in range(3):
+            state=new_game_state();state['menu_selection']=region;before=deepcopy(state)
+            with patch.object(game,'draw_hero_hair',wraps=game.draw_hero_hair) as hair:
+                game.draw_game(state)
+                self.assertEqual(hair.call_args.args[1],region)
+            self.assertEqual(state,before)
+
 
     def test_damage_and_cutscenes_use_the_origin_hair(self):
         state=f.state(screen_state='battle',progress=10,route=[2,0,1],active_enemy=True,
