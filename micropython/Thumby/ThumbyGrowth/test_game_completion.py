@@ -62,6 +62,78 @@ class GameCompletionTests(unittest.TestCase):
         self.assertEqual(state['equipped_weapon' if item<2 else 'equipped_armor'],item)
         return self.frame(state,B=True)
 
+    def test_new_economy_completes_fifteen_fights_using_only_earned_money_and_inputs(self):
+        state=new_game_state()
+        purchases=[4,6,7,8,5,9]
+        prices={4:60,6:50,7:60,8:60,5:15,9:80}
+        seen=set();skill_used=False;healed=False
+        with patch.object(game,'draw_game'):
+            for stage in range(15):
+                if state['screen_state']=='country_select':
+                    state=self.frame(state,A=True)
+                # Menu selection changes are actual button edges, never injected state.
+                while state['menu_selection']:
+                    state=self.frame(state,U=True)
+                state=self.frame(state,A=True)
+                self.assertEqual(state['screen_state'],'battle')
+                shot=False
+                for tick in range(2000):
+                    gap=state['enemy_x']-state['player_x']-6
+                    if (state['skill_owned'] and not skill_used and gap<=12
+                            and state['player_attack_cooldown']<=1):
+                        for keys in ({'U':True,'U_held':True},{},{'U':True,'U_held':True},{},{'A':True}):
+                            state=self.frame(state,**keys)
+                        self.assertEqual(state['attack_kind'],'skill')
+                        skill_used=True
+                    elif state['HP']<state['maxHP'] and state['potions']:
+                        state=self.frame(state,A=True,B=True)
+                        state=self.frame(state,D=True);state=self.frame(state,D=True)
+                        before=state['HP'];state=self.frame(state,A=True)
+                        self.assertGreater(state['HP'],before)
+                        state=self.frame(state,B=True);healed=True
+                    else:
+                        shooting=(state['equipped_weapon']==4 and not shot and 0<=gap<=38
+                                  and state['player_attack_cooldown']<=1)
+                        state=self.frame(state,R=gap>2,L=gap<0,
+                                         A=shooting,B=not shooting and tick%2==0)
+                        if shooting:
+                            self.assertEqual(state['attack_kind'],'shot');shot=True
+                    self.assertNotEqual(state['screen_state'],'defeat')
+                    if state['screen_state']!='battle':break
+                else:self.fail('New economy encounter exceeded 2000 input frames')
+                self.assertEqual(state['progress'],stage+1)
+                if state['screen_state']=='country_select':
+                    state=self.frame(state,A=True)
+                while purchases and state['money']>=prices[purchases[0]] and state['progress']<15:
+                    item=purchases.pop(0)
+                    while state['menu_selection']:state=self.frame(state,U=True)
+                    state=self.frame(state,D=True);state=self.frame(state,A=True)
+                    for _ in range(item):state=self.frame(state,D=True)
+                    before=state['money'];state=self.frame(state,A=True)
+                    self.assertEqual(state['money'],before-prices[item]);seen.add(item)
+                    state=self.frame(state,B=True)
+                    if item==4:
+                        state=self.frame(state,D=True);state=self.frame(state,D=True)
+                        state=self.frame(state,A=True)
+                        for _ in range(4):state=self.frame(state,D=True)
+                        state=self.frame(state,A=True)
+                        self.assertEqual(state['equipped_weapon'],4)
+                        state=self.frame(state,B=True)
+            self.assertEqual(seen,{4,5,6,7,8,9})
+            self.assertEqual(state['money'],45)
+            self.assertTrue(skill_used)
+            self.assertTrue(healed)
+            self.assertEqual((state['hp_growth'],state['atk_growth'],state['def_growth']),(1,1,1))
+            self.assertEqual(state['route'],[0,1,2])
+            state=self.frame(state,B=True)
+            self.assertEqual(state['save_status'],'SAVED')
+            restored=game.load_save_data()
+            self.assertEqual(encode_save_data(restored),encode_save_data(state))
+            state=self.frame(restored,A=True)
+            self.assertEqual((state['progress'],state['money'],state['screen_state']),(0,0,'country_select'))
+        game.draw_game(restored)
+        self.assertIn('QUEST CLEAR',[call.args[0] for call in game.thumby.display.drawText.call_args_list])
+
     def test_fifteen_stage_game_purchase_equip_save_load_and_ending(self):
         state = initial()
         rewards = (20,30,20,30,20,30,20,30,20,30,20,30,20,30,20)

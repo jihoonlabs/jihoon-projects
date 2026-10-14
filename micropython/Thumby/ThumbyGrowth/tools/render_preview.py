@@ -87,10 +87,19 @@ def scene_animation(game,display,path):
     frames[0].save(path,save_all=True,append_images=frames[1:],duration=200,loop=0,optimize=True)
 
 
+def title_animation(game,display,path):
+    frames=[]
+    for frame in (0,116):
+        game.title_frame(frame)
+        frames.append(display.image.convert('RGB').resize((288,160),Image.Resampling.NEAREST))
+    frames[0].save(path,save_all=True,append_images=frames[1:],duration=[3860,140],loop=0,optimize=True)
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--output',required=True)
     parser.add_argument('--scenes',required=True)
     parser.add_argument('--animation',help='PC-only GIF of the real scene helper')
+    parser.add_argument('--title-animation',help='PC-only GIF of the frame-driven title blink')
     args=parser.parse_args()
     game,display=setup()
     from rules import new_game_state,decode_save_data
@@ -117,3 +126,5 @@ if __name__=='__main__':
     gallery(frames+cuts,args.output,3)
     if args.animation:
         scene_animation(game,display,args.animation)
+    if args.title_animation:
+        title_animation(game,display,args.title_animation)

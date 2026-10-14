@@ -1,6 +1,7 @@
 # Ollama로 썸비 작업 이어가기
 
-현재 게임은 `epic/thumby-growth`의 ThumbyGrowth다. 집의 Ollama와 외부 AI가 같은 Git/WORK를 이어받는다.
+현재 게임은 `epic/thumby-growth`의 ThumbyGrowth다.
+현재 사용자 우선순위는 이 게임 하나의 완성이며 Ollama 실행기 추가 개선/실제 모델 평가는 그 뒤 검토한다. 기존 기능은 유지한다. 집의 Ollama와 외부 AI가 같은 Git/WORK를 이어받는다.
 `이어서 해` 또는 `/continue`는 조회가 아니라 WORK의 합의된 작업 하나를 구현하는 입구다.
 
 ## 실행

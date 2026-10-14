@@ -56,6 +56,18 @@ def draw_rows(display, rows, x, y, width, mirror=False, min_y=0):
                 display.drawFilledRectangle(left,y+row,right-left,1,1)
 
 
+def draw_portrait(display,rows,x,y,frame=0):
+    draw_rows(display,rows,x,y,16)
+    if frame%120>=116:
+        # Close only the shared eye area; face, hair and collar remain original.
+        for eye in (5,9):
+            for top,height,color in ((8,2,0),(9,1,1)):
+                left,right=max(0,x+eye),min(72,x+eye+3)
+                first,last=max(0,y+top),min(40,y+top+height)
+                if right>left and last>first:
+                    display.drawFilledRectangle(left,first,right-left,last-first,color)
+
+
 def character_head(state, player):
     if player:
         return HERO_HEAD
@@ -166,8 +178,10 @@ def main_loop():
     thumby.display.setFPS(30)
     music = {'track': None, 'tick': 0}
     action = None
+    title_tick = 0
     while action is None:
-        action = title_frame()
+        action = title_frame(title_tick)
+        title_tick = (title_tick+1)%120
         music = step_music(music, {'screen_state':'title'})
         if action in ('opening','ending'):
             music = play_scene(action,new_game_state(),music)
@@ -265,10 +279,10 @@ def cutscene_frame(kind,frame,state):
     return bool(thumby.buttonA.justPressed() or thumby.buttonB.justPressed())
 
 
-def title_frame():
+def title_frame(frame=0):
     display = thumby.display
     display.fill(0)
-    draw_rows(display,PORTRAIT_ROWS,1,0,16)
+    draw_portrait(display,PORTRAIT_ROWS,1,0,frame)
     display.drawText('GROWTH', 24, 0, 1)
     display.drawText('U:INTRO', 24, 8, 1)
     display.drawText('D:ENDING', 24, 16, 1)
@@ -387,7 +401,7 @@ def draw_game(state):
     elif screen in ('shop_detail', 'equip_detail'):
         item = state['menu_selection']
         names = ITEM_NAMES
-        draw_rows(display,portrait_rows(state,True),0,0,16)
+        draw_portrait(display,portrait_rows(state,True),0,0)
         display.drawText(names[item], 20, 0, 1)
         display.drawText('P:'+str(get_item_price(item)), 20, 8, 1)
         effect = ITEM_EFFECTS[item]
