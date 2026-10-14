@@ -1,20 +1,23 @@
-# Ticket Board Design Child
+# Ticket Account Entry Recovery Child
 
 owner_repo: jihoonlabs/jihoon-projects
-owner_branch: feature/ticket-board-design
+owner_branch: feature/ticket-auth-recovery
 role: child
-status: validated-user-review-pending
+status: validated-adoption-pending
 parent_branch: feature/ticket
-base_sha: a02f37781e0c2fbc5d8852e1f26fcaecb2edf582
+base_sha: 9269be437b16cfe9e2a9db55e1f7deec558d3faa
 
 ## Responsibility / Boundary
-利用者の実画面指摘に合わせ、Header/toolbarの階層と余白、Project色の強さ、カードの可読性、dark-system下の入力を調整する。既存機能・権限・API・DBは変更しない。
+Isolate delayed verification-email resend responses from newer email input and login attempts. Authentication requirements, API, database, mail configuration and approved design are unchanged.
 
 ## Validation / Handoff
-- アプリ検証SHA: `c5417c648f1380dd673b26f1c8317c26ad817346`。公開treeと検証済みローカルファイルの一致を確認した。
-- 共通Headerを小さくし、board toolbarをProject/操作とcontext/filterの2段に整理。管理ボタンの表示を短くし、既存accessible nameと操作を維持した。
-- Project keyから決まる色を維持し、card背景をwhiteと混色して淡くした。タイトルのweight/line-heightと列の幅・間隔を調整した。
-- boardとheaderをlight color-schemeとし、dark-systemでも検索入力の背景/文字を明示した。
-- React全29 files / 208 tests、TypeScript、ESLint、変更TSX/CSSのPrettier、production buildが成功。
-- 実Chromiumのdark-systemで1440/940/393pxを確認。ページ横overflowなし、検索背景/文字、8 cards、mobile detailの画面内収まり、pageerror 0件を確認。1440pxは全5列を表示し、940/393pxはboard内で横scrollする。画像も目視確認した。API fixtureによる表示検証であり、実Laravel接続ではない。
-- 利用者による修正後画面の確認は残る。API・DB・権限変更はない。
+- Application: `8ad9e165adf04fa4958773dbe79726a7c6b35fe7`.
+- Reproduced stale resend success removing the new account retry button, and stale resend failure overwriting its login error, before correction.
+- Ignore old success/failure after email changes or a new login attempt. Always release resend loading state.
+- Four delayed response cases cover success/failure and changed/unchanged email. Existing successful resend and rate-limit recovery remain passing.
+- Child LoginForm: 12 tests passed; TypeScript and changed-file ESLint passed.
+- Applied the same application to existing `integration/ticket-recovery-20261014` after the two Ticket recovery fixes. Authentication boundary: 12 tests passed; final combined frontend: 29 files / 216 tests passed, TypeScript, ESLint, Prettier and production build passed.
+- Application boundary: LoginForm.tsx and its existing EmailVerification.test.tsx. No company mail settings, DB or environment files were changed.
+- Real browser/Laravel/MySQL/SMTP connection checks were not executed. React tests use simulated HTTP responses, not actual company email delivery.
+- Local Epic `5af147b` remains unavailable. Epic/main adoption is pending comparison with that local palette adoption.
+- Continue from the existing integration candidate and preserve approved original design; Jira is only a workflow reference. V1 remains pending actual internal-use confirmation.
