@@ -22,3 +22,9 @@ Prevent delayed successful drag responses from clearing a newer Project list fai
 - The reported local Epic `5af147b` is unavailable here. No Epic/main adoption, palette reconstruction or user DB/environment modification was performed.
 - Next: compare with the actual local adoption and apply the application commits in an isolated integration candidate, then run related regression and connection checks before Epic adoption. Keep the local palette and its adoption record.
 - V1 remains pending actual user workflow confirmation. No new features were added.
+
+## Internal-use readiness findings
+- Minimum workflow: account access/recovery, Project creation and membership, Ticket creation/assignment/priority/status/search, comments, completion and Project restore. Existing code exposes these flows; no additional feature was assumed necessary solely from a checklist.
+- Registration requires email verification. Verification resend and password reset exist, but the checked-in mail default/example use `log`. Actual internal mail delivery configuration and the new-account-to-first-Ticket flow have not been verified here.
+- Existing backend tests cover membership isolation, write restrictions, assignment to Project members, leadership transfer and archive rejection for unfinished Tickets. These tests were inspected, not executed in this Child.
+- Before internal-use completion, verify the actual account-entry method, permissions with separate users, persistence/reconnection and both pending fixes together with the local palette adoption. Do not treat fixture or unit-test success as completion.
