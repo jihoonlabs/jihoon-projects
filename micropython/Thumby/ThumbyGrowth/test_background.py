@@ -45,6 +45,18 @@ class BackgroundTests(unittest.TestCase):
             game.draw_background(game.thumby.display,stage,24)
             self.assertNotEqual(origin,self.rectangles())
 
+    def test_compact_scenery_leaves_three_depths_of_open_floor(self):
+        for stage in range(15):
+            game.thumby.display.reset_mock()
+            game.draw_background(game.thumby.display,stage,24)
+            calls=self.rectangles()
+            scenery=[r for r in calls if r[1]<21]
+            self.assertTrue(scenery)
+            self.assertTrue(all(y+h<=21 for x,y,w,h,color in scenery))
+            floor=[r for r in calls if r[1]>=21]
+            self.assertEqual({r[1] for r in floor},{23,29,37})
+            self.assertTrue(all(r[3]==1 and r[2]<=3 for r in floor))
+
     def test_actor_backing_follows_background_and_does_not_cover_hud(self):
         state=fixtures.state(screen_state='battle',progress=4,active_enemy=True,
                              player_x=16,player_y=15,enemy_x=30,enemy_y=28,enemy_hp=16)

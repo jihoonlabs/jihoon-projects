@@ -136,11 +136,14 @@ def scene_rect(display, x, y, width, height, color=1):
 def draw_background(display, progress, camera):
     stage = min(max(0, progress), GOAL_STAGES-1)
     for x, y, width, height in SCENERY[stage]:
-        scene_rect(display, x-camera//3, y, width, height)
-    # Sparse floor marks scroll at world speed, making movement visible.
-    for world_x in range(0,144,16):
-        scene_rect(display,world_x-camera,38,3,1)
-        scene_rect(display,world_x+7-camera,35,1,1)
+        # Small distant buildings leave the actor-foot plane (y=21..39) open.
+        top = 14+(y-14)//3
+        scene_rect(display, x*3//4-camera//3, top, max(1,width*3//4),
+                   min(max(1,(height+2)//3),21-top))
+    # Three depths of road texture show a broad floor, rather than one platform.
+    for y,spacing,width,offset in ((23,12,1,3),(29,18,2,8),(37,24,3,0)):
+        for world_x in range(-24,168,spacing):
+            scene_rect(display,world_x+offset-camera,y,width,1)
 
 
 def main_loop():
