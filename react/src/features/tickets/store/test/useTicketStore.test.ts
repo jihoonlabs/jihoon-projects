@@ -36,6 +36,45 @@ beforeEach(() => {
 });
 
 describe('Ticket state and persisted order', () => {
+  it('keeps another project unchanged while a drag awaits confirmation and refresh fails', async () => {
+    const moving = ticket('1');
+    const target = ticket('2', 0, 'DONE');
+    const otherProject = { ...ticket('3', 0, 'DONE'), projectId: '2' };
+    useTicketStore.setState({ tickets: [moving, target, otherProject] });
+    const request = deferred<Awaited<ReturnType<typeof api.moveTicket>>>();
+    vi.mocked(api.moveTicket).mockReturnValue(request.promise);
+    vi.mocked(api.fetchTickets).mockRejectedValue(new Error('refresh failed'));
+
+    const move = state().moveTicket('1', 'DONE', 1, 3);
+    const pendingTickets = state().tickets;
+    request.resolve({ ticket: ticket('1', 1, 'DONE'), boardVersion: 4 });
+    await expect(move).resolves.toBe(4);
+
+    expect(pendingTickets.find((item) => item.id === '3')).toBe(otherProject);
+    expect(pendingTickets.find((item) => item.id === '1')?.position).toBe(1);
+    expect(state().tickets.find((item) => item.id === '3')).toBe(otherProject);
+    expect(state().error).toBe('refresh failed');
+  });
+
+  it('restores a rejected drag without changing another project order', async () => {
+    const moving = ticket('1', 2);
+    const target = ticket('2', 0, 'DONE');
+    const otherProject = { ...ticket('3', 7, 'DONE'), projectId: '2' };
+    useTicketStore.setState({ tickets: [moving, target, otherProject] });
+    const request = deferred<Awaited<ReturnType<typeof api.moveTicket>>>();
+    vi.mocked(api.moveTicket).mockReturnValue(request.promise);
+    const move = expect(state().moveTicket('1', 'DONE', 0, 3)).rejects.toThrow(
+      'drag failed',
+    );
+    request.reject(new Error('drag failed'));
+    await move;
+
+    expect(state().tickets.find((item) => item.id === '1')).toBe(moving);
+    expect(state().tickets.find((item) => item.id === '2')).toBe(target);
+    expect(state().tickets.find((item) => item.id === '3')).toBe(otherProject);
+    expect(api.fetchTickets).not.toHaveBeenCalled();
+  });
+
   it('revalidates discarded GETs after a write and includes unrelated server tickets', async () => {
     useTicketStore.setState({ tickets: [ticket('1')] });
     const request = deferred<Ticket>();

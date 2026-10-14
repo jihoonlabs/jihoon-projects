@@ -453,6 +453,7 @@ function TicketModalContent({
               タイトル
               <input
                 value={title}
+                disabled={submitting}
                 onChange={(event) => setTitle(event.target.value)}
                 required
                 maxLength={255}
@@ -463,6 +464,7 @@ function TicketModalContent({
               説明
               <textarea
                 value={description}
+                disabled={submitting}
                 onChange={(event) => setDescription(event.target.value)}
                 rows={5}
               />
@@ -471,6 +473,7 @@ function TicketModalContent({
               ステータス
               <select
                 value={status}
+                disabled={submitting}
                 onChange={(event) =>
                   setStatus(event.target.value as TicketStatus)
                 }
@@ -486,6 +489,7 @@ function TicketModalContent({
               優先度
               <select
                 value={priority}
+                disabled={submitting}
                 onChange={(event) =>
                   setPriority(event.target.value as TicketPriority)
                 }
@@ -501,6 +505,7 @@ function TicketModalContent({
               担当者
               <select
                 value={assigneeId}
+                disabled={submitting}
                 onChange={(event) => setAssigneeId(event.target.value)}
               >
                 <option value="">未割り当て</option>

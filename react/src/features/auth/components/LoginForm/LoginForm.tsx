@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { LoginApiError, loginApi } from '@/features/auth/api/login';
 import { resendVerificationEmailApi } from '@/features/auth/api/resendVerificationEmail';
@@ -64,6 +64,7 @@ export function LoginForm({
     useState(false);
   const [resendingVerificationEmail, setResendingVerificationEmail] =
     useState(false);
+  const verificationRevision = useRef(0);
 
   useEffect(() => {
     // 表示済みのクエリパラメータをURLから削除する
@@ -78,6 +79,7 @@ export function LoginForm({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    verificationRevision.current += 1;
 
     setServerError('');
     setSuccessMessage('');
@@ -125,6 +127,7 @@ export function LoginForm({
   };
 
   const handleResendVerificationEmail = async () => {
+    const revision = verificationRevision.current;
     setServerError('');
     setSuccessMessage('');
     setResendingVerificationEmail(true);
@@ -134,9 +137,12 @@ export function LoginForm({
         email,
       });
 
+      // 入力変更・新しいログイン後に、古い再送応答を表示へ反映しない。
+      if (revision !== verificationRevision.current) return;
       setSuccessMessage(data.message);
       setVerificationEmailRequired(false);
     } catch (error) {
+      if (revision !== verificationRevision.current) return;
       if (error instanceof Error) {
         setServerError(error.message);
         return;
@@ -151,8 +157,16 @@ export function LoginForm({
   return (
     <div className={styles.container}>
       <div className={styles.card}>
-        <h1>タスク管理</h1>
-        <p>チケット管理</p>
+        <header className={styles.heading}>
+          <div className={styles.identity}>
+            <span className={styles.mark} aria-hidden="true">
+              T
+            </span>
+            <span className={styles.eyebrow}>TICKET WORKSPACE</span>
+          </div>
+          <h1>タスク管理</h1>
+          <p>チケット管理</p>
+        </header>
 
         {successMessage && (
           <div className={styles.successMessage} role="status">
@@ -192,6 +206,7 @@ export function LoginForm({
               aria-describedby={errors.email ? 'email-error' : undefined}
               value={email}
               onChange={(event) => {
+                verificationRevision.current += 1;
                 setEmail(event.target.value);
                 setVerificationEmailRequired(false);
 
@@ -216,37 +231,42 @@ export function LoginForm({
           <div className={styles.inputGroup}>
             <label htmlFor="password">パスワード</label>
 
-            <input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              placeholder="••••••••"
-              aria-invalid={Boolean(errors.password)}
-              aria-describedby={errors.password ? 'password-error' : undefined}
-              value={password}
-              onChange={(event) => {
-                setPassword(event.target.value);
-
-                if (errors.password) {
-                  setErrors((prev) => ({
-                    ...prev,
-                    password: undefined,
-                  }));
+            <div className={styles.passwordField}>
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                aria-invalid={Boolean(errors.password)}
+                aria-describedby={
+                  errors.password ? 'password-error' : undefined
                 }
-              }}
-              required
-              disabled={loading}
-            />
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
 
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              aria-label={
-                showPassword ? 'パスワードを隠す' : 'パスワードを表示'
-              }
-            >
-              {showPassword ? '隠す' : '表示'}
-            </button>
+                  if (errors.password) {
+                    setErrors((prev) => ({
+                      ...prev,
+                      password: undefined,
+                    }));
+                  }
+                }}
+                required
+                disabled={loading}
+              />
+
+              <button
+                type="button"
+                className={styles.passwordToggle}
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={
+                  showPassword ? 'パスワードを隠す' : 'パスワードを表示'
+                }
+              >
+                {showPassword ? '隠す' : '表示'}
+              </button>
+            </div>
 
             {errors.password && (
               <span id="password-error" className={styles.fieldError}>
@@ -265,21 +285,26 @@ export function LoginForm({
             {loading ? 'ログイン中...' : 'ログイン'}
           </button>
 
-          <button
-            type="button"
-            onClick={() => handleSocialLogin('google')}
-            disabled={loading}
-          >
-            Googleでログイン
-          </button>
+          <div className={styles.alternativeLabel}>その他のログイン方法</div>
+          <div className={styles.socialGroup}>
+            <button
+              type="button"
+              className={styles.socialButton}
+              onClick={() => handleSocialLogin('google')}
+              disabled={loading}
+            >
+              Googleでログイン
+            </button>
 
-          <button
-            type="button"
-            onClick={() => handleSocialLogin('line')}
-            disabled={loading}
-          >
-            LINEでログイン
-          </button>
+            <button
+              type="button"
+              className={styles.socialButton}
+              onClick={() => handleSocialLogin('line')}
+              disabled={loading}
+            >
+              LINEでログイン
+            </button>
+          </div>
         </form>
 
         <div className={styles.registerGuide}>

@@ -356,6 +356,8 @@ export function TicketBoardView() {
       overPosition >= 0
         ? overPosition
         : targetTickets.filter((ticket) => ticket.id !== activeId).length;
+    const projectListAtStart = projectListSequence.current;
+    const projectRevisionAtStart = projectRevision.current;
 
     try {
       const boardVersion = await moveTicket(
@@ -371,7 +373,12 @@ export function TicketBoardView() {
             : project,
         ),
       );
-      setProjectError(null);
+      // 遅延した移動成功で、後から発生した一覧取得エラーを消さない。
+      if (
+        projectListAtStart === projectListSequence.current &&
+        projectRevisionAtStart === projectRevision.current
+      )
+        setProjectError(null);
     } catch (reason) {
       // 並行書き込み後の再取得がstoreのエラーを消しても、移動失敗を表示する。
       setProjectError(
