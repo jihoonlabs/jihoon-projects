@@ -134,4 +134,4 @@ TinyCircuits의 일반 Thumby 게임 저장소에서 아래 파일을 직접 읽
 큰 수치에서도 72×40 경계를 유지하며 돈이 사라지지 않게 줄여 표시한다. PC 모의 글꼴의 + 기호도 보완했다.
 기기 glyph/가독성/FPS/heap은 미검증이다.
 
-현재 전투 비교: [대기 무기·공격·X 눈 피격](assets/thumby-combat-feedback.png), [저속 PC 시연](assets/thumby-combat-feedback.gif). 머리띠는 생략하고 평소 표정은 단순하게 유지한다.
+현재 전투 비교: [대기 무기·공격·큰 X 피격](assets/thumby-combat-feedback.png), [저속 PC 시연](assets/thumby-combat-feedback.gif). 머리띠는 생략하고 평소 표정은 단순하게 유지한다.

@@ -112,12 +112,12 @@ def actor_screen_y(world_y):
 
 
 def draw_hurt_face(display,x,y):
-    # Long X eyes and a flat mouth on a plain white face; no expression system.
-    scene_rect(display,x+1,y+3,8,4,1)
-    for eye in (1,6):
-        for row in range(3):
-            for col in ((row,2-row) if row!=1 else (1,)):
-                scene_rect(display,x+eye+col,y+3+row,1,1,0)
+    # One wide cartoon X across the eye line, with a separate flat mouth.
+    scene_rect(display,x,y+3,10,4,1)
+    for row in (0,2):
+        scene_rect(display,x+1,y+3+row,2,1,0)
+        scene_rect(display,x+7,y+3+row,2,1,0)
+    scene_rect(display,x+3,y+4,4,1,0)
     scene_rect(display,x+3,y+6,4,1,0)
 
 
