@@ -11,7 +11,8 @@ if sys.implementation.name == 'micropython':
 from rules import (update_state, encode_save_data, decode_save_data,
                    GOAL_STAGES, ENCOUNTERS, REGIONS, STAGES_PER_REGION,
                    CITY_NAMES, stage_index, new_game_state, ITEM_NAMES,
-                   ITEM_EFFECTS, get_item_price, item_owned, can_buy)
+                   ITEM_EFFECTS, get_item_price, item_owned,
+                   item_counter, purchase_status)
 
 from scene_art import SCENE_BITMAPS
 
@@ -276,7 +277,12 @@ def cutscene_frame(kind,frame,state):
     display.drawText('GO' if kind=='opening' else 'HOME' if picture==3 else 'CLEAR',0,33,1)
     display.drawText('A/B',54,33,1)
     display.update()
-    return bool(thumby.buttonA.justPressed() or thumby.buttonB.justPressed())
+    # Sample both edges even when A skips, so a latched B cannot save next screen.
+    a=thumby.buttonA.justPressed()
+    b=thumby.buttonB.justPressed()
+    thumby.buttonU.justPressed()
+    thumby.buttonD.justPressed()
+    return bool(a or b)
 
 
 def title_frame(frame=0):
@@ -289,14 +295,19 @@ def title_frame(frame=0):
     display.drawText('A:NEW', 0, 23, 1)
     display.drawText('B:LOAD', 0, 33, 1)
     display.update()
+    # Consume every menu edge once; unchosen buttons must not leak into the game.
+    a=thumby.buttonA.justPressed()
+    b=thumby.buttonB.justPressed()
+    u=thumby.buttonU.justPressed()
+    d=thumby.buttonD.justPressed()
     # Loading takes priority if both buttons are pressed; it cannot erase a save.
-    if thumby.buttonB.justPressed():
+    if b:
         return 'load'
-    if thumby.buttonA.justPressed():
+    if a:
         return 'new'
-    if thumby.buttonU.justPressed():
+    if u:
         return 'opening'
-    if thumby.buttonD.justPressed():
+    if d:
         return 'ending'
     return None
 
@@ -392,7 +403,8 @@ def draw_game(state):
         cash=str(state['money']) if state['money']<1000 else str(min(999,state['money']//1000))+'k'
         display.drawText(status if status in ('SAVED','SAVE ERR') else '$'+cash+' '+stage_code(state),0,20,1)
         display.drawText('P'+str(state.get('potions',0)),60,20,1)
-        for row,label in enumerate(('BACK','SAVE','HEAL')):
+        healing='NONE' if not state.get('potions',0) else 'FULL' if state['HP']>=state['maxHP'] else 'HEAL'
+        for row,label in enumerate(('BACK','SAVE',healing)):
             x=row*24
             selected=row==state['menu_selection']
             if selected:
@@ -412,11 +424,19 @@ def draw_game(state):
         owned = 'Y' if item_owned(state,item) else 'N'
         equipped = item in (state['equipped_weapon'], state['equipped_armor'])
         if screen == 'shop_detail':
-            action = 'OWNED' if item_owned(state,item) else ('A:BUY' if can_buy(state,item) else 'LIMIT/CASH')
+            action = purchase_status(state,item)
         else:
             action = 'BUY FIRST' if not item_owned(state,item) else ('A:REMOVE' if equipped else 'A:EQUIP')
         display.drawText(action, 0, 24, 1)
-        display.drawText('O:'+owned+' E:'+('Y' if equipped else 'N'), 0, 32, 1)
+        if item==5:
+            detail='QTY'+str(item_counter(state,item))+'/9'
+        elif item in (6,7,8):
+            detail='LV'+str(item_counter(state,item))+'/5'
+        elif item==9:
+            detail='UU+A READY' if item_owned(state,item) else 'BUY TO LEARN'
+        else:
+            detail='O:'+owned+' E:'+('Y' if equipped else 'N')
+        display.drawText(detail, 0, 32, 1)
     elif screen == 'defeat':
         display.drawText('DEFEAT', 0, 0, 1)
         display.drawText('A:RETRY', 0, 20, 1)
@@ -429,19 +449,14 @@ def draw_game(state):
             choices = ITEM_NAMES if screen=='shop' else ITEM_NAMES[:5]
         index=stage_index(state)
         header = CITY_NAMES[index//5][index%5] if screen == 'safe' else screen.upper()
-        if screen in ('shop','equip'):
-            chosen = state['menu_selection']
-            if screen == 'shop':
-                header = 'BOUGHT' if item_owned(state,chosen) else ('A:BUY' if can_buy(state,chosen) else 'LIMIT/CASH')
-            else:
-                on = chosen in (state['equipped_weapon'],state['equipped_armor'])
-                header = 'BUY FIRST' if not item_owned(state,chosen) else ('ON ATK'+str(state['attack']) if on and chosen in (0,1,4) else ('ON DEF'+str(state['defense']) if on else 'A:EQUIP'))
+        cash = str(state['money']) if state['money']<1000 else str(min(999,state['money']//1000))+'k'
         if screen in ('shop','equip'):
             header = 'AT'+str(state['attack'])+' DF'+str(state['defense'])
+            if len(header)+len(cash)+1>12:
+                header='A'+str(state['attack'])+' D'+str(state['defense'])
         if status in ('SAVED','SAVE ERR'):
             header = status
         display.drawText(header, 0, 0, 1)
-        cash = str(state['money']) if state['money']<1000 else str(min(999,state['money']//1000))+'k'
         if len(header)+len(cash)+1 <= 12:
             display.drawText('$'+cash, 72-6*(len(cash)+1), 0, 1)
         start = state['menu_scroll']
@@ -458,6 +473,9 @@ def draw_game(state):
                     label += '+'
                 display.drawText(label, 0, 10+row*10, ink)
                 if screen == 'shop':
+                    counter=item_counter(state,index)
+                    if counter is not None:
+                        display.drawText(str(counter),42,10+row*10,ink)
                     display.drawText(str(get_item_price(index)), 54, 10+row*10, ink)
                 elif screen == 'equip':
                     on = index in (state['equipped_weapon'],state['equipped_armor'])

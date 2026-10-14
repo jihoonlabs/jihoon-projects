@@ -21,14 +21,27 @@ def item_owned(state, item):
     return False
 
 
-def can_buy(state,item):
-    if item_owned(state,item) or state['money'] < get_item_price(item):
-        return False
-    if item == 5:
-        return state.get('potions',0) < 9
+def item_counter(state,item):
+    if item==5:
+        return state.get('potions',0)
     if item in (6,7,8):
-        return state.get(('hp_growth','atk_growth','def_growth')[item-6],0) < GROWTH_LIMIT
-    return True
+        return state.get(('hp_growth','atk_growth','def_growth')[item-6],0)
+    return None
+
+
+def purchase_status(state,item):
+    if item_owned(state,item):
+        return 'OWNED'
+    counter=item_counter(state,item)
+    if counter is not None and counter >= (9 if item==5 else GROWTH_LIMIT):
+        return 'STOCK FULL' if item==5 else 'MAX LEVEL'
+    if state['money'] < get_item_price(item):
+        return 'NO MONEY'
+    return 'A:BUY'
+
+
+def can_buy(state,item):
+    return purchase_status(state,item)=='A:BUY'
 
 
 def apply_stats(state):

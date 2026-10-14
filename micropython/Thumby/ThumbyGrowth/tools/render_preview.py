@@ -21,7 +21,7 @@ FONT={
 '3':[33,65,69,75,49],'4':[24,20,18,127,16],'5':[39,69,69,69,57],
 '6':[60,74,73,73,48],'7':[1,113,9,5,3],'8':[54,73,73,73,54],
 '9':[6,73,73,41,30],':':[0,54,54,0,0],'/':[32,16,8,4,2],
-'$':[36,42,127,42,18],'>':[0,65,34,20,8],'-':[8]*5,' ':[0]*5}
+'$':[36,42,127,42,18],'>':[0,65,34,20,8],'-':[8]*5,'+':[8,8,62,8,8],' ':[0]*5}
 
 
 class Display:
@@ -95,11 +95,30 @@ def title_animation(game,display,path):
     frames[0].save(path,save_all=True,append_images=frames[1:],duration=[3860,140],loop=0,optimize=True)
 
 
+def shop_gallery(game,display,path):
+    from rules import new_game_state
+    examples=(
+        ('Shop / cash and levels',dict(screen_state='shop',menu_selection=8,menu_scroll=7,
+                                      attack=11,defense=7,money=100000,atk_growth=3,def_growth=5)),
+        ('Potion / quantity',dict(screen_state='shop_detail',menu_selection=5,potions=3)),
+        ('Potion / full stock',dict(screen_state='shop_detail',menu_selection=5,potions=9)),
+        ('Growth / maximum level',dict(screen_state='shop_detail',menu_selection=6,hp_growth=5)),
+        ('Skill / buy to learn',dict(screen_state='shop_detail',menu_selection=9)),
+        ('Skill / command ready',dict(screen_state='shop_detail',menu_selection=9,skill_owned=True)),
+    )
+    frames=[]
+    for label,changes in examples:
+        state=new_game_state();state.update(route=[0],money=200);state.update(changes)
+        game.draw_game(state);frames.append((label,display.image.copy()))
+    gallery(frames,path,3)
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--output',required=True)
     parser.add_argument('--scenes',required=True)
     parser.add_argument('--animation',help='PC-only GIF of the real scene helper')
     parser.add_argument('--title-animation',help='PC-only GIF of the frame-driven title blink')
+    parser.add_argument('--shop-preview',help='Current cash, stock, growth and skill screens')
     args=parser.parse_args()
     game,display=setup()
     from rules import new_game_state,decode_save_data
@@ -128,3 +147,5 @@ if __name__=='__main__':
         scene_animation(game,display,args.animation)
     if args.title_animation:
         title_animation(game,display,args.title_animation)
+    if args.shop_preview:
+        shop_gallery(game,display,args.shop_preview)
