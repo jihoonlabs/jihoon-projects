@@ -194,11 +194,11 @@ def main_loop():
         kind = None
         if previous['screen_state']=='country_select' and state['screen_state']=='safe' and state['progress']==0:
             kind = 'opening'
-        elif state['progress'] != previous['progress'] and state['progress']%5==0:
+        elif state['progress'] > previous['progress'] and state['progress']%5==0:
             kind = 'ending' if state['progress']==GOAL_STAGES else 'event'
         if kind:
             music = play_scene(kind,state,music)
-        music = step_music(music,state)
+        music = step_audio(music,previous,state)
 
 
 def play_scene(kind,state,music):
@@ -220,7 +220,7 @@ TUNES = (b'\x01\x03\x05\x08\x05\x03\x02\x00',
          b'\x01\x03\x05\x08\x00\x08\x05\x08')
 
 
-def step_music(music,state):
+def music_track(state):
     screen = state['screen_state']
     track = None
     if screen in ('title','country_select'):
@@ -229,6 +229,11 @@ def step_music(music,state):
         track = 5
     elif screen in ('battle','safe','shop','shop_detail','equip','equip_detail'):
         track = 4 if screen=='battle' and state['progress']%5==4 else 1+stage_index(state)//5
+    return track
+
+
+def step_music(music,state):
+    track=music_track(state)
     changed = track != music['track']
     if changed:
         thumby.audio.stop()
@@ -246,6 +251,55 @@ def step_music(music,state):
         else:
             thumby.audio.stop()
     return {'track':track,'tick':tick+1 if track==5 else (tick+1)%48}
+
+
+def sound_effect(previous,state):
+    # Cues come from real state changes; refused actions and held buttons are silent.
+    screen=state['screen_state']
+    if screen in ('pause','defeat','clear') or state['progress']>=GOAL_STAGES:
+        return None
+    if screen=='battle' and previous['screen_state']=='battle':
+        if state['HP']<previous['HP']:
+            return (196,3)
+        if state['enemy_hp']<previous['enemy_hp']:
+            kind=state.get('attack_kind','punch')
+            return (1047 if kind=='skill' else 880 if kind=='shot' else 392 if kind=='kick' else 659,2)
+        if state['player_attack_cooldown']>previous['player_attack_cooldown']:
+            kind=state.get('attack_kind','punch')
+            return (1318,2) if kind=='skill' else (880,2) if kind=='shot' else (330,1)
+    if state['progress']>previous['progress']:
+        return (1047,3)
+    if screen in ('shop','shop_detail') and state['money']<previous['money']:
+        return (988,2)
+    if state['save_status']!=previous['save_status']:
+        if state['save_status']=='SAVED':
+            return (784,2)
+        if state['save_status']=='SAVE ERR':
+            return (147,3)
+    return None
+
+
+def step_audio(music,previous,state):
+    track=music_track(state)
+    if track is None or track==5:
+        return step_music(music,state)
+    effect=sound_effect(previous,state)
+    if effect:
+        changed=track!=music['track']
+        if changed:
+            thumby.audio.stop()
+        tick=0 if changed else music['tick']
+        result={'track':track,'tick':(tick+1)%48}
+        frequency,frames=effect
+        thumby.audio.play(frequency,1000*frames//30)
+        result['fx_left']=frames-1
+        return result
+    if music['track']==track and music.get('fx_left',0)>0:
+        return dict(music,fx_left=music['fx_left']-1)
+    if 'fx_left' in music and music['track']==track:
+        # Resume at a note edge after the finite cue, without copying sound assets.
+        music={'track':track,'tick':((music['tick']+5)//6*6)%48}
+    return step_music(music,state)
 
 
 def draw_scene_details(display,picture,frame,region):
