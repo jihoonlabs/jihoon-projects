@@ -1,0 +1,39 @@
+{
+  "kind": "Controlled equipment/attack setups, real damage rules, silent slowed PC replay.",
+  "clips": [
+    {
+      "action": "Punch",
+      "victim": "enemy",
+      "damage": 2
+    },
+    {
+      "action": "Kick",
+      "victim": "enemy",
+      "damage": 2
+    },
+    {
+      "action": "Sword swing",
+      "victim": "enemy",
+      "damage": 6
+    },
+    {
+      "action": "Pistol shot",
+      "victim": "enemy",
+      "damage": 1
+    },
+    {
+      "action": "Player takes a hit",
+      "victim": "player",
+      "damage": 2
+    }
+  ],
+  "native_pixels": [
+    72,
+    40
+  ],
+  "source_sha256": {
+    "ThumbyGrowth.py": "f90dfcfe1e5a318abf92d682a526ac964c8e21f928a6d2f1588dc963ffe80237",
+    "rules.py": "ca12762b81210fe406b9201ac6195ae7e139dbf0b76272ea6addb0846d836d47",
+    "scene_art.py": "b339ba1c051c368b92f1a070584c71d8819659dedfd8caf576278aaa4f1dac38"
+  }
+}

@@ -16,16 +16,22 @@ from rules import (update_state, encode_save_data, decode_save_data,
 
 from scene_art import SCENE_BITMAPS
 
-# Shared 8x10 visual body: larger face, same 6x7 collision and feet position.
-HERO_HEAD = b'\x3c\x7e\x5a\x42\x3c'
-FOE_HEAD = b'\x18\x3c\x7e\x5a\x3c'
-BOSS_HEADS = (b'\x54\x7e\x5a\x42\x3c',b'\x7e\x5a\x7e\x42\x3c',b'\x42\x7e\x66\x42\x3c')
-BODY_ROWS = b'\x7c\x54\x38\x28\x6c'
-WALK_BODY_ROWS = b'\x7c\x54\x38\x18\x24'
+# Shared 10x14 period fighters; simulation collision remains 6x7.
+HERO_HEAD = (0x78,0xfc,0x1fe,0x1fe,0x1fe,0x132,0x1fe,0xfc)
+FOE_HEAD = (0x0,0x78,0xfc,0x1fe,0x17a,0x1fe,0x1ce,0xfc)
+BODY_ROWS = (0x3ff,0x1fe,0xdc,0xfc,0xcc,0x1ce)
+WALK_BODY_ROWS = (0x3ff,0x1fe,0xdc,0xfc,0x6c,0xe6)
+PUNCH_BODY = (0x78,0xf8,0x78,0xfc,0xcc,0x1ce)
+KICK_BODY = (0xf8,0x78,0x78,0xfe,0xc0,0x1c0)
+HURT_BODY = (0xfc,0x78,0xcc,0x78,0x6c,0xe7)
+GUARD_BODY = (0x1b6,0x1fe,0x78,0xfc,0xcc,0x1ce)
+BOSS_HEADS = ((0x84,0x1fe,0x3ff,0x2fd,0x1fe,0x12e,0x1fe,0xfc),
+              (0xfc,0x1fe,0x3ff,0x303,0x1fe,0x16a,0x1fe,0xfc),
+              (0x30,0xfc,0x1fe,0x3cf,0x1fe,0x1b6,0x1fe,0xfc))
 HEART_ROWS = b'\x0a\x1f\x1f\x0e\x04'
 ENEMY_ICON_ROWS = b'\x0e\x1f\x15\x0e\x0a'
-# Original large face: shared outline, headband, eyebrows, eyes and collar.
-PORTRAIT_ROWS = (0x03c0,0x0ff0,0x1ff8,0x3ffc,0x3ffc,0x2004,0x3ffc,0x2aa4,
+# Original large face: shared outline, hair, eyes and collar.
+PORTRAIT_ROWS = (0x03c0,0x0ff0,0x1ff8,0x3ffc,0x3ffc,0x3ffc,0x3ffc,0x2aa4,
                 0x2224,0x2224,0x2004,0x2184,0x1008,0x0ff0,0x0660,0x0db0)
 MERCHANT_HEADS = ((0x03c0,0x0ff0,0x1ff8),(0x0ff0,0x1ff8,0x3ffc),(0x0240,0x0ff0,0x1ff8))
 # Three tiny country motifs: leaf, lantern, petal. No per-frame bitmap buffers.
@@ -77,9 +83,111 @@ def character_head(state, player):
     return FOE_HEAD
 
 
-def character_rows(state, player):
-    # Inspection helper; rendering draws shared parts directly without joining.
-    return character_head(state,player)+(WALK_BODY_ROWS if (state['combat_frame']//5)%2 else BODY_ROWS)
+def character_pose(state,player):
+    if state.get('player_hit_flash' if player else 'enemy_hit_flash',0):
+        return 'hurt'
+    if not player:
+        return 'guard' if state.get('enemy_windup',0) else 'punch' if state['enemy_attack_cooldown']>=114 else 'idle'
+    kind=state.get('attack_kind','punch')
+    threshold=20 if kind=='skill' else 23 if kind=='shot' else 12 if kind=='kick' else 8
+    return kind if state['player_attack_cooldown']>=threshold else 'idle'
+
+
+def character_body(state,player):
+    pose=character_pose(state,player)
+    if pose=='hurt': return HURT_BODY
+    if pose=='guard': return GUARD_BODY
+    if pose=='kick': return KICK_BODY
+    if pose in ('punch','shot','skill'): return PUNCH_BODY
+    return WALK_BODY_ROWS if (state['combat_frame']//5)%2 else BODY_ROWS
+
+
+def character_rows(state,player):
+    return character_head(state,player)+character_body(state,player)
+
+
+def actor_screen_y(world_y):
+    # Perspective fits the larger figure below the HUD at every floor depth.
+    return 21+(world_y-15)*2//3
+
+
+def draw_hurt_face(display,x,y):
+    # Long X eyes and a flat mouth on a plain white face; no expression system.
+    scene_rect(display,x+1,y+3,8,4,1)
+    for eye in (1,6):
+        for row in range(3):
+            for col in ((row,2-row) if row!=1 else (1,)):
+                scene_rect(display,x+eye+col,y+3+row,1,1,0)
+    scene_rect(display,x+3,y+6,4,1,0)
+
+
+def draw_weapon(display,weapon,x,y,rightward,swing=False):
+    if weapon is None: return
+    def rect(offset,top,width,height,color=1):
+        left=x+6+offset if rightward else x-offset-width
+        scene_rect(display,left,top,width,height,color)
+    if weapon==4:
+        rect(1,y+1,5,2,0);rect(1,y+1,4,1);rect(1,y+2,1,3)
+        if swing:
+            rect(5,y-1,1,5);rect(4,y+1,3,1);rect(14,y+1,3,1)
+    elif swing:
+        length=8 if weapon==1 else 5
+        for offset in range(length): rect(offset,y+3-offset//2,2,1)
+        rect(0,y+1,1,4)
+    else:
+        length=9 if weapon==1 else 6
+        rect(1,y+3-length,3,length+2,0)
+        rect(2,y+3-length,1,length);rect(1,y+2,3,1);rect(2,y+3,1,2)
+
+
+def draw_impact(display,x,y):
+    scene_rect(display,x-4,y-4,9,9,0)
+    # Six-frame star is drawn only from a real damage latch, never on a miss.
+    for dx,dy,w,h in ((-3,0,7,1),(0,-3,1,7),(-2,-2,1,1),(2,-2,1,1),
+                       (-2,2,1,1),(2,2,1,1)):
+        scene_rect(display,x+dx,y+dy,w,h)
+
+
+def fighter_positions(state,camera):
+    px,ex=state['player_x']-camera,state['enemy_x']-camera
+    if (state['active_enemy'] and abs(px-ex)<12
+            and abs(state.get('player_y',28)-state.get('enemy_y',28))<=4):
+        # Keep large heads distinct at contact without changing world hitboxes.
+        left=max(2,min(52,(px+ex-12)//2))
+        px,ex=(left,left+12) if px<ex else (left+12,left)
+    return px,ex
+
+
+def draw_fighter(display,state,player,x,y):
+    rightward=state['direction']=='R' if player else state['player_x']>state['enemy_x']
+    pose=character_pose(state,player)
+    hurt=pose=='hurt'
+    # Visual recoil does not move the simulation hitbox.
+    lean=(-2 if rightward else 2) if hurt else 0
+    scene_rect(display,x-3,y-8,12,15,0)
+    draw_rows(display,character_head(state,player),x-2+lean,y-7,10,not rightward,14)
+    draw_rows(display,character_body(state,player),x-2,y+1,10,not rightward,14)
+    if hurt: draw_hurt_face(display,x-2+lean,y-7)
+    if player and state['equipped_armor'] is not None:
+        scene_rect(display,x+1,y+2,4,2,1);scene_rect(display,x+2,y+2,2,1,0)
+    weapon=state['equipped_weapon'] if player else None
+    swinging=pose in ('punch','shot','skill')
+    draw_weapon(display,weapon,x,y,rightward,swinging and (weapon!=4 or pose=='shot'))
+    front=x+6 if rightward else x-5
+    if pose=='kick':
+        scene_rect(display,front,y+4,5,2);scene_rect(display,front+(3 if rightward else 0),y+3,2,3)
+    elif swinging and weapon is None:
+        scene_rect(display,front,y+2,5,2)
+        scene_rect(display,front+(3 if rightward else 0),y+1,2,3)
+    if pose=='skill':
+        for offset in range(3):
+            left=x+9+offset if rightward else x-5-offset
+            scene_rect(display,left,y-1+offset,1,6-2*offset)
+    if pose=='guard':
+        scene_rect(display,x+2,y-10,1,2);scene_rect(display,x+2,y-7,1,1)
+    if hurt:
+        impact_x=x+8 if rightward else x-2
+        draw_impact(display,impact_x,y+2)
 
 
 # Original monochrome scenery, stored once. These are decoration, not obstacles.
@@ -323,8 +431,8 @@ def cutscene_frame(kind,frame,state):
     # A tiny travelling silhouette animates the static cuts without frame buffers.
     x = 8+(frame%45)//2 if picture in (0,1) else 48-(frame%45)//2
     display.drawFilledRectangle(x-1,21,10,11,0)
-    draw_rows(display,HERO_HEAD,x,22,8,picture==3)
-    draw_rows(display,WALK_BODY_ROWS if (frame//5)%2 else BODY_ROWS,x,27,8,picture==3)
+    draw_rows(display,HERO_HEAD,x,18,10,picture==3)
+    draw_rows(display,WALK_BODY_ROWS if (frame//5)%2 else BODY_ROWS,x,26,10,picture==3)
     if picture==1:
         for label,x,y in (('KR',3,18),('CN',30,2),('JP',57,18)):
             display.drawText(label,x,y,1)
@@ -415,38 +523,13 @@ def draw_game(state):
             width = max(0, min(28, 28*hp//max(1,maximum)))
             if width:
                 display.drawFilledRectangle(x+1, 10, width, 2, 1)
-        actors = [(True, state['player_x'], state.get('player_y',28))]
+        px,ex=fighter_positions(state,camera)
+        actors = [(True,px,state.get('player_y',28))]
         if state['active_enemy']:
-            actors.append((False, state['enemy_x'], state.get('enemy_y',28)))
+            actors.append((False,ex,state.get('enemy_y',28)))
         actors.sort(key=lambda actor: actor[2])
-        for player, world_x, y in actors:
-            x = world_x-camera
-            # A black one-pixel backing separates white actors from white scenery.
-            scene_rect(display, x-2, y-4, 10, 11, 0)
-            rightward = state['direction']=='R' if player else world_x<state['player_x']
-            flashing = state.get('player_hit_flash' if player else 'enemy_hit_flash',0)>0 and state['combat_frame']%2==0
-            if not flashing:
-                draw_rows(display,character_head(state,player),x-1,y-3,8,not rightward,14)
-                body = WALK_BODY_ROWS if (state['combat_frame']//5)%2 else BODY_ROWS
-                draw_rows(display,body,x-1,y+2,8,not rightward)
-            if not player and state.get('enemy_windup',0):
-                # Small outlined warning marker, kept below the HUD.
-                warning_y = max(20,y)
-                scene_rect(display,x+1,warning_y-6,4,5,0)
-                scene_rect(display,x+2,warning_y-5,1,2,1)
-                scene_rect(display,x+2,warning_y-2,1,1,1)
-            kicking = state.get('attack_kind')=='kick'
-            shooting = state.get('attack_kind')=='shot'
-            special = state.get('attack_kind')=='skill'
-            if player and not flashing and state['player_attack_cooldown']>=(26 if shooting or special else 15 if kicking else 11):
-                length = 12 if special else 4 if kicking or shooting else (2 if state['equipped_weapon'] is None else (6 if state['equipped_weapon']==0 else 8))
-                front = x+6 if rightward else x-length
-                left, right = max(0,front), min(72,front+length)
-                if right>left:
-                    display.drawFilledRectangle(left,y+(5 if kicking else 3),right-left,1,1)
-                if shooting:
-                    bullet = x+18 if rightward else x-14
-                    scene_rect(display,bullet,y+3,3,1)
+        for player,x,world_y in actors:
+            draw_fighter(display,state,player,x,actor_screen_y(world_y))
     elif screen == 'pause':
         stats='HP'+str(state['HP'])+' AT'+str(state['attack'])+' DF'+str(state['defense'])
         if len(stats)>12:

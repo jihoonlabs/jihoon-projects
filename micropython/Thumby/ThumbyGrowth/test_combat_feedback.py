@@ -111,7 +111,9 @@ class CombatFeedbackTests(unittest.TestCase):
         state['player_hit_flash']=6
         game.draw_game(state)
         hit=list(game.thumby.display.drawFilledRectangle.call_args_list)
-        self.assertLess(len(hit),len(recovery))
+        self.assertNotEqual(hit,recovery)
+        self.assertEqual(game.character_pose(state,True),'hurt')
+        self.assertEqual(game.character_pose(dict(state,player_hit_flash=0),True),'idle')
 
 if __name__=='__main__':
     unittest.main()
