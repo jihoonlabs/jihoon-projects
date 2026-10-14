@@ -6,7 +6,14 @@
 ## 完了基準
 社内利用に必要な基本機能を揃え、利用者が実画面で指摘した修正を反映してから次の段階に進む。自動テストだけでV1完了と扱わない。
 
-## 現在の状態
+## 現在の基準（2026-10-14）
+- 作業・引継ぎの統一基準は `feature/ticket`。検証候補 `4e9542be5d61f17b4b426c451b19e6f8b9d8bf4d` を旧Epic `5af147b515bff8a2c85192e2009333968962d0c1` からfast-forward採用した。採用記録以外のアプリtreeは候補と同一。
+- 承認済みboardデザインとDB保存型の重複しない淡色paletteを維持する。Project別DnD楽観順序、遅延成功後の新しい取得error保全、保存待ち入力lock/失敗draft保全、Login表示・認証応答競合修正を含む。
+- 最終React 222 tests、type、ESLint、変更sourceのPrettier、production build通過。実frontend→Laravel→専用MySQLで認証/初回Project・Ticket、save409→明示retry201、遅延move200/新しいGET500、遅延認証応答の中断後のsession維持を検証した。詳細handoffは `BOARD_POLISH_WORK.md`。
+- 新Childの追加を止め、この基準から利用者画面と残る問題を確認する。会社SMTP、元ユーザーの再ログイン後の実環境、外部OAuth、keyboard DnD、今回の独立reviewは未検証。V1全体は未完了。
+- 今後は承認済み作業のcommitを通常pushして他環境へ渡す。Epic採用は明示承認時のみ。採用済みbranchは不要な参照・比較用途を確認して整理し、進行中・未採用・dirty/DB/.envを保持する。
+
+## 既存採用結果（履歴）
 - Epic branch: `feature/ticket`。Project管理Integration Child `feature/ticket-project-integration` を `083e11c8b70e4f2e53ed13360567bb33300bdbe9` までfast-forward統合した。
 - Ticket V1のログイン、Project切替/メンバー権限、Ticket CRUD、コメント、検索/担当者filter、DnD/順序保存、Project別Ticket keyを含む。
 - Project APIはactive userによる作成、creatorの不変性と初期leader/write登録、rename、archive/restore、leader譲渡、メンバー範囲検索、監査記録に対応する。監査履歴の画面は未実装。
@@ -106,3 +113,9 @@
 - 候補の実frontend→Laravel→MySQLで作成・version付き編集・担当者再編集・pointer状態移動/reload・comment CRUD/権限・Project切替/色分離・確認付き削除を検証。6 grouped scenarios、Parent React208 testsが成功。アプリコード修正なしで承認済みデザインを維持した。
 - 元のユーザーSQLite・envと4デザインProject/20 Ticketを保持。採用後のアプリtreeは検証SHAと同一。追加変更はこの採用記録のみ。Child149 Laravel tests、type/lint/buildの同一コード検証は反復しない。
 - 詳細: `PROJECT_PALETTE_WORK.md` / `PROJECT_PALETTE_INTEGRATION_WORK.md`。最終採用状態の正本は本Epic文書。Child/candidateは保持する。外部OAuth完了・keyboard DnDと利用者による実使用確認は残り、V1全体は未完了。
+
+## Branch整理の境界
+- Remote Ticket関連45 branches。現在Epicに全commitが含まれる既存26 Childは削除候補。最新recovery candidateとpalette候補は今回の採用・確認基準として保持する。実行中worktreeと旧previewは保持する。
+- project-order/auth/delayed-drag/save-input/login-designのアプリcommitは採用済みだが、Child tipの追加文書commitは独立して残る。コード不足と文書差分を区別し、重複mergeしない。
+- 旧project-ui/project-overview、login-ui/board-ux、audit-history、ui-modal、test-user-admin、preview等には独自commitがある。現行機能と同等か未採用かを個別照合するまで保持し、旧デザインの巻戻し・権限変更をまとめて適用しない。
+- 優先順: 統合基準の利用者確認 → 再現する問題と修正案の一覧 → 必要な責任のみ実装。過去branchを統合するためだけの新Childを作らない。
