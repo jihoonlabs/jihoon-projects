@@ -1,6 +1,8 @@
 STAGES_PER_REGION = 5
 REGIONS = ('KR', 'CN', 'JP')
 GOAL_STAGES = 15
+ENEMY_WINDUP_FRAMES = 12
+HIT_FLASH_FRAMES = 6
 # HP, attack, defense. Each fifth encounter closes one region.
 ENCOUNTERS = (
     (6,2,0), (10,3,1), (8,3,0), (12,3,1), (16,4,2),
@@ -43,6 +45,8 @@ def update_state(state, inputs):
     new_state['menu_r_held'] = inputs['R']
     new_state['save_requested'] = False
     new_state.setdefault('attack_kind', 'punch')
+    for field in ('enemy_windup','enemy_stun','enemy_hit_flash','player_hit_flash'):
+        new_state.setdefault(field,0)
 
     if screen == 'country_select':
         choices = [region for region in range(3) if region not in new_state['route']]
@@ -127,6 +131,8 @@ def update_state(state, inputs):
         new_state['combat_frame'] = 0
         new_state['player_attack_cooldown'] = 0
         new_state['attack_kind'] = 'punch'
+        for field in ('enemy_windup','enemy_stun','enemy_hit_flash','player_hit_flash'):
+            new_state[field] = 0
         new_state['enemy_attack_cooldown'] = 0
         new_state['active_enemy'] = True
         hp, attack, defense = ENCOUNTERS[min(new_state['progress'], GOAL_STAGES-1)]
@@ -186,6 +192,8 @@ def update_state(state, inputs):
         return new_state
 
     new_state['combat_frame'] += 1
+    for field in ('enemy_stun','enemy_hit_flash','player_hit_flash'):
+        new_state[field] = max(0,new_state[field]-1)
     new_state['player_attack_cooldown'] = max(0, state['player_attack_cooldown'] - 1)
     new_state['enemy_attack_cooldown'] = max(0, state['enemy_attack_cooldown'] - 1)
     # World 144x40. Top-left body coordinates; HUD occupies y=0..13.
@@ -206,7 +214,8 @@ def update_state(state, inputs):
         moved_y = py
     new_state['player_x'] = moved
     new_state['player_y'] = moved_y
-    if new_state['active_enemy'] and new_state['combat_frame'] % 2 == 0:
+    if (new_state['active_enemy'] and not state.get('enemy_stun',0)
+            and not state.get('enemy_windup',0) and new_state['combat_frame'] % 2 == 0):
         next_enemy = max(0, min(138, enemy + (1 if moved > enemy else -1 if moved < enemy else 0)))
         if not (abs(next_enemy-moved) < 6 and abs(ey-moved_y) < 7):
             enemy = next_enemy
@@ -225,6 +234,13 @@ def update_state(state, inputs):
         if new_state['active_enemy'] and same_lane and 0 <= gap <= (10 if kicking else 8):
             damage = calculate_damage(new_state, {'defense': new_state['enemy_defense']})
             new_state['enemy_hp'] = max(0, new_state['enemy_hp'] - damage)
+            # A landed hit interrupts preparation; misses never cause stun.
+            new_state['enemy_windup'] = 0
+            new_state['enemy_stun'] = 12 if kicking else 8
+            new_state['enemy_hit_flash'] = HIT_FLASH_FRAMES
+            if kicking:
+                enemy = max(0,min(138,enemy+(3 if new_state['direction']=='R' else -3)))
+                new_state['enemy_x'] = enemy
             if new_state['enemy_hp'] == 0:
                 new_state['money'] += 30 if new_state['progress'] % 2 else 20
                 new_state['progress'] += 1
@@ -240,10 +256,19 @@ def update_state(state, inputs):
                 return new_state
 
     gap = max(moved, enemy) - (min(moved, enemy) + 6)
-    if new_state['active_enemy'] and same_lane and 0 <= gap <= 2 and new_state['enemy_attack_cooldown'] == 0:
-        damage = calculate_damage({'attack': new_state['enemy_attack']}, new_state)
-        new_state['HP'] = max(0, new_state['HP'] - damage)
-        new_state['enemy_attack_cooldown'] = 120
+    in_range = same_lane and 0 <= gap <= 2
+    if new_state['active_enemy'] and not new_state['enemy_stun']:
+        if new_state['enemy_windup']:
+            new_state['enemy_windup'] -= 1
+            if new_state['enemy_windup'] == 0:
+                # Commit the swing even after a dodge; recovery prevents instant retry.
+                if in_range:
+                    damage = calculate_damage({'attack': new_state['enemy_attack']}, new_state)
+                    new_state['HP'] = max(0, new_state['HP'] - damage)
+                    new_state['player_hit_flash'] = HIT_FLASH_FRAMES
+                new_state['enemy_attack_cooldown'] = 120
+        elif in_range and new_state['enemy_attack_cooldown'] == 0:
+            new_state['enemy_windup'] = ENEMY_WINDUP_FRAMES
     if new_state['HP'] == 0:
         new_state['screen_state'] = 'defeat'
         new_state['menu_selection'] = 0
@@ -357,6 +382,10 @@ def decode_save_data(data):
         direction='R',
         player_attack_cooldown=0,
         attack_kind='punch',
+        enemy_windup=0,
+        enemy_stun=0,
+        enemy_hit_flash=0,
+        player_hit_flash=0,
         enemy_attack_cooldown=0,
         active_enemy=False,
         enemy_hp=0,

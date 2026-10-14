@@ -185,7 +185,7 @@ def draw_game(state):
             # A black one-pixel backing separates white actors from white scenery.
             scene_rect(display, x-1, y-1, 8, 9, 0)
             rightward = state['direction']=='R' if player else world_x<state['player_x']
-            flashing = player and state['enemy_attack_cooldown']>=115 and state['combat_frame']%2==0
+            flashing = state.get('player_hit_flash' if player else 'enemy_hit_flash',0)>0 and state['combat_frame']%2==0
             rows = (12,30,26,12,31,18,33) if player else (30,18,30,12,63,18,33)
             if player and (state['combat_frame']//5)%2:
                 rows = rows[:5]+(12,18)
@@ -195,6 +195,12 @@ def draw_game(state):
                         bit = 5-column if rightward else column
                         if mask & (1<<bit) and 0<=x+column<72:
                             display.drawFilledRectangle(x+column, y+row, 1, 1, 1)
+            if not player and state.get('enemy_windup',0):
+                # Small outlined warning marker, kept below the HUD.
+                warning_y = max(20,y)
+                scene_rect(display,x+1,warning_y-6,4,5,0)
+                scene_rect(display,x+2,warning_y-5,1,2,1)
+                scene_rect(display,x+2,warning_y-2,1,1,1)
             kicking = state.get('attack_kind')=='kick'
             if player and not flashing and state['player_attack_cooldown']>=(15 if kicking else 11):
                 length = 4 if kicking else (2 if state['equipped_weapon'] is None else (6 if state['equipped_weapon']==0 else 8))

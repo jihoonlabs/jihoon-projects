@@ -31,6 +31,8 @@ def state(**changes):
     from rules import legacy_route
     value.setdefault('route', legacy_route(value['progress']))
     value.setdefault('attack_kind', 'punch')
+    for field in ('enemy_windup','enemy_stun','enemy_hit_flash','player_hit_flash'):
+        value.setdefault(field,0)
     if value['progress'] in (5,10) and 'screen_state' not in changes:
         value['screen_state']='country_select'
     return value

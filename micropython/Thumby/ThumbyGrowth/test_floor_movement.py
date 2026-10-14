@@ -62,7 +62,7 @@ class FloorTests(unittest.TestCase):
                 self.assertEqual(t['enemy_hp'],6-damage)
     def test_enemy_hit_height_and_cooldown(self):
         for dy,hp in ((0,8),(3,8),(4,10)):
-            s=state(screen_state='battle',active_enemy=True,enemy_x=22,enemy_y=28-dy,enemy_hp=6,enemy_attack=2)
+            s=state(screen_state='battle',active_enemy=True,enemy_x=22,enemy_y=28-dy,enemy_hp=6,enemy_attack=2,enemy_windup=1)
             t=update_state(s,keys());self.assertEqual(t['HP'],hp)
             if dy==0:
                 self.assertEqual(t['enemy_attack_cooldown'],120)
@@ -76,7 +76,7 @@ class FloorTests(unittest.TestCase):
         t=update_state(s,keys(A=True))
         self.assertEqual((t['screen_state'],t['money'],t['progress']),('safe',20,1))
         self.assertEqual(update_state(t,keys())['money'],20)
-        s.update(HP=1,enemy_attack=2)
+        s.update(HP=1,enemy_attack=2,enemy_windup=1)
         self.assertEqual(update_state(s,keys())['screen_state'],'defeat')
     def test_shop_equip_and_save_roundtrip(self):
         s=state(screen_state='shop',money=120)

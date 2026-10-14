@@ -15,6 +15,8 @@ def state(**changes):
     from rules import legacy_route
     value.setdefault('route', legacy_route(value['progress']))
     value.setdefault('attack_kind', 'punch')
+    for field in ('enemy_windup','enemy_stun','enemy_hit_flash','player_hit_flash'):
+        value.setdefault(field,0)
     if value['progress'] in (5,10) and 'screen_state' not in changes:
         value['screen_state']='country_select'
     return value
@@ -140,15 +142,15 @@ class TestRules(unittest.TestCase):
 
     def test_case_10(self):
         result = self.advance(battle(enemy_x=24),A=True)
-        self.assertEqual((result['HP'],result['enemy_hp']), (8,4))
-        self.assertEqual((result['player_attack_cooldown'],result['enemy_attack_cooldown']), (15,120))
+        self.assertEqual((result['HP'],result['enemy_hp']), (10,4))
+        self.assertEqual((result['player_attack_cooldown'],result['enemy_attack_cooldown']), (15,0))
         later = self.advance(result)
-        self.assertEqual((later['player_attack_cooldown'],later['enemy_attack_cooldown']), (14,119))
+        self.assertEqual((later['player_attack_cooldown'],later['enemy_attack_cooldown']), (14,0))
         distant = self.advance(battle(enemy_x=25))
         self.assertEqual((distant['HP'],distant['enemy_attack_cooldown']), (10,0))
         killed = self.advance(battle(enemy_x=24,enemy_hp=2,HP=1),A=True)
         self.assertEqual((killed['HP'],killed['screen_state']), (10,'safe'))
-        defeated = self.advance(battle(enemy_x=24,HP=1))
+        defeated = self.advance(battle(enemy_x=24,HP=1,enemy_windup=1))
         self.assertEqual((defeated['HP'],defeated['screen_state']), (0,'defeat'))
 
     def test_case_11(self):
