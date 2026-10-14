@@ -1,20 +1,28 @@
-# Ticket Board Design Child
+# Ticket Recovery Integration Candidate
 
 owner_repo: jihoonlabs/jihoon-projects
-owner_branch: feature/ticket-board-design
-role: child
-status: validated-user-review-pending
+owner_branch: integration/ticket-recovery-20261014
+role: integration
+status: validated-local-adoption-comparison-pending
 parent_branch: feature/ticket
-base_sha: a02f37781e0c2fbc5d8852e1f26fcaecb2edf582
+base_sha: 9269be437b16cfe9e2a9db55e1f7deec558d3faa
 
 ## Responsibility / Boundary
-利用者の実画面指摘に合わせ、Header/toolbarの階層と余白、Project色の強さ、カードの可読性、dark-system下の入力を調整する。既存機能・権限・API・DBは変更しない。
+Combine only verified recovery fixes. No new features, API, DB, palette or design changes. Jira is a workflow reference, not a visual template; preserve the approved original design.
 
 ## Validation / Handoff
-- アプリ検証SHA: `c5417c648f1380dd673b26f1c8317c26ad817346`。公開treeと検証済みローカルファイルの一致を確認した。
-- 共通Headerを小さくし、board toolbarをProject/操作とcontext/filterの2段に整理。管理ボタンの表示を短くし、既存accessible nameと操作を維持した。
-- Project keyから決まる色を維持し、card背景をwhiteと混色して淡くした。タイトルのweight/line-heightと列の幅・間隔を調整した。
-- boardとheaderをlight color-schemeとし、dark-systemでも検索入力の背景/文字を明示した。
-- React全29 files / 208 tests、TypeScript、ESLint、変更TSX/CSSのPrettier、production buildが成功。
-- 実Chromiumのdark-systemで1440/940/393pxを確認。ページ横overflowなし、検索背景/文字、8 cards、mobile detailの画面内収まり、pageerror 0件を確認。1440pxは全5列を表示し、940/393pxはboard内で横scrollする。画像も目視確認した。API fixtureによる表示検証であり、実Laravel接続ではない。
-- 利用者による修正後画面の確認は残る。API・DB・権限変更はない。
+- Combined application candidate: `e5e16f75225a489e7e0f4c78775025267b213ae6`. Its Git tree is identical to the locally tested tree.
+- Applied project-order application `f8ad6e4513c272503b30c741382cd2032fe8f7d1` first; 24 store tests passed.
+- Applied delayed-drag application `ff1fb5da5aa9e3c06f1b0d17ef2237d4893cdb05` next without conflicts; 38 View tests passed with both changes present.
+- Final frontend regression: 29 files / 212 tests passed. TypeScript, ESLint, changed TypeScript Prettier, production build and git diff check passed.
+- Combined application changes are confined to the store, View and their existing tests. No new functional or design changes were introduced during integration.
+- Real browser/Laravel/MySQL connection checks have not been run for this candidate. React tests simulate deferred API responses; they are not actual database verification.
+- The reported local Epic `5af147b` is still absent from remote `feature/ticket` and this environment. This candidate does not include that palette adoption or its DB migration and is not a replacement for the local Epic.
+- Do not adopt into Epic/main until compared with the actual local adoption. In an isolated candidate based on that local adoption, apply the two application fixes, preserve the palette/seed/data/permission contracts and run frontend regression plus actual connection checks.
+- Child sources and this candidate are retained; no branch/worktree or user artifact deletion occurred. Epic adoption and cleanup have not been performed.
+
+## Minimum internal-use readiness
+- Required workflow: account access/recovery, Project/membership setup, Ticket creation/assignment/priority/status/search, comments, completion and Project restore. Existing code exposes these flows; implementation does not mean actual internal-use acceptance.
+- Registration requires verification; resend and password reset exist. Checked-in mail default/example use `log`; actual internal email delivery and new-account-to-first-Ticket flow remain unverified. Do not change user configuration or weaken verification to bypass this check.
+- Separate-user permission checks, persistence/reconnection and failure recovery must be confirmed in the target environment before V1 completion.
+- Audit UI, keyboard DnD, external OAuth and additional database configurations are not automatically required or added.
