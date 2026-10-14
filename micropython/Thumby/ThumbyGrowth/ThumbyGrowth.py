@@ -27,6 +27,10 @@ ENEMY_ICON_ROWS = b'\x0e\x1f\x15\x0e\x0a'
 PORTRAIT_ROWS = (0x03c0,0x0ff0,0x1ff8,0x3ffc,0x3ffc,0x2004,0x3ffc,0x2aa4,
                 0x2224,0x2224,0x2004,0x2184,0x1008,0x0ff0,0x0660,0x0db0)
 MERCHANT_HEADS = ((0x03c0,0x0ff0,0x1ff8),(0x0ff0,0x1ff8,0x3ffc),(0x0240,0x0ff0,0x1ff8))
+# Three tiny country motifs: leaf, lantern, petal. No per-frame bitmap buffers.
+SCENE_MOTIFS = (b'\x04\x0e\x06',b'\x04\x0e\x15\x0e\x04',b'\x0a\x1f\x0e')
+SCENE_ANCHORS = (((2,0),(32,2),(64,1)),((2,0),(20,0),(61,0)),
+                 ((16,0),(32,0),(62,0)),((3,0),(26,0),(64,0)))
 
 
 def portrait_rows(state,merchant=False):
@@ -229,12 +233,24 @@ def step_music(music,state):
     return {'track':track,'tick':tick+1 if track==5 else (tick+1)%48}
 
 
+def draw_scene_details(display,picture,frame,region):
+    rows = SCENE_MOTIFS[region]
+    for index,(x,y) in enumerate(SCENE_ANCHORS[picture]):
+        phase = (frame//6+index*3)%8
+        # A lantern sways; leaves/petals drift. Victory motifs gently twinkle.
+        if picture==2 and phase in (2,3):
+            continue
+        offset = phase if phase<4 else 7-phase
+        draw_rows(display,rows,x+offset,y+(phase//2 if region!=1 else 0),5,phase>=4)
+
+
 def cutscene_frame(kind,frame,state):
     display = thumby.display
     display.fill(0)
     second = frame>=45
     picture = int(second) if kind=='opening' else 2+int(second) if kind=='ending' else 2
     display.blit(SCENE_BITMAPS[picture],0,0,72,32,-1,0,0)
+    draw_scene_details(display,picture,frame,stage_index(state)//STAGES_PER_REGION)
     # A tiny travelling silhouette animates the static cuts without frame buffers.
     x = 8+(frame%45)//2 if picture in (0,1) else 48-(frame%45)//2
     display.drawFilledRectangle(x-1,21,10,11,0)

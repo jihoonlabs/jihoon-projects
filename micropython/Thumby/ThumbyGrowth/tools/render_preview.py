@@ -68,9 +68,30 @@ def gallery(frames,path,columns=2):
     canvas.save(path)
 
 
+def scene_animation(game,display,path):
+    # PC documentation only: the device still stores four static 72x32 cuts.
+    from rules import new_game_state
+    font=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',16)
+    frames=[]
+    for frame in range(0,90,6):
+        canvas=Image.new('RGB',(650,700),'#0b1120');draw=ImageDraw.Draw(canvas)
+        draw.text((15,12),'Opening / ending: actual helpers, PC simulation',font=font,fill='white')
+        for region,country in enumerate(('Korea / leaves','China / lanterns','Japan / petals')):
+            state=new_game_state();state['route']=[region]
+            for column,kind in enumerate(('opening','ending')):
+                game.cutscene_frame(kind,frame,state)
+                x=15+column*325;y=48+region*215
+                draw.text((x,y),country+' / '+kind,font=font,fill='#cbd5e1')
+                canvas.paste(display.image.convert('RGB').resize((288,160),Image.Resampling.NEAREST),(x,y+27))
+        frames.append(canvas)
+    frames[0].save(path,save_all=True,append_images=frames[1:],duration=200,loop=0,optimize=True)
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--output',required=True)
-    parser.add_argument('--scenes',required=True);args=parser.parse_args()
+    parser.add_argument('--scenes',required=True)
+    parser.add_argument('--animation',help='PC-only GIF of the real scene helper')
+    args=parser.parse_args()
     game,display=setup()
     from rules import new_game_state,decode_save_data
     state=decode_save_data(dict(version=2,money=0,progress=0,route=[0],
@@ -94,3 +115,5 @@ if __name__=='__main__':
         cuts.append((label,display.image.copy()))
     gallery(cuts,args.scenes)
     gallery(frames+cuts,args.output,3)
+    if args.animation:
+        scene_animation(game,display,args.animation)
