@@ -75,6 +75,24 @@ def stage_index(state):
     return region*5+city
 
 
+def combat_power(state):
+    # Current build strength, independent of the selected country or its identity.
+    return state.get('maxHP',10)//2 + state.get('attack',2)*3 + state.get('defense',0)*2
+
+
+def encounter_stats(state):
+    progress=min(max(0,state['progress']),GOAL_STAGES-1)
+    hp,attack,defense=ENCOUNTERS[progress]
+    if progress%STAGES_PER_REGION == STAGES_PER_REGION-1:
+        boss_round=progress//STAGES_PER_REGION
+        target_power=20+8*boss_round
+        surplus=max(0,combat_power(state)-target_power)
+        hp+=min(16,surplus//2)
+        attack+=min(2,surplus//12)
+        defense+=min(2,surplus//18)
+    return hp,attack,defense
+
+
 def new_game_state():
     return decode_save_data(dict(version=2, money=0, progress=0, route=[],
         owned=[False]*4, equipped_weapon=None, equipped_armor=None))
@@ -185,11 +203,11 @@ def update_state(state, inputs):
             new_state[field] = 0
         new_state['enemy_attack_cooldown'] = 0
         new_state['active_enemy'] = True
-        hp, attack, defense = ENCOUNTERS[min(new_state['progress'], GOAL_STAGES-1)]
+        apply_stats(new_state)
+        hp, attack, defense = encounter_stats(new_state)
         new_state['enemy_hp'] = hp
         new_state['enemy_attack'] = attack
         new_state['enemy_defense'] = defense
-        apply_stats(new_state)
         new_state['command_timer'] = 0
         new_state['command_ready'] = 0
         new_state['screen_state'] = 'battle'

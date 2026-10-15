@@ -6,6 +6,54 @@ import ThumbyGrowth as game
 
 
 class CharacterDesignTests(unittest.TestCase):
+    def test_regular_enemies_change_only_hair_pixels_and_share_all_poses(self):
+        fixtures.TestAdapter.setUp(self)
+        game.thumby=fixtures.fake_thumby
+        faces=[]
+        for head in game.FOE_HEADS+game.BOSS_HEADS:
+            self.assertEqual(head[4:],game.HERO_HEAD[4:])
+        for city in range(4):
+            state=fixtures.state(progress=city,route=[0],combat_frame=0)
+            before=deepcopy(state)
+            display=game.thumby.display;display.reset_mock()
+            game.draw_fighter(display,state,False,28,29)
+            pixels=set()
+            for call in display.drawFilledRectangle.call_args_list:
+                x,y,w,h,ink=call.args
+                area={(px,py) for px in range(x,x+w) for py in range(y,y+h)}
+                if ink:pixels.update(area)
+                else:pixels.difference_update(area)
+            faces.append(pixels)
+            self.assertEqual(state,before)
+            self.assertIs(game.character_head(state,False),game.FOE_HEADS[city])
+            for changes,expected in (({},game.BODY_ROWS),({'combat_frame':5},game.WALK_BODY_ROWS),
+                                     ({'enemy_windup':1},game.GUARD_BODY),
+                                     ({'enemy_attack_cooldown':114},game.PUNCH_BODY),
+                                     ({'enemy_hit_flash':6},game.HURT_BODY)):
+                self.assertIs(game.character_body(dict(state,**changes),False),expected)
+        self.assertEqual(len({frozenset(p) for p in faces}),4)
+        self.assertEqual(tuple(len(rows) for rows in game.FOE_SIDE_HAIR),(2,3,4,5))
+        for pixels in faces[1:]:
+            self.assertTrue(all(24<=x<38 and 22<=y<28 for x,y in pixels^faces[0]))
+
+    def test_regular_enemy_faces_mirror_around_shared_body(self):
+        fixtures.TestAdapter.setUp(self)
+        game.thumby=fixtures.fake_thumby
+        for city in range(4):
+            versions=[]
+            for right in (True,False):
+                state=fixtures.state(progress=city,route=[0],player_x=50 if right else 0,enemy_x=28)
+                game.thumby.display.reset_mock()
+                game.draw_fighter(game.thumby.display,state,False,28,29)
+                pixels=set()
+                for call in game.thumby.display.drawFilledRectangle.call_args_list:
+                    x,y,w,h,ink=call.args
+                    area={(px,py) for px in range(x,x+w) for py in range(y,y+h)}
+                    if ink:pixels.update(area)
+                    else:pixels.difference_update(area)
+                versions.append(pixels)
+            self.assertEqual({(61-x,y) for x,y in versions[0]},versions[1])
+
     def test_row_runs_preserve_every_pixel_and_mirror_without_edge_escape(self):
         fixtures.TestAdapter.setUp(self)
         display=fixtures.fake_thumby.display
@@ -39,8 +87,8 @@ class CharacterDesignTests(unittest.TestCase):
     def test_hero_foe_and_three_bosses_are_distinct(self):
         state=fixtures.state(combat_frame=0)
         designs=[game.character_rows(state,True),game.character_rows(state,False)]
-        for country in range(3):
-            state.update(progress=4,route=[country])
+        for build in ((10,2,0),(20,2,0),(20,6,2)):
+            state=fixtures.state(progress=4,route=[0],maxHP=build[0],attack=build[1],defense=build[2])
             designs.append(game.character_rows(state,False))
         self.assertEqual(len(set(designs)),5)
         for rows in designs:
@@ -60,14 +108,19 @@ class CharacterDesignTests(unittest.TestCase):
                 self.assertEqual(still[:12],walking[:12])
                 self.assertNotEqual(still[12:],walking[12:])
 
-    def test_boss_design_follows_selected_country_not_total_chapter(self):
+    def test_boss_design_ignores_country_and_changes_with_player_power(self):
         for progress in (4,9,14):
+            appearances=[]
             for country in range(3):
                 others=[r for r in range(3) if r!=country]
                 route=others[:progress//5]+[country]
                 state=fixtures.state(progress=progress,route=route)
-                self.assertIs(game.character_head(state,False),game.BOSS_HEADS[country])
+                appearances.append(game.character_head(state,False))
                 self.assertEqual(game.character_rows(state,False)[8:],game.BODY_ROWS)
+            self.assertEqual(len(set(appearances)),1)
+            weak=fixtures.state(progress=progress,route=[0],maxHP=10,attack=2,defense=0)
+            strong=fixtures.state(progress=progress,route=[0],maxHP=20,attack=10,defense=4)
+            self.assertNotEqual(game.boss_variant(weak),game.boss_variant(strong))
 
     def test_design_render_keeps_bounds_call_budget_and_state(self):
         fixtures.TestAdapter.setUp(self)

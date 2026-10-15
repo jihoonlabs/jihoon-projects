@@ -12,25 +12,35 @@ from rules import (update_state, encode_save_data, decode_save_data,
                    GOAL_STAGES, ENCOUNTERS, REGIONS, STAGES_PER_REGION,
                    CITY_NAMES, stage_index, new_game_state, ITEM_NAMES,
                    ITEM_EFFECTS, get_item_price, item_owned,
-                   item_counter, purchase_status)
+                   item_counter, purchase_status, combat_power, encounter_stats)
 
 from scene_art import SCENE_BITMAPS
 
 # Shared 10x14 period fighters; simulation collision remains 6x7.
-HERO_HEADS = ((0xfc,0x1fe,0x1fe,0x1fe,0x1fe,0x132,0x1fe,0xfc),
-              (0xfc,0x1fe,0x1fe,0x1fe,0x1fe,0x132,0x1fe,0xfc),
-              (0xfc,0x1fe,0x1ff,0x1fe,0x1fe,0x132,0x1fe,0xfc))
-HERO_HEAD = HERO_HEADS[0]
-FOE_HEAD = (0x0,0x78,0xfc,0x1fe,0x17a,0x1fe,0x1ce,0xfc)
-BODY_ROWS = (0x3ff,0x1fe,0xdc,0xfc,0xcc,0x1ce)
-WALK_BODY_ROWS = (0x3ff,0x1fe,0xdc,0xfc,0x6c,0xe6)
-PUNCH_BODY = (0x78,0xf8,0x78,0xfc,0xcc,0x1ce)
-KICK_BODY = (0xf8,0x78,0x78,0xfe,0xc0,0x1c0)
-HURT_BODY = (0xfc,0x78,0xcc,0x78,0x6c,0xe7)
-GUARD_BODY = (0x1b6,0x1fe,0x78,0xfc,0xcc,0x1ce)
-BOSS_HEADS = ((0x84,0x1fe,0x3ff,0x2fd,0x1fe,0x12e,0x1fe,0xfc),
-              (0xfc,0x1fe,0x3ff,0x303,0x1fe,0x16a,0x1fe,0xfc),
-              (0x30,0xfc,0x1fe,0x3cf,0x1fe,0x1b6,0x1fe,0xfc))
+HERO_HEAD = (0xfc,0x1fe,0x1fe,0x1fe,0x1b6,0x1b6,0x1fe,0xfc)
+# One face, one fringe and one braid; shared by the country variants.
+HERO_FRINGE = b'\x03\x02\x00\x02'
+# Tiny separate beads; the blank rows intentionally contain no connecting stem.
+BRAID_ROWS = b'\x03\x03\x00\x03\x03\x00\x03\x03\x00\x03\x03'
+PONY_ROWS = b'\x06\x0f\x1f\x1e\x1c\x18\x10\x08'
+# Only hair varies; all fighters reuse exactly the same lower face and eye dots.
+FOE_HEADS = tuple(hair+HERO_HEAD[4:] for hair in
+                 ((0x0,0x78,0xfc,0x1fe),(0x30,0xfc,0x1fe,0x1fe),
+                  (0x84,0x1fe,0x1fe,0x1fe),(0xfc,0x1fe,0x1fe,0x132)))
+# Ordinary enemies share the face and body; only the simple back lock gets longer.
+FOE_SIDE_HAIR = ((0x03,0x03),(0x03,0x03,0x03),
+                 (0x03,0x03,0x03,0x03),(0x03,0x03,0x03,0x03,0x03))
+FOE_HEAD = FOE_HEADS[0]
+# Solid shoulders/arms, one compact torso and short legs; no collar or inner trim.
+BODY_ROWS = (0x1fe,0x3ff,0x1fe,0xfc,0x1ce,0x387)
+WALK_BODY_ROWS = (0x1fe,0x3ff,0x1fe,0xfc,0x1dc,0x38e)
+PUNCH_BODY = (0xf0,0x1f8,0xfc,0xfc,0x1ce,0x387)
+KICK_BODY = (0x1fe,0x3ff,0x1fc,0xfe,0x1c0,0x380)
+HURT_BODY = (0xfc,0x1fe,0x1fe,0xfc,0xec,0x1c7)
+GUARD_BODY = (0x3ff,0x3ff,0x1fe,0xfc,0x1ce,0x387)
+BOSS_HEADS = tuple(hair+HERO_HEAD[4:] for hair in
+                  ((0x84,0x1fe,0x3ff,0x2fd),(0xfc,0x1fe,0x3ff,0x303),
+                   (0x30,0xfc,0x1fe,0x3cf)))
 HEART_ROWS = b'\x0a\x1f\x1f\x0e\x04'
 ENEMY_ICON_ROWS = b'\x0e\x1f\x15\x0e\x0a'
 # Original large face: shared outline, hair, eyes and collar.
@@ -50,9 +60,11 @@ def portrait_rows(state,merchant=False):
     return MERCHANT_HEADS[stage_index(state)//5]+PORTRAIT_ROWS[3:11]+(0x23c4,)+PORTRAIT_ROWS[12:]
 
 
-def draw_rows(display, rows, x, y, width, mirror=False, min_y=0):
+def draw_rows(display, rows, x, y, width, mirror=False, min_y=0, ink=1, row_count=None):
     # Draw contiguous lit pixels in one call; keep the same monochrome bitmap.
     for row,mask in enumerate(rows):
+        if row_count is not None and row>=row_count:
+            break
         column = 0
         while column < width:
             if not mask & (1 << (column if mirror else width-1-column)):
@@ -63,7 +75,7 @@ def draw_rows(display, rows, x, y, width, mirror=False, min_y=0):
                 column += 1
             left,right = max(0,x+start),min(72,x+column)
             if right>left and min_y<=y+row<40:
-                display.drawFilledRectangle(left,y+row,right-left,1,1)
+                display.drawFilledRectangle(left,y+row,right-left,1,ink)
 
 
 def draw_portrait(display,rows,x,y,frame=0):
@@ -86,10 +98,15 @@ def hero_region(state):
 
 def character_head(state, player):
     if player:
-        return HERO_HEADS[hero_region(state)]
+        return HERO_HEAD
     elif state['progress']%STAGES_PER_REGION == STAGES_PER_REGION-1:
-        return BOSS_HEADS[stage_index(state)//STAGES_PER_REGION]
-    return FOE_HEAD
+        return BOSS_HEADS[boss_variant(state)]
+    return FOE_HEADS[stage_index(state)%STAGES_PER_REGION]
+
+
+def boss_variant(state):
+    # Rotate by boss round and the player's current build, never by region.
+    return (state['progress']//STAGES_PER_REGION + combat_power(state)//12)%len(BOSS_HEADS)
 
 
 def character_pose(state,player):
@@ -170,21 +187,19 @@ def draw_hero_hair(display,region,x,y,rightward):
     def rect(offset,dy,width,height,color=1):
         left=x-2-offset-width if rightward else x+8+offset
         scene_rect(display,left,y+dy,width,height,color)
-    rect(0,-6,5,12,0)
+    rect(0,-6,6,12,0)
     if region in (0,1):
-        # Both countries share the exact same braid and face.
-        for row in range(8): rect(1+row%2,-3+row,1,1)
-        rect(1,5,2,1)
+        left=x-5 if rightward else x+9
+        draw_rows(display,BRAID_ROWS,left,y-6,2,not rightward,14,
+                  row_count=8 if region==0 else 11)
         if region==0:
-            # Only a tiny 3x3 bow at the tip distinguishes the Korean hair.
-            rect(0,3,3,3,0)
-            for dy in (3,5):
-                rect(0,dy,1,1);rect(2,dy,1,1)
-            rect(1,4,1,1)
+            # The bow follows the third round bead instead of replacing it.
+            rect(0,2,1,1);rect(2,2,1,1);rect(1,3,1,1)
     else:
-        # Thick high ponytail, hanging as long as the other two styles.
-        for offset,dy,width,height in ((0,-6,3,2),(1,-4,3,3),(2,-1,3,4),(3,3,2,3)):
-            rect(offset,dy,width,height)
+        # A high fan sweeps backward; the short tip keeps the mass above the waist.
+        left=x-8 if rightward else x+9
+        draw_rows(display,PONY_ROWS,left,y-6,5,not rightward,14)
+        rect(-1,-5,2,1)
 
 
 def draw_fighter(display,state,player,x,y):
@@ -195,7 +210,16 @@ def draw_fighter(display,state,player,x,y):
     lean=(-2 if rightward else 2) if hurt else 0
     scene_rect(display,x-3,y-8,12,15,0)
     if player: draw_hero_hair(display,hero_region(state),x+lean,y,rightward)
+    elif state['progress']%STAGES_PER_REGION != STAGES_PER_REGION-1:
+        hair=FOE_SIDE_HAIR[stage_index(state)%STAGES_PER_REGION]
+        hair_x=x-3 if rightward else x+7
+        draw_rows(display,hair,hair_x,y-6,2,not rightward,14)
     draw_rows(display,character_head(state,player),x-2+lean,y-7,10,not rightward,14)
+    if player and hero_region(state) in (0,2):
+        # Two locks project outside the forehead; never carve a mark into the face.
+        fringe_x=x+7+lean if rightward else x-3+lean
+        scene_rect(display,fringe_x if rightward else fringe_x-1,y-7,3,6,0)
+        draw_rows(display,HERO_FRINGE,fringe_x,y-6,2,not rightward,14)
     draw_rows(display,character_body(state,player),x-2,y+1,10,not rightward,14)
     if hurt: draw_hurt_face(display,x-2+lean,y-7)
     if player and state['equipped_armor'] is not None:
@@ -463,6 +487,8 @@ def cutscene_frame(kind,frame,state):
     display.drawFilledRectangle(x-2,17,13,15,0)
     draw_hero_hair(display,hero_region(state),x+2,25,picture!=3)
     draw_rows(display,character_head(state,True),x,18,10,picture==3)
+    if hero_region(state) in (0,2):
+        draw_rows(display,HERO_FRINGE,x+2,20,6,picture==3,0,0)
     draw_rows(display,WALK_BODY_ROWS if (frame//5)%2 else BODY_ROWS,x,26,10,picture==3)
     if picture==1:
         for label,x,y in (('KR',3,18),('CN',30,2),('JP',57,18)):
@@ -552,11 +578,13 @@ def draw_game(state):
         display.drawText(str(state['HP']),7,0,1)
         draw_rows(display,ENEMY_ICON_ROWS,42,1,5)
         display.drawText(str(state['enemy_hp']),49,0,1)
-        for x, hp, maximum in ((0, state['HP'], state['maxHP']),
-                                (42, state['enemy_hp'], ENCOUNTERS[min(state['progress'],GOAL_STAGES-1)][0])):
-            display.drawFilledRectangle(x, 9, 30, 4, 1)
-            display.drawFilledRectangle(x+1, 10, 28, 2, 0)
-            width = max(0, min(28, 28*hp//max(1,maximum)))
+        for x, hp, maximum, bar_width in ((0, state['HP'], state['maxHP'],30),
+                                (42, state['enemy_hp'], encounter_stats(state)[0],14)):
+            display.drawFilledRectangle(x, 9, bar_width, 4, 1)
+            inside=bar_width-2
+            display.drawFilledRectangle(x+1, 10, inside, 2, 0)
+            # A living enemy must still show one pixel on the compact bar.
+            width = min(inside,max(1,inside*hp//max(1,maximum))) if hp>0 else 0
             if width:
                 display.drawFilledRectangle(x+1, 10, width, 2, 1)
         px,ex=fighter_positions(state,camera)

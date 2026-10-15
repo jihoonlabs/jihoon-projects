@@ -1,6 +1,6 @@
 import unittest
 from copy import deepcopy
-from rules import update_state, calculate_damage, get_item_price, get_item_type, is_valid_save_data, encode_save_data, decode_save_data
+from rules import update_state, calculate_damage, get_item_price, get_item_type, is_valid_save_data, encode_save_data, decode_save_data, encounter_stats
 
 
 def state(**changes):
@@ -57,6 +57,24 @@ class TestRules(unittest.TestCase):
             self.assertEqual(tuple(result[k] for k in ('enemy_hp','enemy_attack','enemy_defense')), stats)
             self.assertEqual(tuple(result[k] for k in ('HP','player_x','enemy_x','combat_frame','player_attack_cooldown','enemy_attack_cooldown')), (10,16,112,0,0,0))
             self.assertEqual(result['direction'], 'R')
+
+    def test_boss_stats_scale_up_with_player_power_without_country_or_save_fields(self):
+        weak=state(progress=4,maxHP=10,attack=2,defense=0,route=[0])
+        strong=state(progress=4,maxHP=20,attack=10,defense=4,route=[2])
+        expected=encounter_stats(weak)
+        scaled=encounter_stats(strong)
+        self.assertEqual(expected,(16,4,2))
+        self.assertGreater(scaled[0],expected[0])
+        self.assertGreaterEqual(scaled[1],expected[1])
+        self.assertGreaterEqual(scaled[2],expected[2])
+        same_build_other_country=dict(strong,route=[1])
+        self.assertEqual(encounter_stats(same_build_other_country),scaled)
+        started=self.advance(state(screen_state='safe',progress=4,hp_growth=5,
+            atk_growth=5,def_growth=4,equipped_weapon=1,equipped_armor=3,
+            route=[0]),A=True)
+        self.assertEqual(tuple(started[k] for k in ('enemy_hp','enemy_attack','enemy_defense')),
+                         encounter_stats(started))
+        self.assertGreater(started['enemy_hp'],expected[0])
 
     def test_case_2(self):
         data = dict(version=1, money=0, progress=0, owned=[False]*4,

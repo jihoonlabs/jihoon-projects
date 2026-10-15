@@ -19,12 +19,10 @@ class HeroOriginTests(unittest.TestCase):
             for _ in range(region): state=update_state(state,f.inputs(D=True))
             state=update_state(state,f.inputs(A=True))
             self.assertEqual(state['route'],[region])
-            self.assertIs(game.character_head(state,True),game.HERO_HEADS[region])
+            self.assertIs(game.character_head(state,True),game.HERO_HEAD)
             self.assertEqual(game.character_body(state,True),game.BODY_ROWS)
             stats.append((state['HP'],state['maxHP'],state['attack'],state['defense'],state['money']))
-        self.assertEqual(game.HERO_HEADS[0],game.HERO_HEADS[1])
-        self.assertNotEqual(game.HERO_HEADS[0],game.HERO_HEADS[2])
-        self.assertTrue(all(head[0]==0xfc and head[1]==0x1fe for head in game.HERO_HEADS))
+        self.assertEqual(game.HERO_HEAD[:2],(0xfc,0x1fe))
         self.assertEqual(stats,[(10,10,2,0,0)]*3)
 
     def test_six_routes_and_save_load_preserve_first_country_not_destination(self):
@@ -34,15 +32,15 @@ class HeroOriginTests(unittest.TestCase):
                     state=f.state(progress=chapter*5+city,route=list(order[:chapter+1]))
                     before=deepcopy(state)
                     self.assertEqual(game.hero_region(state),order[0])
-                    self.assertIs(game.character_head(state,True),game.HERO_HEADS[order[0]])
+                    self.assertIs(game.character_head(state,True),game.HERO_HEAD)
                     if city==4:
-                        self.assertIs(game.character_head(state,False),game.BOSS_HEADS[order[chapter]])
+                        self.assertIs(game.character_head(state,False),game.BOSS_HEADS[game.boss_variant(state)])
                     loaded=decode_save_data(encode_save_data(state))
-                    self.assertIs(game.character_head(loaded,True),game.HERO_HEADS[order[0]])
+                    self.assertIs(game.character_head(loaded,True),game.HERO_HEAD)
                     self.assertEqual(state,before)
 
     def test_braid_and_ponytail_mirror_around_the_same_body_and_do_not_mutate_data(self):
-        original=deepcopy(game.HERO_HEADS);designs=[]
+        original=(game.HERO_HEAD,game.BRAID_ROWS,game.HERO_FRINGE,game.PONY_ROWS);designs=[]
         for region in range(3):
             versions=[]
             for rightward in (True,False):
@@ -58,21 +56,36 @@ class HeroOriginTests(unittest.TestCase):
                 versions.append(pixels)
             self.assertEqual({(61-x,y) for x,y in versions[0]},versions[1])
             self.assertTrue(versions[0])
-            self.assertEqual(max(y for _,y in versions[0]),34)
+            self.assertEqual(max(y for _,y in versions[0]),(32,33,30)[region])
             if region==0:
-                self.assertEqual({x for x,y in versions[0] if y==34},{23,25})
-                self.assertEqual({x for x,y in versions[0] if y==33},{24})
+                self.assertEqual({x for x,y in versions[0] if y==31},{23,25})
+                self.assertEqual({x for x,y in versions[0] if y==32},{24})
             designs.append(frozenset(versions[0]))
         self.assertEqual(len(set(designs)),3)
-        self.assertEqual({p for p in designs[0] if p[1]<32},{p for p in designs[1] if p[1]<32})
-        self.assertTrue(all(23<=x<=25 and 32<=y<=34 for x,y in designs[0]^designs[1]))
-        self.assertEqual(game.HERO_HEADS,original)
+        self.assertEqual({p for p in designs[0] if p[1]<31},{p for p in designs[1] if p[1]<31})
+        self.assertTrue(all(23<=x<=25 and 31<=y<=33 for x,y in designs[0]^designs[1]))
+        self.assertEqual((game.HERO_HEAD,game.BRAID_ROWS,game.HERO_FRINGE,game.PONY_ROWS),original)
+
+    def test_round_braid_is_one_shared_pattern_and_fringe_only_for_korea_and_japan(self):
+        self.assertEqual(game.BRAID_ROWS,b'\x03\x03\x00'*3+b'\x03\x03')
+        for region in range(3):
+            for direction in ('R','L'):
+                state=f.state(route=[region],direction=direction)
+                with patch.object(game,'draw_rows',wraps=game.draw_rows) as rows:
+                    game.draw_fighter(game.thumby.display,state,True,28,29)
+                    braids=[c for c in rows.call_args_list if c.args[1] is game.BRAID_ROWS]
+                    fringes=[c for c in rows.call_args_list if c.args[1] is game.HERO_FRINGE]
+                    self.assertEqual(len(braids),1 if region in (0,1) else 0)
+                    self.assertEqual(len(fringes),1 if region in (0,2) else 0)
+                    if fringes:
+                        self.assertEqual(fringes[0].args[4],2)
+                        self.assertEqual(fringes[0].args[2],35 if direction=='R' else 25)
 
     def test_only_initial_country_menu_previews_different_hero_heads(self):
         for state,expected in ((new_game_state(),1),(f.state(progress=5,route=[2]),0)):
             with patch.object(game,'draw_rows',wraps=game.draw_rows) as rows:
                 game.draw_game(state)
-                heads=[c.args[1] for c in rows.call_args_list if c.args[1] in game.HERO_HEADS]
+                heads=[c.args[1] for c in rows.call_args_list if c.args[1]==game.HERO_HEAD]
                 self.assertEqual(len(heads),expected)
         texts=[c.args[0] for c in game.thumby.display.drawText.call_args_list]
         self.assertIn('YOUR COUNTRY',texts);self.assertIn('NEXT COUNTRY',texts)
@@ -89,7 +102,7 @@ class HeroOriginTests(unittest.TestCase):
                       enemy_x=24,enemy_hp=30,enemy_attack=2,enemy_windup=1)
         hit=update_state(state,f.inputs())
         self.assertLess(hit['HP'],state['HP'])
-        self.assertIs(game.character_head(hit,True),game.HERO_HEADS[2])
+        self.assertIs(game.character_head(hit,True),game.HERO_HEAD)
         with patch.object(game,'draw_hero_hair',wraps=game.draw_hero_hair) as hair:
             game.draw_game(hit)
             for kind in ('opening','event','ending'): game.cutscene_frame(kind,20,hit)

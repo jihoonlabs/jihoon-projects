@@ -90,7 +90,9 @@ class TestAdapter(unittest.TestCase):
         ThumbyGrowth.draw_game(original)
         self.assertEqual(original,snapshot)
         rectangles = fake_thumby.display.drawFilledRectangle.call_args_list
-        self.assertTrue(any(32 <= c.args[0] < 40 and c.args[1] == 32 for c in rectangles))
+        self.assertTrue(any(c.args[0] <= 35 < c.args[0]+c.args[2]
+                            and c.args[1] == 32 and c.args[4] == 1
+                            for c in rectangles))
         self.assertTrue(any(0 <= c.args[2] <= 8 and 0 <= c.args[3] <= 8 for c in rectangles))
         self.assertTrue(any(0 <= c.args[2] <= 7 for c in fake_thumby.display.drawText.call_args_list))
         self.assertGreater(fake_thumby.display.update.call_count,0)
