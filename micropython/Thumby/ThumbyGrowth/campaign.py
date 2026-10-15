@@ -1,5 +1,4 @@
 """Selectable-origin city campaign with map shops and bounded enemy waves."""
-from copy import deepcopy
 from rules import (CITY_NAMES, CITY_MAP_COUNTS, MAX_ACTIVE_ENEMIES,
                    ITEM_NAMES, ITEM_EFFECTS, ITEM_PRICES, GROWTH_LIMIT,
                    apply_stats, combat_power, calculate_damage, item_owned,
@@ -9,6 +8,12 @@ VERSION = 4
 WAVE_DELAY = 24
 SHOP_X = 104
 COUNTRY_NAMES = ('KOREA','CHINA','JAPAN')
+
+
+def _copy_foes(foes):
+    # Enemy records contain only scalar values; copy them without importing the
+    # CPython-only `copy` module, which is absent from the Thumby MicroPython.
+    return [dict(foe) for foe in foes]
 
 
 def new_game_state():
@@ -345,7 +350,7 @@ def update(state,inputs):
     s=dict(state)
     for key in ('route','completed_cities','owned'):
         s[key]=list(state[key])
-    s['foes']=deepcopy(state.get('foes',[]))
+    s['foes']=_copy_foes(state.get('foes',[]))
     s['save_requested']=False
     screen=s['screen_state']
     if screen=='country_select':
