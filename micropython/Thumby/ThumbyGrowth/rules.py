@@ -4,7 +4,7 @@ GOAL_STAGES = 15
 ENEMY_WINDUP_FRAMES = 12
 HIT_FLASH_FRAMES = 6
 # Small demo economy; the first four equipment IDs remain save-compatible.
-ITEM_NAMES = ('Blade','Sword','Vest','Armor','Pistol','Potion','HP up','ATK up','DEF up','Skill')
+ITEM_NAMES = ('BLADE','SWORD','VEST','ARMOR','GUN','POT','HP+','ATK+','DEF+','SKILL')
 ITEM_PRICES = (40,80,40,80,60,15,50,60,60,80)
 ITEM_EFFECTS = ('ATK+2','ATK+4','DEF+1','DEF+2','RNG40','HEAL+6','HP+2','ATK+1','DEF+1','UU+A')
 GROWTH_LIMIT = 5

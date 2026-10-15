@@ -107,9 +107,10 @@ class TestAdapter(unittest.TestCase):
                 self.assertTrue({0,10,20,30}.issubset(rows))
                 self.assertEqual((current['menu_selection'],current['menu_scroll']),(selected,scroll))
             rendered = ' '.join(seen)
-            for name in ('Blade','Sword','Vest','Armor'): self.assertIn(name,rendered)
+            for name in ('BLADE','SWORD','VEST','ARMOR'): self.assertIn(name,rendered)
+            self.assertGreaterEqual(fake_thumby.display.drawFilledRectangle.call_count,20)
         for screen in ('shop_detail','equip_detail'):
-            for selected,name,price in ((0,'Blade',40),(1,'Sword',80),(2,'Vest',40),(3,'Armor',80)):
+            for selected,name,price in ((0,'BLADE',40),(1,'SWORD',80),(2,'VEST',40),(3,'ARMOR',80)):
                 fake_thumby.display.reset_mock()
                 current = state(screen_state=screen,menu_selection=selected,
                     menu_scroll=1,money=123456,owned=[True]*4,

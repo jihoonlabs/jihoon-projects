@@ -43,6 +43,13 @@ BOSS_HEADS = tuple(hair+HERO_HEAD[4:] for hair in
                    (0x30,0xfc,0x1fe,0x3cf)))
 HEART_ROWS = b'\x0a\x1f\x1f\x0e\x04'
 ENEMY_ICON_ROWS = b'\x0e\x1f\x15\x0e\x0a'
+# Tiny monochrome shop marks keep the item list scannable at 72x40.
+ITEM_ICON_ROWS = (
+    b'\x10\x18\x1c\x1e\x0c\x06\x04', b'\x04\x0c\x1e\x1c\x18\x10\x10',
+    b'\x0e\x1f\x15\x1f\x0e\x0a\x0a', b'\x0e\x1f\x1f\x0e\x1f\x0e\x0a',
+    b'\x00\x1f\x15\x1f\x04\x0c\x08', b'\x0e\x11\x11\x11\x0e\x04\x04',
+    b'\x0e\x11\x11\x1f\x11\x11\x0e', b'\x04\x0e\x15\x04\x04\x04\x04',
+    b'\x04\x0e\x15\x04\x04\x0e\x04', b'\x0e\x11\x15\x11\x0e\x04\x0e')
 # Original large face: shared outline, hair, eyes and collar.
 PORTRAIT_ROWS = (0x03c0,0x0ff0,0x1ff8,0x3ffc,0x3ffc,0x3ffc,0x3ffc,0x2aa4,
                 0x2224,0x2224,0x2004,0x2184,0x1008,0x0ff0,0x0660,0x0db0)
@@ -493,8 +500,9 @@ def cutscene_frame(kind,frame,state):
     if picture==1:
         for label,x,y in (('KR',3,18),('CN',30,2),('JP',57,18)):
             display.drawText(label,x,y,1)
-    display.drawText('GO' if kind=='opening' else 'HOME' if picture==3 else 'CLEAR',0,33,1)
-    display.drawText('A/B',54,33,1)
+    caption = 'PICK A PATH' if kind=='opening' else 'RETURN HOME' if picture==3 else 'ROUTE DONE'
+    display.drawText(caption,0,24,1)
+    display.drawText('A/B SKIP',24,33,1)
     display.update()
     # Sample both edges even when A skips, so a latched B cannot save next screen.
     a=thumby.buttonA.justPressed()
@@ -615,6 +623,7 @@ def draw_game(state):
         item = state['menu_selection']
         names = ITEM_NAMES
         draw_portrait(display,portrait_rows(state,True),0,0)
+        draw_rows(display,ITEM_ICON_ROWS[item],1,21,5)
         display.drawText(names[item], 20, 0, 1)
         display.drawText('P:'+str(get_item_price(item)), 20, 8, 1)
         effect = ITEM_EFFECTS[item]
@@ -668,10 +677,12 @@ def draw_game(state):
                 if active:
                     display.drawFilledRectangle(0,10+row*10,72,8,1)
                 selected = '>' if active else ' '
+                if screen in ('shop','equip'):
+                    draw_rows(display,ITEM_ICON_ROWS[index],2,11+row*10,5,ink=ink)
                 label = selected+choices[index]
                 if screen in ('shop','equip') and item_owned(state,index):
                     label += '+'
-                display.drawText(label, 0, 10+row*10, ink)
+                display.drawText(label, 10 if screen in ('shop','equip') else 0, 10+row*10, ink)
                 if screen == 'shop':
                     counter=item_counter(state,index)
                     if counter is not None:
