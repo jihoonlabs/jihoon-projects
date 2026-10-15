@@ -5,6 +5,7 @@ try:
 except ImportError:
     import json
 import thumby
+import campaign
 # The device launcher need not add the game's sibling-module directory.
 if sys.implementation.name == 'micropython':
     sys.path.append('/Games/ThumbyGrowth')
@@ -108,7 +109,7 @@ def hero_region(state):
 def character_head(state, player):
     if player:
         return HERO_HEAD
-    elif state['progress']%STAGES_PER_REGION == STAGES_PER_REGION-1:
+    elif state.get('is_boss') or state['progress']%STAGES_PER_REGION == STAGES_PER_REGION-1:
         return BOSS_HEADS[boss_variant(state)]
     return FOE_HEADS[stage_index(state)%STAGES_PER_REGION]
 
@@ -122,7 +123,7 @@ def character_pose(state,player):
     if state.get('player_hit_flash' if player else 'enemy_hit_flash',0):
         return 'hurt'
     if not player:
-        return 'guard' if state.get('enemy_windup',0) else 'punch' if state['enemy_attack_cooldown']>=114 else 'idle'
+        return 'guard' if state.get('enemy_windup',0) else 'punch' if state.get('enemy_attack_cooldown',0)>=114 else 'idle'
     kind=state.get('attack_kind','punch')
     threshold=20 if kind=='skill' else 23 if kind=='shot' else 12 if kind=='kick' else 8
     return kind if state['player_attack_cooldown']>=threshold else 'idle'
@@ -134,7 +135,7 @@ def character_body(state,player):
     if pose=='guard': return GUARD_BODY
     if pose=='kick': return KICK_BODY
     if pose in ('punch','shot','skill'): return PUNCH_BODY
-    return WALK_BODY_ROWS if (state['combat_frame']//5)%2 else BODY_ROWS
+    return WALK_BODY_ROWS if (state.get('combat_frame',0)//5)%2 else BODY_ROWS
 
 
 def character_rows(state,player):
@@ -339,15 +340,17 @@ def scene_rect(display, x, y, width, height, color=1):
         display.drawFilledRectangle(left, top, right-left, bottom-top, color)
 
 
-def draw_background(display, progress, camera):
+def draw_background(display, progress, camera, map_index=0):
     stage = min(max(0, progress), GOAL_STAGES-1)
+    # City maps retain their region identity while shifting landmarks and road marks.
+    variant=(map_index*7)%24
     for x, y, width, height in SCENERY[stage]:
         # Small distant buildings leave the actor-foot plane (y=21..39) open.
         top = 14+(y-14)//3
-        scene_rect(display, x*3//4-camera//3, top, max(1,width*3//4),
+        scene_rect(display, (x+variant)*3//4-camera//3, top, max(1,width*3//4),
                    min(max(1,(height+2)//3),21-top))
     # Three depths of road texture show a broad floor, rather than one platform.
-    for y,spacing,width,offset in ((23,12,1,3),(29,18,2,8),(37,24,3,0)):
+    for y,spacing,width,offset in ((23,12,1,3+map_index%3),(29,18,2,8+map_index%5),(37,24,3,map_index%7)):
         for world_x in range(-24,168,spacing):
             scene_rect(display,world_x+offset-camera,y,width,1)
 
@@ -379,14 +382,16 @@ def main_loop():
         if action in ('opening','ending'):
             music = play_scene(action,new_game_state(),music)
             action = None
-    state = load_save_data() if action == 'load' else new_game_state()
+    state = load_save_data() if action == 'load' else campaign.new_game_state()
     while True:
         previous = state
         state = step_frame(state)
         kind = None
-        if previous['screen_state']=='country_select' and state['screen_state']=='safe' and state['progress']==0:
+        if previous['screen_state']=='country_select' and state['screen_state']=='city_select' and state['progress']==0:
             kind = 'opening'
-        elif state['progress'] > previous['progress'] and state['progress']%5==0:
+        elif state.get('campaign_mode') and state['progress']>previous['progress']:
+            kind = 'ending' if state['screen_state']=='ending' else 'event'
+        elif not state.get('campaign_mode') and state['progress'] > previous['progress'] and state['progress']%5==0:
             kind = 'ending' if state['progress']==GOAL_STAGES else 'event'
         if kind:
             music = play_scene(kind,state,music)
@@ -415,11 +420,11 @@ TUNES = (b'\x01\x03\x05\x08\x05\x03\x02\x00',
 def music_track(state):
     screen = state['screen_state']
     track = None
-    if screen in ('title','country_select'):
+    if screen in ('title','country_select','city_select'):
         track = 0
-    elif screen=='clear' or (screen=='safe' and state['progress']>=GOAL_STAGES):
+    elif screen in ('clear','ending') or (screen=='safe' and state['progress']>=GOAL_STAGES):
         track = 5
-    elif screen in ('battle','safe','shop','shop_detail','equip','equip_detail'):
+    elif screen in ('battle','explore','safe','shop','shop_detail','equip','equip_detail'):
         track = 4 if screen=='battle' and state['progress']%5==4 else 1+stage_index(state)//5
     return track
 
@@ -564,7 +569,7 @@ def title_frame(frame=0):
 
 def step_frame(state):
     inputs = handle_inputs()
-    new_state = update_state(state, inputs)
+    new_state = campaign.update(state,inputs) if state.get('campaign_mode') else update_state(state, inputs)
     if new_state['save_requested']:
         new_state['save_status'] = save_game(new_state)
         new_state['save_requested'] = False
@@ -576,11 +581,104 @@ def step_frame(state):
     return new_state
 
 
+def draw_campaign_game(state):
+    display=thumby.display
+    screen=state['screen_state']
+    if screen=='country_select':
+        choices=[i for i in range(3) if i not in state['route']]
+        display.drawText('CHOOSE ORIGIN',0,0,1)
+        for row,region in enumerate(choices):
+            y=10+row*9
+            active=row==state['menu_selection']
+            if active: display.drawFilledRectangle(0,y,72,8,1)
+            display.drawText(('>' if active else ' ')+campaign.COUNTRY_NAMES[region],0,y,0 if active else 1)
+        display.drawText('A:FIGHT B:SAVE',0,34,1)
+    elif screen=='city_select':
+        region=state['route'][-1]
+        cities=[region*5+i for i in range(5) if region*5+i not in state['completed_cities']]
+        display.drawText(campaign.COUNTRY_NAMES[region]+' CITY',0,0,1)
+        start=state['menu_scroll']
+        for row in range(3):
+            index=start+row
+            if index<len(cities):
+                city=cities[index];active=index==state['menu_selection'];y=10+row*9
+                if active: display.drawFilledRectangle(0,y,72,8,1)
+                name=CITY_NAMES[city//5][city%5]
+                display.drawText(('>' if active else ' ')+name,0,y,0 if active else 1)
+                display.drawText(str(CITY_MAP_COUNTS[city//5][city%5])+'M',58,y,0 if active else 1)
+        display.drawText('A:ENTER B:SAVE',0,34,1)
+    elif screen=='explore':
+        index=state['current_city']
+        camera=max(0,min(72,state['player_x']-32))
+        draw_background(display,index,camera,state['map_index'])
+        draw_shop_building(display,camera,state['map_index'])
+        draw_rows(display,HEART_ROWS,0,1,5)
+        display.drawText(str(state['HP']),7,0,1)
+        display.drawText(CITY_NAMES[index//5][index%5],0,8,1)
+        display.drawText('M'+str(state['map_index']+1)+'/'+str(campaign.map_count(state)),48,8,1)
+        foes=state['foes']
+        display.drawText('E'+str(len(foes)),58,0,1)
+        actors=[(True,state['player_x']-camera,state['player_y'],state)]
+        for foe in foes:
+            foe_state=dict(state,enemy_x=foe['x'],enemy_y=foe['y'],active_enemy=True,
+                           progress=state['progress'],is_boss=foe['boss'],
+                           enemy_windup=foe['windup'],enemy_attack_cooldown=0,
+                           enemy_hit_flash=foe['flash'],enemy_stun=foe['stun'])
+            actors.append((False,foe['x']-camera,foe['y'],foe_state))
+        for player,x,y,actor_state in sorted(actors,key=lambda value:value[2]):
+            draw_fighter(display,actor_state,player,x,actor_screen_y(y))
+        if abs(state['player_x']-SHOP_WORLD_X)<=8:
+            display.drawText('U:SHOP',42,33,1)
+        elif state['player_x']>=120:
+            display.drawText('R:BOSS' if state['map_index']==campaign.map_count(state)-1
+                             else 'R:MAP',42,33,1)
+        elif state['map_index']>0 and state['player_x']<=18:
+            display.drawText('L:PREV',0,33,1)
+        elif not foes:
+            display.drawText('NEXT WAVE',42,33,1)
+    elif screen=='shop':
+        cash=str(state['money']) if state['money']<1000 else str(min(999,state['money']//1000))+'k'
+        display.drawText('CITY SHOP',0,0,1)
+        display.drawText('$'+cash,48,0,1)
+        for row in range(3):
+            index=state['menu_scroll']+row
+            if index<10:
+                active=index==state['menu_selection'];y=10+row*10;ink=0 if active else 1
+                if active: display.drawFilledRectangle(0,y,72,8,1)
+                draw_rows(display,ITEM_ICON_ROWS[index],2,y+1,5,ink=ink)
+                label=('>' if active else ' ')+ITEM_NAMES[index]
+                if item_owned(state,index): label+='+'
+                display.drawText(label,10,y,ink)
+                display.drawText(str(ITEM_PRICES[index]),54,y,ink)
+        display.drawText('A:BUY B:EXIT',0,34,1)
+    elif screen=='pause':
+        display.drawText('STATUS',0,0,1)
+        display.drawText('HP'+str(state['HP'])+' AT'+str(state['attack']),0,10,1)
+        display.drawText('DF'+str(state['defense'])+' $'+str(state['money']),0,20,1)
+        for row,label in enumerate(('BACK','SAVE','POT '+str(state.get('potions',0)))):
+            x=row*24;active=row==state['menu_selection']
+            if active: display.drawFilledRectangle(x,30,24,8,1)
+            display.drawText(label,x,30,0 if active else 1)
+    elif screen=='defeat':
+        display.drawText('DEFEAT',0,0,1)
+        display.drawText('A:RETRY B:SAVE',0,24,1)
+    elif screen=='ending':
+        display.drawText('ASIA FIST KING',0,3,1)
+        display.drawText('CHAMPION!',0,15,1)
+        display.drawText('A:NEW B:SAVE',0,32,1)
+    if state['save_status']:
+        display.drawText(state['save_status'],0,0,1)
+    display.update()
+
+
 def draw_game(state):
     display = thumby.display
     display.fill(0)
     screen = state['screen_state']
     status = state['save_status']
+    if state.get('campaign_mode'):
+        draw_campaign_game(state)
+        return
     if screen == 'country_select':
         display.drawText('YOUR COUNTRY' if not state['route'] else 'NEXT COUNTRY',0,0,1)
         choices = [region for region in range(3) if region not in state['route']]
@@ -738,18 +836,15 @@ def handle_inputs():
 
 
 def load_save_data():
-    initial = {
-        'version': 2, 'money': 0, 'progress': 0, 'route': [], 'owned': [False]*4,
-        'equipped_weapon': None, 'equipped_armor': None,
-    }
     try:
         thumby.saveData.setName('ThumbyGrowth')
         if not thumby.saveData.hasItem('state'):
-            return decode_save_data(initial)
+            return campaign.new_game_state()
         raw = thumby.saveData.getItem('state')
-        restored = decode_save_data(json.loads(raw))
+        payload=json.loads(raw)
+        restored=campaign.decode_save(payload) if payload.get('version')==campaign.VERSION else decode_save_data(payload)
         if restored is not None:
-            return restored
+            return restored if restored.get('campaign_mode') else campaign.migrate_legacy(restored)
     except Exception:
         pass
     thumby.display.fill(0)
@@ -757,12 +852,12 @@ def load_save_data():
     thumby.display.update()
     if sys.implementation.name == 'micropython':
         time.sleep(1)
-    return decode_save_data(initial)
+    return campaign.new_game_state()
 
 
 def save_game(state):
     try:
-        data = json.dumps(encode_save_data(state))
+        data = json.dumps(campaign.encode_save(state) if state.get('campaign_mode') else encode_save_data(state))
         thumby.saveData.setName('ThumbyGrowth')
         thumby.saveData.setItem('state', data)
         thumby.saveData.save()

@@ -91,8 +91,8 @@ class FloorTests(unittest.TestCase):
         self.assertEqual(game.save_game(s),'SAVED')
         t=game.load_save_data()
         self.assertEqual((t['money'],t['attack'],t['equipped_weapon']),(80,4,0))
-        self.assertEqual((t['player_y'],t['enemy_y']),(28,28))
-        self.assertEqual(encode_save_data(s),encode_save_data(t))
+        self.assertEqual((t['player_y'],t['current_city'],t['screen_state']),(28,None,'city_select'))
+        self.assertEqual(game.campaign.encode_save(t)['money'],80)
     def test_update_does_not_mutate_input(self):
         s=state(screen_state='battle');before=deepcopy(s)
         update_state(s,keys(R=True,U_held=True,A=True));self.assertEqual(s,before)

@@ -229,8 +229,8 @@ class TestAdapter(unittest.TestCase):
             fake_thumby.saveData.getItem.side_effect = OSError('읽기 실패') if kind == '읽기실패' else None
             fake_thumby.saveData.getItem.return_value = '손상된 값'
             result = ThumbyGrowth.load_save_data()
-            from rules import new_game_state
-            expected = new_game_state()
+            import campaign
+            expected = campaign.new_game_state()
             for key,value in expected.items():
                 self.assertEqual(result[key],value)
             self.assertEqual(fake_thumby.saveData.setItem.call_count,0)
@@ -252,7 +252,12 @@ class TestAdapter(unittest.TestCase):
         self.assertTrue(memory)
         fake_thumby.saveData.reset_mock()
         result = ThumbyGrowth.load_save_data()
-        self.assertEqual(result,state(money=123,progress=5,owned=[False,True,False,True],equipped_weapon=1,equipped_armor=3,attack=6,defense=2))
+        import campaign
+        self.assertEqual(result['campaign_mode'],True)
+        self.assertEqual((result['money'],result['progress'],result['owned'],
+                          result['equipped_weapon'],result['equipped_armor'],
+                          result['attack'],result['defense'],result['HP']),
+                         (123,5,[False,True,False,True],1,3,6,2,10))
         self.assertEqual(fake_thumby.saveData.save.call_count,0)
         self.assertEqual(fake_thumby.saveData.setItem.call_count,0)
 

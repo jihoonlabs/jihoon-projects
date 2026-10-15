@@ -89,7 +89,7 @@ class AudioFeedbackTests(unittest.TestCase):
     def test_main_loop_wires_previous_and_next_to_audio(self):
         before=self.battle();after=update_state(before,f.inputs(A=True))
         with patch.object(game,'title_frame',return_value='new'), \
-             patch.object(game,'new_game_state',return_value=before), \
+             patch.object(game.campaign,'new_game_state',return_value=before), \
              patch.object(game,'step_frame',side_effect=[after,RuntimeError('halt')]), \
              patch.object(game,'step_music',side_effect=lambda m,s:m), \
              patch.object(game,'step_audio',side_effect=lambda m,p,s:m) as audio:

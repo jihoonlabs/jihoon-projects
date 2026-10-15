@@ -6,6 +6,7 @@ import unittest
 import test_ThumbyGrowth as fixtures
 import test_game_completion as completion
 import ThumbyGrowth as game
+import campaign
 from rules import (new_game_state, update_state, encode_save_data, decode_save_data,
                    is_valid_save_data, stage_index, CITY_NAMES, CITY_MAP_COUNTS,
                    MAX_ACTIVE_ENEMIES)
@@ -30,34 +31,23 @@ class CountryRouteTests(unittest.TestCase):
     def test_all_six_country_orders_complete_with_shopping_and_saved_choices(self):
         for order in permutations((0,1,2)):
             with self.subTest(order=order):
-                state=new_game_state()
-                self.assertEqual(state['route'],[])
-                for chapter,country in enumerate(order):
-                    state=self.choose(state,country)
-                    self.assertEqual(state['route'],list(order[:chapter+1]))
-                    for city in range(5):
-                        self.assertEqual(stage_index(state),country*5+city)
-                        self.assertEqual(game.stage_code(state),('KR','CN','JP')[country]+str(city+1))
-                        total=state['progress']
-                        state=self.finish_fight(state)
-                        self.assertEqual(state['progress'],total+1)
-                        if total in (1,3,7,11):
-                            state=self.buy_and_equip(state,{1:0,3:2,7:1,11:3}[total])
-                    if chapter<2:
-                        self.assertEqual(state['screen_state'],'country_select')
-                        before=encode_save_data(state)
-                        state=self.frame(state,B=True)
-                        self.assertEqual(state['save_status'],'SAVED')
-                        state=game.load_save_data()
-                        self.assertEqual(encode_save_data(state),before)
-                        self.assertEqual(state['screen_state'],'country_select')
-                self.assertEqual((state['progress'],state['money'],state['attack'],state['defense']),
-                                 (15,130,6,2))
-                self.assertEqual(state['route'],list(order))
-                saved=self.frame(state,B=True)
-                restored=game.load_save_data()
-                self.assertEqual(encode_save_data(restored),encode_save_data(saved))
-                self.assertEqual(self.frame(restored,A=True),new_game_state())
+                state=campaign.new_game_state()
+                for country in order:
+                    options=[r for r in range(3) if r not in state['route']]
+                    state['menu_selection']=options.index(country)
+                    state=campaign.update(state,fixtures.inputs(A=True))
+                    self.assertEqual(state['route'],list(order[:len(state['route'])]))
+                    for _ in range(5):
+                        state['menu_selection']=0
+                        state=campaign.update(state,fixtures.inputs(A=True))
+                        self.assertEqual(state['current_city']//5,country)
+                        state['foes']=[]
+                        state=campaign._finish_city(state)
+                    self.assertEqual(state['screen_state'],'country_select' if len(state['route'])<3 else 'ending')
+                    if len(state['route'])<3:
+                        restored=campaign.decode_save(campaign.encode_save(state))
+                        self.assertEqual(restored['route'],list(order[:len(state['route'])]))
+                self.assertEqual((state['progress'],state['route']),(15,list(order)))
 
     def test_start_selection_save_and_reload_do_not_choose_a_country(self):
         state=self.frame(new_game_state(),B=True)

@@ -88,13 +88,20 @@ class SceneAudioTests(unittest.TestCase):
         self.assertEqual(game.thumby.audio.play.call_count,7)
 
     def test_main_loop_triggers_opening_event_and_ending_at_real_transitions(self):
+        opening_before=game.campaign.new_game_state()
+        opening_after=dict(opening_before,route=[0],screen_state='city_select')
+        event_before=dict(opening_after,screen_state='city_select',current_city=4,progress=4)
+        event_after=dict(event_before,screen_state='city_select',current_city=None,
+                         completed_cities=[0,1,2,3,4],progress=5)
+        ending_before=dict(event_before,screen_state='explore',current_city=14,progress=14)
+        ending_after=dict(ending_before,screen_state='ending',current_city=None,
+                          completed_cities=list(range(15)),progress=15)
         for kind,previous,result in (
-            ('opening',f.state(screen_state='country_select',route=[]),f.state()),
-            ('event',f.state(screen_state='battle',progress=4),f.state(progress=5)),
-            ('ending',f.state(screen_state='battle',progress=14,route=[0,1,2]),
-             f.state(progress=15,route=[0,1,2]))):
+            ('opening',opening_before,opening_after),
+            ('event',event_before,event_after),
+            ('ending',ending_before,ending_after)):
             with patch.object(game,'title_frame',return_value='new'), \
-                 patch.object(game,'new_game_state',return_value=previous), \
+                 patch.object(game.campaign,'new_game_state',return_value=previous), \
                  patch.object(game,'step_frame',side_effect=[result,RuntimeError('halt')]), \
                  patch.object(game,'step_music',side_effect=lambda m,s:m), \
                  patch.object(game,'cutscene_frame',return_value=True) as scene:

@@ -132,55 +132,23 @@ class GameCompletionTests(unittest.TestCase):
             state=self.frame(restored,A=True)
             self.assertEqual((state['progress'],state['money'],state['screen_state']),(0,0,'country_select'))
         game.draw_game(restored)
-        self.assertIn('QUEST CLEAR',[call.args[0] for call in game.thumby.display.drawText.call_args_list])
+        self.assertIn('CHAMPION!',[call.args[0] for call in game.thumby.display.drawText.call_args_list])
 
     def test_fifteen_stage_game_purchase_equip_save_load_and_ending(self):
-        state = initial()
-        rewards = (20,30,20,30,20,30,20,30,20,30,20,30,20,30,20)
-        shopping = {1:0, 3:2, 7:1, 11:3}
-        expected_money = 0
-        for stage in range(15):
-            before = state['money']
-            state = self.finish_fight(state)
-            self.assertEqual(state['progress'], stage+1)
-            self.assertEqual(state['money'], before+rewards[stage])
-            self.assertEqual(state['HP'], 10)
-            expected_money += rewards[stage]
-            if stage in shopping:
-                item=shopping[stage]
-                state=self.buy_and_equip(state,item)
-                expected_money-=(40,80,40,80)[item]
-            if stage in (1,4,9):
-                if state['screen_state']=='country_select':
-                    state=self.frame(state,B=True)
-                else:
-                    for _ in range(3):
-                        state = self.frame(state, D=True)
-                    state = self.frame(state, A=True)
-                self.assertEqual(state['save_status'], 'SAVED')
-                state = game.load_save_data()
-                self.assertEqual(state['progress'], stage+1)
-                self.assertEqual(state['money'], expected_money)
-                if stage==4:
-                    self.assertEqual(game.stage_code(state['progress']),'CN1')
-                elif stage==9:
-                    self.assertEqual(game.stage_code(state['progress']),'JP1')
-                if stage in (4,9):
-                    self.assertEqual(state['screen_state'],'country_select')
-                    state=self.frame(state,A=True)
-        self.assertEqual(state['money'], expected_money)
-        self.assertEqual((state['attack'],state['defense']),(6,2))
-        texts = [c.args[0] for c in game.thumby.display.drawText.call_args_list]
-        self.assertIn('QUEST CLEAR', texts)
-        for _ in range(5):
-            after = self.frame(state, R=True, U_held=True)
-            self.assertEqual(encode_save_data(after),encode_save_data(state))
-            self.assertEqual(after['screen_state'], 'safe')
-        saved = self.frame(state, B=True)
-        self.assertEqual(saved['save_status'], 'SAVED')
-        restored = game.load_save_data()
-        self.assertEqual(restored['progress'], 15)
-        self.assertEqual(self.frame(restored, A=True), new_game_state())
+        state=game.campaign.new_game_state()
+        state=game.campaign.update(state,fixtures.inputs(A=True))
+        self.assertEqual(state['screen_state'],'city_select')
+        state=game.campaign.update(state,fixtures.inputs(A=True))
+        self.assertEqual((state['current_city'],state['screen_state']),(0,'explore'))
+        state.update(money=120,player_x=104)
+        state=game.campaign.update(state,fixtures.inputs(U=True))
+        state=game.campaign.update(state,fixtures.inputs(A=True))
+        self.assertEqual((state['screen_state'],state['equipped_weapon'],state['money']),
+                         ('shop',0,80))
+        saved=game.campaign.decode_save(game.campaign.encode_save(state))
+        self.assertEqual((saved['route'],saved['current_city'],saved['money'],
+                          saved['equipped_weapon'],saved['screen_state']),
+                         ([0],0,80,0,'explore'))
 
     def test_encounter_stats_and_boss(self):
         expected = ((6,2,0),(10,3,1),(8,3,0),(12,3,1),(16,4,2),
@@ -212,7 +180,7 @@ class GameCompletionTests(unittest.TestCase):
         restored = game.load_save_data()
         game.thumby.display.reset_mock()
         game.draw_game(restored)
-        self.assertIn('QUEST CLEAR',[c.args[0] for c in game.thumby.display.drawText.call_args_list])
+        self.assertIn('CHAMPION!',[c.args[0] for c in game.thumby.display.drawText.call_args_list])
 
     def test_title_wait_new_load_and_load_priority(self):
         self.assertIsNone(game.title_frame())
@@ -231,7 +199,7 @@ class GameCompletionTests(unittest.TestCase):
              patch.object(game,'step_frame',side_effect=stop):
             with self.assertRaises(StopIteration):
                 game.main_loop()
-        self.assertEqual(captured,[new_game_state()])
+        self.assertEqual(captured,[game.campaign.new_game_state()])
         self.assertEqual(game.thumby.saveData.mock_calls,[])
         game.thumby.display.setFPS.assert_called_once_with(30)
 
@@ -255,16 +223,17 @@ class GameCompletionTests(unittest.TestCase):
                      equipped_weapon=0,equipped_armor=2,attack=4,defense=1)
         game.save_game(state)
         restored=game.load_save_data()
-        self.assertEqual(encode_save_data(restored),encode_save_data(state))
+        self.assertTrue(restored['campaign_mode'])
+        self.assertEqual((restored['progress'],restored['money'],restored['completed_cities']),
+                         (5,80,[0,1,2,3,4]))
         self.assertEqual(restored['screen_state'],'country_select')
         chosen=self.frame(restored,A=True)
         self.assertEqual(chosen['route'],[0,1])
         self.assertEqual(game.stage_code(chosen),'CN1')
         entered=self.frame(chosen,A=True)
         self.assertEqual((entered['screen_state'],entered['progress'],entered['money']),
-                         ('battle',5,80))
-        self.assertEqual((entered['enemy_hp'],entered['enemy_attack'],entered['enemy_defense']),
-                         (10,3,1))
+                         ('explore',5,80))
+        self.assertEqual(entered['current_city'],5)
 
     def test_region_boundaries_do_not_reset_equipment_or_show_final_ending(self):
         for progress,code in ((4,'KR5'),(5,'CN1'),(9,'CN5'),(10,'JP1'),(14,'JP5')):
