@@ -56,7 +56,10 @@ export const useTicketStore = create<TicketState>((set, get) => {
   // Serialize writes to the same ticket; unrelated tickets can still progress.
   const write = <T>(id: string, operation: () => Promise<T>): Promise<T> => {
     const previous = pending.get(id);
-    const request = previous ? previous.then(operation) : operation();
+    // 先行失敗を後続の明示操作へ伝播させず、各操作の結果は呼出元へ返す。
+    const request = previous
+      ? previous.then(operation, operation)
+      : operation();
     pending.set(id, request);
     return request.finally(() => {
       if (pending.get(id) === request) pending.delete(id);
