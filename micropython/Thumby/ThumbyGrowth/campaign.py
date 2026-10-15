@@ -234,6 +234,15 @@ def _open_shop(state):
     state['shop_return']='explore'
     state['menu_selection']=0
     state['menu_scroll']=0
+    state['shop_notice']=''
+
+
+def _equip_item(state,item):
+    if item in (0,1): state['equipped_weapon']=item
+    elif item in (2,3): state['equipped_armor']=item
+    elif item==4: state['equipped_weapon']=4
+    apply_stats(state)
+    return state
 
 
 def _shop_update(state,inputs):
@@ -248,14 +257,16 @@ def _shop_update(state,inputs):
     state['menu_scroll']=max(0,min(7,selected-2))
     if inputs['A']:
         item=selected
-        if can_buy(state,item):
+        if item<5 and item_owned(state,item):
+            _equip_item(state,item)
+            state['shop_notice']='EQUIPPED'
+        elif can_buy(state,item):
             state['money']-=ITEM_PRICES[item]
             if item<4:
                 state['owned'][item]=True
-                if item in (0,1): state['equipped_weapon']=item
-                else: state['equipped_armor']=item
+                _equip_item(state,item)
             elif item==4:
-                state['gun_owned']=True;state['equipped_weapon']=4
+                state['gun_owned']=True;_equip_item(state,item)
             elif item==5: state['potions']=state.get('potions',0)+1
             elif item in (6,7,8):
                 field=('hp_growth','atk_growth','def_growth')[item-6]
@@ -263,6 +274,7 @@ def _shop_update(state,inputs):
                 apply_stats(state)
                 if item==6: state['HP']=min(state['maxHP'],state['HP']+2)
             elif item==9: state['skill_owned']=True
+            state['shop_notice']='EQUIPPED' if item<5 else 'BOUGHT'
     return state
 
 
@@ -282,7 +294,7 @@ def _explore_update(state,inputs):
     dx=int(bool(inputs['R']))-int(bool(inputs['L']))
     dy=int(bool(inputs.get('D_held',inputs['D'])))-int(bool(inputs.get('U_held',inputs['U'])))
     if dx: state['direction']='R' if dx>0 else 'L'
-    if not healed and dx and state['player_attack_cooldown']==0 and (inputs['A'] or inputs['B']):
+    if not healed and state['player_attack_cooldown']==0 and (inputs['A'] or inputs['B']):
         kicking=bool(inputs['B'])
         state['attack_kind']='kick' if kicking else 'punch'
         state['player_attack_cooldown']=20 if kicking else 15
@@ -290,7 +302,9 @@ def _explore_update(state,inputs):
         reach=10 if kicking else 8
         for foe in state['foes']:
             gap=foe['x']-(state['player_x']+6) if state['direction']=='R' else state['player_x']-(foe['x']+6)
-            if abs(state['player_y']-foe['y'])<=3 and 0<=gap<=reach and gap<best:
+            # A small overlap allowance prevents close enemies from slipping
+            # through the hitbox and makes a stationary facing attack reliable.
+            if abs(state['player_y']-foe['y'])<=3 and -4<=gap<=reach and gap<best:
                 target=foe;best=gap
         if target is not None:
             power=state['attack']+(1 if kicking else 0)

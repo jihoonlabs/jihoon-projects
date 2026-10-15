@@ -627,15 +627,18 @@ def draw_campaign_game(state):
             actors.append((False,foe['x']-camera,foe['y'],foe_state))
         for player,x,y,actor_state in sorted(actors,key=lambda value:value[2]):
             draw_fighter(display,actor_state,player,x,actor_screen_y(y))
+        # Keep the combat buttons visible during play; show the nearby action
+        # on the right side of the same footer line.
+        display.drawText('A:H B:K',0,33,1)
         if abs(state['player_x']-SHOP_WORLD_X)<=8:
             display.drawText('U:SHOP',42,33,1)
         elif state['player_x']>=120:
             display.drawText('R:BOSS' if state['map_index']==campaign.map_count(state)-1
                              else 'R:MAP',42,33,1)
         elif state['map_index']>0 and state['player_x']<=18:
-            display.drawText('L:PREV',0,33,1)
+            display.drawText('L:BACK',42,33,1)
         elif not foes:
-            display.drawText('NEXT WAVE',42,33,1)
+            display.drawText('WAVE',48,33,1)
     elif screen=='shop':
         cash=str(state['money']) if state['money']<1000 else str(min(999,state['money']//1000))+'k'
         display.drawText('CITY SHOP',0,0,1)
@@ -643,14 +646,22 @@ def draw_campaign_game(state):
         for row in range(3):
             index=state['menu_scroll']+row
             if index<10:
-                active=index==state['menu_selection'];y=10+row*10;ink=0 if active else 1
+                active=index==state['menu_selection'];y=8+row*9;ink=0 if active else 1
                 if active: display.drawFilledRectangle(0,y,72,8,1)
                 draw_rows(display,ITEM_ICON_ROWS[index],2,y+1,5,ink=ink)
                 label=('>' if active else ' ')+ITEM_NAMES[index]
-                if item_owned(state,index): label+='+'
+                owned=item_owned(state,index)
+                equipped=index in (state['equipped_weapon'],state['equipped_armor'])
+                if owned and index<5:
+                    label+='*' if equipped else '+'
+                elif owned:
+                    label+='+'
                 display.drawText(label,10,y,ink)
-                display.drawText(str(ITEM_PRICES[index]),54,y,ink)
-        display.drawText('A:BUY B:EXIT',0,34,1)
+                if index<5 and owned:
+                    display.drawText('ON' if equipped else 'EQ',54,y,ink)
+                else:
+                    display.drawText(str(ITEM_PRICES[index]),54,y,ink)
+        display.drawText('A:OK B:BACK',0,34,1)
     elif screen=='pause':
         display.drawText('STATUS',0,0,1)
         display.drawText('HP'+str(state['HP'])+' AT'+str(state['attack']),0,10,1)

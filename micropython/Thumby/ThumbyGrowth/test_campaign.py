@@ -75,6 +75,29 @@ class CampaignTests(unittest.TestCase):
         state=campaign.update(state,buttons(A=True))
         self.assertEqual((state['HP'],state['potions'],state['screen_state']),(10,0,'pause'))
 
+    def test_stationary_attack_hits_enemy_in_front(self):
+        state=campaign.new_game_state()
+        foe=dict(x=24,y=28,hp=20,max_hp=20,attack=1,defense=0,
+                 windup=0,cooldown=99,stun=0,flash=0,boss=False)
+        state.update(route=[0],current_city=0,screen_state='explore',
+                     player_x=16,player_y=28,direction='R',foes=[foe])
+        state=campaign.update(state,buttons(A=True))
+        self.assertLess(state['foes'][0]['hp'],20)
+        self.assertEqual(state['attack_kind'],'punch')
+
+    def test_shop_buys_and_equips_gear_then_re_equips_owned_gear_for_free(self):
+        state=campaign.new_game_state()
+        state.update(route=[0],current_city=0,screen_state='shop',money=160)
+        state=campaign.update(state,buttons(A=True))
+        self.assertEqual(state['equipped_weapon'],0)
+        self.assertEqual(state['money'],120)
+        state=campaign.update(state,buttons(D=True))
+        state=campaign.update(state,buttons(A=True))
+        self.assertEqual((state['equipped_weapon'],state['money']),(1,40))
+        state=campaign.update(state,buttons(U=True))
+        state=campaign.update(state,buttons(A=True))
+        self.assertEqual((state['equipped_weapon'],state['money']),(0,40))
+
 
 if __name__=='__main__':
     unittest.main()
