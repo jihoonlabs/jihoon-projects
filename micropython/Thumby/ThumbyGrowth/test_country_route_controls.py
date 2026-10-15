@@ -7,7 +7,8 @@ import test_ThumbyGrowth as fixtures
 import test_game_completion as completion
 import ThumbyGrowth as game
 from rules import (new_game_state, update_state, encode_save_data, decode_save_data,
-                   is_valid_save_data, stage_index, CITY_NAMES)
+                   is_valid_save_data, stage_index, CITY_NAMES, CITY_MAP_COUNTS,
+                   MAX_ACTIVE_ENEMIES)
 
 
 class CountryRouteTests(unittest.TestCase):
@@ -135,6 +136,12 @@ class CountryRouteTests(unittest.TestCase):
                 self.assertIn(name,[call.args[0] for call in game.thumby.display.drawText.call_args_list])
         self.assertEqual(len(set(names)),15)
 
+    def test_each_city_has_two_to_five_maps_and_enemy_cap_is_three(self):
+        self.assertEqual(len(CITY_MAP_COUNTS),3)
+        self.assertTrue(all(len(cities)==5 for cities in CITY_MAP_COUNTS))
+        self.assertTrue(all(2<=count<=5 for cities in CITY_MAP_COUNTS for count in cities))
+        self.assertEqual(MAX_ACTIVE_ENEMIES,3)
+
 
 class HandFootControlTests(unittest.TestCase):
     def battle(self, **changes):
@@ -179,6 +186,19 @@ class HandFootControlTests(unittest.TestCase):
         self.assertEqual(resumed['screen_state'],'battle')
         self.assertEqual(resumed['enemy_hp'],6)
         self.assertEqual(resumed['player_attack_cooldown'],0)
+
+    def test_shop_is_entered_from_storefront_and_returns_to_the_same_map(self):
+        state=self.battle(player_x=104)
+        entered=update_state(state,fixtures.inputs(U=True))
+        self.assertEqual((entered['screen_state'],entered['shop_return']),('shop','battle'))
+        returned=update_state(entered,fixtures.inputs(B=True))
+        self.assertEqual(returned['screen_state'],'battle')
+        self.assertEqual(returned['player_x'],104)
+
+    def test_shop_cannot_be_opened_from_elsewhere_on_the_map(self):
+        state=self.battle(player_x=16)
+        unchanged=update_state(state,fixtures.inputs(U=True))
+        self.assertEqual(unchanged['screen_state'],'battle')
 
 
 if __name__=='__main__':

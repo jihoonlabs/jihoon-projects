@@ -12,7 +12,8 @@ from rules import (update_state, encode_save_data, decode_save_data,
                    GOAL_STAGES, ENCOUNTERS, REGIONS, STAGES_PER_REGION,
                    CITY_NAMES, stage_index, new_game_state, ITEM_NAMES,
                    ITEM_EFFECTS, get_item_price, item_owned,
-                   item_counter, purchase_status, combat_power, encounter_stats)
+                   item_counter, purchase_status, combat_power, encounter_stats,
+                   MAX_ACTIVE_ENEMIES, CITY_MAP_COUNTS)
 
 from scene_art import SCENE_BITMAPS
 
@@ -58,6 +59,7 @@ MERCHANT_HEADS = ((0x03c0,0x0ff0,0x1ff8),(0x0ff0,0x1ff8,0x3ffc),(0x0240,0x0ff0,0
 SCENE_MOTIFS = (b'\x04\x0e\x06',b'\x04\x0e\x15\x0e\x04',b'\x0a\x1f\x0e')
 SCENE_ANCHORS = (((2,0),(32,2),(64,1)),((2,0),(20,0),(61,0)),
                  ((16,0),(32,0),(62,0)),((3,0),(26,0),(64,0)))
+SHOP_WORLD_X = 104
 
 
 def portrait_rows(state,merchant=False):
@@ -350,6 +352,21 @@ def draw_background(display, progress, camera):
             scene_rect(display,world_x+offset-camera,y,width,1)
 
 
+def draw_shop_building(display,camera,map_index=0):
+    x=SHOP_WORLD_X-camera
+    if x < -16 or x > 72:
+        return
+    scene_rect(display,x,18,14,12,1)
+    scene_rect(display,x-1,16,16,3,1)
+    scene_rect(display,x+2,21,4,5,0)
+    scene_rect(display,x+9,21,3,4,0)
+    if map_index%3==1:
+        scene_rect(display,x+5,18,1,3,0)
+    elif map_index%3==2:
+        scene_rect(display,x+6,16,2,2,0)
+    display.drawText('SHOP',x+1,13,1)
+
+
 def main_loop():
     thumby.display.setFPS(30)
     music = {'track': None, 'tick': 0}
@@ -588,6 +605,7 @@ def draw_game(state):
     elif screen == 'battle':
         camera = max(0, min(72, state['player_x']-32))
         draw_background(display, stage_index(state), camera)
+        draw_shop_building(display,camera,state.get('map_index',0))
         draw_rows(display,HEART_ROWS,0,1,5)
         display.drawText(str(state['HP']),7,0,1)
         draw_rows(display,ENEMY_ICON_ROWS,42,1,5)
@@ -608,6 +626,8 @@ def draw_game(state):
         actors.sort(key=lambda actor: actor[2])
         for player,x,world_y in actors:
             draw_fighter(display,state,player,x,actor_screen_y(world_y))
+        if abs(state['player_x']-SHOP_WORLD_X)<=8:
+            display.drawText('U:SHOP',42,33,1)
     elif screen == 'pause':
         stats='HP'+str(state['HP'])+' AT'+str(state['attack'])+' DF'+str(state['defense'])
         if len(stats)>12:

@@ -60,6 +60,19 @@ CITY_NAMES = (
     ('BEIJING','SHANGHAI','GUANGZHOU','CHENGDU','XIAN'),
     ('TOKYO','OSAKA','KYOTO','NAGOYA','SAPPORO'),
 )
+# Each city is a short chain of explorable screens. The final screen leads to
+# the city boss; regular enemy waves can continue until the player moves on.
+CITY_MAP_COUNTS = (
+    (5,4,3,2,3),
+    (5,4,3,2,4),
+    (5,4,3,2,4),
+)
+MAX_ACTIVE_ENEMIES = 3
+ENEMY_WAVE_DELAY = 24
+
+
+def city_map_count(region, city):
+    return CITY_MAP_COUNTS[region][city]
 
 
 def legacy_route(progress):
@@ -114,6 +127,15 @@ def update_state(state, inputs):
     for field in ('command_timer','command_ready'):
         new_state.setdefault(field,0)
 
+    # A storefront can be opened from the map when the fighter reaches its door.
+    if (screen == 'battle' and inputs['U'] and not inputs['D']
+            and abs(state['player_x']-104)<=8):
+        new_state['screen_state']='shop'
+        new_state['shop_return']='battle'
+        new_state['menu_selection']=0
+        new_state['menu_scroll']=0
+        return new_state
+
     if screen == 'country_select':
         choices = [region for region in range(3) if region not in new_state['route']]
         if not choices:
@@ -159,7 +181,7 @@ def update_state(state, inputs):
         if screen == 'pause':
             new_state['screen_state'] = 'battle'
         elif screen in ('shop', 'equip'):
-            new_state['screen_state'] = 'safe'
+            new_state['screen_state'] = state.get('shop_return','safe') if screen=='shop' else 'safe'
         elif screen in ('shop_detail', 'equip_detail'):
             new_state['screen_state'] = screen[:-7]
             return new_state
@@ -220,6 +242,7 @@ def update_state(state, inputs):
             selected = new_state['menu_selection']
             if selected in (1, 2):
                 new_state['screen_state'] = 'shop' if selected == 1 else 'equip'
+                new_state['shop_return'] = 'safe'
                 new_state['menu_selection'] = 0
                 new_state['menu_scroll'] = 0
             elif selected == 3:
