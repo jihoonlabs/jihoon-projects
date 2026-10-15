@@ -60,6 +60,15 @@ class SceneDetailTests(unittest.TestCase):
             self.assertEqual(state,before)
         self.assertEqual(tuple(bytes(b) for b in game.SCENE_BITMAPS),art)
 
+    def test_opening_and_ending_read_as_a_fighting_challenge(self):
+        for kind,frame,expected in (('opening',0,'FIGHT BEGINS'),
+                                    ('ending',0,'FINAL BOSS'),
+                                    ('ending',60,'CHAMPION')):
+            game.thumby.display.reset_mock()
+            game.cutscene_frame(kind,frame,f.state())
+            labels=[call.args[0] for call in game.thumby.display.drawText.call_args_list]
+            self.assertIn(expected,labels)
+
     def test_preview_scene_still_has_three_second_limit_and_one_bitmap_blit(self):
         for kind,duration in (('opening',90),('ending',90),('event',45)):
             game.thumby.display.reset_mock()

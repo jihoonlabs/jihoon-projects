@@ -500,7 +500,7 @@ def cutscene_frame(kind,frame,state):
     if picture==1:
         for label,x,y in (('KR',3,18),('CN',30,2),('JP',57,18)):
             display.drawText(label,x,y,1)
-    caption = 'PICK A PATH' if kind=='opening' else 'RETURN HOME' if picture==3 else 'ROUTE DONE'
+    caption = 'FIGHT BEGINS' if kind=='opening' else 'CHAMPION' if picture==3 else 'FINAL BOSS'
     display.drawText(caption,0,24,1)
     display.drawText('A/B SKIP',24,33,1)
     display.update()
