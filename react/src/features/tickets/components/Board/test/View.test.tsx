@@ -84,6 +84,20 @@ vi.mock('@dnd-kit/core', async (importOriginal) => {
   };
 });
 
+async function renderSelectedProject() {
+  render(<TicketBoardView />);
+  await waitFor(() =>
+    expect(
+      screen
+        .getByRole('combobox', { name: 'プロジェクト' })
+        .querySelector('option[value="1"]'),
+    ).not.toBeNull(),
+  );
+  fireEvent.change(screen.getByRole('combobox', { name: 'プロジェクト' }), {
+    target: { value: '1' },
+  });
+}
+
 beforeEach(() => {
   vi.mocked(projectApi.fetchProjectMembers).mockReset();
   vi.mocked(projectApi.fetchProjects).mockReset();
@@ -128,7 +142,7 @@ it('persists a board drop with the selected project version', async () => {
   vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
   vi.mocked(api.moveTicket).mockResolvedValue({ ticket, boardVersion: 4 });
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   await waitFor(() =>
     expect(useTicketStore.getState().tickets).toHaveLength(1),
   );
@@ -152,7 +166,7 @@ it.each([false, true])(
     );
     vi.mocked(api.createTicket).mockResolvedValue(created);
     useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-    render(<TicketBoardView />);
+    await renderSelectedProject();
     await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' });
     fireEvent.click(screen.getByText('drop DONE'));
     await waitFor(() => expect(api.moveTicket).toHaveBeenCalled());
@@ -204,7 +218,7 @@ it.each([false, true])(
       }),
     );
     useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-    render(<TicketBoardView />);
+    await renderSelectedProject();
     await screen.findByRole('combobox', { name: 'First ticket のステータス' });
     fireEvent.click(screen.getByText('drop DONE'));
     await waitFor(() => expect(api.moveTicket).toHaveBeenCalled());
@@ -266,7 +280,7 @@ it('shows tickets assigned to the signed-in user in the ME filter', async () => 
   });
 
   try {
-    render(<TicketBoardView />);
+    await renderSelectedProject();
     await waitFor(() =>
       expect(screen.getByText('First ticket')).toBeInTheDocument(),
     );
@@ -292,7 +306,7 @@ it('allows manual status changes while search disables dragging', async () => {
   });
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   expect(await screen.findByText('First ticket')).toBeInTheDocument();
   fireEvent.change(screen.getByRole('textbox', { name: 'チケット検索' }), {
     target: { value: 'First ticket' },
@@ -318,7 +332,7 @@ it('exposes accessible names for search and assignee filters', async () => {
   vi.mocked(api.fetchTickets).mockResolvedValue([]);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
-  render(<TicketBoardView />);
+  await renderSelectedProject();
 
   expect(
     screen.getByRole('textbox', { name: 'チケット検索' }),
@@ -348,7 +362,7 @@ it('filters tickets by the selected project', async () => {
   ]);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   expect(await screen.findByText('First ticket')).toBeInTheDocument();
   expect(screen.queryByText('Other project ticket')).not.toBeInTheDocument();
   fireEvent.change(screen.getByRole('combobox', { name: 'プロジェクト' }), {
@@ -371,7 +385,7 @@ it('keeps read members read-only while allowing Ticket details and comments', as
   ]);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   const ticketTitle = await screen.findByRole('button', {
     name: 'TICK-1 の詳細を開く',
   });
@@ -425,7 +439,7 @@ it('allows a read-only project leader to manage members without Ticket write con
   ]);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   expect(
     await screen.findByRole('button', { name: 'メンバー管理' }),
   ).toBeInTheDocument();
@@ -461,7 +475,7 @@ it('lets a project leader add members and change each member role and permission
   });
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   fireEvent.click(await screen.findByRole('button', { name: 'メンバー管理' }));
   const dialog = await screen.findByRole('dialog');
   expect(within(dialog).getByText(/Tester/)).toBeInTheDocument();
@@ -495,7 +509,7 @@ it('keeps the create modal open and shows the save error when creation fails', a
   vi.mocked(api.createTicket).mockRejectedValue(new Error('create failed'));
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   fireEvent.click(
     await screen.findByRole('button', { name: '+ チケット作成' }),
   );
@@ -521,7 +535,7 @@ it('keeps the modal open when the backdrop is clicked while saving', async () =>
   );
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   fireEvent.click(
     await screen.findByRole('button', { name: '+ チケット作成' }),
   );
@@ -548,7 +562,7 @@ it('keeps the edit modal open and shows the save error when editing fails', asyn
   vi.mocked(api.updateTicket).mockRejectedValue(new Error('update failed'));
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' });
   fireEvent.click(screen.getByRole('button', { name: 'TICK-1 の詳細を開く' }));
   await screen.findByRole('heading', { name: 'チケット詳細' });
@@ -570,7 +584,7 @@ it('opens details from the title with the keyboard and restores focus on close',
   vi.mocked(api.fetchTickets).mockResolvedValue([api.toTicket(responseTicket)]);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   const title = await screen.findByRole('button', {
     name: 'TICK-1 の詳細を開く',
   });
@@ -594,7 +608,7 @@ it('saves edits from detail and returns to the refreshed detail view', async () 
   });
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' });
   fireEvent.click(screen.getByRole('button', { name: 'TICK-1 の詳細を開く' }));
   fireEvent.click(await screen.findByRole('button', { name: '編集' }));
@@ -655,7 +669,7 @@ it.each(['7', ''])(
         : null,
     }));
     useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-    render(<TicketBoardView />);
+    await renderSelectedProject();
     fireEvent.click(
       await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' }),
     );
@@ -686,7 +700,7 @@ it('deletes a ticket from detail only after confirmation', async () => {
   vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' });
   expect(
     screen.queryByRole('button', { name: '削除' }),
@@ -706,7 +720,7 @@ it('keeps detail open and reports a failed delete', async () => {
   vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' });
   fireEvent.click(screen.getByRole('button', { name: 'TICK-1 の詳細を開く' }));
   fireEvent.click(await screen.findByRole('button', { name: '削除' }));
@@ -723,7 +737,7 @@ it('does not open a ticket detail from a drag completion on the board', async ()
   vi.mocked(api.moveTicket).mockResolvedValue({ ticket, boardVersion: 4 });
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' });
   fireEvent.click(screen.getByText('drop DONE'));
 
@@ -745,7 +759,7 @@ it('handles a failed project refresh after a manual status update', async () => 
     .mockRejectedValueOnce(new Error('project refresh failed'));
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   fireEvent.change(
     await screen.findByRole('combobox', { name: 'First ticket のステータス' }),
     {
@@ -769,7 +783,7 @@ it('keeps a failed manual status update visible and allows retry', async () => {
     .mockResolvedValue([{ ...ticket, status: 'DONE' }]);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   const status = await screen.findByRole('combobox', {
     name: 'First ticket のステータス',
   });
@@ -848,7 +862,7 @@ it('does not turn a saved Ticket into a failed creation when Project refresh fai
     .mockResolvedValue([ticket]);
   vi.mocked(api.createTicket).mockClear().mockResolvedValue(ticket);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   fireEvent.click(
     await screen.findByRole('button', { name: '+ チケット作成' }),
   );
@@ -890,6 +904,10 @@ it('keeps archived Project boards read-only even for admins and exposes restorat
   fireEvent.click(
     screen.getByRole('checkbox', { name: '終了したプロジェクトを表示' }),
   );
+  await screen.findByRole('option', { name: 'General' });
+  fireEvent.change(screen.getByRole('combobox', { name: 'プロジェクト' }), {
+    target: { value: '1' },
+  });
   await waitFor(() =>
     expect(screen.getByRole('combobox', { name: 'プロジェクト' })).toHaveValue(
       '1',
@@ -934,7 +952,7 @@ it('archives the current Project without deleting Tickets and removes it from th
     archivedAt: '2026-10-13T00:00:00Z',
   });
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   fireEvent.click(
     await screen.findByRole('button', { name: 'プロジェクト設定' }),
   );
@@ -946,7 +964,7 @@ it('archives the current Project without deleting Tickets and removes it from th
     ),
   );
   expect(screen.getByRole('combobox', { name: 'プロジェクト' })).toHaveValue(
-    '',
+    'ALL',
   );
   expect(useTicketStore.getState().tickets).toHaveLength(1);
 });
@@ -973,7 +991,7 @@ it('updates leader authority immediately after a successful transfer', async () 
     role: 'leader',
   });
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   fireEvent.click(await screen.findByRole('button', { name: 'メンバー管理' }));
   fireEvent.click(
     await screen.findByRole('button', { name: 'Ren をリーダーにする' }),
@@ -1019,7 +1037,7 @@ it('does not resurrect an archived Project when an older Project refresh arrives
     user: { ...useAuthStore.getState().user!, role: 'admin' },
   });
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   const status = await screen.findByRole('combobox', {
     name: 'First ticket のステータス',
   });
@@ -1037,14 +1055,14 @@ it('does not resurrect an archived Project when an older Project refresh arrives
   fireEvent.click(screen.getByRole('button', { name: '終了を確定' }));
   await waitFor(() =>
     expect(screen.getByRole('combobox', { name: 'プロジェクト' })).toHaveValue(
-      '',
+      'ALL',
     ),
   );
   await act(async () => {
     oldRefresh([project]);
   });
   expect(screen.getByRole('combobox', { name: 'プロジェクト' })).toHaveValue(
-    '',
+    'ALL',
   );
   expect(
     screen.queryByRole('button', { name: '+ チケット作成' }),
@@ -1065,7 +1083,7 @@ it('recovers member authority on the same project after a failed initial lookup'
     .mockRejectedValueOnce(new Error('membership unavailable'))
     .mockResolvedValueOnce([recoveryMember]);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   expect(await screen.findByRole('alert')).toHaveTextContent(
     'membership unavailable',
   );
@@ -1091,7 +1109,7 @@ it('retains the retry action after another member lookup failure', async () => {
     .mockRejectedValueOnce(new Error('first failure'))
     .mockRejectedValueOnce(new Error('retry failure'));
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   await screen.findByText('first failure');
   fireEvent.click(
     screen.getByRole('button', { name: 'メンバーと権限を再取得' }),
@@ -1123,7 +1141,7 @@ it('ignores a late member response from dialog close after switching projects', 
       { ...recoveryMember, role: 'member', permission: 'read' },
     ]);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   fireEvent.click(await screen.findByRole('button', { name: 'メンバー管理' }));
   const dialog = await screen.findByRole('dialog');
   await within(dialog).findByRole('combobox', { name: 'Tester の権限' });
@@ -1159,7 +1177,7 @@ it('does not clear a project list error when a pending member lookup succeeds', 
     membersResponse,
   );
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   await waitFor(() =>
     expect(screen.getByRole('combobox', { name: 'プロジェクト' })).toHaveValue(
       '1',
@@ -1192,7 +1210,7 @@ it('closes a successfully deleted Ticket even when the Project refresh fails', a
   vi.mocked(api.deleteTicket).mockResolvedValue(undefined);
   vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   fireEvent.click(
     await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' }),
   );
@@ -1216,7 +1234,7 @@ it('retries a failed initial Ticket list from the board', async () => {
     .mockRejectedValueOnce(new Error('ticket list unavailable'))
     .mockResolvedValueOnce([api.toTicket(responseTicket)]);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   expect(await screen.findByRole('alert')).toHaveTextContent(
     'ticket list unavailable',
   );
@@ -1231,7 +1249,7 @@ it('preserves the existing Ticket list and permits another retry after a failed 
     .mockRejectedValueOnce(new Error('retry list failure'));
   const ticket = api.toTicket(responseTicket);
   useTicketStore.setState({ tickets: [ticket], error: null, isLoading: false });
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   await screen.findByText('first list failure');
   fireEvent.click(screen.getByRole('button', { name: 'チケット一覧を再取得' }));
   expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -1256,7 +1274,7 @@ it('announces a pending Ticket list retry without offering another retry request
     .mockRejectedValueOnce(new Error('list failed'))
     .mockReturnValueOnce(pendingList);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-  render(<TicketBoardView />);
+  await renderSelectedProject();
   await screen.findByText('list failed');
   fireEvent.click(screen.getByRole('button', { name: 'チケット一覧を再取得' }));
   expect(screen.getByText('チケット一覧を更新中...')).toHaveAttribute(
@@ -1275,3 +1293,86 @@ it('announces a pending Ticket list retry without offering another retry request
     screen.getByRole('button', { name: 'TICK-1 の詳細を開く' }),
   ).toBeInTheDocument();
 });
+
+it.each(['admin', 'user'] as const)(
+  'defaults %s to all accessible active Projects without mixed write controls',
+  async (role) => {
+    useAuthStore.setState({ user: { ...useAuthStore.getState().user!, role } });
+    vi.mocked(projectApi.fetchProjects).mockResolvedValue([
+      {
+        id: '1',
+        name: 'General',
+        projectKey: 'GEN',
+        boardVersion: 3,
+        color: '#fff4df',
+      },
+      {
+        id: '2',
+        name: 'Design',
+        projectKey: 'DSN',
+        boardVersion: 4,
+        color: '#dff6f2',
+      },
+    ]);
+    const first = api.toTicket(responseTicket);
+    const second = {
+      ...first,
+      id: '2',
+      projectId: '2',
+      title: 'Second project ticket',
+      issueKey: 'DSN-1',
+    };
+    const hidden = {
+      ...first,
+      id: '3',
+      projectId: '3',
+      title: 'Inaccessible ticket',
+    };
+    vi.mocked(api.fetchTickets).mockResolvedValue([first, second, hidden]);
+    useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+    render(<TicketBoardView />);
+    expect(
+      await screen.findByText('Second project ticket'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'プロジェクト' })).toHaveValue(
+      'ALL',
+    );
+    expect(screen.getByText('First ticket')).toBeInTheDocument();
+    expect(screen.queryByText('Inaccessible ticket')).not.toBeInTheDocument();
+    expect(projectApi.fetchProjectMembers).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('button', { name: '+ チケット作成' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('combobox', { name: 'First ticket のステータス' }),
+    ).not.toBeInTheDocument();
+    const firstCard = screen.getByRole('group', {
+      name: 'TICK-1: First ticket',
+    });
+    const secondCard = screen.getByRole('group', {
+      name: 'DSN-1: Second project ticket',
+    });
+    expect(firstCard.style.getPropertyValue('--project-background-color')).toBe(
+      '#fff4df',
+    );
+    expect(
+      secondCard.style.getPropertyValue('--project-background-color'),
+    ).toBe('#dff6f2');
+    fireEvent.click(screen.getByRole('button', { name: 'DSN-1 の詳細を開く' }));
+    await screen.findByRole('heading', { name: 'Second project ticket' });
+    const detail = screen.getByRole('dialog');
+    expect(detail.style.getPropertyValue('--project-border-color')).toBe(
+      '#dff6f2',
+    );
+    expect(
+      within(detail).queryByRole('button', { name: '編集' }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(within(detail).getByRole('button', { name: '閉じる' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'プロジェクト' }), {
+      target: { value: '1' },
+    });
+    await screen.findByRole('button', { name: '+ チケット作成' });
+    expect(screen.queryByText('Second project ticket')).not.toBeInTheDocument();
+    expect(projectApi.fetchProjectMembers).toHaveBeenCalledWith('1');
+  },
+);

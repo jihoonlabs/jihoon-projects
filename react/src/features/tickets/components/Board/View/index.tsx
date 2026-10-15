@@ -29,6 +29,8 @@ import {
 import type { Project, ProjectMember } from '@/features/tickets/types/project';
 import styles from './index.module.css';
 
+const ALL_PROJECTS = 'ALL';
+
 export function TicketBoardView() {
   const {
     tickets,
@@ -53,7 +55,7 @@ export function TicketBoardView() {
   const projectRevision = useRef(0);
   const projectListSequence = useRef(0);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState(ALL_PROJECTS);
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const memberRevision = useRef(0);
   const [memberAttempt, setMemberAttempt] = useState(0);
@@ -102,9 +104,9 @@ export function TicketBoardView() {
         setProjects(items);
         setProjectError(null);
         setSelectedProjectId((current) =>
-          current && items.some((item) => item.id === current)
+          current === ALL_PROJECTS || items.some((item) => item.id === current)
             ? current
-            : (items[0]?.id ?? ''),
+            : ALL_PROJECTS,
         );
       })
       .catch((reason) => {
@@ -128,7 +130,7 @@ export function TicketBoardView() {
   }, [showArchived, projectListAttempt]);
 
   useEffect(() => {
-    if (!selectedProjectId) return;
+    if (!selectedProjectId || selectedProjectId === ALL_PROJECTS) return;
     let active = true;
     const revision = memberRevision.current;
     fetchProjectMembers(selectedProjectId)
@@ -179,8 +181,16 @@ export function TicketBoardView() {
     !isArchived &&
     (isAdmin || currentMembership?.permission === 'write');
   const canManageMembers = !isArchived && canManageProject;
-  const projectTickets = tickets.filter(
-    (ticket) => ticket.projectId === selectedProjectId,
+  // 全体表示でもProject一覧の権限・稼働/終了スコープを越えて表示しない。
+  const availableProjectIds = new Set(projects.map((project) => project.id));
+  const projectTickets = tickets.filter((ticket) =>
+    selectedProjectId === ALL_PROJECTS
+      ? availableProjectIds.has(ticket.projectId)
+      : ticket.projectId === selectedProjectId,
+  );
+  const modalProject = projects.find(
+    (project) =>
+      project.id === (selectedTicket?.projectId ?? selectedProjectId),
   );
   const canDrag =
     canWrite && searchQuery.trim() === '' && assigneeFilter === 'ALL';
@@ -198,9 +208,9 @@ export function TicketBoardView() {
       return;
     setProjects(items);
     setSelectedProjectId((current) =>
-      current && items.some((item) => item.id === current)
+      current === ALL_PROJECTS || items.some((item) => item.id === current)
         ? current
-        : (items[0]?.id ?? ''),
+        : ALL_PROJECTS,
     );
   };
 
@@ -246,7 +256,7 @@ export function TicketBoardView() {
     projectRevision.current += 1;
     setShowArchived(archived);
     setProjects([]);
-    setSelectedProjectId('');
+    setSelectedProjectId(ALL_PROJECTS);
     setOperationsOpen(false);
     setProjectNotice(null);
     setProjectError(null);
@@ -261,7 +271,7 @@ export function TicketBoardView() {
     items.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
     setProjects(items);
     if (!sameScope) {
-      setSelectedProjectId(items[0]?.id ?? '');
+      setSelectedProjectId(ALL_PROJECTS);
       setOperationsOpen(false);
       setSearchQuery('');
       setAssigneeFilter('ALL');
@@ -516,6 +526,9 @@ export function TicketBoardView() {
       >
         <Main
           tickets={projectTickets}
+          projectColors={Object.fromEntries(
+            projects.map((project) => [project.id, project.color ?? null]),
+          )}
           projectKey={selectedProject?.projectKey}
           projectColor={selectedProject?.color}
           searchQuery={searchQuery}
@@ -548,12 +561,12 @@ export function TicketBoardView() {
           currentUserId={currentUserId}
           currentUserRole={currentUser?.role}
           projectId={selectedTicket?.projectId ?? selectedProjectId}
-          projectKey={selectedProject?.projectKey}
-          projectColor={selectedProject?.color}
+          projectKey={modalProject?.projectKey}
+          projectColor={modalProject?.color}
           projectMembers={
             membersProjectId === selectedProjectId ? projectMembers : []
           }
-          commentsReadOnly={isArchived}
+          commentsReadOnly={!modalProject || Boolean(modalProject.archivedAt)}
           readOnly={!canWrite}
           onClose={closeModal}
           onCreate={handleCreate}

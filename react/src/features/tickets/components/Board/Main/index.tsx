@@ -7,6 +7,7 @@ interface MainProps {
   tickets: Ticket[];
   projectKey?: string | null;
   projectColor?: string | null;
+  projectColors?: Record<string, string | null>;
   searchQuery: string;
   assigneeFilter: string;
   currentUserId: number | null;
@@ -20,6 +21,7 @@ export default function Main({
   tickets,
   projectKey,
   projectColor,
+  projectColors,
   searchQuery,
   assigneeFilter,
   currentUserId,
@@ -58,6 +60,7 @@ export default function Main({
             tickets={columnTickets}
             projectKey={projectKey}
             projectColor={projectColor}
+            projectColors={projectColors}
             onStatusChange={onStatusChange}
             onOpenDetails={onOpenDetails}
             canWrite={canWrite}

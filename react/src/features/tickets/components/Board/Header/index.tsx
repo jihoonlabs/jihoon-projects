@@ -59,13 +59,16 @@ export default function Header({
             disabled={projects.length === 0 || projectsBusy}
           >
             {projects.length === 0 ? (
-              <option value="">利用可能なプロジェクトがありません</option>
+              <option value="ALL">利用可能なプロジェクトがありません</option>
             ) : (
-              projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))
+              <>
+                <option value="ALL">全プロジェクト</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </>
             )}
           </select>
         </div>
@@ -117,6 +120,15 @@ export default function Header({
         </div>
       </div>
       <div className={styles.bottomRow}>
+        {!selectedProject &&
+          projects.length > 0 &&
+          selectedProjectId === 'ALL' && (
+            <p className={styles.projectContext}>
+              <strong>全プロジェクト</strong>
+              <span>{projects.length}件</span>
+              <span>編集・移動はプロジェクトを選択</span>
+            </p>
+          )}
         {selectedProject && (
           <p className={styles.projectContext}>
             <strong>{selectedProject.name}</strong>
