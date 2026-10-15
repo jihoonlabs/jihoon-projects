@@ -125,7 +125,7 @@ def character_pose(state,player):
     if not player:
         return 'guard' if state.get('enemy_windup',0) else 'punch' if state.get('enemy_attack_cooldown',0)>=114 else 'idle'
     kind=state.get('attack_kind','punch')
-    threshold=20 if kind=='skill' else 23 if kind=='shot' else 12 if kind=='kick' else 8
+    threshold=20 if kind=='skill' else 23 if kind=='shot' else 8 if kind=='kick' else 5
     return kind if state['player_attack_cooldown']>=threshold else 'idle'
 
 
@@ -245,10 +245,10 @@ def draw_fighter(display,state,player,x,y):
     draw_weapon(display,weapon,x,y,rightward,swinging and (weapon!=4 or pose=='shot'))
     front=x+6 if rightward else x-5
     if pose=='kick':
-        scene_rect(display,front,y+4,5,2);scene_rect(display,front+(3 if rightward else 0),y+3,2,3)
+        scene_rect(display,front,y+4,6,2);scene_rect(display,front+(3 if rightward else 0),y+3,3,4)
     elif swinging and weapon is None:
-        scene_rect(display,front,y+2,5,2)
-        scene_rect(display,front+(3 if rightward else 0),y+1,2,3)
+        scene_rect(display,front,y+2,6,3)
+        scene_rect(display,front+(3 if rightward else 0),y+1,3,4)
     if pose=='skill':
         for offset in range(3):
             left=x+9+offset if rightward else x-5-offset
