@@ -287,14 +287,12 @@ def _explore_update(state,inputs):
     if inputs['U'] and abs(state['player_x']-SHOP_X)<=8:
         _open_shop(state)
         return state
-    healed=False
-    if inputs['A'] and state.get('potions',0) and state['HP']<state['maxHP']:
-        state['potions']-=1;state['HP']=min(state['maxHP'],state['HP']+6)
-        healed=True
+    # A always means punch during combat. Potions are used explicitly from
+    # the pause menu so carrying one never swallows an attack input.
     dx=int(bool(inputs['R']))-int(bool(inputs['L']))
     dy=int(bool(inputs.get('D_held',inputs['D'])))-int(bool(inputs.get('U_held',inputs['U'])))
     if dx: state['direction']='R' if dx>0 else 'L'
-    if not healed and state['player_attack_cooldown']==0 and (inputs['A'] or inputs['B']):
+    if state['player_attack_cooldown']==0 and (inputs['A'] or inputs['B']):
         kicking=bool(inputs['B'])
         state['attack_kind']='kick' if kicking else 'punch'
         state['player_attack_cooldown']=20 if kicking else 15

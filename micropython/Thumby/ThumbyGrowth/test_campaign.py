@@ -80,10 +80,12 @@ class CampaignTests(unittest.TestCase):
         foe=dict(x=24,y=28,hp=20,max_hp=20,attack=1,defense=0,
                  windup=0,cooldown=99,stun=0,flash=0,boss=False)
         state.update(route=[0],current_city=0,screen_state='explore',
-                     player_x=16,player_y=28,direction='R',foes=[foe])
+                     player_x=16,player_y=28,direction='R',foes=[foe],
+                     HP=4,potions=1)
         state=campaign.update(state,buttons(A=True))
         self.assertLess(state['foes'][0]['hp'],20)
         self.assertEqual(state['attack_kind'],'punch')
+        self.assertEqual((state['HP'],state['potions']),(4,1))
 
     def test_shop_buys_and_equips_gear_then_re_equips_owned_gear_for_free(self):
         state=campaign.new_game_state()
