@@ -8,7 +8,7 @@ parent_branch: feature/ticket
 base_sha: 17a9447730ada87ea759766a3b03d7c0b9002e95
 
 ## Responsibility / Boundary
-Provide one user-checkable snapshot of the adopted Ticket implementation and repair the confirmed same-Ticket write-queue failure. Preserve the approved design, API/version/permission contracts, original data and environment. No new feature, broad optimization, unrelated branch adoption or Epic merge.
+Provide one user-checkable snapshot of the adopted Ticket implementation and repair the confirmed same-Ticket write-queue failure. Preserve the approved design, API/version/permission contracts, original data and environment. The requested root entry correction is included: `/` always redirects to `/login`. No broad optimization, unrelated branch adoption or Epic merge.
 
 ## Inherited result
 All current adopted work is inherited from Parent. Recovery application: `4e9542be5d61f17b4b426c451b19e6f8b9d8bf4d`; palette adoption: `5af147b515bff8a2c85192e2009333968962d0c1`. Parent `TICKET.md` owns previous adoption/audit evidence. Prior 222 React tests and isolated API/MySQL results remain separate from checks executed here.
@@ -29,3 +29,8 @@ Development Strict Effect duplicate GETs reproduced; production comparison has o
 - Initial browser harness matched a drag animation overlay and failed its locator; after waiting for overlay completion, the actual application scenario passed. This was a harness failure, separate from the fixed queue bug.
 - Runtime `http://127.0.0.1:3280` now uses this Child production build in `/private/tmp/ticket-acceptance-v1-worktree/react`; API8180 uses `/private/tmp/ticket-recovery-local-worktree/laravel`, whose Laravel tree is unchanged from this Child. Data target is dedicated temporary MySQL `ticket_palette_review` at127.0.0.1:33316. Test login details remain only in local protected fixture file `/private/tmp/ticket-recovery-local-check-20261014/audit-login.json`.
 - Evidence: `/private/tmp/ticket-recovery-local-check-20261014/acceptance-queue-result.json` and `acceptance-queue.png`. This WORK's application commit is the validated Child SHA. Original legacy/unadopted branches were not silently merged. Epic remains unchanged; no branch/file/worktree deletion. User acceptance, V1 completion and cleanup execution remain pending.
+
+## Root entry correction (2026-10-15)
+- User opening the advertised root URL saw the Next.js starter screen. Root now uses the existing Next server redirect to `/login` (307), regardless of authentication state. Other routes and session policy are unchanged. Existing asset/CSS files were not deleted.
+- Changed-page ESLint/Prettier and production build/type check passed. Real Chrome verified anonymous root→login, normal login→Tickets, authenticated root→login with subsequent /me200, starter content absent and pageerror0. No full suite repeat for this isolated route correction.
+- Evidence: `/private/tmp/ticket-recovery-local-check-20261014/root-login-result.json` and `root-login.png`. Runtime3280 was rebuilt/restarted from this Child. Cleanup reserved branch remains at its prior checked snapshot; no deletion or Epic merge.
