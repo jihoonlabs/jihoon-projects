@@ -173,7 +173,7 @@ class HandFootControlTests(unittest.TestCase):
         game.draw_game(state)
         texts=[call.args[0] for call in game.thumby.display.drawText.call_args_list]
         self.assertIn('HP10 AT2 DF0',texts)
-        self.assertIn('GAEGYEONG',texts)
+        self.assertIn('SEOUL',texts)
         self.assertIn('$50 KR1',texts)
         resumed=update_state(state,fixtures.inputs(B=True))
         self.assertEqual(resumed['screen_state'],'battle')
