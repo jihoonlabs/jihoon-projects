@@ -76,6 +76,20 @@ class TestRules(unittest.TestCase):
                          encounter_stats(started))
         self.assertGreater(started['enemy_hp'],expected[0])
 
+    def test_boss_scaling_thresholds_and_caps_hold_for_every_round(self):
+        for progress,boss_round in ((4,0),(9,1),(14,2)):
+            target=20+8*boss_round
+            base=encounter_stats(state(progress=progress,maxHP=2*target,attack=0,defense=0))
+            for surplus,expected_delta in (
+                (0,(0,0,0)), (3,(1,0,0)), (4,(2,0,0)),
+                (11,(5,0,0)), (12,(6,1,0)), (18,(9,1,1)),
+                (36,(16,2,2)), (100,(16,2,2)),
+            ):
+                current=encounter_stats(state(progress=progress,
+                    maxHP=2*(target+surplus),attack=0,defense=0))
+                self.assertEqual(tuple(now-before for now,before in zip(current,base)),
+                                 expected_delta,(progress,surplus))
+
     def test_case_2(self):
         data = dict(version=1, money=0, progress=0, owned=[False]*4,
                     equipped_weapon=None, equipped_armor=None)
