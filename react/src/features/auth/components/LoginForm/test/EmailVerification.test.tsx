@@ -10,24 +10,24 @@ import { LoginForm } from '../LoginForm';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
-const { pushMock } = vi.hoisted(() => ({
-  pushMock: vi.fn(),
+const { replaceMock } = vi.hoisted(() => ({
+  replaceMock: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: pushMock,
+    replace: replaceMock,
   }),
 }));
 
 describe('LoginForm メール認証処理', () => {
   beforeEach(() => {
-    pushMock.mockReset();
+    replaceMock.mockReset();
 
     useAuthStore.setState({
       user: null,
       isAuthenticated: false,
-      isInitialized: false,
+      isInitialized: true,
     });
   });
 
@@ -62,7 +62,7 @@ describe('LoginForm メール認証処理', () => {
       screen.getByRole('button', { name: '認証メールを再送する' }),
     ).toBeInTheDocument();
 
-    expect(pushMock).not.toHaveBeenCalled();
+    expect(replaceMock).not.toHaveBeenCalled();
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
   });
 
@@ -144,7 +144,7 @@ describe('LoginForm メール認証処理', () => {
       expect(email).toHaveValue(
         changeEmail ? 'second@example.com' : 'first@example.com',
       );
-      expect(pushMock).not.toHaveBeenCalled();
+      expect(replaceMock).not.toHaveBeenCalled();
       expect(useAuthStore.getState().isAuthenticated).toBe(false);
     },
   );

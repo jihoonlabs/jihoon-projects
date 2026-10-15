@@ -8,7 +8,7 @@ parent_branch: feature/ticket
 base_sha: 17a9447730ada87ea759766a3b03d7c0b9002e95
 
 ## Responsibility / Boundary
-Provide one user-checkable snapshot of the adopted Ticket implementation and repair the confirmed same-Ticket write-queue failure. Preserve the approved design, API/version/permission contracts, original data and environment. The requested root entry correction is included: `/` always redirects to `/login`. No broad optimization, unrelated branch adoption or Epic merge.
+Provide one user-checkable snapshot of the adopted Ticket implementation and repair the confirmed same-Ticket write-queue failure. Preserve the approved design, API/version/permission contracts, original data and environment. Root entry uses the server `/login` redirect; the latest history correction then routes verified authenticated users to `/tickets`, while anonymous users remain at login. No broad optimization, unrelated branch adoption or Epic merge.
 
 ## Inherited result
 All current adopted work is inherited from Parent. Recovery application: `4e9542be5d61f17b4b426c451b19e6f8b9d8bf4d`; palette adoption: `5af147b515bff8a2c85192e2009333968962d0c1`. Parent `TICKET.md` owns previous adoption/audit evidence. Prior 222 React tests and isolated API/MySQL results remain separate from checks executed here.
@@ -34,3 +34,10 @@ Development Strict Effect duplicate GETs reproduced; production comparison has o
 - User opening the advertised root URL saw the Next.js starter screen. Root now uses the existing Next server redirect to `/login` (307), regardless of authentication state. Other routes and session policy are unchanged. Existing asset/CSS files were not deleted.
 - Changed-page ESLint/Prettier and production build/type check passed. Real Chrome verified anonymous root→login, normal login→Tickets, authenticated root→login with subsequent /me200, starter content absent and pageerror0. No full suite repeat for this isolated route correction.
 - Evidence: `/private/tmp/ticket-recovery-local-check-20261014/root-login-result.json` and `root-login.png`. Runtime3280 was rebuilt/restarted from this Child. Cleanup reserved branch remains at its prior checked snapshot; no deletion or Epic merge.
+
+## Authentication history correction (2026-10-15)
+- User reported login→Tickets→Back showing the login form, then Forward returning to Tickets. A retained valid session explains forward access; exposing the authenticated login form was the navigation defect.
+- LoginForm now waits for initial session resolution and replaces its route with `/tickets` whenever authenticated. Successful login updates the auth store; this single guard owns replacement rather than a separate push. Valid-session visits to `/` or `/login` therefore finish at Tickets; this supersedes the prior authenticated-root-login expectation while preserving anonymous root→login and the existing server307.
+- Regression tests cover pending-session form suppression, restored-session redirect without login inputs and successful login replacement; existing validation/failure/resend tests use an initialized anonymous state and replacement navigation. Full React29 files/226 tests, ESLint, changed-source Prettier, production build/type and diff check passed.
+- Real production Chrome→Laravel→temporary MySQL: anonymous root→login; successful login replaces history (Back skips login; Forward opens Tickets); direct authenticated `/login` and `/` return to Tickets; reload preserves session; real logout followed by Back/Forward rejects protected history and Ticket API returns401. Exactly1 loginPOST/1 logoutPOST, pageerror0. Evidence: `/private/tmp/ticket-recovery-local-check-20261014/history-auth-result.json` and `history-auth.png`.
+- Runtime3280 rebuilt/restarted from this Child. API/data unchanged. Cross-tab logout/server-expiry/BFCache variants beyond these tested navigation paths are not newly verified. No Epic merge, deletion or cleanup execution; user acceptance remains pending.
