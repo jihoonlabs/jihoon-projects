@@ -229,8 +229,14 @@ def draw_fighter(display,state,player,x,y):
         draw_rows(display,HERO_FRINGE,fringe_x,y-6,2,not rightward,14)
     draw_rows(display,character_body(state,player),x-2,y+1,10,not rightward,14)
     if hurt: draw_hurt_face(display,x-2+lean,y-7)
-    if player and state['equipped_armor'] is not None:
-        scene_rect(display,x+1,y+2,4,2,1);scene_rect(display,x+2,y+2,2,1,0)
+    if player and state['equipped_armor']==2:
+        # Vest: light shoulder straps and an open center.
+        scene_rect(display,x+1,y+2,2,3,1);scene_rect(display,x+5,y+2,2,3,1)
+        scene_rect(display,x+2,y+3,4,1,0)
+    elif player and state['equipped_armor']==3:
+        # Armor: wider shoulder plates and a solid chest plate silhouette.
+        scene_rect(display,x,y+2,8,2,1);scene_rect(display,x+1,y+3,6,3,1)
+        scene_rect(display,x+3,y+3,2,2,0);scene_rect(display,x+2,y+5,4,1,1)
     weapon=state['equipped_weapon'] if player else None
     swinging=pose in ('punch','shot','skill')
     draw_weapon(display,weapon,x,y,rightward,swinging and (weapon!=4 or pose=='shot'))
