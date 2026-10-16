@@ -130,7 +130,7 @@ def boss_variant(state):
 def character_pose(state,player):
     hit='player_hit_flash' if player else 'enemy_hit_flash'
     stun='player_stun' if player else 'enemy_stun'
-    if state.get(hit,0) or state.get(stun,0):
+    if state.get(hit,0) or (state.get('campaign_mode',False) and state.get(stun,0)):
         return 'hurt'
     if not player:
         return 'guard' if state.get('enemy_windup',0) else 'punch' if state.get('enemy_attack_cooldown',0)>=114 else 'idle'
