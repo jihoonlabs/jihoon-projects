@@ -123,7 +123,7 @@ class BackgroundTests(unittest.TestCase):
         self.assertNotIn('SHOP',labels)
         self.assertIn('2/5',labels)
 
-    def test_each_active_enemy_gets_a_health_gauge(self):
+    def test_each_active_enemy_gets_a_hud_health_gauge_outside_the_floor_lanes(self):
         state=campaign.new_game_state()
         state.update(screen_state='explore',route=[0],current_city=0,map_index=1,
                      player_x=74,player_y=28)
@@ -137,14 +137,23 @@ class BackgroundTests(unittest.TestCase):
         ]
         game.draw_campaign_game(state)
         bars=self.rectangles()
-        for rect in ((35,14,10,3,1),(51,18,10,3,1),(62,22,10,3,1)):
+        for rect in ((22,7,12,3,1),(38,7,12,3,1),(54,7,12,3,1)):
             self.assertIn(rect,bars)
+
+    def test_campaign_actor_projection_uses_a_deeper_vertical_range(self):
+        self.assertEqual(game.actor_screen_y(12,campaign=True),17)
+        self.assertEqual(game.actor_screen_y(36,campaign=True),33)
+        self.assertEqual(game.actor_screen_y(15),21)  # classic battle stays unchanged
 
     def test_boss_health_gauge_is_wider(self):
         game.thumby.display.reset_mock()
         game.draw_enemy_health(game.thumby.display,
             dict(hp=12,max_hp=24,boss=True),40,29)
         self.assertIn((33,18,14,3,1),self.rectangles())
+        game.thumby.display.reset_mock()
+        game.draw_enemy_health(game.thumby.display,
+            dict(hp=12,max_hp=24,boss=True),40,29,hud_x=54)
+        self.assertIn((54,7,14,3,1),self.rectangles())
 
     def test_storefront_stays_inside_screen_as_camera_scrolls(self):
         for camera in range(73):
