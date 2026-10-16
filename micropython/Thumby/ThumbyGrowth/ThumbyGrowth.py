@@ -118,7 +118,7 @@ def character_head(state, player):
         return HERO_HEAD
     elif state.get('is_boss') or state['progress']%STAGES_PER_REGION == STAGES_PER_REGION-1:
         return BOSS_HEADS[boss_variant(state)]
-    return FOE_HEADS[stage_index(state)%STAGES_PER_REGION]
+    return FOE_HEADS[stage_index(state)%len(FOE_HEADS)]
 
 
 def boss_variant(state):
@@ -255,7 +255,7 @@ def draw_fighter(display,state,player,x,y):
     lean=(-2 if rightward else 2) if hurt else 0
     if player: draw_hero_hair(display,hero_region(state),x+lean,y,rightward)
     elif state['progress']%STAGES_PER_REGION != STAGES_PER_REGION-1:
-        hair=FOE_SIDE_HAIR[stage_index(state)%STAGES_PER_REGION]
+        hair=FOE_SIDE_HAIR[stage_index(state)%len(FOE_SIDE_HAIR)]
         hair_x=x-3 if rightward else x+7
         draw_rows(display,hair,hair_x,y-6,2,not rightward,14)
     draw_rows(display,character_head(state,player),x-2+lean,y-7,10,not rightward,14)
