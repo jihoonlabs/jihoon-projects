@@ -105,9 +105,9 @@ class BackgroundTests(unittest.TestCase):
         calls=game.thumby.display.drawText.call_args_list
         labels=[call.args[0] for call in calls]
         self.assertIn('SHOP',labels)
-        self.assertIn('AT+2',labels)
-        self.assertIn('AT+4',labels)
-        self.assertIn('DF+1',labels)
+        self.assertIn('GUN',labels)
+        self.assertIn('HP+',labels)
+        self.assertIn('VEST',labels)
         self.assertEqual(state,before)
         for call in calls:
             text,x,y,_=call.args
