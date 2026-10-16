@@ -161,12 +161,12 @@ class TestRules(unittest.TestCase):
 
     def test_case_9(self):
         for changes, keys, hp, wait in (
-            ({'enemy_x':30},dict(A=True),4,15),
-            ({'enemy_x':30,'direction':'L'},dict(A=True),6,15),
-            ({'enemy_x':31},dict(A=True),6,15),
+            ({'enemy_x':30},dict(A=True),4,10),
+            ({'enemy_x':30,'direction':'L'},dict(A=True),6,10),
+            ({'enemy_x':31},dict(A=True),6,10),
             ({'enemy_x':30,'player_attack_cooldown':2},dict(A=True),6,1),
             ({'enemy_x':30},dict(),6,0),
-            ({'enemy_x':30,'player_attack_cooldown':1},dict(A=True),4,15)):
+            ({'enemy_x':30,'player_attack_cooldown':1},dict(A=True),4,10)):
             result = self.advance(battle(**changes),**keys)
             self.assertEqual(result['enemy_hp'],hp)
             self.assertEqual(result['player_attack_cooldown'],wait)
@@ -176,9 +176,9 @@ class TestRules(unittest.TestCase):
     def test_case_10(self):
         result = self.advance(battle(enemy_x=24),A=True)
         self.assertEqual((result['HP'],result['enemy_hp']), (10,4))
-        self.assertEqual((result['player_attack_cooldown'],result['enemy_attack_cooldown']), (15,0))
+        self.assertEqual((result['player_attack_cooldown'],result['enemy_attack_cooldown']), (10,0))
         later = self.advance(result)
-        self.assertEqual((later['player_attack_cooldown'],later['enemy_attack_cooldown']), (14,0))
+        self.assertEqual((later['player_attack_cooldown'],later['enemy_attack_cooldown']), (9,0))
         distant = self.advance(battle(enemy_x=25))
         self.assertEqual((distant['HP'],distant['enemy_attack_cooldown']), (10,0))
         killed = self.advance(battle(enemy_x=24,enemy_hp=2,HP=1),A=True)
