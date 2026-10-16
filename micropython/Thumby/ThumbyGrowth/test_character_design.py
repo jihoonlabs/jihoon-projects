@@ -1,6 +1,7 @@
 """Shared 10x14 visuals preserve simulation collision with a floor projection."""
 import unittest
 from copy import deepcopy
+from unittest.mock import patch
 import test_ThumbyGrowth as fixtures
 import ThumbyGrowth as game
 
@@ -26,6 +27,22 @@ class CharacterDesignTests(unittest.TestCase):
         self.assertIn((11,17,1,1,0),calls)
         self.assertIn((16,17,1,1,0),calls)
         self.assertNotIn((14,19,2,1,0),calls)
+
+    def test_punch_and_kick_use_compact_fist_and_shoe_shapes(self):
+        fixtures.TestAdapter.setUp(self)
+        state=fixtures.state(screen_state='battle',active_enemy=True,enemy_x=50,
+            player_x=28,player_attack_cooldown=10,attack_kind='punch')
+        for pose,expected,old_shape in (
+            ('punch',(35,31,2,2,1),((34,31,6,3,1),(37,30,3,4,1))),
+            ('kick',(35,33,3,2,1),((34,33,6,2,1),(37,32,3,4,1)))):
+            state.update(attack_kind=pose,player_attack_cooldown=10)
+            drawn=[]
+            with patch.object(game,'scene_rect',
+                side_effect=lambda display,x,y,w,h,color=1:drawn.append((x,y,w,h,color))):
+                game.draw_fighter(game.thumby.display,state,True,28,29)
+            self.assertIn(expected,drawn)
+            for shape in old_shape:
+                self.assertNotIn(shape,drawn)
 
     def test_country_weapon_sprites_are_visibly_distinct(self):
         fixtures.TestAdapter.setUp(self)
