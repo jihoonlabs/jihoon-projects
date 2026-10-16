@@ -9,6 +9,14 @@ WAVE_DELAY = 24
 SHOP_X = 104
 SHOP_DEPTH = 19
 COUNTRY_NAMES = ('KOREA','CHINA','JAPAN')
+COUNTRY_WEAPONS = (4,0,1)  # Korea: gun, China: spear, Japan: sword
+WEAPON_LABELS = {0:'SPEAR',1:'SWORD',4:'GUN'}
+STAT_STOCK = (6,7,8)
+ARMOR_STOCK = (2,3)
+FOOD_STOCK = ('RICE','BBQ','SOUP','TEA','NOODLE','BUN','DUCK','TANG','DUMPL','WONTON',
+              'SUSHI','CURRY','SOBA','MISO','RAMEN')
+ARMOR_LABELS = ('VEST','PAD','SHELL','MAIL','PLATE','GI','GUARD','COAT','SCALE','BRACE',
+                'KEIKO','DO','HAORI','LAMELL','KABUTO')
 
 
 def _copy_foes(foes):
@@ -238,6 +246,21 @@ def _open_shop(state):
     state['shop_notice']=''
 
 
+def shop_catalog(state):
+    """Five short, city-specific offers; only the regional weapon is fixed."""
+    city=state.get('current_city')
+    if city is None:
+        city=5*(state.get('route') or [0])[-1]
+    weapon=COUNTRY_WEAPONS[city//5]
+    stat=STAT_STOCK[city%len(STAT_STOCK)]
+    armor=ARMOR_STOCK[city%len(ARMOR_STOCK)]
+    return ((weapon,WEAPON_LABELS[weapon]),
+            (stat,ITEM_NAMES[stat]),
+            (armor,ARMOR_LABELS[city]),
+            (5,FOOD_STOCK[city]),
+            (9,'SKILL'))
+
+
 def _equip_item(state,item):
     if item in (0,1): state['equipped_weapon']=item
     elif item in (2,3): state['equipped_armor']=item
@@ -251,13 +274,15 @@ def _shop_update(state,inputs):
         state['screen_state']='explore'
         state['menu_selection']=0
         return state
-    selected=max(0,min(9,state['menu_selection']))
+    catalog=shop_catalog(state)
+    last=len(catalog)-1
+    selected=max(0,min(last,state['menu_selection']))
     if inputs['U'] and not inputs['D']: selected=max(0,selected-1)
-    elif inputs['D'] and not inputs['U']: selected=min(9,selected+1)
+    elif inputs['D'] and not inputs['U']: selected=min(last,selected+1)
     state['menu_selection']=selected
-    state['menu_scroll']=max(0,min(7,selected-2))
+    state['menu_scroll']=max(0,min(last-2,selected-2))
     if inputs['A']:
-        item=selected
+        item=catalog[selected][0]
         if item<5 and item_owned(state,item):
             _equip_item(state,item)
             state['shop_notice']='EQUIPPED'
@@ -275,7 +300,7 @@ def _shop_update(state,inputs):
                 apply_stats(state)
                 if item==6: state['HP']=min(state['maxHP'],state['HP']+2)
             elif item==9: state['skill_owned']=True
-            state['shop_notice']='EQUIPPED' if item<5 else 'BOUGHT'
+            state['shop_notice']='EQUIPPED' if item in (0,1,4,2,3) else 'BOUGHT'
     return state
 
 
@@ -288,6 +313,14 @@ def _explore_update(state,inputs):
     if (inputs.get('U_held',False) or inputs['U']) and abs(state['player_x']-SHOP_X)<=6 and state['player_y']<=SHOP_DEPTH:
         _open_shop(state)
         return state
+    state['command_timer']=max(0,state.get('command_timer',0)-1)
+    state['command_ready']=max(0,state.get('command_ready',0)-1)
+    if inputs['U'] and not inputs['D']:
+        if state['command_timer']:
+            state['command_ready']=12
+            state['command_timer']=0
+        else:
+            state['command_timer']=12
     # A always means punch during combat. Potions are used explicitly from
     # the pause menu so carrying one never swallows an attack input.
     right=int(bool(inputs.get('R_tap',False)))*3 or int(bool(inputs['R']))
@@ -299,10 +332,15 @@ def _explore_update(state,inputs):
     if dx: state['direction']='R' if dx>0 else 'L'
     if state['player_attack_cooldown']==0 and (inputs['A'] or inputs['B']):
         kicking=bool(inputs['B'])
-        state['attack_kind']='kick' if kicking else 'punch'
-        state['player_attack_cooldown']=20 if kicking else 15
+        weapon=state.get('equipped_weapon')
+        skill=not kicking and state.get('skill_owned',False) and state['command_ready']>0
+        shooting=not kicking and not skill and weapon==4
+        state['attack_kind']='kick' if kicking else 'skill' if skill else 'shot' if shooting else 'spear' if weapon==0 else 'sword' if weapon==1 else 'punch'
+        state['player_attack_cooldown']=20 if kicking else 30 if skill or shooting else 18 if weapon in (0,1) else 15
+        state['command_ready']=0
+        state['command_timer']=0
         target=None;best=999
-        reach=10 if kicking else 8
+        reach=10 if kicking else 12 if skill else 40 if shooting else 16 if weapon==0 else 11 if weapon==1 else 8
         for foe in state['foes']:
             gap=foe['x']-(state['player_x']+6) if state['direction']=='R' else state['player_x']-(foe['x']+6)
             # A small overlap allowance prevents close enemies from slipping
@@ -310,7 +348,7 @@ def _explore_update(state,inputs):
             if abs(state['player_y']-foe['y'])<=3 and -4<=gap<=reach and gap<best:
                 target=foe;best=gap
         if target is not None:
-            power=state['attack']+(1 if kicking else 0)
+            power=1+state.get('atk_growth',0) if shooting else state['attack']+(1 if kicking else 4 if skill else 0)
             target['hp']=max(0,target['hp']-calculate_damage({'attack':power},{'defense':target['defense']}))
             target['stun']=10
             target['flash']=6
