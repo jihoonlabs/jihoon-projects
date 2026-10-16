@@ -33,7 +33,7 @@ def new_game_state():
         equipped_armor=None,gun_owned=False,skill_owned=False,potions=0,
         hp_growth=0,atk_growth=0,def_growth=0,player_x=16,player_y=28,
         direction='R',player_attack_cooldown=0,attack_kind='punch',
-        player_stun=0,player_hit_flash=0,command_timer=0,command_ready=0,menu_selection=0,menu_scroll=0,
+        player_stun=0,player_hit_flash=0,player_invuln=0,command_timer=0,command_ready=0,menu_selection=0,menu_scroll=0,
         menu_r_held=False,save_requested=False,save_status='',boss_active=False)
 
 
@@ -311,6 +311,7 @@ def _explore_update(state,inputs):
     # their full duration instead of being shortened immediately.
     state['player_stun']=max(0,state.get('player_stun',0)-1)
     state['player_hit_flash']=max(0,state.get('player_hit_flash',0)-1)
+    state['player_invuln']=max(0,state.get('player_invuln',0)-1)
     for foe in state['foes']:
         foe['stun']=max(0,foe['stun']-1)
         foe['flash']=max(0,foe['flash']-1)
@@ -369,6 +370,8 @@ def _explore_update(state,inputs):
             target['hp_seen']=True
             target['stun']=10
             target['flash']=6
+            # A brief recoil separates fighters after a confirmed close hit.
+            target['x']=max(0,min(138,target['x']+(2 if target['x']>=state['player_x'] else -2)))
             if target['hp']==0:
                 state['money']+=30 if target['boss'] else 10+state['wave']%3*5
                 state['foes'].remove(target)
@@ -397,11 +400,14 @@ def _explore_update(state,inputs):
         elif foe['windup']>0:
             foe['windup']-=1
             if foe['windup']==0:
-                if in_range:
+                if in_range and state.get('player_invuln',0)==0:
                     state['HP']=max(0,state['HP']-max(1,foe['attack']-state['defense']))
                     state['player_stun']=8
                     state['player_hit_flash']=6
+                    state['player_invuln']=24
                     state['direction']='L' if state['player_x']>foe['x'] else 'R'
+                    # Knock the player a couple of pixels away from the attacker.
+                    state['player_x']=max(0,min(138,state['player_x']+(2 if state['player_x']>foe['x'] else -2)))
                 foe['cooldown']=90
         else:
             foe['cooldown']=max(0,foe['cooldown']-1)
