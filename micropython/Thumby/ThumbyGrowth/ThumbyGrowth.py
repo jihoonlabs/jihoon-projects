@@ -708,9 +708,10 @@ def draw_campaign_game(state):
         for player,x,y,actor_state in sorted(actors,key=lambda value:value[2]):
             draw_fighter(display,actor_state,player,x,actor_screen_y(y,campaign=True))
         for slot,foe in enumerate(foes):
-            draw_enemy_health(display,foe,foe['x']-camera,
-                              actor_screen_y(foe['y'],campaign=True),
-                              hud_x=(22,38,54)[slot])
+            if foe.get('hp_seen',False):
+                draw_enemy_health(display,foe,foe['x']-camera,
+                                  actor_screen_y(foe['y'],campaign=True),
+                                  hud_x=(22,38,54)[slot])
     elif screen=='shop':
         cash=str(state['money']) if state['money']<1000 else str(min(999,state['money']//1000))+'k'
         display.drawText('SHOP',0,0,1)
@@ -959,3 +960,4 @@ def save_game(state):
 
 if sys.implementation.name == 'micropython':
     main_loop()
+
