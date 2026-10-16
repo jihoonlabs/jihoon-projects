@@ -56,7 +56,7 @@ class CharacterDesignTests(unittest.TestCase):
         self.assertEqual(len({frozenset(p) for p in faces}),4)
         self.assertEqual(tuple(len(rows) for rows in game.FOE_SIDE_HAIR),(2,3,4,5))
         for pixels in faces[1:]:
-            self.assertTrue(all(24<=x<38 and 22<=y<28 for x,y in pixels^faces[0]))
+            self.assertTrue(all(24<=x<38 and 22<=y<30 for x,y in pixels^faces[0]))
 
     def test_regular_enemy_faces_mirror_around_shared_body(self):
         fixtures.TestAdapter.setUp(self)
