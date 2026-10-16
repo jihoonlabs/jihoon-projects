@@ -6,6 +6,16 @@ import ThumbyGrowth as game
 
 
 class CharacterDesignTests(unittest.TestCase):
+    def test_country_weapon_sprites_are_visibly_distinct(self):
+        fixtures.TestAdapter.setUp(self)
+        game.thumby=fixtures.fake_thumby
+        renders=[]
+        for weapon in (4,1,0):
+            game.thumby.display.reset_mock()
+            game.draw_weapon(game.thumby.display,weapon,30,25,True,True)
+            renders.append(repr(game.thumby.display.drawFilledRectangle.call_args_list))
+        self.assertEqual(len(set(renders)),3)
+
     def test_regular_enemies_change_only_hair_pixels_and_share_all_poses(self):
         fixtures.TestAdapter.setUp(self)
         game.thumby=fixtures.fake_thumby
