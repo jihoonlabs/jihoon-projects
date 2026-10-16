@@ -123,22 +123,30 @@ class BackgroundTests(unittest.TestCase):
         self.assertNotIn('SHOP',labels)
         self.assertIn('2/5',labels)
 
-    def test_each_active_enemy_gets_a_hud_health_gauge_outside_the_floor_lanes(self):
+    def test_enemy_gauges_are_hidden_until_that_enemy_is_hit(self):
         state=campaign.new_game_state()
         state.update(screen_state='explore',route=[0],current_city=0,map_index=1,
                      player_x=74,player_y=28)
         state['foes']=[
             dict(x=82,y=22,hp=6,max_hp=8,attack=2,defense=0,windup=0,
-                 cooldown=24,stun=0,flash=0,boss=False),
+                 cooldown=24,stun=0,flash=0,hp_seen=False,boss=False),
             dict(x=98,y=28,hp=4,max_hp=8,attack=2,defense=0,windup=0,
-                 cooldown=32,stun=0,flash=0,boss=False),
+                 cooldown=32,stun=0,flash=0,hp_seen=False,boss=False),
             dict(x=114,y=34,hp=2,max_hp=8,attack=2,defense=0,windup=0,
-                 cooldown=40,stun=0,flash=0,boss=False),
+                 cooldown=40,stun=0,flash=0,hp_seen=False,boss=False),
         ]
         game.draw_campaign_game(state)
         bars=self.rectangles()
-        for rect in ((22,7,12,3,1),(38,7,12,3,1),(54,7,12,3,1)):
-            self.assertIn(rect,bars)
+        gauges=((22,7,12,3,1),(38,7,12,3,1),(54,7,12,3,1))
+        for rect in gauges:
+            self.assertNotIn(rect,bars)
+        state['foes'][1]['hp_seen']=True
+        game.thumby.display.reset_mock()
+        game.draw_campaign_game(state)
+        bars=self.rectangles()
+        self.assertIn(gauges[1],bars)
+        self.assertNotIn(gauges[0],bars)
+        self.assertNotIn(gauges[2],bars)
 
     def test_campaign_actor_projection_uses_a_deeper_vertical_range(self):
         self.assertEqual(game.actor_screen_y(12,campaign=True),17)
@@ -172,3 +180,4 @@ class BackgroundTests(unittest.TestCase):
 
 if __name__=='__main__':
     unittest.main()
+
