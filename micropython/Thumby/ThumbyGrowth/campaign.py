@@ -9,8 +9,8 @@ WAVE_DELAY = 24
 SHOP_X = 104
 SHOP_DEPTH = 19
 COUNTRY_NAMES = ('KOREA','CHINA','JAPAN')
+COUNTRY_WEAPONS = (4,0,1)  # Korea: gun, China: spear, Japan: sword
 WEAPON_LABELS = {0:'SPEAR',1:'SWORD',4:'GUN'}
-WEAPON_STOCK = ((4,'GUN'),(0,'SPEAR'),(1,'SWORD'))
 STAT_STOCK = (6,7,8)
 ARMOR_STOCK = (2,3)
 FOOD_STOCK = ('RICE','BBQ','SOUP','TEA','NOODLE','BUN','DUCK','TANG','DUMPL','WONTON',
@@ -248,17 +248,18 @@ def _open_shop(state):
 
 
 def shop_catalog(state):
-    """Every city sells every weapon plus city-specific goods."""
+    """Each country's cities sell its weapon plus city-specific goods."""
     city=state.get('current_city')
     if city is None:
         city=5*(state.get('route') or [0])[-1]
+    weapon=COUNTRY_WEAPONS[city//5]
     stat=STAT_STOCK[city%len(STAT_STOCK)]
     armor=ARMOR_STOCK[city%len(ARMOR_STOCK)]
-    return (WEAPON_STOCK+
-            ((stat,ITEM_NAMES[stat]),
+    return ((weapon,WEAPON_LABELS[weapon]),
+            (stat,ITEM_NAMES[stat]),
             (armor,ARMOR_LABELS[city]),
             (5,FOOD_STOCK[city]),
-            (9,'SKILL')))
+            (9,'SKILL'))
 
 
 def _equip_item(state,item):
