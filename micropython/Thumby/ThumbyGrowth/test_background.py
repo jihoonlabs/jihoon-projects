@@ -127,6 +127,15 @@ class BackgroundTests(unittest.TestCase):
         self.assertNotIn('SHOP',labels)
         self.assertIn('2/5',labels)
 
+    def test_campaign_enemy_rendering_covers_all_fifteen_city_indices(self):
+        for city in range(15):
+            state=campaign.new_game_state()
+            state.update(screen_state='explore',route=[city//5],current_city=city,
+                         foes=campaign.spawn_wave(dict(wave=0,current_city=city,
+                                                       map_index=0,boss_active=False)))
+            game.thumby.display.reset_mock()
+            game.draw_campaign_game(state)
+
     def test_enemy_gauges_are_hidden_until_that_enemy_is_hit(self):
         state=campaign.new_game_state()
         state.update(screen_state='explore',route=[0],current_city=0,map_index=1,
