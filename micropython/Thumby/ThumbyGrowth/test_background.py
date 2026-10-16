@@ -4,6 +4,7 @@ import unittest
 
 import test_ThumbyGrowth as fixtures
 import ThumbyGrowth as game
+import campaign
 
 
 class BackgroundTests(unittest.TestCase):
@@ -87,6 +88,31 @@ class BackgroundTests(unittest.TestCase):
                 game.draw_game(state)
                 self.assertEqual(state,before)
                 self.assertLessEqual(len(self.rectangles()),160)
+
+    def test_shop_icons_are_distinct_seven_row_monochrome_sprites(self):
+        icons=game.ITEM_ICON_ROWS
+        self.assertEqual(len(icons),10)
+        self.assertEqual(len(set(icons)),10)
+        for icon in icons:
+            self.assertEqual(len(icon),7)
+            self.assertTrue(all(0<=row<=0x1f for row in icon))
+
+    def test_campaign_shop_shows_short_effect_labels_within_72_by_40(self):
+        state=campaign.new_game_state()
+        state.update(screen_state='shop',money=125)
+        before=deepcopy(state)
+        game.draw_campaign_game(state)
+        calls=game.thumby.display.drawText.call_args_list
+        labels=[call.args[0] for call in calls]
+        self.assertIn('SHOP',labels)
+        self.assertIn('AT+2',labels)
+        self.assertIn('AT+4',labels)
+        self.assertIn('DF+1',labels)
+        self.assertEqual(state,before)
+        for call in calls:
+            text,x,y,_=call.args
+            self.assertTrue(0<=x and x+6*len(text)<=72)
+            self.assertTrue(0<=y and y+7<=40)
 
 
 if __name__=='__main__':

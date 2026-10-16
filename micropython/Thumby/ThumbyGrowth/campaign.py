@@ -7,6 +7,7 @@ from rules import (CITY_NAMES, CITY_MAP_COUNTS, MAX_ACTIVE_ENEMIES,
 VERSION = 4
 WAVE_DELAY = 24
 SHOP_X = 104
+SHOP_DEPTH = 19
 COUNTRY_NAMES = ('KOREA','CHINA','JAPAN')
 
 
@@ -284,13 +285,17 @@ def _explore_update(state,inputs):
         state['screen_state']='pause'
         state['menu_selection']=0
         return state
-    if inputs['U'] and abs(state['player_x']-SHOP_X)<=8:
+    if (inputs.get('U_held',False) or inputs['U']) and abs(state['player_x']-SHOP_X)<=6 and state['player_y']<=SHOP_DEPTH:
         _open_shop(state)
         return state
     # A always means punch during combat. Potions are used explicitly from
     # the pause menu so carrying one never swallows an attack input.
-    dx=int(bool(inputs['R']))-int(bool(inputs['L']))
-    dy=int(bool(inputs.get('D_held',inputs['D'])))-int(bool(inputs.get('U_held',inputs['U'])))
+    right=int(bool(inputs.get('R_tap',False)))*3 or int(bool(inputs['R']))
+    left=int(bool(inputs.get('L_tap',False)))*3 or int(bool(inputs['L']))
+    down=int(bool(inputs.get('D_tap',False)))*3 or int(bool(inputs.get('D_held',inputs['D'])))
+    up=int(bool(inputs.get('U_tap',False)))*3 or int(bool(inputs.get('U_held',inputs['U'])))
+    dx=right-left
+    dy=down-up
     if dx: state['direction']='R' if dx>0 else 'L'
     if state['player_attack_cooldown']==0 and (inputs['A'] or inputs['B']):
         kicking=bool(inputs['B'])

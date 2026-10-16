@@ -41,7 +41,8 @@ def state(**changes):
 
 
 def inputs(**changes):
-    value = dict.fromkeys(('L','R','A','B','U','D','U_held','D_held','A_held','B_held'),False)
+    value = dict.fromkeys(('L','R','A','B','U','D','L_tap','R_tap','U_tap','D_tap',
+                           'U_held','D_held','A_held','B_held'),False)
     value.update(changes)
     return value
 
@@ -69,7 +70,10 @@ class TestAdapter(unittest.TestCase):
             method = 'pressed' if key in ('L','R','U_held','D_held','A_held','B_held') else 'justPressed'
             getattr(button,method).return_value = True
             result = ThumbyGrowth.handle_inputs()
-            self.assertEqual(result,inputs(**{key:True}))
+            expected=inputs(**{key:True})
+            if key in ('U','D'):
+                expected[key+'_tap']=True
+            self.assertEqual(result,expected)
             self.assertTrue(all(type(value) is bool for value in result.values()))
             self.assertGreater(getattr(button,method).call_count,0)
             getattr(button,method).return_value = False
@@ -77,7 +81,8 @@ class TestAdapter(unittest.TestCase):
             button = getattr(fake_thumby, 'button'+key)
             button.pressed.return_value = True
             button.justPressed.return_value = True
-            self.assertEqual(ThumbyGrowth.handle_inputs(),inputs(**{key:True,key+'_held':True}))
+            self.assertEqual(ThumbyGrowth.handle_inputs(),inputs(**{
+                key:True,key+'_held':True,key+'_tap':True}))
             button.pressed.return_value = False
             button.justPressed.return_value = False
         self.assertEqual(ThumbyGrowth.handle_inputs(),inputs())

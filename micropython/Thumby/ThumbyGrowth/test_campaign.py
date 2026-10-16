@@ -4,7 +4,8 @@ import campaign
 
 
 def buttons(**pressed):
-    return {key: key in pressed for key in ('L','R','A','B','U','D')}
+    keys=('L','R','A','B','U','D','L_tap','R_tap','U_tap','D_tap','U_held','D_held')
+    return {key:key in pressed for key in keys}
 
 
 class CampaignTests(unittest.TestCase):
@@ -46,9 +47,23 @@ class CampaignTests(unittest.TestCase):
         state=campaign.new_game_state()
         state.update(route=[0],current_city=0,map_index=2,screen_state='explore',player_x=104)
         state=campaign.update(state,buttons(U=True))
+        self.assertEqual(state['screen_state'],'explore')
+        self.assertEqual(state['player_y'],28)
+        for _ in range(3):
+            state=campaign.update(state,buttons(U=True,U_tap=True))
+        self.assertEqual(state['player_y'],campaign.SHOP_DEPTH)
+        state=campaign.update(state,buttons(U=True))
         self.assertEqual(state['screen_state'],'shop')
         state=campaign.update(state,buttons(B=True))
         self.assertEqual((state['screen_state'],state['current_city'],state['map_index']),('explore',0,2))
+
+    def test_mouse_direction_tap_moves_three_pixels_and_hold_moves_one(self):
+        state=campaign.new_game_state()
+        state.update(route=[0],current_city=0,screen_state='explore',player_x=16)
+        state=campaign.update(state,buttons(R=True,R_tap=True))
+        self.assertEqual(state['player_x'],19)
+        state=campaign.update(state,buttons(R=True))
+        self.assertEqual(state['player_x'],20)
 
     def test_boss_strength_is_independent_of_country_and_tracks_build(self):
         a=campaign.new_game_state();a.update(route=[0],current_city=4,progress=4)

@@ -4,7 +4,7 @@ GOAL_STAGES = 15
 ENEMY_WINDUP_FRAMES = 12
 HIT_FLASH_FRAMES = 6
 # Small demo economy; the first four equipment IDs remain save-compatible.
-ITEM_NAMES = ('BLADE','SWORD','VEST','ARMOR','GUN','POT','HP+','ATK+','DEF+','SKILL')
+ITEM_NAMES = ('BLADE','SWORD','VEST','ARMOR','GUN','MEAT','HP+','ATK+','DEF+','SKILL')
 ITEM_PRICES = (40,80,40,80,60,15,50,60,60,80)
 ITEM_EFFECTS = ('ATK+2','ATK+4','DEF+1','DEF+2','RNG40','HEAL+6','HP+2','ATK+1','DEF+1','UU+A')
 GROWTH_LIMIT = 5
@@ -82,6 +82,8 @@ def legacy_route(progress):
 
 
 def stage_index(state):
+    if isinstance(state,dict) and state.get('campaign_mode') and state.get('current_city') is not None:
+        return state['current_city']
     route = state.get('route', legacy_route(state['progress']))
     region = route[-1] if route else 0
     city = 4 if state['progress'] >= GOAL_STAGES else state['progress']%5

@@ -140,7 +140,7 @@ class GameCompletionTests(unittest.TestCase):
         self.assertEqual(state['screen_state'],'city_select')
         state=game.campaign.update(state,fixtures.inputs(A=True))
         self.assertEqual((state['current_city'],state['screen_state']),(0,'explore'))
-        state.update(money=120,player_x=104)
+        state.update(money=120,player_x=104,player_y=game.campaign.SHOP_DEPTH)
         state=game.campaign.update(state,fixtures.inputs(U=True))
         state=game.campaign.update(state,fixtures.inputs(A=True))
         self.assertEqual((state['screen_state'],state['equipped_weapon'],state['money']),

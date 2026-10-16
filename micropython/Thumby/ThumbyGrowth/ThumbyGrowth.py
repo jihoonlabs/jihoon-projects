@@ -45,13 +45,20 @@ BOSS_HEADS = tuple(hair+HERO_HEAD[4:] for hair in
                    (0x30,0xfc,0x1fe,0x3cf)))
 HEART_ROWS = b'\x0a\x1f\x1f\x0e\x04'
 ENEMY_ICON_ROWS = b'\x0e\x1f\x15\x0e\x0a'
-# Tiny monochrome shop marks keep the item list scannable at 72x40.
+# Readable 5x7 monochrome silhouettes for the 72x40 shop list.
 ITEM_ICON_ROWS = (
-    b'\x10\x18\x1c\x1e\x0c\x06\x04', b'\x04\x0c\x1e\x1c\x18\x10\x10',
-    b'\x0e\x1f\x15\x1f\x0e\x0a\x0a', b'\x0e\x1f\x1f\x0e\x1f\x0e\x0a',
-    b'\x00\x1f\x15\x1f\x04\x0c\x08', b'\x0e\x11\x11\x11\x0e\x04\x04',
-    b'\x0e\x11\x11\x1f\x11\x11\x0e', b'\x04\x0e\x15\x04\x04\x04\x04',
-    b'\x04\x0e\x15\x04\x04\x0e\x04', b'\x0e\x11\x15\x11\x0e\x04\x0e')
+    b'\x04\x06\x07\x0e\x1c\x08\x08',  # short blade
+    b'\x04\x0e\x04\x04\x04\x0e\x04',  # sword
+    b'\x0e\x15\x1f\x11\x11\x11\x11',  # vest
+    b'\x0e\x1f\x1b\x1f\x15\x1f\x0a',  # armor
+    b'\x00\x1e\x1f\x1c\x04\x04\x00',  # gun
+    b'\x0c\x1e\x1f\x0e\x0e\x06\x06',  # meat
+    b'\x0a\x1f\x1f\x0e\x04\x00\x00',  # heart / max HP
+    b'\x0e\x1f\x1f\x1f\x0e\x04\x06',  # fist / attack
+    b'\x1f\x11\x1f\x0e\x0e\x04\x00',  # shield / defense
+    b'\x02\x06\x0c\x1f\x06\x0c\x08')  # skill spark
+SHOP_ITEM_LABELS = ('AT+2','AT+4','DF+1','DF+2','RNG','HEAL6',
+                    'HP+2','AT+1','DF+1','SKILL')
 # Original large face: shared outline, hair, eyes and collar.
 PORTRAIT_ROWS = (0x03c0,0x0ff0,0x1ff8,0x3ffc,0x3ffc,0x3ffc,0x3ffc,0x2aa4,
                 0x2224,0x2224,0x2004,0x2184,0x1008,0x0ff0,0x0660,0x0db0)
@@ -358,18 +365,24 @@ def draw_shop_building(display,camera,map_index=0):
     x=SHOP_WORLD_X-camera
     if x < -16 or x > 72:
         return
-    # Draw an open outline so the store reads as a building, not a solid tile.
-    scene_rect(display,x-1,17,16,1,1)
-    scene_rect(display,x+1,18,12,1,1)
-    scene_rect(display,x+2,19,1,9,1)
-    scene_rect(display,x+11,19,1,9,1)
-    scene_rect(display,x+2,28,10,1,1)
-    scene_rect(display,x+5,22,1,6,1)
-    scene_rect(display,x+8,22,1,6,1)
-    if map_index%3==1:
-        scene_rect(display,x+5,19,3,1,1)
-    elif map_index%3==2:
-        scene_rect(display,x+6,18,2,2,1)
+    # A small Edo-era storefront: deep tiled eaves, noren panels and an open door.
+    scene_rect(display,x-3,18,18,1,1)
+    scene_rect(display,x-1,17,14,1,1)
+    scene_rect(display,x+1,16,10,1,1)
+    scene_rect(display,x+2,19,1,6,1)
+    scene_rect(display,x+11,19,1,6,1)
+    scene_rect(display,x+3,20,8,1,1)
+    scene_rect(display,x+3,20,1,4,1)
+    scene_rect(display,x+5,20,1,3,1)
+    scene_rect(display,x+7,20,1,3,1)
+    scene_rect(display,x+9,20,1,4,1)
+    scene_rect(display,x+3,24,8,1,1)
+    # Shop curtain and a tiny hanging lantern; all stay above the walkable lane.
+    scene_rect(display,x+4,20,1,2,0)
+    scene_rect(display,x+6,20,1,2,0)
+    scene_rect(display,x+8,20,1,2,0)
+    scene_rect(display,x+12,19,2,3,1)
+    scene_rect(display,x+13,18,1,1,1)
     display.drawText('SHOP',x+1,13,1)
 
 
@@ -632,32 +645,29 @@ def draw_campaign_game(state):
             draw_fighter(display,actor_state,player,x,actor_screen_y(y))
     elif screen=='shop':
         cash=str(state['money']) if state['money']<1000 else str(min(999,state['money']//1000))+'k'
-        display.drawText('CITY SHOP',0,0,1)
+        display.drawText('SHOP',0,0,1)
         display.drawText('$'+cash,48,0,1)
         for row in range(3):
             index=state['menu_scroll']+row
             if index<10:
-                active=index==state['menu_selection'];y=8+row*9;ink=0 if active else 1
+                active=index==state['menu_selection'];y=8+row*8;ink=0 if active else 1
                 if active: display.drawFilledRectangle(0,y,72,8,1)
                 draw_rows(display,ITEM_ICON_ROWS[index],2,y+1,5,ink=ink)
-                label=('>' if active else ' ')+ITEM_NAMES[index]
+                label=SHOP_ITEM_LABELS[index]
                 owned=item_owned(state,index)
                 equipped=index in (state['equipped_weapon'],state['equipped_armor'])
-                if owned and index<5:
-                    label+='*' if equipped else '+'
-                elif owned:
-                    label+='+'
                 display.drawText(label,10,y,ink)
                 if index<5 and owned:
                     display.drawText('ON' if equipped else 'EQ',54,y,ink)
                 else:
-                    display.drawText(str(ITEM_PRICES[index]),54,y,ink)
-        display.drawText('A:OK B:BACK',0,34,1)
+                    display.drawText(str(get_item_price(index)),54,y,ink)
+        display.drawText('A:OK B:BACK',0,33,1)
     elif screen=='pause':
         display.drawText('STATUS',0,0,1)
+        display.drawText('M'+str(state.get('potions',0)),54,0,1)
         display.drawText('HP'+str(state['HP'])+' AT'+str(state['attack']),0,10,1)
         display.drawText('DF'+str(state['defense'])+' $'+str(state['money']),0,20,1)
-        for row,label in enumerate(('BACK','SAVE','POT '+str(state.get('potions',0)))):
+        for row,label in enumerate(('BACK','SAVE','EAT')):
             x=row*24;active=row==state['menu_selection']
             if active: display.drawFilledRectangle(x,30,24,8,1)
             display.drawText(label,x,30,0 if active else 1)
@@ -823,15 +833,23 @@ def draw_game(state):
 
 
 def handle_inputs():
+    left_tap=bool(thumby.buttonL.justPressed())
+    right_tap=bool(thumby.buttonR.justPressed())
+    up_tap=bool(thumby.buttonU.justPressed())
+    down_tap=bool(thumby.buttonD.justPressed())
     return {
         'L': bool(thumby.buttonL.pressed()),
         'R': bool(thumby.buttonR.pressed()),
+        'L_tap': left_tap,
+        'R_tap': right_tap,
         'A': bool(thumby.buttonA.justPressed()),
         'B': bool(thumby.buttonB.justPressed()),
-        'U': bool(thumby.buttonU.justPressed()),
-        'D': bool(thumby.buttonD.justPressed()),
+        'U': up_tap,
+        'D': down_tap,
         'U_held': bool(thumby.buttonU.pressed()),
         'D_held': bool(thumby.buttonD.pressed()),
+        'U_tap': up_tap,
+        'D_tap': down_tap,
         'A_held': bool(thumby.buttonA.pressed()),
         'B_held': bool(thumby.buttonB.pressed()),
     }
