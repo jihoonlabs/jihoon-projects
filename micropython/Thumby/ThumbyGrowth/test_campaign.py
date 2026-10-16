@@ -111,6 +111,44 @@ class CampaignTests(unittest.TestCase):
         state=campaign.update(state,buttons(A=True))
         self.assertEqual((state['HP'],state['potions'],state['screen_state']),(10,0,'pause'))
 
+    def test_close_overlap_attack_hits_and_targets_nearest_actor(self):
+        for foe_x in (16,18,21):
+            state=campaign.new_game_state()
+            foes=[dict(x=foe_x,y=28,hp=20,max_hp=20,attack=0,defense=0,
+                       windup=0,cooldown=99,stun=0,flash=0,boss=False),
+                  dict(x=48,y=28,hp=20,max_hp=20,attack=0,defense=0,
+                       windup=0,cooldown=99,stun=0,flash=0,boss=False)]
+            state.update(route=[0],current_city=0,screen_state='explore',
+                         player_x=16,player_y=28,direction='R',foes=foes)
+            state=campaign.update(state,buttons(A=True))
+            self.assertLess(state['foes'][0]['hp'],20)
+            self.assertEqual(state['foes'][1]['hp'],20)
+            self.assertEqual(state['foes'][0]['stun'],10)
+
+    def test_hits_interrupt_enemy_and_player_actions_for_full_stun(self):
+        state=campaign.new_game_state()
+        foe=dict(x=16,y=28,hp=20,max_hp=20,attack=6,defense=0,
+                 windup=1,cooldown=0,stun=0,flash=0,boss=False)
+        state.update(route=[0],current_city=0,screen_state='explore',
+                     player_x=16,player_y=28,direction='R',foes=[foe])
+        state=campaign.update(state,buttons(A=True))
+        self.assertEqual(state['foes'][0]['stun'],10)
+        self.assertEqual(state['foes'][0]['windup'],0)
+        self.assertEqual(state['HP'],10)
+        # A newly landed enemy hit applies full damage and locks both controls.
+        state['foes'][0].update(stun=0,windup=1,cooldown=0)
+        state=campaign.update(state,buttons())
+        self.assertEqual((state['HP'],state['player_stun'],state['player_hit_flash']),(4,8,6))
+        player_x=state['player_x'];enemy_hp=state['foes'][0]['hp']
+        state=campaign.update(state,buttons(L=True,A=True))
+        self.assertEqual(state['player_x'],player_x)
+        self.assertEqual(state['foes'][0]['hp'],enemy_hp)
+        for _ in range(8):
+            state=campaign.update(state,buttons())
+        self.assertEqual(state['player_stun'],0)
+        state=campaign.update(state,buttons(L=True))
+        self.assertEqual(state['player_x'],player_x-1)
+
     def test_stationary_attack_hits_enemy_in_front(self):
         state=campaign.new_game_state()
         foe=dict(x=24,y=28,hp=20,max_hp=20,attack=1,defense=0,
