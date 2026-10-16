@@ -135,7 +135,7 @@ def character_pose(state,player):
     if not player:
         return 'guard' if state.get('enemy_windup',0) else 'punch' if state.get('enemy_attack_cooldown',0)>=114 else 'idle'
     kind=state.get('attack_kind','punch')
-    threshold=20 if kind=='skill' else 23 if kind=='shot' else 8 if kind in ('kick','spear','sword') else 5
+    threshold=20 if kind=='skill' else 23 if kind=='shot' else 5 if kind in ('kick','spear','sword') else 4
     return kind if state['player_attack_cooldown']>=threshold else 'idle'
 
 
@@ -307,10 +307,11 @@ def draw_fighter(display,state,player,x,y):
                 (weapon!=4 or pose=='shot'))
     front=x+6 if rightward else x-5
     if pose=='kick':
-        scene_rect(display,front,y+4,6,2);scene_rect(display,front+(3 if rightward else 0),y+3,3,4)
+        # A short, flat shoe keeps the kick inside the squat silhouette.
+        scene_rect(display,front+1,y+4,3,2)
     elif swinging and weapon is None:
-        scene_rect(display,front,y+2,6,3)
-        scene_rect(display,front+(3 if rightward else 0),y+1,3,4)
+        # Use a compact fist instead of stretching the whole character forward.
+        scene_rect(display,front+(1 if rightward else 2),y+2,2,2)
     if pose=='skill':
         for offset in range(3):
             left=x+9+offset if rightward else x-5-offset
@@ -534,7 +535,7 @@ def music_track(state):
     return track
 
 
-MUSIC_FRAME_MS = 33
+MUSIC_FRAME_MS = 30
 
 
 def audio_now_ms():
@@ -570,7 +571,7 @@ def step_music(music,state,now_ms=None):
     if changed:
         note=TUNES[track][0]
         if note:
-            thumby.audio.play(NOTES[note-1],200)
+            thumby.audio.play(NOTES[note-1],160)
         else:
             thumby.audio.stop()
         return {'track':track,'tick':0,
@@ -591,7 +592,7 @@ def step_music(music,state,now_ms=None):
     if elapsed_tick//6 != tick//6:
         note = TUNES[track][(elapsed_tick//6)%8]
         if note:
-            thumby.audio.play(NOTES[note-1],200)
+            thumby.audio.play(NOTES[note-1],160)
         else:
             thumby.audio.stop()
     next_ms=audio_time_add(next_ms,steps*MUSIC_FRAME_MS)
