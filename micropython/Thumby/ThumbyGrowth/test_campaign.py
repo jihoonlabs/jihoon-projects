@@ -125,6 +125,17 @@ class CampaignTests(unittest.TestCase):
             self.assertEqual(state['foes'][1]['hp'],20)
             self.assertEqual(state['foes'][0]['stun'],10)
 
+    def test_punch_and_kick_recover_in_fewer_frames(self):
+        foe=dict(x=24,y=28,hp=20,max_hp=20,attack=0,defense=0,
+                 windup=0,cooldown=99,stun=0,flash=0,boss=False)
+        punch=campaign.new_game_state()
+        punch.update(route=[0],current_city=0,screen_state='explore',
+                     player_x=16,player_y=28,direction='R',foes=[dict(foe)])
+        kick=dict(punch,foes=[dict(foe)])
+        punch=campaign.update(punch,buttons(A=True))
+        kick=campaign.update(kick,buttons(B=True))
+        self.assertEqual((punch['player_attack_cooldown'],kick['player_attack_cooldown']),(9,11))
+
     def test_hits_interrupt_enemy_and_player_actions_for_full_stun(self):
         state=campaign.new_game_state()
         foe=dict(x=21,y=28,hp=20,max_hp=20,attack=1,defense=0,
@@ -245,4 +256,5 @@ class CampaignTests(unittest.TestCase):
 
 if __name__=='__main__':
     unittest.main()
+
 
