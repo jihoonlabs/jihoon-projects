@@ -5,10 +5,11 @@ try:
 except ImportError:
     import json
 import thumby
-import campaign
 # The device launcher need not add the game's sibling-module directory.
+# Add it before importing any sibling module (including campaign).
 if sys.implementation.name == 'micropython':
     sys.path.append('/Games/ThumbyGrowth')
+import campaign
 from rules import (update_state, encode_save_data, decode_save_data,
                    GOAL_STAGES, ENCOUNTERS, REGIONS, STAGES_PER_REGION,
                    CITY_NAMES, stage_index, new_game_state, ITEM_NAMES,
