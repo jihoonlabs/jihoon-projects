@@ -57,16 +57,15 @@ class BackgroundTests(unittest.TestCase):
             self.assertEqual({r[1] for r in floor},{23,29,37})
             self.assertTrue(all(r[3]==1 and r[2]<=3 for r in floor))
 
-    def test_actor_backing_follows_background_and_does_not_cover_hud(self):
+    def test_actor_sprite_has_no_black_square_backing(self):
         state=fixtures.state(screen_state='battle',progress=4,active_enemy=True,
                              player_x=16,player_y=15,enemy_x=30,enemy_y=28,enemy_hp=16)
         before=deepcopy(state)
         game.draw_game(state)
         self.assertEqual(state,before)
         calls=self.rectangles()
-        self.assertIn((13,14,12,14,0),calls)
-        self.assertIn((27,21,12,15,0),calls)
-        self.assertLess(calls.index((13,14,12,14,0)),calls.index((27,21,12,15,0)))
+        self.assertNotIn((13,14,12,14,0),calls)
+        self.assertNotIn((27,21,12,15,0),calls)
         for x,y,w,h,color in calls:
             if color==0 and h>2:
                 self.assertGreaterEqual(y,14)

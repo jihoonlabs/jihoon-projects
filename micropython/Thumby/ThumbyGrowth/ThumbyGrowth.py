@@ -218,7 +218,6 @@ def draw_fighter(display,state,player,x,y):
     hurt=pose=='hurt'
     # Visual recoil does not move the simulation hitbox.
     lean=(-2 if rightward else 2) if hurt else 0
-    scene_rect(display,x-3,y-8,12,15,0)
     if player: draw_hero_hair(display,hero_region(state),x+lean,y,rightward)
     elif state['progress']%STAGES_PER_REGION != STAGES_PER_REGION-1:
         hair=FOE_SIDE_HAIR[stage_index(state)%STAGES_PER_REGION]
@@ -359,14 +358,18 @@ def draw_shop_building(display,camera,map_index=0):
     x=SHOP_WORLD_X-camera
     if x < -16 or x > 72:
         return
-    scene_rect(display,x,18,14,12,1)
-    scene_rect(display,x-1,16,16,3,1)
-    scene_rect(display,x+2,21,4,5,0)
-    scene_rect(display,x+9,21,3,4,0)
+    # Draw an open outline so the store reads as a building, not a solid tile.
+    scene_rect(display,x-1,17,16,1,1)
+    scene_rect(display,x+1,18,12,1,1)
+    scene_rect(display,x+2,19,1,9,1)
+    scene_rect(display,x+11,19,1,9,1)
+    scene_rect(display,x+2,28,10,1,1)
+    scene_rect(display,x+5,22,1,6,1)
+    scene_rect(display,x+8,22,1,6,1)
     if map_index%3==1:
-        scene_rect(display,x+5,18,1,3,0)
+        scene_rect(display,x+5,19,3,1,1)
     elif map_index%3==2:
-        scene_rect(display,x+6,16,2,2,0)
+        scene_rect(display,x+6,18,2,2,1)
     display.drawText('SHOP',x+1,13,1)
 
 
@@ -627,18 +630,6 @@ def draw_campaign_game(state):
             actors.append((False,foe['x']-camera,foe['y'],foe_state))
         for player,x,y,actor_state in sorted(actors,key=lambda value:value[2]):
             draw_fighter(display,actor_state,player,x,actor_screen_y(y))
-        # Keep the combat buttons visible during play; show the nearby action
-        # on the right side of the same footer line.
-        display.drawText('A:H B:K',0,33,1)
-        if abs(state['player_x']-SHOP_WORLD_X)<=8:
-            display.drawText('U:SHOP',42,33,1)
-        elif state['player_x']>=120:
-            display.drawText('R:BOSS' if state['map_index']==campaign.map_count(state)-1
-                             else 'R:MAP',42,33,1)
-        elif state['map_index']>0 and state['player_x']<=18:
-            display.drawText('L:BACK',42,33,1)
-        elif not foes:
-            display.drawText('WAVE',48,33,1)
     elif screen=='shop':
         cash=str(state['money']) if state['money']<1000 else str(min(999,state['money']//1000))+'k'
         display.drawText('CITY SHOP',0,0,1)
