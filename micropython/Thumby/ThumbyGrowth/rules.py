@@ -343,7 +343,7 @@ def update_state(state, inputs):
         skill = not kicking and new_state.get('skill_owned',False) and new_state['command_ready']>0
         shooting = not kicking and not skill and new_state['equipped_weapon']==4
         new_state['attack_kind'] = 'skill' if skill else 'shot' if shooting else 'kick' if kicking else 'punch'
-        new_state['player_attack_cooldown'] = 30 if skill or shooting else 20 if kicking else 15
+        new_state['player_attack_cooldown'] = 30 if skill or shooting else 12 if kicking else 10
         new_state['command_ready'] = 0
         new_state['command_timer'] = 0
         gap = enemy - (moved + 6) if new_state['direction'] == 'R' else moved - (enemy + 6)
