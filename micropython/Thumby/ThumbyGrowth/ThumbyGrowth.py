@@ -630,8 +630,9 @@ def draw_campaign_game(state):
         draw_shop_building(display,camera,state['map_index'])
         draw_rows(display,HEART_ROWS,0,1,5)
         display.drawText(str(state['HP']),7,0,1)
-        display.drawText(CITY_NAMES[index//5][index%5],0,8,1)
-        display.drawText('M'+str(state['map_index']+1)+'/'+str(campaign.map_count(state)),48,8,1)
+        # The city name is already shown during selection. Keep only map
+        # progress in the play HUD so the tiny screen stays focused on action.
+        display.drawText(str(state['map_index']+1)+'/'+str(campaign.map_count(state)),0,8,1)
         foes=state['foes']
         display.drawText('E'+str(len(foes)),58,0,1)
         actors=[(True,state['player_x']-camera,state['player_y'],state)]
