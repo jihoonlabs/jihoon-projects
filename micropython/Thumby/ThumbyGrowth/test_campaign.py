@@ -123,19 +123,54 @@ class CampaignTests(unittest.TestCase):
         self.assertEqual(state['attack_kind'],'punch')
         self.assertEqual((state['HP'],state['potions']),(4,1))
 
-    def test_country_weapon_and_city_stock_vary_by_shop(self):
+    def test_every_country_sells_all_weapons_and_city_goods_still_vary(self):
         expected=((4,'GUN'),(0,'SPEAR'),(1,'SWORD'))
-        for region,(weapon,label) in enumerate(expected):
+        catalogs=[]
+        for region in range(3):
             state=campaign.new_game_state()
-            state.update(route=[region],current_city=region*5,screen_state='shop',money=160)
-            self.assertEqual(campaign.shop_catalog(state)[0],(weapon,label))
-            state=campaign.update(state,buttons(A=True))
-            self.assertEqual(state['equipped_weapon'],weapon)
+            state.update(route=[region],current_city=region*5,screen_state='shop',money=1000)
+            catalog=campaign.shop_catalog(state)
+            catalogs.append(catalog)
+            self.assertEqual(catalog[:3],expected)
+            for index,weapon in enumerate((4,0,1)):
+                state['menu_selection']=index
+                state=campaign.update(state,buttons(A=True))
+                self.assertEqual(state['equipped_weapon'],weapon)
         korea=campaign.shop_catalog(dict(current_city=0,route=[0]))
         busan=campaign.shop_catalog(dict(current_city=1,route=[0]))
-        self.assertEqual([x[0] for x in korea],[4,6,2,5,9])
-        self.assertEqual([x[0] for x in busan],[4,7,3,5,9])
-        self.assertNotEqual(korea[1:4],busan[1:4])
+        self.assertEqual([x[0] for x in korea],[4,0,1,6,2,5,9])
+        self.assertEqual([x[0] for x in busan],[4,0,1,7,3,5,9])
+        self.assertNotEqual(korea[3:6],busan[3:6])
+        self.assertEqual(catalogs[0][:3],catalogs[1][:3])
+
+    def test_weapon_damage_and_reach_trade_off_by_weapon(self):
+        for defense in (0,4):
+            damage={}
+            for weapon in (4,0,1):
+                state=campaign.new_game_state()
+                foe=dict(x=31,y=28,hp=30,max_hp=30,attack=0,defense=defense,
+                         windup=0,cooldown=999,stun=0,flash=0,boss=False)
+                state.update(route=[0],current_city=0,screen_state='explore',
+                             equipped_weapon=weapon,player_x=16,player_y=28,
+                             direction='R',foes=[foe])
+                campaign.apply_stats(state)
+                state=campaign.update(state,buttons(A=True))
+                damage[weapon]=30-state['foes'][0]['hp']
+            self.assertLess(damage[4],damage[0])
+            self.assertLess(damage[0],damage[1])
+
+        for weapon,reach,expected_hit in ((1,12,False),(0,12,True),
+                                          (0,17,False),(4,17,True)):
+            state=campaign.new_game_state()
+            gap=reach
+            foe=dict(x=22+gap,y=28,hp=30,max_hp=30,attack=0,defense=0,
+                     windup=0,cooldown=999,stun=0,flash=0,boss=False)
+            state.update(route=[0],current_city=0,screen_state='explore',
+                         equipped_weapon=weapon,player_x=16,player_y=28,
+                         direction='R',foes=[foe])
+            campaign.apply_stats(state)
+            state=campaign.update(state,buttons(A=True))
+            self.assertEqual(state['foes'][0]['hp']<30,expected_hit)
 
     def test_spear_sword_and_gun_have_distinct_attack_ranges(self):
         for weapon,x,kind in ((0,34,'spear'),(1,29,'sword'),(4,60,'shot')):
