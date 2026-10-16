@@ -535,7 +535,31 @@ def music_track(state):
     return track
 
 
-def step_music(music,state):
+MUSIC_FRAME_MS = 33
+
+
+def audio_now_ms():
+    # MicroPython uses wrap-safe ticks; CPython tests use a monotonic clock.
+    if hasattr(time,'ticks_ms'):
+        return time.ticks_ms()
+    return int(time.monotonic()*1000)
+
+
+def audio_time_add(now_ms,delta):
+    if hasattr(time,'ticks_add'):
+        return time.ticks_add(now_ms,delta)
+    return now_ms+delta
+
+
+def audio_time_diff(now_ms,target_ms):
+    if hasattr(time,'ticks_diff'):
+        return time.ticks_diff(now_ms,target_ms)
+    return now_ms-target_ms
+
+
+def step_music(music,state,now_ms=None):
+    if now_ms is None:
+        now_ms=audio_now_ms()
     track=music_track(state)
     changed = track != music['track']
     if changed:
@@ -543,17 +567,37 @@ def step_music(music,state):
     tick = 0 if changed else music['tick']
     if track is None:
         return {'track':None,'tick':0}
+    next_ms=now_ms if changed else music.get('next_ms',now_ms)
+    if changed:
+        note=TUNES[track][0]
+        if note:
+            thumby.audio.play(NOTES[note-1],200)
+        else:
+            thumby.audio.stop()
+        return {'track':track,'tick':0,
+                'next_ms':audio_time_add(now_ms,MUSIC_FRAME_MS)}
+    late=audio_time_diff(now_ms,next_ms)
+    if late<0:
+        return dict(music,track=track,tick=tick,next_ms=next_ms)
+    # Music follows elapsed time, so a busy render frame cannot stretch notes.
+    steps=1+late//MUSIC_FRAME_MS
     if track==5 and tick>=48:
         if tick==48:
             thumby.audio.stop()
         return {'track':track,'tick':49}
-    if tick%6==0:
-        note = TUNES[track][(tick//6)%8]
+    elapsed_tick=tick+steps
+    if track==5 and elapsed_tick>=48:
+        thumby.audio.stop()
+        return {'track':track,'tick':49}
+    if elapsed_tick//6 != tick//6:
+        note = TUNES[track][(elapsed_tick//6)%8]
         if note:
-            thumby.audio.play(NOTES[note-1],160)
+            thumby.audio.play(NOTES[note-1],200)
         else:
             thumby.audio.stop()
-    return {'track':track,'tick':tick+1 if track==5 else (tick+1)%48}
+    next_ms=audio_time_add(next_ms,steps*MUSIC_FRAME_MS)
+    return {'track':track,'tick':elapsed_tick if track==5 else elapsed_tick%48,
+            'next_ms':next_ms}
 
 
 def sound_effect(previous,state):
@@ -582,27 +626,34 @@ def sound_effect(previous,state):
     return None
 
 
-def step_audio(music,previous,state):
+def step_audio(music,previous,state,now_ms=None):
+    if now_ms is None:
+        now_ms=audio_now_ms()
     track=music_track(state)
     if track is None or track==5:
-        return step_music(music,state)
+        return step_music(music,state,now_ms)
+    if music.get('fx_until') is not None:
+        if audio_time_diff(now_ms,music['fx_until'])<0:
+            return music
+        music=dict(music)
+        del music['fx_until']
+        # A cue interrupts the current note; restart on the next beat edge.
+        music['tick']=((music['tick']//6+1)*6-1)%48
+        music['next_ms']=now_ms
     effect=sound_effect(previous,state)
     if effect:
         changed=track!=music['track']
         if changed:
             thumby.audio.stop()
         tick=0 if changed else music['tick']
-        result={'track':track,'tick':(tick+1)%48}
+        next_ms=now_ms if changed else music.get('next_ms',now_ms)
+        result={'track':track,'tick':tick,'next_ms':next_ms}
         frequency,frames=effect
-        thumby.audio.play(frequency,1000*frames//30)
-        result['fx_left']=frames-1
+        duration=1000*frames//30
+        thumby.audio.play(frequency,duration)
+        result['fx_until']=audio_time_add(now_ms,duration)
         return result
-    if music['track']==track and music.get('fx_left',0)>0:
-        return dict(music,fx_left=music['fx_left']-1)
-    if 'fx_left' in music and music['track']==track:
-        # Resume at a note edge after the finite cue, without copying sound assets.
-        music={'track':track,'tick':((music['tick']+5)//6*6)%48}
-    return step_music(music,state)
+    return step_music(music,state,now_ms)
 
 
 def draw_scene_details(display,picture,frame,region):
@@ -987,4 +1038,5 @@ def save_game(state):
 
 if sys.implementation.name == 'micropython':
     main_loop()
+
 
