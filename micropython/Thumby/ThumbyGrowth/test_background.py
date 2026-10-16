@@ -122,6 +122,29 @@ class BackgroundTests(unittest.TestCase):
         self.assertNotIn('SEOUL',labels)
         self.assertIn('2/5',labels)
 
+    def test_each_active_enemy_gets_a_health_gauge(self):
+        state=campaign.new_game_state()
+        state.update(screen_state='explore',route=[0],current_city=0,map_index=1,
+                     player_x=74,player_y=28)
+        state['foes']=[
+            dict(x=82,y=22,hp=6,max_hp=8,attack=2,defense=0,windup=0,
+                 cooldown=24,stun=0,flash=0,boss=False),
+            dict(x=98,y=28,hp=4,max_hp=8,attack=2,defense=0,windup=0,
+                 cooldown=32,stun=0,flash=0,boss=False),
+            dict(x=114,y=34,hp=2,max_hp=8,attack=2,defense=0,windup=0,
+                 cooldown=40,stun=0,flash=0,boss=False),
+        ]
+        game.draw_campaign_game(state)
+        bars=self.rectangles()
+        for rect in ((35,14,10,3,1),(51,18,10,3,1),(62,22,10,3,1)):
+            self.assertIn(rect,bars)
+
+    def test_boss_health_gauge_is_wider(self):
+        game.thumby.display.reset_mock()
+        game.draw_enemy_health(game.thumby.display,
+            dict(hp=12,max_hp=24,boss=True),40,29)
+        self.assertIn((33,18,14,3,1),self.rectangles())
+
 
 if __name__=='__main__':
     unittest.main()
