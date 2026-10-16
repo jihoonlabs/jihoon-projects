@@ -146,10 +146,10 @@ class HandFootControlTests(unittest.TestCase):
         state=self.battle(enemy_x=32)
         punch=update_state(state,fixtures.inputs(A=True))
         kick=update_state(state,fixtures.inputs(B=True))
-        self.assertEqual((punch['enemy_hp'],punch['player_attack_cooldown'],punch['attack_kind']),(6,15,'punch'))
-        self.assertEqual((kick['enemy_hp'],kick['player_attack_cooldown'],kick['attack_kind']),(4,20,'kick'))
+        self.assertEqual((punch['enemy_hp'],punch['player_attack_cooldown'],punch['attack_kind']),(6,10,'punch'))
+        self.assertEqual((kick['enemy_hp'],kick['player_attack_cooldown'],kick['attack_kind']),(4,12,'kick'))
         later=update_state(kick,fixtures.inputs(A=True))
-        self.assertEqual((later['enemy_hp'],later['player_attack_cooldown']),(4,19))
+        self.assertEqual((later['enemy_hp'],later['player_attack_cooldown']),(4,11))
         self.assertEqual(kick['screen_state'],'battle')
 
     def test_both_buttons_open_status_without_advancing_combat_or_attacking(self):
