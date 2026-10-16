@@ -78,7 +78,7 @@ def valid_save(data):
         return False
     if type(data['player_x']) is not int or not 0<=data['player_x']<=138:
         return False
-    if type(data['player_y']) is not int or not 15<=data['player_y']<=33:
+    if type(data['player_y']) is not int or not 12<=data['player_y']<=36:
         return False
     if data['direction'] not in ('L','R'):
         return False
@@ -362,7 +362,7 @@ def _explore_update(state,inputs):
                     state['wave_delay']=WAVE_DELAY
     state['player_attack_cooldown']=max(0,state['player_attack_cooldown']-1)
     state['player_x']=max(0,min(138,state['player_x']+dx))
-    state['player_y']=max(15,min(33,state['player_y']+dy))
+    state['player_y']=max(12,min(36,state['player_y']+dy))
     boss_gate=(state['map_index']==map_count(state)-1 and state['player_x']>=132)
     if not state['foes'] and not boss_gate:
         state['wave_delay']=max(0,state.get('wave_delay',0)-1)
@@ -373,7 +373,7 @@ def _explore_update(state,inputs):
         foe['flash']=max(0,foe['flash']-1)
         if state['frame']%2==0 and not foe['stun']:
             foe['x']=max(0,min(138,foe['x']+(1 if state['player_x']>foe['x'] else -1 if state['player_x']<foe['x'] else 0)))
-            foe['y']=max(15,min(33,foe['y']+(1 if state['player_y']>foe['y'] else -1 if state['player_y']<foe['y'] else 0)))
+            foe['y']=max(12,min(36,foe['y']+(1 if state['player_y']>foe['y'] else -1 if state['player_y']<foe['y'] else 0)))
         in_range=abs(state['player_x']-foe['x'])<=12 and abs(state['player_y']-foe['y'])<=3
         if in_range and foe['cooldown']<=0 and foe['windup']==0:
             foe['windup']=10
