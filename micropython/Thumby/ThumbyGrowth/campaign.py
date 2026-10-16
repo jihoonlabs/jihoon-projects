@@ -9,8 +9,8 @@ WAVE_DELAY = 24
 SHOP_X = 104
 SHOP_DEPTH = 19
 COUNTRY_NAMES = ('KOREA','CHINA','JAPAN')
-COUNTRY_WEAPONS = (4,0,1)  # Korea: gun, China: spear, Japan: sword
 WEAPON_LABELS = {0:'SPEAR',1:'SWORD',4:'GUN'}
+WEAPON_STOCK = ((4,'GUN'),(0,'SPEAR'),(1,'SWORD'))
 STAT_STOCK = (6,7,8)
 ARMOR_STOCK = (2,3)
 FOOD_STOCK = ('RICE','BBQ','SOUP','TEA','NOODLE','BUN','DUCK','TANG','DUMPL','WONTON',
@@ -248,18 +248,17 @@ def _open_shop(state):
 
 
 def shop_catalog(state):
-    """Five short, city-specific offers; only the regional weapon is fixed."""
+    """Every city sells every weapon plus city-specific goods."""
     city=state.get('current_city')
     if city is None:
         city=5*(state.get('route') or [0])[-1]
-    weapon=COUNTRY_WEAPONS[city//5]
     stat=STAT_STOCK[city%len(STAT_STOCK)]
     armor=ARMOR_STOCK[city%len(ARMOR_STOCK)]
-    return ((weapon,WEAPON_LABELS[weapon]),
-            (stat,ITEM_NAMES[stat]),
+    return (WEAPON_STOCK+
+            ((stat,ITEM_NAMES[stat]),
             (armor,ARMOR_LABELS[city]),
             (5,FOOD_STOCK[city]),
-            (9,'SKILL'))
+            (9,'SKILL')))
 
 
 def _equip_item(state,item):
@@ -350,7 +349,12 @@ def _explore_update(state,inputs):
                 target=foe;best=gap
         if target is not None:
             power=1+state.get('atk_growth',0) if shooting else state['attack']+(1 if kicking else 4 if skill else 0)
-            target['hp']=max(0,target['hp']-calculate_damage({'attack':power},{'defense':target['defense']}))
+            damage=calculate_damage({'attack':power},{'defense':target['defense']})
+            if not kicking and not skill and weapon in (4,0,1):
+                # Preserve the intended gun < spear < sword damage order even
+                # when a heavily armored target reduces all three hits.
+                damage=max(damage,1 if weapon==4 else 2 if weapon==0 else 3)
+            target['hp']=max(0,target['hp']-damage)
             target['hp_seen']=True
             target['stun']=10
             target['flash']=6
