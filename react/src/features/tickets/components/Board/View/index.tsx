@@ -70,6 +70,7 @@ export function TicketBoardView() {
   const [projectListAttempt, setProjectListAttempt] = useState(0);
   const [operationsOpen, setOperationsOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(false);
+  const [createFocusRequest, setCreateFocusRequest] = useState(0);
   const [projectsBusy, setProjectsBusy] = useState(false);
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectNotice, setProjectNotice] = useState<string | null>(null);
@@ -443,6 +444,17 @@ export function TicketBoardView() {
         assigneeFilter={assigneeFilter}
         onAssigneeChange={setAssigneeFilter}
         onCreate={openCreate}
+        onCreateProject={() => {
+          if (showArchived) changeProjectScope(false);
+          setProjectsOpen(true);
+          setCreateFocusRequest((request) => request + 1);
+        }}
+        canCreateTicket={
+          !showArchived &&
+          !projectsLoading &&
+          projects.length > 0 &&
+          (selectedProjectId === ALL_PROJECTS || canWrite)
+        }
         projects={projects}
         selectedProjectId={selectedProjectId}
         onProjectChange={selectProject}
@@ -459,6 +471,7 @@ export function TicketBoardView() {
 
       {projectsOpen && (
         <ProjectDirectory
+          createFocusRequest={createFocusRequest}
           showArchived={showArchived}
           externalBusy={projectsBusy}
           onArchivedChange={changeProjectScope}
@@ -567,7 +580,32 @@ export function TicketBoardView() {
             membersProjectId === selectedProjectId ? projectMembers : []
           }
           commentsReadOnly={!modalProject || Boolean(modalProject.archivedAt)}
-          readOnly={!canWrite}
+          readOnly={
+            !canWrite ||
+            (!selectedTicket && membersProjectId !== selectedProjectId)
+          }
+          projectSelection={
+            !selectedTicket
+              ? {
+                  projects,
+                  onChange: selectProject,
+                  message:
+                    selectedProjectId === ALL_PROJECTS
+                      ? '作成先のプロジェクトを選択してください。'
+                      : memberError?.projectId === selectedProjectId
+                        ? memberError.message
+                        : membersProjectId !== selectedProjectId
+                          ? 'メンバーと権限を確認中...'
+                          : !canWrite
+                            ? 'このプロジェクトは閲覧のみです。作成できるプロジェクトを選択してください。'
+                            : undefined,
+                  onRetry:
+                    memberError?.projectId === selectedProjectId
+                      ? retryMembers
+                      : undefined,
+                }
+              : undefined
+          }
           onClose={closeModal}
           onCreate={handleCreate}
           onUpdate={handleUpdate}

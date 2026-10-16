@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useRef, type FormEvent } from 'react';
+import { useEffect, useState, useRef, type FormEvent } from 'react';
 import { createProject } from '@/features/tickets/api/projectApi';
 import type { Project } from '@/features/tickets/types/project';
 import styles from './index.module.css';
 
 interface Props {
   projects: Project[];
+  createFocusRequest?: number;
   loading: boolean;
   showArchived?: boolean;
   externalBusy?: boolean;
@@ -20,6 +21,7 @@ interface Props {
 
 export default function ProjectDirectory({
   projects,
+  createFocusRequest = 0,
   loading,
   showArchived = false,
   externalBusy = false,
@@ -30,6 +32,12 @@ export default function ProjectDirectory({
   onCreated,
   onPendingChange,
 }: Props) {
+  const createName = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!createFocusRequest || showArchived) return;
+    createName.current?.focus();
+    createName.current?.scrollIntoView?.({ block: 'center' });
+  }, [createFocusRequest, showArchived]);
   const [search, setSearch] = useState('');
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -150,6 +158,7 @@ export default function ProjectDirectory({
             <label className={styles.field}>
               プロジェクト名
               <input
+                ref={createName}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 required

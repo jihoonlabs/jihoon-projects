@@ -11,7 +11,7 @@ import type {
 } from '@/features/tickets/types/ticket';
 import { fetchTicket, TicketApiError } from '@/features/tickets/api/ticketApi';
 import TicketComments from '../TicketComments';
-import type { ProjectMember } from '@/features/tickets/types/project';
+import type { Project, ProjectMember } from '@/features/tickets/types/project';
 import { getProjectBorderColor } from '@/features/tickets/utils/projectColor';
 import styles from './index.module.css';
 
@@ -43,6 +43,12 @@ interface TicketModalProps {
   projectKey?: string | null;
   projectColor?: string | null;
   projectMembers: ProjectMember[];
+  projectSelection?: {
+    projects: Project[];
+    onChange: (id: string) => void;
+    message?: string;
+    onRetry?: () => void;
+  };
   readOnly?: boolean;
   commentsReadOnly?: boolean;
 }
@@ -144,6 +150,7 @@ function TicketModalContent({
   projectId,
   projectColor,
   projectMembers,
+  projectSelection,
   readOnly = false,
   commentsReadOnly = false,
 }: TicketModalProps) {
@@ -449,6 +456,40 @@ function TicketModalContent({
           </div>
         ) : (
           <form onSubmit={submit} className={styles.form}>
+            {!ticket && projectSelection && (
+              <>
+                <label>
+                  作成先プロジェクト
+                  <select
+                    value={projectId}
+                    disabled={submitting}
+                    onChange={(event) => {
+                      // Project変更で別Projectの担当者を送信しない。その他の下書きは保全する。
+                      setAssigneeId('');
+                      setSaveError(null);
+                      projectSelection.onChange(event.target.value);
+                    }}
+                  >
+                    <option value="ALL">プロジェクトを選択してください</option>
+                    {projectSelection.projects
+                      .filter((project) => !project.archivedAt)
+                      .map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                {projectSelection.message && (
+                  <p role="status">{projectSelection.message}</p>
+                )}
+                {projectSelection.onRetry && (
+                  <button type="button" onClick={projectSelection.onRetry}>
+                    メンバーと権限を再取得
+                  </button>
+                )}
+              </>
+            )}
             <label>
               タイトル
               <input
@@ -566,7 +607,11 @@ function TicketModalContent({
               <button
                 type="submit"
                 disabled={
-                  submitting || conflict || unavailable || !title.trim()
+                  readOnly ||
+                  submitting ||
+                  conflict ||
+                  unavailable ||
+                  !title.trim()
                 }
               >
                 {submitting ? '保存中...' : '保存'}

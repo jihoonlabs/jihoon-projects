@@ -1341,8 +1341,8 @@ it.each(['admin', 'user'] as const)(
     expect(screen.queryByText('Inaccessible ticket')).not.toBeInTheDocument();
     expect(projectApi.fetchProjectMembers).not.toHaveBeenCalled();
     expect(
-      screen.queryByRole('button', { name: '+ チケット作成' }),
-    ).not.toBeInTheDocument();
+      screen.getByRole('button', { name: '+ チケット作成' }),
+    ).toBeEnabled();
     expect(
       screen.queryByRole('combobox', { name: 'First ticket のステータス' }),
     ).not.toBeInTheDocument();
@@ -1376,3 +1376,157 @@ it.each(['admin', 'user'] as const)(
     expect(projectApi.fetchProjectMembers).toHaveBeenCalledWith('1');
   },
 );
+
+it.each(['admin', 'user'] as const)(
+  'creates from aggregate with the chosen Project members and preserves drafts on switch (%s)',
+  async (role) => {
+    useAuthStore.setState({ user: { ...useAuthStore.getState().user!, role } });
+    vi.mocked(projectApi.fetchProjects).mockResolvedValue([
+      { id: '1', name: 'General', projectKey: 'GEN', boardVersion: 3 },
+      { id: '2', name: 'Design', projectKey: 'DSN', boardVersion: 4 },
+    ]);
+    vi.mocked(projectApi.fetchProjectMembers).mockImplementation(async (id) => [
+      {
+        id: '7',
+        name: 'Tester',
+        email: 'tester@example.test',
+        role: 'member',
+        permission: 'write',
+      },
+      ...(id === '2'
+        ? [
+            {
+              id: '42',
+              name: 'Pat',
+              email: 'pat@example.test',
+              role: 'member' as const,
+              permission: 'write' as const,
+            },
+          ]
+        : []),
+    ]);
+    vi.mocked(api.fetchTickets).mockResolvedValue([]);
+    vi.mocked(api.createTicket).mockResolvedValue({
+      ...api.toTicket(responseTicket),
+      projectId: '2',
+      title: 'Preserved create draft',
+    });
+    useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+    render(<TicketBoardView />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: '+ チケット作成' }),
+    );
+    const dialog = screen.getByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText('タイトル'), {
+      target: { value: 'Preserved create draft' },
+    });
+    expect(within(dialog).getByRole('button', { name: '保存' })).toBeDisabled();
+    fireEvent.change(within(dialog).getByLabelText('作成先プロジェクト'), {
+      target: { value: '1' },
+    });
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole('button', { name: '保存' }),
+      ).toBeEnabled(),
+    );
+    fireEvent.change(within(dialog).getByLabelText('担当者'), {
+      target: { value: '7' },
+    });
+    fireEvent.change(within(dialog).getByLabelText('作成先プロジェクト'), {
+      target: { value: '2' },
+    });
+    expect(within(dialog).getByLabelText('タイトル')).toHaveValue(
+      'Preserved create draft',
+    );
+    expect(within(dialog).getByLabelText('担当者')).toHaveValue('');
+    await within(dialog).findByRole('option', { name: 'Pat' });
+    fireEvent.change(within(dialog).getByLabelText('担当者'), {
+      target: { value: '42' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存' }));
+    await waitFor(() =>
+      expect(api.createTicket).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: '2',
+          title: 'Preserved create draft',
+          assigneeId: '42',
+        }),
+      ),
+    );
+    expect(api.createTicket).toHaveBeenCalledTimes(1);
+  },
+);
+
+it('keeps aggregate creation disabled for a read-only selected membership', async () => {
+  vi.mocked(projectApi.fetchProjectMembers).mockResolvedValue([
+    {
+      id: '7',
+      name: 'Tester',
+      email: null,
+      role: 'member',
+      permission: 'read',
+    },
+  ]);
+  vi.mocked(api.fetchTickets).mockResolvedValue([]);
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+  render(<TicketBoardView />);
+  fireEvent.click(
+    await screen.findByRole('button', { name: '+ チケット作成' }),
+  );
+  const dialog = screen.getByRole('dialog');
+  fireEvent.change(within(dialog).getByLabelText('作成先プロジェクト'), {
+    target: { value: '1' },
+  });
+  fireEvent.change(within(dialog).getByLabelText('タイトル'), {
+    target: { value: 'Read-only draft' },
+  });
+  await within(dialog).findByText(/このプロジェクトは閲覧のみ/);
+  expect(within(dialog).getByRole('button', { name: '保存' })).toBeDisabled();
+  expect(api.createTicket).not.toHaveBeenCalled();
+});
+
+it('retries failed creation membership inside the modal without discarding its draft', async () => {
+  vi.mocked(projectApi.fetchProjectMembers)
+    .mockRejectedValueOnce(new Error('lookup failed'))
+    .mockResolvedValue([
+      {
+        id: '7',
+        name: 'Tester',
+        email: null,
+        role: 'member',
+        permission: 'write',
+      },
+    ]);
+  vi.mocked(api.fetchTickets).mockResolvedValue([]);
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+  render(<TicketBoardView />);
+  fireEvent.click(
+    await screen.findByRole('button', { name: '+ チケット作成' }),
+  );
+  const dialog = screen.getByRole('dialog');
+  fireEvent.change(within(dialog).getByLabelText('タイトル'), {
+    target: { value: 'Retry preserved draft' },
+  });
+  fireEvent.change(within(dialog).getByLabelText('作成先プロジェクト'), {
+    target: { value: '1' },
+  });
+  await within(dialog).findByText('lookup failed');
+  expect(within(dialog).getByRole('button', { name: '保存' })).toBeDisabled();
+  fireEvent.click(
+    within(dialog).getByRole('button', { name: 'メンバーと権限を再取得' }),
+  );
+  await waitFor(() =>
+    expect(within(dialog).getByRole('button', { name: '保存' })).toBeEnabled(),
+  );
+  expect(within(dialog).getByLabelText('タイトル')).toHaveValue(
+    'Retry preserved draft',
+  );
+});
+
+it('opens the existing Project creation form directly from aggregate', async () => {
+  vi.mocked(api.fetchTickets).mockResolvedValue([]);
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+  render(<TicketBoardView />);
+  fireEvent.click(screen.getByRole('button', { name: '+ プロジェクト作成' }));
+  expect(await screen.findByLabelText('プロジェクト名')).toHaveFocus();
+});

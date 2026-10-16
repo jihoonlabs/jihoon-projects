@@ -9,6 +9,8 @@ interface HeaderProps {
   assigneeFilter: string;
   onAssigneeChange: (value: string) => void;
   onCreate: () => void;
+  onCreateProject: () => void;
+  canCreateTicket: boolean;
   projects: Project[];
   selectedProjectId: string;
   onProjectChange: (projectId: string) => void;
@@ -29,6 +31,8 @@ export default function Header({
   assigneeFilter,
   onAssigneeChange,
   onCreate,
+  onCreateProject,
+  canCreateTicket,
   projects,
   selectedProjectId,
   onProjectChange,
@@ -76,6 +80,13 @@ export default function Header({
         <div className={styles.rightSection}>
           <button
             type="button"
+            onClick={onCreateProject}
+            disabled={projectsBusy}
+          >
+            + プロジェクト作成
+          </button>
+          <button
+            type="button"
             disabled={projectsBusy}
             aria-label="プロジェクト一覧・作成"
             aria-expanded={projectsOpen}
@@ -106,7 +117,7 @@ export default function Header({
               メンバー
             </button>
           )}
-          {selectedProject && canWrite && (
+          {canCreateTicket && (
             <button
               type="button"
               className={styles.createBtn}
