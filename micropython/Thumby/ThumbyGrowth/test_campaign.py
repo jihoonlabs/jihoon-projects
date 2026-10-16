@@ -127,19 +127,21 @@ class CampaignTests(unittest.TestCase):
 
     def test_hits_interrupt_enemy_and_player_actions_for_full_stun(self):
         state=campaign.new_game_state()
-        foe=dict(x=16,y=28,hp=20,max_hp=20,attack=6,defense=0,
+        foe=dict(x=21,y=28,hp=20,max_hp=20,attack=1,defense=0,
                  windup=1,cooldown=0,stun=0,flash=0,boss=False)
+        attackers=[dict(foe),dict(foe,x=4),dict(foe,x=6)]
         state.update(route=[0],current_city=0,screen_state='explore',
-                     player_x=16,player_y=28,direction='R',foes=[foe])
+                     player_x=16,player_y=28,direction='R',foes=attackers)
         state=campaign.update(state,buttons(A=True))
         self.assertEqual(state['foes'][0]['stun'],10)
         self.assertEqual(state['foes'][0]['windup'],0)
-        self.assertEqual(state['HP'],10)
-        # A newly landed enemy hit applies full damage and locks both controls.
-        state['foes'][0].update(stun=0,windup=1,cooldown=0)
-        state=campaign.update(state,buttons())
-        self.assertEqual((state['HP'],state['player_stun'],state['player_hit_flash']),(4,8,6))
+        self.assertEqual(state['foes'][0]['x'],23)
+        # Two simultaneous enemy swings cause one hit; invulnerability prevents a pile-on.
+        self.assertEqual((state['HP'],state['player_stun'],state['player_hit_flash'],state['player_invuln']),
+                         (9,8,6,24))
+        self.assertEqual((state['foes'][1]['cooldown'],state['foes'][2]['cooldown']),(90,90))
         player_x=state['player_x'];enemy_hp=state['foes'][0]['hp']
+        self.assertEqual(player_x,18)
         state=campaign.update(state,buttons(L=True,A=True))
         self.assertEqual(state['player_x'],player_x)
         self.assertEqual(state['foes'][0]['hp'],enemy_hp)
