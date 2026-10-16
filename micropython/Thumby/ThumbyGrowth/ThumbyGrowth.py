@@ -195,13 +195,12 @@ def draw_weapon(display,weapon,x,y,rightward,swing=False):
 
 
 def draw_fighter_details(display,x,y,pose,rightward):
-    """Add face and gi marks so tiny fighters read as people, not blocks."""
+    """Keep faces simple while gi marks distinguish the shared body."""
     def detail(offset,dy,width,height,color):
         left=offset if rightward else 10-offset-width
         scene_rect(display,x+left,y+dy,width,height,color)
-    # Eyes and a short mouth sit inside the shared ten-pixel face silhouette.
+    # Two eyes are enough at this scale; the blank lower face keeps the sprite clean.
     detail(1,-3,1,1,0);detail(6,-3,1,1,0)
-    detail(4,-1,2,1,0)
     # Open jacket lapels, obi belt and split trouser legs.
     detail(2,1,1,1,0);detail(6,1,1,1,0)
     detail(3,2,1,1,0);detail(5,2,1,1,0)
@@ -251,7 +250,7 @@ def draw_hero_hair(display,region,x,y,rightward):
 
 
 class ScaledFighterDisplay:
-    """Draw fighter rectangles at 7/8 size, anchored to their feet."""
+    """Draw fighter rectangles slightly smaller, anchored to their feet."""
     __slots__=('display','anchor_x','anchor_y')
     def __init__(self,display,anchor_x,anchor_y):
         self.display=display
@@ -259,8 +258,8 @@ class ScaledFighterDisplay:
         self.anchor_y=anchor_y
     @staticmethod
     def _edge(value,anchor):
-        delta=(value-anchor)*7
-        return anchor+(delta+4)//8 if delta>=0 else anchor-((-delta+4)//8)
+        delta=(value-anchor)*13
+        return anchor+(delta+8)//16 if delta>=0 else anchor-((-delta+8)//16)
     def drawFilledRectangle(self,x,y,width,height,color=1):
         left=self._edge(x,self.anchor_x);right=self._edge(x+width,self.anchor_x)
         top=self._edge(y,self.anchor_y);bottom=self._edge(y+height,self.anchor_y)
