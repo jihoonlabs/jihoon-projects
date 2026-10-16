@@ -149,8 +149,11 @@ def character_rows(state,player):
     return character_head(state,player)+character_body(state,player)
 
 
-def actor_screen_y(world_y):
-    # Perspective fits the larger figure below the HUD at every floor depth.
+def actor_screen_y(world_y,campaign=False):
+    # Campaign play gets a deeper floor lane now that enemy gauges live in HUD.
+    if campaign:
+        return 17+(world_y-12)*2//3
+    # Classic battle keeps its original projection and collision feel.
     return 21+(world_y-15)*2//3
 
 
@@ -293,11 +296,11 @@ def draw_fighter(display,state,player,x,y):
         draw_impact(display,impact_x,y+2)
 
 
-def draw_enemy_health(display, foe, screen_x, screen_y):
-    """Draw a tiny per-enemy health gauge above its head."""
-    width=14 if foe.get('boss') else 10
-    left=max(0,min(72-width,screen_x-width//2))
-    top=max(14,screen_y-11)
+def draw_enemy_health(display, foe, screen_x, screen_y, hud_x=None):
+    """Draw a foe gauge over its head, or in a fixed campaign HUD slot."""
+    width=14 if foe.get('boss') else (12 if hud_x is not None else 10)
+    left=max(0,min(72-width,screen_x-width//2)) if hud_x is None else hud_x
+    top=max(14,screen_y-11) if hud_x is None else 7
     inner=width-2
     hp=max(0,foe['hp'])
     maximum=max(1,foe['max_hp'])
@@ -690,9 +693,9 @@ def draw_campaign_game(state):
         draw_shop_building(display,camera,state['map_index'],show_label=False)
         draw_rows(display,HEART_ROWS,0,1,5)
         display.drawText(str(state['HP']),7,0,1)
-        # The city name is already shown during selection. Keep only map
-        # progress in the play HUD so the tiny screen stays focused on action.
-        display.drawText(str(state['map_index']+1)+'/'+str(campaign.map_count(state)),0,8,1)
+        # Keep status on the top two rows. Enemy gauges no longer take floor
+        # space above actors, so the whole 12..36 lane range remains readable.
+        display.drawText(str(state['map_index']+1)+'/'+str(campaign.map_count(state)),22,0,1)
         foes=state['foes']
         display.drawText('E'+str(len(foes)),58,0,1)
         actors=[(True,state['player_x']-camera,state['player_y'],state)]
@@ -703,10 +706,11 @@ def draw_campaign_game(state):
                            enemy_hit_flash=foe['flash'],enemy_stun=foe['stun'])
             actors.append((False,foe['x']-camera,foe['y'],foe_state))
         for player,x,y,actor_state in sorted(actors,key=lambda value:value[2]):
-            draw_fighter(display,actor_state,player,x,actor_screen_y(y))
-        for foe in foes:
+            draw_fighter(display,actor_state,player,x,actor_screen_y(y,campaign=True))
+        for slot,foe in enumerate(foes):
             draw_enemy_health(display,foe,foe['x']-camera,
-                              actor_screen_y(foe['y']))
+                              actor_screen_y(foe['y'],campaign=True),
+                              hud_x=(22,38,54)[slot])
     elif screen=='shop':
         cash=str(state['money']) if state['money']<1000 else str(min(999,state['money']//1000))+'k'
         display.drawText('SHOP',0,0,1)
