@@ -148,7 +148,21 @@ class CampaignTests(unittest.TestCase):
             state=campaign.update(state,buttons(A=True))
             self.assertEqual(state['attack_kind'],kind)
             self.assertLess(state['foes'][0]['hp'],20)
+            self.assertTrue(state['foes'][0]['hp_seen'])
+
+    def test_a_hit_reveals_only_the_target_enemy_health(self):
+        state=campaign.new_game_state()
+        near=dict(x=24,y=28,hp=20,max_hp=20,attack=1,defense=0,
+                  windup=0,cooldown=99,stun=0,flash=0,boss=False,hp_seen=False)
+        far=dict(x=50,y=28,hp=20,max_hp=20,attack=1,defense=0,
+                 windup=0,cooldown=99,stun=0,flash=0,boss=False,hp_seen=False)
+        state.update(route=[0],current_city=0,screen_state='explore',
+                     player_x=16,player_y=28,direction='R',foes=[near,far])
+        state=campaign.update(state,buttons(A=True))
+        self.assertTrue(state['foes'][0]['hp_seen'])
+        self.assertFalse(state['foes'][1]['hp_seen'])
 
 
 if __name__=='__main__':
     unittest.main()
+
