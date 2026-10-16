@@ -102,18 +102,31 @@ class CampaignTests(unittest.TestCase):
         self.assertEqual(state['attack_kind'],'punch')
         self.assertEqual((state['HP'],state['potions']),(4,1))
 
-    def test_shop_buys_and_equips_gear_then_re_equips_owned_gear_for_free(self):
-        state=campaign.new_game_state()
-        state.update(route=[0],current_city=0,screen_state='shop',money=160)
-        state=campaign.update(state,buttons(A=True))
-        self.assertEqual(state['equipped_weapon'],0)
-        self.assertEqual(state['money'],120)
-        state=campaign.update(state,buttons(D=True))
-        state=campaign.update(state,buttons(A=True))
-        self.assertEqual((state['equipped_weapon'],state['money']),(1,40))
-        state=campaign.update(state,buttons(U=True))
-        state=campaign.update(state,buttons(A=True))
-        self.assertEqual((state['equipped_weapon'],state['money']),(0,40))
+    def test_country_weapon_and_city_stock_vary_by_shop(self):
+        expected=((4,'GUN'),(0,'SPEAR'),(1,'SWORD'))
+        for region,(weapon,label) in enumerate(expected):
+            state=campaign.new_game_state()
+            state.update(route=[region],current_city=region*5,screen_state='shop',money=160)
+            self.assertEqual(campaign.shop_catalog(state)[0],(weapon,label))
+            state=campaign.update(state,buttons(A=True))
+            self.assertEqual(state['equipped_weapon'],weapon)
+        korea=campaign.shop_catalog(dict(current_city=0,route=[0]))
+        busan=campaign.shop_catalog(dict(current_city=1,route=[0]))
+        self.assertEqual([x[0] for x in korea],[4,6,2,5,9])
+        self.assertEqual([x[0] for x in busan],[4,7,3,5,9])
+        self.assertNotEqual(korea[1:4],busan[1:4])
+
+    def test_spear_sword_and_gun_have_distinct_attack_ranges(self):
+        for weapon,x,kind in ((0,34,'spear'),(1,29,'sword'),(4,60,'shot')):
+            state=campaign.new_game_state()
+            foe=dict(x=x,y=28,hp=20,max_hp=20,attack=1,defense=0,
+                     windup=0,cooldown=99,stun=0,flash=0,boss=False)
+            state.update(route=[0],current_city=0,screen_state='explore',
+                         equipped_weapon=weapon,player_x=16,player_y=28,
+                         direction='R',foes=[foe])
+            state=campaign.update(state,buttons(A=True))
+            self.assertEqual(state['attack_kind'],kind)
+            self.assertLess(state['foes'][0]['hp'],20)
 
 
 if __name__=='__main__':
