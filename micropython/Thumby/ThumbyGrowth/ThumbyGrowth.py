@@ -379,27 +379,44 @@ def draw_background(display, progress, camera, map_index=0):
 
 def draw_shop_building(display,camera,map_index=0):
     x=SHOP_WORLD_X-camera
-    if x < -16 or x > 72:
+    if x < -18 or x > 90:
         return
-    # A small Edo-era storefront: deep tiled eaves, noren panels and an open door.
-    scene_rect(display,x-3,18,18,1,1)
-    scene_rect(display,x-1,17,14,1,1)
-    scene_rect(display,x+1,16,10,1,1)
-    scene_rect(display,x+2,19,1,6,1)
-    scene_rect(display,x+11,19,1,6,1)
-    scene_rect(display,x+3,20,8,1,1)
-    scene_rect(display,x+3,20,1,4,1)
-    scene_rect(display,x+5,20,1,3,1)
-    scene_rect(display,x+7,20,1,3,1)
-    scene_rect(display,x+9,20,1,4,1)
-    scene_rect(display,x+3,24,8,1,1)
-    # Shop curtain and a tiny hanging lantern; all stay above the walkable lane.
-    scene_rect(display,x+4,20,1,2,0)
-    scene_rect(display,x+6,20,1,2,0)
-    scene_rect(display,x+8,20,1,2,0)
-    scene_rect(display,x+12,19,2,3,1)
-    scene_rect(display,x+13,18,1,1,1)
-    display.drawText('SHOP',x+1,13,1)
+    # Compact old-town shop facade: tiled eaves, timber frame, noren and entry.
+    # The broad black cutouts keep the building readable at 72x40 pixels.
+    scene_rect(display,x-13,19,26,6,1)
+    scene_rect(display,x-10,17,20,1,1)
+    scene_rect(display,x-13,18,26,1,1)
+    scene_rect(display,x-16,19,32,2,1)
+    for offset in range(-14,15,4):
+        scene_rect(display,x+offset,19,2,1,0)
+    scene_rect(display,x-14,21,28,1,1)
+    scene_rect(display,x-12,22,2,3,1)
+    scene_rect(display,x+10,22,2,3,1)
+    # Left lattice window and right shutter, both behind the fighting lane.
+    scene_rect(display,x-9,22,5,3,0)
+    scene_rect(display,x-8,22,1,3,1)
+    scene_rect(display,x-6,22,1,3,1)
+    scene_rect(display,x-4,22,1,3,1)
+    scene_rect(display,x+4,22,5,3,0)
+    for row in (22,24):
+        scene_rect(display,x+4,row,5,1,1)
+    scene_rect(display,x+5,23,3,1,1)
+    # Three hanging curtain panels frame a dark, walk-in doorway.
+    scene_rect(display,x-3,22,7,2,1)
+    scene_rect(display,x-2,22,1,2,0)
+    scene_rect(display,x,22,1,2,0)
+    scene_rect(display,x+2,22,1,2,0)
+    scene_rect(display,x-3,24,7,2,0)
+    scene_rect(display,x-4,24,1,2,1)
+    scene_rect(display,x+4,24,1,2,1)
+    scene_rect(display,x-5,25,11,1,1)
+    # Small hanging lantern and a short sign; no full-screen shop menu text.
+    scene_rect(display,x+14,21,3,4,1)
+    scene_rect(display,x+15,20,1,1,1)
+    scene_rect(display,x+15,22,1,2,0)
+    scene_rect(display,x-5,15,10,1,1)
+    if 0<=x-5 and x+19<=72:
+        display.drawText('SHOP',x-5,14,1)
 
 
 def main_loop():
