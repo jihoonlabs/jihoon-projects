@@ -348,7 +348,7 @@ def _explore_update(state,inputs):
         skill=not kicking and state.get('skill_owned',False) and state['command_ready']>0
         shooting=not kicking and not skill and weapon==4
         state['attack_kind']='kick' if kicking else 'skill' if skill else 'shot' if shooting else 'spear' if weapon==0 else 'sword' if weapon==1 else 'punch'
-        state['player_attack_cooldown']=20 if kicking else 30 if skill or shooting else 18 if weapon in (0,1) else 15
+        state['player_attack_cooldown']=12 if kicking else 30 if skill or shooting else 14 if weapon in (0,1) else 10
         state['command_ready']=0
         state['command_timer']=0
         target=None;best=999
@@ -470,4 +470,5 @@ def update(state,inputs):
         elif inputs['A']: return new_game_state()
         return s
     return s
+
 
