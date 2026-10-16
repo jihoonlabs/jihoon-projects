@@ -144,11 +144,11 @@ class GameCompletionTests(unittest.TestCase):
         state=game.campaign.update(state,fixtures.inputs(U=True))
         state=game.campaign.update(state,fixtures.inputs(A=True))
         self.assertEqual((state['screen_state'],state['equipped_weapon'],state['money']),
-                         ('shop',0,80))
+                         ('shop',4,60))
         saved=game.campaign.decode_save(game.campaign.encode_save(state))
         self.assertEqual((saved['route'],saved['current_city'],saved['money'],
                           saved['equipped_weapon'],saved['screen_state']),
-                         ([0],0,80,0,'explore'))
+                         ([0],0,60,4,'explore'))
 
     def test_encounter_stats_and_boss(self):
         expected = ((6,2,0),(10,3,1),(8,3,0),(12,3,1),(16,4,2),
