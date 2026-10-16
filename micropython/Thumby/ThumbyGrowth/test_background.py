@@ -106,13 +106,19 @@ class BackgroundTests(unittest.TestCase):
         labels=[call.args[0] for call in calls]
         self.assertIn('SHOP',labels)
         self.assertIn('GUN',labels)
-        self.assertIn('HP+',labels)
-        self.assertIn('VEST',labels)
+        self.assertIn('SPEAR',labels)
+        self.assertIn('SWORD',labels)
         self.assertEqual(state,before)
         for call in calls:
             text,x,y,_=call.args
             self.assertTrue(0<=x and x+6*len(text)<=72)
             self.assertTrue(0<=y and y+7<=40)
+        state['menu_scroll']=3
+        game.thumby.display.reset_mock()
+        game.draw_campaign_game(state)
+        labels=[call.args[0] for call in game.thumby.display.drawText.call_args_list]
+        self.assertIn('HP+',labels)
+        self.assertIn('VEST',labels)
 
     def test_campaign_play_hud_hides_city_name_and_keeps_map_progress(self):
         state=campaign.new_game_state()
