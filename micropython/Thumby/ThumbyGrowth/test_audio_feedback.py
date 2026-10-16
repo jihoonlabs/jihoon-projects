@@ -60,10 +60,10 @@ class AudioFeedbackTests(unittest.TestCase):
         music=game.step_audio(music,after,after,66)
         self.assertNotIn('fx_until',music)
         self.assertEqual(game.thumby.audio.play.call_count,2)
-        self.assertEqual(game.thumby.audio.play.call_args.args[1],200)
+        self.assertEqual(game.thumby.audio.play.call_args.args[1],160)
         music=game.step_audio(music,after,after,198)
         self.assertEqual(game.thumby.audio.play.call_count,2)
-        self.assertEqual(game.thumby.audio.play.call_args.args[1],200)
+        self.assertEqual(game.thumby.audio.play.call_args.args[1],160)
         self.assertEqual(after,snapshot)
         self.assertEqual(encode_save_data(after),saved)
         for name in ('A','B','U','D'):
@@ -81,7 +81,7 @@ class AudioFeedbackTests(unittest.TestCase):
             game.thumby.audio.play.assert_not_called()
         after=dict(before,route=[1])
         music=game.step_audio({'track':1,'tick':8,'fx_until':100},after,after,200)
-        self.assertEqual(music,{'track':2,'tick':0,'next_ms':233})
+        self.assertEqual(music,{'track':2,'tick':0,'next_ms':230})
         game.thumby.audio.reset_mock()
         after=f.state(progress=15,route=[0,1,2])
         music={'track':1,'tick':8,'fx_left':2}
