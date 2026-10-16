@@ -145,6 +145,20 @@ class BackgroundTests(unittest.TestCase):
             dict(hp=12,max_hp=24,boss=True),40,29)
         self.assertIn((33,18,14,3,1),self.rectangles())
 
+    def test_storefront_stays_inside_screen_as_camera_scrolls(self):
+        for camera in range(73):
+            game.thumby.display.reset_mock()
+            game.draw_shop_building(game.thumby.display,camera,1)
+            for x,y,width,height,color in self.rectangles():
+                self.assertTrue(0<=x<x+width<=72)
+                self.assertTrue(14<=y<y+height<=40)
+            for call in game.thumby.display.drawText.call_args_list:
+                label,x,y,_=call.args
+                self.assertTrue(0<=x and x+6*len(label)<=72)
+        game.thumby.display.reset_mock()
+        game.draw_shop_building(game.thumby.display,52,1)
+        self.assertIn('SHOP',[c.args[0] for c in game.thumby.display.drawText.call_args_list])
+
 
 if __name__=='__main__':
     unittest.main()
