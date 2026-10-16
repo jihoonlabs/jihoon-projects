@@ -55,14 +55,22 @@ class SceneAudioTests(unittest.TestCase):
         before=deepcopy(state)
         for frame in range(7):
             old=deepcopy(music)
-            result=game.step_music(music,state)
+            result=game.step_music(music,state,frame*33)
             self.assertEqual(music,old)
             music=result
         self.assertEqual(game.thumby.audio.play.call_count,2)
         self.assertEqual(state,before)
         for call in game.thumby.audio.play.call_args_list:
             self.assertTrue(20<=call.args[0]<=20000)
-            self.assertEqual(call.args[1],160)
+            self.assertEqual(call.args[1],200)
+
+    def test_music_keeps_real_tempo_when_render_frames_are_skipped(self):
+        state=f.state(screen_state='battle')
+        music=game.step_music({'track':None,'tick':0},state,0)
+        music=game.step_music(music,state,198)
+        self.assertEqual(music['tick'],6)
+        self.assertEqual(game.thumby.audio.play.call_count,2)
+        self.assertEqual(game.thumby.audio.play.call_args.args[1],200)
 
     def test_pause_defeat_stop_music_without_repeated_device_calls(self):
         for screen in ('pause','defeat'):
@@ -82,8 +90,8 @@ class SceneAudioTests(unittest.TestCase):
             f.state(screen_state='battle',progress=4))['track'],4)
         game.thumby.audio.reset_mock()
         music={'track':None,'tick':0}
-        for _ in range(200):
-            music=game.step_music(music,f.state(progress=15,route=[0,1,2]))
+        for frame in range(200):
+            music=game.step_music(music,f.state(progress=15,route=[0,1,2]),frame*33)
         self.assertEqual(music,{'track':5,'tick':49})
         self.assertEqual(game.thumby.audio.play.call_count,7)
 
@@ -103,7 +111,7 @@ class SceneAudioTests(unittest.TestCase):
             with patch.object(game,'title_frame',return_value='new'), \
                  patch.object(game.campaign,'new_game_state',return_value=previous), \
                  patch.object(game,'step_frame',side_effect=[result,RuntimeError('halt')]), \
-                 patch.object(game,'step_music',side_effect=lambda m,s:m), \
+                 patch.object(game,'step_music',side_effect=lambda m,s,*args:m), \
                  patch.object(game,'cutscene_frame',return_value=True) as scene:
                 with self.assertRaisesRegex(RuntimeError,'halt'):
                     game.main_loop()
