@@ -6,6 +6,18 @@ import ThumbyGrowth as game
 
 
 class CharacterDesignTests(unittest.TestCase):
+    def test_fighter_rectangles_shrink_around_the_foot_anchor(self):
+        fixtures.TestAdapter.setUp(self)
+        display=fixtures.fake_thumby.display
+        display.reset_mock()
+        scaled=game.ScaledFighterDisplay(display,23,36)
+        scaled.drawFilledRectangle(18,22,10,14,1)
+        x,y,width,height,color=display.drawFilledRectangle.call_args.args
+        self.assertLess(width,10)
+        self.assertLess(height,14)
+        self.assertEqual(color,1)
+        self.assertGreaterEqual(y+height,34)
+
     def test_country_weapon_sprites_are_visibly_distinct(self):
         fixtures.TestAdapter.setUp(self)
         game.thumby=fixtures.fake_thumby
