@@ -123,7 +123,7 @@ class CampaignTests(unittest.TestCase):
         self.assertEqual(state['attack_kind'],'punch')
         self.assertEqual((state['HP'],state['potions']),(4,1))
 
-    def test_every_country_sells_all_weapons_and_city_goods_still_vary(self):
+    def test_each_country_sells_its_weapon_and_start_country_is_unrestricted(self):
         expected=((4,'GUN'),(0,'SPEAR'),(1,'SWORD'))
         catalogs=[]
         for region in range(3):
@@ -131,17 +131,22 @@ class CampaignTests(unittest.TestCase):
             state.update(route=[region],current_city=region*5,screen_state='shop',money=1000)
             catalog=campaign.shop_catalog(state)
             catalogs.append(catalog)
-            self.assertEqual(catalog[:3],expected)
-            for index,weapon in enumerate((4,0,1)):
-                state['menu_selection']=index
-                state=campaign.update(state,buttons(A=True))
-                self.assertEqual(state['equipped_weapon'],weapon)
+            self.assertEqual(catalog[0],expected[region])
+            self.assertEqual(len(catalog),5)
+            state=campaign.update(state,buttons(A=True))
+            self.assertEqual(state['equipped_weapon'],expected[region][0])
+            self.assertTrue(campaign.item_owned(state,expected[region][0]))
+        for start_region in range(3):
+            state=campaign.new_game_state()
+            for _ in range(start_region):
+                state=campaign.update(state,buttons(D=True))
+            state=campaign.update(state,buttons(A=True))
+            self.assertEqual(state['route'],[start_region])
         korea=campaign.shop_catalog(dict(current_city=0,route=[0]))
         busan=campaign.shop_catalog(dict(current_city=1,route=[0]))
-        self.assertEqual([x[0] for x in korea],[4,0,1,6,2,5,9])
-        self.assertEqual([x[0] for x in busan],[4,0,1,7,3,5,9])
-        self.assertNotEqual(korea[3:6],busan[3:6])
-        self.assertEqual(catalogs[0][:3],catalogs[1][:3])
+        self.assertEqual([x[0] for x in korea],[4,6,2,5,9])
+        self.assertEqual([x[0] for x in busan],[4,7,3,5,9])
+        self.assertNotEqual(korea[1:4],busan[1:4])
 
     def test_weapon_damage_and_reach_trade_off_by_weapon(self):
         for defense in (0,4):
