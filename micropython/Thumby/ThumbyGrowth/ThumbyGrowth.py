@@ -132,7 +132,7 @@ def character_pose(state,player):
     if not player:
         return 'guard' if state.get('enemy_windup',0) else 'punch' if state.get('enemy_attack_cooldown',0)>=114 else 'idle'
     kind=state.get('attack_kind','punch')
-    threshold=20 if kind=='skill' else 23 if kind=='shot' else 8 if kind=='kick' else 5
+    threshold=20 if kind=='skill' else 23 if kind=='shot' else 8 if kind in ('kick','spear','sword') else 5
     return kind if state['player_attack_cooldown']>=threshold else 'idle'
 
 
@@ -141,7 +141,7 @@ def character_body(state,player):
     if pose=='hurt': return HURT_BODY
     if pose=='guard': return GUARD_BODY
     if pose=='kick': return KICK_BODY
-    if pose in ('punch','shot','skill'): return PUNCH_BODY
+    if pose in ('punch','shot','skill','spear','sword'): return PUNCH_BODY
     return WALK_BODY_ROWS if (state.get('combat_frame',0)//5)%2 else BODY_ROWS
 
 
@@ -172,10 +172,16 @@ def draw_weapon(display,weapon,x,y,rightward,swing=False):
         rect(1,y+1,5,2,0);rect(1,y+1,4,1);rect(1,y+2,1,3)
         if swing:
             rect(5,y-1,1,5);rect(4,y+1,3,1);rect(14,y+1,3,1)
+    elif weapon==0:
+        # A long pole and triangular point read clearly as China's spear.
+        rect(0,y-2,1,11)
+        rect(1,y-3,3,1);rect(1,y-2,2,1);rect(1,y-1,1,1)
+        if swing:
+            rect(5,y,1,1);rect(8,y+1,1,1);rect(11,y+2,1,1)
     elif swing:
-        length=8 if weapon==1 else 5
-        for offset in range(length): rect(offset,y+3-offset//2,2,1)
-        rect(0,y+1,1,4)
+        # Japan's sword gets a long, high slash distinct from the spear thrust.
+        for offset in range(8): rect(offset,y-2+offset//3,2,1)
+        rect(0,y+1,1,4);rect(1,y+1,2,1)
     else:
         length=9 if weapon==1 else 6
         rect(1,y+3-length,3,length+2,0)
@@ -267,8 +273,9 @@ def draw_fighter(display,state,player,x,y):
         scene_rect(display,x,y+2,8,2,1);scene_rect(display,x+1,y+3,6,3,1)
         scene_rect(display,x+3,y+3,2,2,0);scene_rect(display,x+2,y+5,4,1,1)
     weapon=state['equipped_weapon'] if player else None
-    swinging=pose in ('punch','shot','skill')
-    draw_weapon(display,weapon,x,y,rightward,swinging and (weapon!=4 or pose=='shot'))
+    swinging=pose in ('punch','shot','skill','spear','sword')
+    draw_weapon(display,weapon,x,y,rightward,swinging and
+                (weapon!=4 or pose=='shot'))
     front=x+6 if rightward else x-5
     if pose=='kick':
         scene_rect(display,front,y+4,6,2);scene_rect(display,front+(3 if rightward else 0),y+3,3,4)
@@ -704,20 +711,23 @@ def draw_campaign_game(state):
         cash=str(state['money']) if state['money']<1000 else str(min(999,state['money']//1000))+'k'
         display.drawText('SHOP',0,0,1)
         display.drawText('$'+cash,48,0,1)
+        catalog=campaign.shop_catalog(state)
         for row in range(3):
             index=state['menu_scroll']+row
-            if index<10:
+            if index<len(catalog):
                 active=index==state['menu_selection'];y=8+row*8;ink=0 if active else 1
                 if active: display.drawFilledRectangle(0,y,72,8,1)
-                draw_rows(display,ITEM_ICON_ROWS[index],2,y+1,5,ink=ink)
-                label=SHOP_ITEM_LABELS[index]
-                owned=item_owned(state,index)
-                equipped=index in (state['equipped_weapon'],state['equipped_armor'])
+                item,label=catalog[index]
+                draw_rows(display,ITEM_ICON_ROWS[item],2,y+1,5,ink=ink)
+                owned=item_owned(state,item)
+                equipped=item in (state['equipped_weapon'],state['equipped_armor'])
                 display.drawText(label,10,y,ink)
-                if index<5 and owned:
+                if item in (0,1,2,3,4) and owned:
                     display.drawText('ON' if equipped else 'EQ',54,y,ink)
+                elif item==9 and owned:
+                    display.drawText('ON',54,y,ink)
                 else:
-                    display.drawText(str(get_item_price(index)),54,y,ink)
+                    display.drawText(str(get_item_price(item)),54,y,ink)
         display.drawText('A:OK B:BACK',0,33,1)
     elif screen=='pause':
         display.drawText('STATUS',0,0,1)
