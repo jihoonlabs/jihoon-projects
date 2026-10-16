@@ -266,6 +266,22 @@ def draw_fighter(display,state,player,x,y):
         draw_impact(display,impact_x,y+2)
 
 
+def draw_enemy_health(display, foe, screen_x, screen_y):
+    """Draw a tiny per-enemy health gauge above its head."""
+    width=14 if foe.get('boss') else 10
+    left=max(0,min(72-width,screen_x-width//2))
+    top=max(14,screen_y-11)
+    inner=width-2
+    hp=max(0,foe['hp'])
+    maximum=max(1,foe['max_hp'])
+    filled=min(inner,(inner*hp+maximum-1)//maximum) if hp else 0
+    # A one-pixel white frame keeps the bar visible over scenery and hair.
+    display.drawFilledRectangle(left,top,width,3,1)
+    display.drawFilledRectangle(left+1,top+1,inner,1,0)
+    if filled:
+        display.drawFilledRectangle(left+1,top+1,filled,1,1)
+
+
 # Original monochrome scenery, stored once. These are decoration, not obstacles.
 # x, y, width, height in the distant layer; battle HUD ends at y=13.
 SCENERY = (
@@ -644,6 +660,9 @@ def draw_campaign_game(state):
             actors.append((False,foe['x']-camera,foe['y'],foe_state))
         for player,x,y,actor_state in sorted(actors,key=lambda value:value[2]):
             draw_fighter(display,actor_state,player,x,actor_screen_y(y))
+        for foe in foes:
+            draw_enemy_health(display,foe,foe['x']-camera,
+                              actor_screen_y(foe['y']))
     elif screen=='shop':
         cash=str(state['money']) if state['money']<1000 else str(min(999,state['money']//1000))+'k'
         display.drawText('SHOP',0,0,1)
