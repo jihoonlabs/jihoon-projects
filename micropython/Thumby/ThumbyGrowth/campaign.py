@@ -174,7 +174,7 @@ def spawn_wave(state):
     return [dict(x=max(0,min(132,112-16*i)),y=22+6*i,hp=base+state['wave']%4,
         max_hp=base+state['wave']%4,attack=2+min(3,(city%5+map_level)//3),
         defense=min(2,(city%5+map_level)//4),windup=0,cooldown=24+8*i,
-        stun=0,flash=0,boss=False) for i in range(count)]
+        stun=0,flash=0,hp_seen=False,boss=False) for i in range(count)]
 
 
 def spawn_boss(state):
@@ -184,7 +184,8 @@ def spawn_boss(state):
     extra=max(0,power-target)
     hp=base+min(22,extra//2)
     return dict(x=112,y=28,hp=hp,max_hp=hp,attack=4+min(2,extra//14),
-        defense=2+min(2,extra//20),windup=0,cooldown=40,stun=0,flash=0,boss=True)
+        defense=2+min(2,extra//20),windup=0,cooldown=40,stun=0,flash=0,
+        hp_seen=False,boss=True)
 
 
 def _select_city(state,inputs):
@@ -350,6 +351,7 @@ def _explore_update(state,inputs):
         if target is not None:
             power=1+state.get('atk_growth',0) if shooting else state['attack']+(1 if kicking else 4 if skill else 0)
             target['hp']=max(0,target['hp']-calculate_damage({'attack':power},{'defense':target['defense']}))
+            target['hp_seen']=True
             target['stun']=10
             target['flash']=6
             if target['hp']==0:
@@ -444,3 +446,4 @@ def update(state,inputs):
         elif inputs['A']: return new_game_state()
         return s
     return s
+
