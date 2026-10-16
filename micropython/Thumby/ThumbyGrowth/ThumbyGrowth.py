@@ -272,6 +272,8 @@ class ScaledFighterDisplay:
 
 
 def draw_fighter(display,state,player,x,y):
+    if player and state.get('player_invuln',0) and state.get('frame',0)%2:
+        return
     display=ScaledFighterDisplay(display,x+3,y+7)
     rightward=state['direction']=='R' if player else state['player_x']>state['enemy_x']
     pose=character_pose(state,player)
