@@ -114,6 +114,14 @@ class BackgroundTests(unittest.TestCase):
             self.assertTrue(0<=x and x+6*len(text)<=72)
             self.assertTrue(0<=y and y+7<=40)
 
+    def test_campaign_play_hud_hides_city_name_and_keeps_map_progress(self):
+        state=campaign.new_game_state()
+        state.update(screen_state='explore',route=[0],current_city=0,map_index=1)
+        game.draw_campaign_game(state)
+        labels=[call.args[0] for call in game.thumby.display.drawText.call_args_list]
+        self.assertNotIn('SEOUL',labels)
+        self.assertIn('2/5',labels)
+
 
 if __name__=='__main__':
     unittest.main()
