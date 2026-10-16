@@ -120,6 +120,7 @@ class BackgroundTests(unittest.TestCase):
         game.draw_campaign_game(state)
         labels=[call.args[0] for call in game.thumby.display.drawText.call_args_list]
         self.assertNotIn('SEOUL',labels)
+        self.assertNotIn('SHOP',labels)
         self.assertIn('2/5',labels)
 
     def test_each_active_enemy_gets_a_health_gauge(self):
