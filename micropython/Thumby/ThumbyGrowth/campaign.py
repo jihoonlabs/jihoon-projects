@@ -33,7 +33,7 @@ def new_game_state():
         equipped_armor=None,gun_owned=False,skill_owned=False,potions=0,
         hp_growth=0,atk_growth=0,def_growth=0,player_x=16,player_y=28,
         direction='R',player_attack_cooldown=0,attack_kind='punch',
-        command_timer=0,command_ready=0,menu_selection=0,menu_scroll=0,
+        player_stun=0,player_hit_flash=0,command_timer=0,command_ready=0,menu_selection=0,menu_scroll=0,
         menu_r_held=False,save_requested=False,save_status='',boss_active=False)
 
 
@@ -307,6 +307,13 @@ def _shop_update(state,inputs):
 
 def _explore_update(state,inputs):
     state['frame']+=1
+    # Existing reactions lose a frame here; new hits later in the update keep
+    # their full duration instead of being shortened immediately.
+    state['player_stun']=max(0,state.get('player_stun',0)-1)
+    state['player_hit_flash']=max(0,state.get('player_hit_flash',0)-1)
+    for foe in state['foes']:
+        foe['stun']=max(0,foe['stun']-1)
+        foe['flash']=max(0,foe['flash']-1)
     if inputs['A'] and inputs['B']:
         state['screen_state']='pause'
         state['menu_selection']=0
@@ -330,8 +337,11 @@ def _explore_update(state,inputs):
     up=int(bool(inputs.get('U_tap',False)))*3 or int(bool(inputs.get('U_held',inputs['U'])))
     dx=right-left
     dy=down-up
+    player_locked=state.get('player_stun',0)>0
+    if player_locked:
+        dx=dy=0
     if dx: state['direction']='R' if dx>0 else 'L'
-    if state['player_attack_cooldown']==0 and (inputs['A'] or inputs['B']):
+    if not player_locked and state['player_attack_cooldown']==0 and (inputs['A'] or inputs['B']):
         kicking=bool(inputs['B'])
         weapon=state.get('equipped_weapon')
         skill=not kicking and state.get('skill_owned',False) and state['command_ready']>0
@@ -346,8 +356,8 @@ def _explore_update(state,inputs):
             gap=foe['x']-(state['player_x']+6) if state['direction']=='R' else state['player_x']-(foe['x']+6)
             # A small overlap allowance prevents close enemies from slipping
             # through the hitbox and makes a stationary facing attack reliable.
-            if abs(state['player_y']-foe['y'])<=3 and -4<=gap<=reach and gap<best:
-                target=foe;best=gap
+            if abs(state['player_y']-foe['y'])<=3 and -12<=gap<=reach and abs(gap)<best:
+                target=foe;best=abs(gap)
         if target is not None:
             power=1+state.get('atk_growth',0) if shooting else state['attack']+(1 if kicking else 4 if skill else 0)
             damage=calculate_damage({'attack':power},{'defense':target['defense']})
@@ -376,19 +386,22 @@ def _explore_update(state,inputs):
         if state['wave_delay']==0:
             state['foes']=spawn_wave(state)
     for foe in state['foes']:
-        foe['stun']=max(0,foe['stun']-1)
-        foe['flash']=max(0,foe['flash']-1)
         if state['frame']%2==0 and not foe['stun']:
             foe['x']=max(0,min(138,foe['x']+(1 if state['player_x']>foe['x'] else -1 if state['player_x']<foe['x'] else 0)))
             foe['y']=max(12,min(36,foe['y']+(1 if state['player_y']>foe['y'] else -1 if state['player_y']<foe['y'] else 0)))
         in_range=abs(state['player_x']-foe['x'])<=12 and abs(state['player_y']-foe['y'])<=3
-        if in_range and foe['cooldown']<=0 and foe['windup']==0:
+        if foe['stun']>0:
+            foe['windup']=0
+        elif in_range and foe['cooldown']<=0 and foe['windup']==0:
             foe['windup']=10
         elif foe['windup']>0:
             foe['windup']-=1
             if foe['windup']==0:
                 if in_range:
                     state['HP']=max(0,state['HP']-max(1,foe['attack']-state['defense']))
+                    state['player_stun']=8
+                    state['player_hit_flash']=6
+                    state['direction']='L' if state['player_x']>foe['x'] else 'R'
                 foe['cooldown']=90
         else:
             foe['cooldown']=max(0,foe['cooldown']-1)
