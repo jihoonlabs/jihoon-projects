@@ -128,7 +128,9 @@ def boss_variant(state):
 
 
 def character_pose(state,player):
-    if state.get('player_hit_flash' if player else 'enemy_hit_flash',0):
+    hit='player_hit_flash' if player else 'enemy_hit_flash'
+    stun='player_stun' if player else 'enemy_stun'
+    if state.get(hit,0) or state.get(stun,0):
         return 'hurt'
     if not player:
         return 'guard' if state.get('enemy_windup',0) else 'punch' if state.get('enemy_attack_cooldown',0)>=114 else 'idle'
@@ -248,7 +250,29 @@ def draw_hero_hair(display,region,x,y,rightward):
         rect(-1,-5,2,1)
 
 
+class ScaledFighterDisplay:
+    """Draw fighter rectangles at 7/8 size, anchored to their feet."""
+    __slots__=('display','anchor_x','anchor_y')
+    def __init__(self,display,anchor_x,anchor_y):
+        self.display=display
+        self.anchor_x=anchor_x
+        self.anchor_y=anchor_y
+    @staticmethod
+    def _edge(value,anchor):
+        delta=(value-anchor)*7
+        return anchor+(delta+4)//8 if delta>=0 else anchor-((-delta+4)//8)
+    def drawFilledRectangle(self,x,y,width,height,color=1):
+        left=self._edge(x,self.anchor_x);right=self._edge(x+width,self.anchor_x)
+        top=self._edge(y,self.anchor_y);bottom=self._edge(y+height,self.anchor_y)
+        if width and right<=left: right=left+1
+        if height and bottom<=top: bottom=top+1
+        left=max(0,left);top=max(0,top);right=min(72,right);bottom=min(40,bottom)
+        if right>left and bottom>top:
+            self.display.drawFilledRectangle(left,top,right-left,bottom-top,color)
+
+
 def draw_fighter(display,state,player,x,y):
+    display=ScaledFighterDisplay(display,x+3,y+7)
     rightward=state['direction']=='R' if player else state['player_x']>state['enemy_x']
     pose=character_pose(state,player)
     hurt=pose=='hurt'
