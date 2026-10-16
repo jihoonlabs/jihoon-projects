@@ -65,6 +65,27 @@ class CampaignTests(unittest.TestCase):
         state=campaign.update(state,buttons(R=True))
         self.assertEqual(state['player_x'],20)
 
+    def test_exploration_uses_wider_vertical_floor_lanes(self):
+        state=campaign.new_game_state()
+        state.update(route=[0],current_city=0,screen_state='explore',player_y=12,
+                     foes=[dict(x=130,y=28,hp=20,max_hp=20,attack=0,defense=0,
+                                windup=0,cooldown=999,stun=0,flash=0,boss=False)])
+        state=campaign.update(state,buttons(D=True,D_held=True))
+        self.assertEqual(state['player_y'],13)
+        state.update(player_y=36)
+        state=campaign.update(state,buttons(D=True,D_held=True))
+        self.assertEqual(state['player_y'],36)
+        state.update(player_y=12)
+        state=campaign.update(state,buttons(U=True,U_held=True))
+        self.assertEqual(state['player_y'],12)
+
+    def test_campaign_save_accepts_the_expanded_floor_range(self):
+        state=campaign.new_game_state()
+        state.update(route=[0],current_city=0,player_y=12)
+        self.assertEqual(campaign.decode_save(campaign.encode_save(state))['player_y'],12)
+        state['player_y']=36
+        self.assertEqual(campaign.decode_save(campaign.encode_save(state))['player_y'],36)
+
     def test_boss_strength_is_independent_of_country_and_tracks_build(self):
         a=campaign.new_game_state();a.update(route=[0],current_city=4,progress=4)
         b=campaign.new_game_state();b.update(route=[1],current_city=9,progress=4)
