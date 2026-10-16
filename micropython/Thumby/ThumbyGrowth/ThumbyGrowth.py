@@ -182,6 +182,25 @@ def draw_weapon(display,weapon,x,y,rightward,swing=False):
         rect(2,y+3-length,1,length);rect(1,y+2,3,1);rect(2,y+3,1,2)
 
 
+def draw_fighter_details(display,x,y,pose,rightward):
+    """Add face and gi marks so tiny fighters read as people, not blocks."""
+    def detail(offset,dy,width,height,color):
+        left=offset if rightward else 10-offset-width
+        scene_rect(display,x+left,y+dy,width,height,color)
+    # Eyes and a short mouth sit inside the shared ten-pixel face silhouette.
+    detail(1,-3,1,1,0);detail(6,-3,1,1,0)
+    detail(4,-1,2,1,0)
+    # Open jacket lapels, obi belt and split trouser legs.
+    detail(2,1,1,1,0);detail(6,1,1,1,0)
+    detail(3,2,1,1,0);detail(5,2,1,1,0)
+    detail(0,4,8,1,0);detail(3,4,2,1,1)
+    detail(3,5,1,2,0)
+    if pose=='guard':
+        detail(7,2,1,2,0)
+    elif pose=='kick':
+        detail(1,5,1,1,0)
+
+
 def draw_impact(display,x,y):
     scene_rect(display,x-4,y-4,9,9,0)
     # Six-frame star is drawn only from a real damage latch, never on a miss.
@@ -237,6 +256,7 @@ def draw_fighter(display,state,player,x,y):
         scene_rect(display,fringe_x if rightward else fringe_x-1,y-7,3,6,0)
         draw_rows(display,HERO_FRINGE,fringe_x,y-6,2,not rightward,14)
     draw_rows(display,character_body(state,player),x-2,y+1,10,not rightward,14)
+    draw_fighter_details(display,x-2,y,pose,rightward)
     if hurt: draw_hurt_face(display,x-2+lean,y-7)
     if player and state['equipped_armor']==2:
         # Vest: light shoulder straps and an open center.
@@ -377,7 +397,7 @@ def draw_background(display, progress, camera, map_index=0):
             scene_rect(display,world_x+offset-camera,y,width,1)
 
 
-def draw_shop_building(display,camera,map_index=0):
+def draw_shop_building(display,camera,map_index=0,show_label=True):
     x=SHOP_WORLD_X-camera
     if x < -18 or x > 90:
         return
@@ -415,7 +435,7 @@ def draw_shop_building(display,camera,map_index=0):
     scene_rect(display,x+15,20,1,1,1)
     scene_rect(display,x+15,22,1,2,0)
     scene_rect(display,x-5,15,10,1,1)
-    if 0<=x-5 and x+19<=72:
+    if show_label and 0<=x-5 and x+19<=72:
         display.drawText('SHOP',x-5,14,1)
 
 
@@ -660,7 +680,7 @@ def draw_campaign_game(state):
         index=state['current_city']
         camera=max(0,min(72,state['player_x']-32))
         draw_background(display,index,camera,state['map_index'])
-        draw_shop_building(display,camera,state['map_index'])
+        draw_shop_building(display,camera,state['map_index'],show_label=False)
         draw_rows(display,HEART_ROWS,0,1,5)
         display.drawText(str(state['HP']),7,0,1)
         # The city name is already shown during selection. Keep only map
