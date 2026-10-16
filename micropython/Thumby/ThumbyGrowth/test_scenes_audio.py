@@ -62,15 +62,15 @@ class SceneAudioTests(unittest.TestCase):
         self.assertEqual(state,before)
         for call in game.thumby.audio.play.call_args_list:
             self.assertTrue(20<=call.args[0]<=20000)
-            self.assertEqual(call.args[1],200)
+            self.assertEqual(call.args[1],160)
 
     def test_music_keeps_real_tempo_when_render_frames_are_skipped(self):
         state=f.state(screen_state='battle')
         music=game.step_music({'track':None,'tick':0},state,0)
-        music=game.step_music(music,state,198)
+        music=game.step_music(music,state,180)
         self.assertEqual(music['tick'],6)
         self.assertEqual(game.thumby.audio.play.call_count,2)
-        self.assertEqual(game.thumby.audio.play.call_args.args[1],200)
+        self.assertEqual(game.thumby.audio.play.call_args.args[1],160)
 
     def test_pause_defeat_stop_music_without_repeated_device_calls(self):
         for screen in ('pause','defeat'):
@@ -91,7 +91,7 @@ class SceneAudioTests(unittest.TestCase):
         game.thumby.audio.reset_mock()
         music={'track':None,'tick':0}
         for frame in range(200):
-            music=game.step_music(music,f.state(progress=15,route=[0,1,2]),frame*33)
+            music=game.step_music(music,f.state(progress=15,route=[0,1,2]),frame*30)
         self.assertEqual(music,{'track':5,'tick':49})
         self.assertEqual(game.thumby.audio.play.call_count,7)
 
