@@ -51,16 +51,19 @@ class AudioFeedbackTests(unittest.TestCase):
     def test_finite_cue_resumes_music_without_mutating_game_or_save(self):
         before=self.battle();after=update_state(before,f.inputs(A=True))
         snapshot=deepcopy(after);saved=encode_save_data(after)
-        music={'track':1,'tick':7};original=dict(music)
-        music=game.step_audio(music,before,after)
-        self.assertEqual(original,{'track':1,'tick':7})
+        music={'track':1,'tick':7,'next_ms':0};original=dict(music)
+        music=game.step_audio(music,before,after,0)
+        self.assertEqual(original,{'track':1,'tick':7,'next_ms':0})
         game.thumby.audio.play.assert_called_once_with(659,66)
-        music=game.step_audio(music,after,after)
+        music=game.step_audio(music,after,after,33)
         self.assertEqual(game.thumby.audio.play.call_count,1)
-        music=game.step_audio(music,after,after)
+        music=game.step_audio(music,after,after,66)
+        self.assertNotIn('fx_until',music)
         self.assertEqual(game.thumby.audio.play.call_count,2)
-        self.assertNotIn('fx_left',music)
-        self.assertEqual(game.thumby.audio.play.call_args.args[1],160)
+        self.assertEqual(game.thumby.audio.play.call_args.args[1],200)
+        music=game.step_audio(music,after,after,198)
+        self.assertEqual(game.thumby.audio.play.call_count,2)
+        self.assertEqual(game.thumby.audio.play.call_args.args[1],200)
         self.assertEqual(after,snapshot)
         self.assertEqual(encode_save_data(after),saved)
         for name in ('A','B','U','D'):
@@ -72,17 +75,17 @@ class AudioFeedbackTests(unittest.TestCase):
         for screen in ('pause','defeat'):
             game.thumby.audio.reset_mock()
             after=dict(before,screen_state=screen)
-            music=game.step_audio({'track':1,'tick':8,'fx_left':2},before,after)
+            music=game.step_audio({'track':1,'tick':8,'fx_until':100},before,after,0)
             self.assertEqual(music,{'track':None,'tick':0})
             game.thumby.audio.stop.assert_called_once_with()
             game.thumby.audio.play.assert_not_called()
         after=dict(before,route=[1])
-        music=game.step_audio({'track':1,'tick':8,'fx_left':2},after,after)
-        self.assertEqual(music,{'track':2,'tick':1})
+        music=game.step_audio({'track':1,'tick':8,'fx_until':100},after,after,200)
+        self.assertEqual(music,{'track':2,'tick':0,'next_ms':233})
         game.thumby.audio.reset_mock()
         after=f.state(progress=15,route=[0,1,2])
         music={'track':1,'tick':8,'fx_left':2}
-        for _ in range(200): music=game.step_audio(music,after,after)
+        for frame in range(200): music=game.step_audio(music,after,after,frame*33)
         self.assertEqual(music,{'track':5,'tick':49})
         self.assertEqual(game.thumby.audio.play.call_count,7)
 
@@ -91,7 +94,7 @@ class AudioFeedbackTests(unittest.TestCase):
         with patch.object(game,'title_frame',return_value='new'), \
              patch.object(game.campaign,'new_game_state',return_value=before), \
              patch.object(game,'step_frame',side_effect=[after,RuntimeError('halt')]), \
-             patch.object(game,'step_music',side_effect=lambda m,s:m), \
+             patch.object(game,'step_music',side_effect=lambda m,s,*args:m), \
              patch.object(game,'step_audio',side_effect=lambda m,p,s:m) as audio:
             with self.assertRaisesRegex(RuntimeError,'halt'): game.main_loop()
             self.assertEqual(audio.call_args.args[1:],(before,after))
@@ -102,7 +105,7 @@ class AudioFeedbackTests(unittest.TestCase):
         with patch.object(game,'title_frame',return_value='new'), \
              patch.object(game,'new_game_state',return_value=before), \
              patch.object(game,'step_frame',side_effect=[after,RuntimeError('halt')]), \
-             patch.object(game,'step_music',side_effect=lambda m,s:m), \
+             patch.object(game,'step_music',side_effect=lambda m,s,*args:m), \
              patch.object(game,'cutscene_frame',return_value=True) as scene:
             with self.assertRaisesRegex(RuntimeError,'halt'): game.main_loop()
             scene.assert_not_called()
