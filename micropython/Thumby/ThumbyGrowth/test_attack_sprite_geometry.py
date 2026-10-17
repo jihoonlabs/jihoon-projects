@@ -60,16 +60,16 @@ class AttackSpriteGeometryTests(unittest.TestCase):
             for pixels,reach in ((chamber,2),(extended,4)):
                 # The normal stance legs stay in the shared body; the attack
                 # overlay contains only the horizontal two-pixel kick bar.
-                self.assertEqual({py for px,py in pixels},{y+3,y+4})
+                self.assertEqual({py for px,py in pixels},{y+4,y+5})
                 self.assertEqual(self.component_count_pixels(pixels),1)
-                for py in (y+3,y+4):
+                for py in (y+4,y+5):
                     bar={px for px,yy in pixels if yy==py}
                     if rightward:
                         self.assertEqual(bar,set(range(x+4,x+5+reach)))
                     else:
                         self.assertEqual(bar,set(range(x-reach+1,x+2)))
-            self.assertEqual({px for px,py in extended if py==y+3},
-                             {px for px,py in extended if py==y+4})
+            self.assertEqual({px for px,py in extended if py==y+4},
+                             {px for px,py in extended if py==y+5})
             if rightward:
                 self.assertEqual(max(px for px,py in extended),x+8)
             else:

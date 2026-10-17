@@ -314,10 +314,10 @@ def attack_limb_runs(pose,frame,rightward,x,y):
         phase=(frame//2)%2
         if phase:
             # The forward foot is omitted from KICK_BODY; this bar is the kick.
-            bar(x+4,y+3,x+8,y+3)
+            bar(x+4,y+4,x+8,y+4)
         else:
             # Chambered pose uses the same straight bar at a shorter reach.
-            bar(x+4,y+3,x+6,y+3)
+            bar(x+4,y+4,x+6,y+4)
     if not rightward:
         # The shared 10-pixel fighter is centered at x+2.5; reflect around
         # that half-pixel axis so the left pose keeps the same visible reach.
