@@ -313,8 +313,10 @@ def attack_limb_runs(pose,frame,rightward,x,y):
         bar(x+4,y+2,fist_x+1,y+2)
     elif pose=='kick':
         phase=(frame//2)%2
-        # One supporting leg stays under the hip with a single grounded shoe.
-        put(x+2,y+4); put(x+2,y+5); put(x+1,y+6); put(x+2,y+6)
+        # Keep the support leg one pixel wide; widen its sole into a small,
+        # rounded 3-pixel shoe so it reads as firmly planted on the ground.
+        put(x+2,y+4); put(x+2,y+5)
+        put(x+1,y+6); put(x+2,y+6); put(x+3,y+6)
         if phase:
             # Reuse the same two-pixel bar for the raised ㄴ-shaped kick.
             bar(x+4,y+2,x+4,y+4)
