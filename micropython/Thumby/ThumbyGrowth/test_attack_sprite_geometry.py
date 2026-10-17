@@ -5,6 +5,15 @@ import ThumbyGrowth as game
 
 
 class AttackSpriteGeometryTests(unittest.TestCase):
+    def test_attack_art_is_an_exact_mirror_with_matching_frame_timing(self):
+        x,y=24,28
+        for pose in ('punch','kick'):
+            for frame in range(8):
+                right=self.pixels(game.attack_limb_runs(pose,frame,True,x,y))
+                left=self.pixels(game.attack_limb_runs(pose,frame,False,x,y))
+                self.assertEqual(left,{(2*x+6-px,py) for px,py in right},
+                                 (pose,frame))
+
     def test_punch_reach_animates_and_stays_connected_in_both_directions(self):
         for rightward in (True, False):
             first=game.attack_limb_runs('punch',0,rightward,24,28)
@@ -34,6 +43,11 @@ class AttackSpriteGeometryTests(unittest.TestCase):
                 for dx in range(width) for dy in range(height)]
         return (max(x for x,y in pixels)-min(x for x,y in pixels)+1,
                 max(y for x,y in pixels)-min(y for x,y in pixels)+1)
+
+    @staticmethod
+    def pixels(shapes):
+        return {(x+dx,y+dy) for x,y,width,height,color in shapes if color
+                for dx in range(width) for dy in range(height)}
 
     @staticmethod
     def component_count(shapes):
