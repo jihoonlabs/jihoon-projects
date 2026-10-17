@@ -45,8 +45,11 @@ class AttackSpriteGeometryTests(unittest.TestCase):
             extended=self.pixels(game.attack_limb_runs('kick',2,rightward,x,y))
             self.assertNotEqual(chamber,extended)
             for pixels in (chamber,extended):
-                # Only the supporting shoe reaches the floor row.
-                self.assertEqual(sum(py==y+6 for px,py in pixels),2)
+                # Only the supporting shoe reaches the floor row; its sole is
+                # three contiguous pixels while the support leg stays narrow.
+                floor={px for px,py in pixels if py==y+6}
+                self.assertEqual(len(floor),3)
+                self.assertEqual(floor,set(range(min(floor),max(floor)+1)))
                 self.assertEqual(self.component_count_pixels(pixels),2)
             if rightward:
                 self.assertEqual({px for px,py in extended if py==y+2},{x+4,x+5})
