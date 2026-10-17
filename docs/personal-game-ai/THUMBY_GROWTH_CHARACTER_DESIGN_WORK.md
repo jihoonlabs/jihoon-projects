@@ -5,7 +5,7 @@ owner_branch: feature/thumby-growth-character-design
 parent_branch: feature/thumby-growth
 role: child
 status: implementation-verified-pc; awaiting-user-device-check
-tested_sha: c743757ab6be69d6dc904dc7a390089cfe92176c
+tested_sha: cc8f7dc7c01362fdb5b0b0a57a40143739dcbf90
 base_sha: 694224bd26135d2abd97f9a2a79eb0a994b72f28
 
 ## Responsibility
@@ -25,7 +25,7 @@ Fix only character rendering issues reproduced from the user's Thumby screenshot
 - Upper-lane sprite rows were clipped with the HUD boundary before the 10/16 coordinate transform. Row clipping is now applied after scaling in screen space.
 - Initial validation found that mathematically mirrored left-side attacks still blended into the reduced body, so they were difficult to see in the actual composited renderer.
 - Punch uses the neutral shared body and a straight, uniform two-pixel bar; reach remains unchanged.
-- Kick uses the shared torso and removes only the forward foot from the body silhouette. The rear support foot remains as in the standing pose, while the straight two-pixel bar represents the kick; the chamber frame is shorter and the extended frame increases reach. Facing direction mirrors the silhouette so the forward foot is removed on either side.
+- Kick uses the shared torso and removes only the forward foot from the body silhouette. The rear support foot remains as in the standing pose, while the straight two-pixel bar exits from the lower torso to match the user's sketch; the chamber frame is shorter and the extended frame increases reach. Facing direction mirrors the silhouette so the forward foot is removed on either side.
 - Punch and kick reuse one small axis-aligned bar renderer with pose-specific position, orientation, and reach. Both attack poses mirror around the fighter's true half-pixel center and retain equal horizontal reach in each direction. This avoids duplicated sprite frames and drawing logic; runtime RAM reduction has not been measured.
 - No attack timing, hitboxes, or gameplay values changed.
 
