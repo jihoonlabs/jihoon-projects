@@ -275,27 +275,31 @@ class ScaledFighterDisplay:
 
 
 def attack_limb_rects(pose,frame,rightward,x,y):
-    """Return compact limb pieces that overlap the fighter's shoulder or hip."""
+    """Return visible 1x attack pieces rooted in the scaled sleeve or hip."""
     if pose in ('punch','shot','skill','spear','sword'):
-        reach=3+(frame//2)%2
+        reach=5+(frame//2)%2
         if rightward:
-            return ((x+4,y+1,reach,2,1),(x+3+reach,y+1,2,2,1))
-        return ((x-2-reach,y+1,reach,2,1),(x-4-reach,y+1,2,2,1))
+            return ((x+3,y+3,reach,2,1),(x+7+(frame//2)%2,y+3,3,2,1))
+        return ((x-2-reach,y+3,reach,2,1),(x-8-(frame//2)%2,y+3,3,2,1))
     if pose=='kick':
         phase=(frame//2)%3
         if rightward:
             if phase==1:
-                return ((x+2,y+4,2,2,0),(x+4,y+3,3,2,1),(x+7,y+3,3,2,1))
-            return ((x+2,y+4,2,2,0),(x+4,y+3,2,2,1),(x+5,y+3,2,2,1))
+                return ((x+2,y+6,2,2,0),(x+3,y+6,3,2,1),
+                        (x+5,y+5,3,2,1),(x+8,y+4,4,2,1))
+            return ((x+2,y+6,2,2,0),(x+3,y+6,3,2,1),
+                    (x+5,y+5,3,2,1))
         if phase==1:
-            return ((x+4,y+4,2,2,0),(x+1,y+3,3,2,1),(x-2,y+3,3,2,1))
-        return ((x+4,y+4,2,2,0),(x+2,y+3,2,2,1),(x+1,y+3,2,2,1))
+            return ((x+4,y+6,2,2,0),(x+3,y+6,3,2,1),
+                    (x+1,y+5,3,2,1),(x-3,y+4,4,2,1))
+        return ((x+4,y+6,2,2,0),(x+3,y+6,3,2,1),
+                (x+1,y+5,3,2,1))
     return ()
-
 
 def draw_fighter(display,state,player,x,y):
     if player and state.get('player_invuln',0) and state.get('frame',0)%2:
         return
+    raw_display=display
     display=ScaledFighterDisplay(display,x+3,y+7)
     rightward=state['direction']=='R' if player else state['player_x']>state['enemy_x']
     pose=character_pose(state,player)
@@ -329,7 +333,7 @@ def draw_fighter(display,state,player,x,y):
     # Attack limbs begin inside the existing sleeve/hip and use two visible frames.
     for left,top,width,height,color in attack_limb_rects(
             pose,state.get('frame',state.get('combat_frame',0)),rightward,x,y):
-        scene_rect(display,left,top,width,height,color)
+        scene_rect(raw_display,left,top,width,height,color)
     if pose=='skill':
         for offset in range(3):
             left=x+9+offset if rightward else x-5-offset
