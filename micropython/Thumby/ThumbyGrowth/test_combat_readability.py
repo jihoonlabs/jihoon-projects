@@ -38,7 +38,8 @@ class CombatReadabilityTests(unittest.TestCase):
             self.assertNotEqual(self.render(after),self.render(before))
             for _ in range(31): after=update_state(after,f.inputs())
             self.assertEqual(game.character_pose(after,True),'idle')
-        self.assertEqual(game.PUNCH_BODY,game.KICK_BODY)
+        self.assertEqual(game.PUNCH_BODY[:4],game.KICK_BODY[:4])
+        self.assertNotEqual(game.PUNCH_BODY,game.KICK_BODY)
         self.assertNotEqual(game.attack_limb_runs('punch',2,True,28,28),
                             game.attack_limb_runs('kick',2,True,28,28))
         skilled=update_state(self.state(equipped_weapon=4,gun_owned=True,skill_owned=True,command_ready=12),f.inputs(A=True))

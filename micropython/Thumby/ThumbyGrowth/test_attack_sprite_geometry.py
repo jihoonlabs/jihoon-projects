@@ -36,10 +36,23 @@ class AttackSpriteGeometryTests(unittest.TestCase):
                 self.assertGreaterEqual(min(px for px,py in extended),x-3)
                 self.assertEqual(min(px for px,py in extended),x-3)
 
-    def test_kick_keeps_standing_legs_and_only_extends_a_straight_bar(self):
+    def test_kick_keeps_only_the_rear_support_foot_and_extends_a_straight_bar(self):
         x,y=24,28
         state={'player_attack_cooldown':8,'attack_kind':'kick'}
-        self.assertEqual(game.character_body(state,True),game.BODY_ROWS)
+        body=game.character_body(state,True)
+        self.assertEqual(body,game.KICK_BODY)
+        self.assertEqual(body[:4],game.BODY_ROWS[:4])
+        # Facing right, keep the rear (left) foot and erase the forward one.
+        self.assertEqual(body[4:],(0x1c0,0x380))
+        for rightward,expected_rows in ((True,(set(range(11,14)),set(range(10,13)))),
+                                        (False,(set(range(16,19)),set(range(17,20))))):
+            game.thumby.display.reset_mock()
+            game.draw_rows(game.thumby.display,body,10,0,10,not rightward)
+            rendered=self.pixels([call.args for call in
+                                  game.thumby.display.drawFilledRectangle.call_args_list])
+            for row,expected_foot in zip((4,5),expected_rows):
+                self.assertEqual({px for px,py in rendered if py==row},
+                                 expected_foot)
         for rightward in (True,False):
             chamber=self.pixels(game.attack_limb_runs('kick',0,rightward,x,y))
             extended=self.pixels(game.attack_limb_runs('kick',2,rightward,x,y))
