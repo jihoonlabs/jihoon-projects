@@ -79,7 +79,7 @@ class HeroOriginTests(unittest.TestCase):
                 game.draw_hero_hair_accents(game.thumby.display,region,28,29,direction=='R')
                 rects=[call.args for call in game.thumby.display.drawFilledRectangle.call_args_list]
                 if region==0:
-                    self.assertIn((30,24,2,3,1),rects)
+                    self.assertEqual(sum(1 for call in rects if call[2:4]==(2,1) and call[4]==1),2)
                     self.assertIn((29,28,4,1,0),rects)
                 elif region==1:
                     self.assertEqual(sum(1 for call in rects if call[2:4]==(1,1)),5)

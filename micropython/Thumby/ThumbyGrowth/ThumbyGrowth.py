@@ -244,10 +244,13 @@ def draw_hero_hair(display,region,x,y,rightward):
 def draw_hero_hair_accents(display,region,x,y,rightward):
     """Keep each national hairstyle recognizable after the body is reduced."""
     if region==0:
-        # A topknot sits above the scalp; the dark row reads as a manggeon.
-        scene_rect(display,x+2,y-5,2,3,1)
+        # Keep the knot behind the crown and round it into a compact bun.
+        # The separate thin manggeon line no longer runs into the knot as a T.
+        knot=x+1 if rightward else x+3
+        scene_rect(display,knot,y-5,2,1,1)
+        scene_rect(display,knot-1 if rightward else knot,y-4,3,1,1)
+        scene_rect(display,knot,y-3,2,1,1)
         scene_rect(display,x+1,y-1,4,1,0)
-        scene_rect(display,x+2,y-1,2,1,1)
     elif region==1:
         # The Chinese queue hangs from the back of the head, not from the crown.
         back=x-1 if rightward else x+6
