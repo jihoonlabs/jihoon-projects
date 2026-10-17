@@ -38,8 +38,8 @@ FOE_HEAD = FOE_HEADS[0]
 BODY_ROWS = (0x1fe,0x3ff,0x1fe,0xfc,0x1ce,0x387)
 WALK_BODY_ROWS = (0x1fe,0x3ff,0x1fe,0xfc,0x1dc,0x38e)
 PUNCH_BODY = BODY_ROWS
-# Stop the shared body above the legs; the kick frame draws one planted leg
-# and one raised leg separately so two grounded feet cannot remain visible.
+# Stop the shared body above the legs; the kick frame draws a broad planted
+# shoe and a straight kicking bar separately, with no one-pixel leg connector.
 KICK_BODY = (0x1fe,0x3ff,0x1fe,0xfc,0x000,0x000)
 HURT_BODY = (0xfc,0x1fe,0x1fe,0xfc,0xec,0x1c7)
 GUARD_BODY = (0x3ff,0x3ff,0x1fe,0xfc,0x1ce,0x387)
@@ -313,18 +313,16 @@ def attack_limb_runs(pose,frame,rightward,x,y):
         bar(x+4,y+2,fist_x+1,y+2)
     elif pose=='kick':
         phase=(frame//2)%2
-        # Keep the support leg one pixel wide; widen its sole into a small,
-        # rounded 3-pixel shoe so it reads as firmly planted on the ground.
-        put(x+2,y+4); put(x+2,y+5)
-        put(x+1,y+6); put(x+2,y+6); put(x+3,y+6)
+        # Skip the one-pixel connector leg; keep a broad shoe behind the kick.
+        shoe_x=x-2
+        for px in range(shoe_x+1,shoe_x+4): put(px,y+5)
+        for px in range(shoe_x,shoe_x+5): put(px,y+6)
         if phase:
-            # Reuse the same two-pixel bar for the raised ㄴ-shaped kick.
-            bar(x+4,y+2,x+4,y+4)
+            # Extend one straight two-pixel kick bar directly from the body.
             bar(x+4,y+3,x+8,y+3)
         else:
-            # Chambered leg uses the same bar thickness and stays off the floor.
-            bar(x+4,y+3,x+4,y+4)
-            bar(x+5,y+3,x+6,y+3)
+            # Chambered pose uses the same straight bar at a shorter reach.
+            bar(x+4,y+3,x+6,y+3)
     if not rightward:
         # The shared 10-pixel fighter is centered at x+2.5; reflect around
         # that half-pixel axis so the left pose keeps the same visible reach.
