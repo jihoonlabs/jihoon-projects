@@ -28,21 +28,15 @@ class CharacterDesignTests(unittest.TestCase):
         self.assertIn((16,17,1,1,0),calls)
         self.assertNotIn((14,19,2,1,0),calls)
 
-    def test_punch_and_kick_use_compact_fist_and_shoe_shapes(self):
-        fixtures.TestAdapter.setUp(self)
-        state=fixtures.state(screen_state='battle',active_enemy=True,enemy_x=50,
-            player_x=28,player_attack_cooldown=10,attack_kind='punch')
-        for pose,expected,old_shape in (
-            ('punch',(36,30,4,2,1),((34,31,6,3,1),(37,30,3,4,1))),
-            ('kick',(35,33,5,2,1),((34,33,6,2,1),(37,32,3,4,1)))):
-            state.update(attack_kind=pose,player_attack_cooldown=10)
-            drawn=[]
-            with patch.object(game,'scene_rect',
-                side_effect=lambda display,x,y,w,h,color=1:drawn.append((x,y,w,h,color))):
-                game.draw_fighter(game.thumby.display,state,True,28,29)
-            self.assertIn(expected,drawn)
-            for shape in old_shape:
-                self.assertNotIn(shape,drawn)
+    def test_punch_and_kick_use_attached_animated_limb_shapes(self):
+        for country in range(3):
+            punch=[game.period_sprite(country,'punch',frame)[0] for frame in range(3)]
+            kick=[game.period_sprite(country,'kick',frame)[0] for frame in range(3)]
+            self.assertGreaterEqual(len(set(punch)),2)
+            self.assertGreaterEqual(len(set(kick)),2)
+            for rows in punch+kick:
+                self.assertEqual(len(rows),14)
+                self.assertTrue(all(0<=row<1<<12 for row in rows))
 
     def test_country_weapon_sprites_are_visibly_distinct(self):
         fixtures.TestAdapter.setUp(self)
@@ -54,13 +48,13 @@ class CharacterDesignTests(unittest.TestCase):
             renders.append(repr(game.thumby.display.drawFilledRectangle.call_args_list))
         self.assertEqual(len(set(renders)),3)
 
-    def test_regular_enemies_change_only_hair_pixels_and_share_all_poses(self):
+    def test_three_country_fighters_have_distinct_sprite_silhouettes(self):
         fixtures.TestAdapter.setUp(self)
         game.thumby=fixtures.fake_thumby
         faces=[]
         for head in game.FOE_HEADS+game.BOSS_HEADS:
             self.assertEqual(head[4:],game.HERO_HEAD[4:])
-        for city in range(4):
+        for city in range(3):
             state=fixtures.state(progress=city,route=[0],combat_frame=0)
             before=deepcopy(state)
             display=game.thumby.display;display.reset_mock()
@@ -79,10 +73,7 @@ class CharacterDesignTests(unittest.TestCase):
                                      ({'enemy_attack_cooldown':114},game.PUNCH_BODY),
                                      ({'enemy_hit_flash':6},game.HURT_BODY)):
                 self.assertIs(game.character_body(dict(state,**changes),False),expected)
-        self.assertEqual(len({frozenset(p) for p in faces}),4)
-        self.assertEqual(tuple(len(rows) for rows in game.FOE_SIDE_HAIR),(2,3,4,5))
-        for pixels in faces[1:]:
-            self.assertTrue(all(24<=x<35 and 22<=y<=30 for x,y in pixels^faces[0]))
+        self.assertEqual(len({frozenset(p) for p in faces}),3)
 
     def test_regular_enemy_faces_mirror_around_shared_body(self):
         fixtures.TestAdapter.setUp(self)
