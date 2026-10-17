@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 12342)
-Total output lines: 1110
-
 import sys
 import time
 try:
@@ -529,7 +526,42 @@ def draw_shop_building(display,camera,map_index=0,show_label=True):
     # Three hanging curtain panels frame a dark, walk-in doorway.
     scene_rect(display,x-3,22,7,2,1)
     scene_rect(display,x-2,22,1,2,0)
-    scene_rect(display,x,22,1,2,0)…342 tokens truncated…e['screen_state']=='ending' else 'event'
+    scene_rect(display,x,22,1,2,0)
+    scene_rect(display,x+2,22,1,2,0)
+    scene_rect(display,x-3,24,7,2,0)
+    scene_rect(display,x-4,24,1,2,1)
+    scene_rect(display,x+4,24,1,2,1)
+    scene_rect(display,x-5,25,11,1,1)
+    # Small hanging lantern and a short sign; no full-screen shop menu text.
+    scene_rect(display,x+14,21,3,4,1)
+    scene_rect(display,x+15,20,1,1,1)
+    scene_rect(display,x+15,22,1,2,0)
+    scene_rect(display,x-5,15,10,1,1)
+    if show_label and 0<=x-5 and x+19<=72:
+        display.drawText('SHOP',x-5,14,1)
+
+
+def main_loop():
+    thumby.display.setFPS(30)
+    music = {'track': None, 'tick': 0}
+    action = None
+    title_tick = 0
+    while action is None:
+        action = title_frame(title_tick)
+        title_tick = (title_tick+1)%120
+        music = step_music(music, {'screen_state':'title'})
+        if action in ('opening','ending'):
+            music = play_scene(action,new_game_state(),music)
+            action = None
+    state = load_save_data() if action == 'load' else campaign.new_game_state()
+    while True:
+        previous = state
+        state = step_frame(state)
+        kind = None
+        if previous['screen_state']=='country_select' and state['screen_state']=='city_select' and state['progress']==0:
+            kind = 'opening'
+        elif state.get('campaign_mode') and state['progress']>previous['progress']:
+            kind = 'ending' if state['screen_state']=='ending' else 'event'
         elif not state.get('campaign_mode') and state['progress'] > previous['progress'] and state['progress']%5==0:
             kind = 'ending' if state['progress']==GOAL_STAGES else 'event'
         if kind:
