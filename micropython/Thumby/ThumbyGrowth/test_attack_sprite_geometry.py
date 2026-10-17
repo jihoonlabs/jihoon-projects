@@ -21,9 +21,11 @@ class AttackSpriteGeometryTests(unittest.TestCase):
             extended=self.pixels(game.attack_limb_runs('punch',2,rightward,x,y))
             self.assertNotEqual(first,extended)
             for pixels in (first,extended):
-                rows={py:{px for px,yy in pixels if yy==py} for py in (y+2,y+3)}
-                self.assertEqual(rows[y+2],rows[y+3])
-                self.assertEqual(max(rows[y+2])-min(rows[y+2])+1,len(rows[y+2]))
+                upper={px for px,py in pixels if py==y+2}
+                arm={px for px,py in pixels if py==y+3}
+                self.assertEqual(len(upper),2)
+                self.assertTrue(upper.issubset(arm))
+                self.assertEqual(max(arm)-min(arm)+1,len(arm))
                 self.assertEqual(self.component_count_pixels(pixels),1)
             if rightward:
                 self.assertGreater(max(px for px,py in extended),x+7)
@@ -42,7 +44,11 @@ class AttackSpriteGeometryTests(unittest.TestCase):
                 # Only the supporting shoe reaches the floor row.
                 self.assertEqual(sum(py==y+6 for px,py in pixels),2)
                 self.assertEqual(self.component_count_pixels(pixels),2)
-            self.assertTrue(any(py<y+6 for px,py in extended))
+            if rightward:
+                self.assertTrue(all(px>=x+4 for px,py in extended if py==y+4 and px>=x+4))
+                self.assertGreaterEqual(max(px for px,py in extended if py==y+4),x+8)
+            else:
+                self.assertLessEqual(min(px for px,py in extended if py==y+4),x-2)
 
     @staticmethod
     def pixels(shapes):
