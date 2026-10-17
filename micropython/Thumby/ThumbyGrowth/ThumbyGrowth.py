@@ -300,21 +300,17 @@ def attack_limb_runs(pose,frame,rightward,x,y):
         pixels[(px,py)]=color
     if pose in ('punch','shot','skill','spear','sword'):
         phase=(frame//2)%2
-        # Keep the previous reach. The arm stays one pixel thick and only
-        # the terminal fist gets one extra pixel above the straight line.
+        # Keep the arm a uniform one-pixel bar in both frames.
         fist_x=x+5+phase*2
         for px in range(x+4,fist_x+2): put(px,y+3)
-        put(fist_x+1,y+2)
     elif pose=='kick':
         phase=(frame//2)%2
         # One supporting leg stays under the hip with a single grounded shoe.
         put(x+2,y+4); put(x+2,y+5); put(x+1,y+6); put(x+2,y+6)
         if phase:
-            # Raised leg forms a slim ㄴ: a vertical leg, a level forward
-            # foot, and one extra pixel at its tip. Mirror toward facing.
+            # Raised leg forms a uniform one-pixel ㄴ-shaped bar.
             put(x+4,y+2); put(x+4,y+3); put(x+4,y+4)
             for px in range(x+5,x+9): put(px,y+4)
-            put(x+8,y+3)
         else:
             # Chambered knee and raised foot; this leg does not touch the floor.
             put(x+4,y+3); put(x+4,y+4); put(x+5,y+4)
