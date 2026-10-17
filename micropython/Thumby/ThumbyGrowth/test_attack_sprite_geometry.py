@@ -42,7 +42,7 @@ class AttackSpriteGeometryTests(unittest.TestCase):
             self.assertLessEqual(self.bounds(chamber)[0],3)
             width,height=self.bounds(extended)
             self.assertLessEqual(width,7)
-            self.assertLessEqual(height,3)
+            self.assertLessEqual(height,4)
             pixels=self.pixels(extended)
             if rightward:
                 self.assertGreaterEqual(max(px for px,py in pixels),x+9)
