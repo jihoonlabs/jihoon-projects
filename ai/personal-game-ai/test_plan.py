@@ -54,15 +54,28 @@ def _runtime_assertion(node):
     if not (
         isinstance(node, ast.Call)
         and isinstance(node.func, ast.Attribute)
-        and isinstance(node.func.value, ast.Name)
+    ):
+        return False
+    if (
+        isinstance(node.func.value, ast.Name)
         and node.func.value.id == "self"
         and node.func.attr.startswith("assert")
     ):
-        return False
-    arguments = [*node.args, *(
-        keyword.value for keyword in node.keywords if keyword.arg != "msg"
-    )]
-    return any(not _constant_expression(argument) for argument in arguments)
+        arguments = [*node.args, *(
+            keyword.value for keyword in node.keywords if keyword.arg != "msg"
+        )]
+        return any(not _constant_expression(argument) for argument in arguments)
+
+    # unittest.mock call assertions inspect observed runtime interactions and
+    # legitimately take no arguments (e.g. mock.assert_called()).
+    return (
+        isinstance(node.func.value, ast.Name)
+        and node.func.value.id != "self"
+        and node.func.attr in {
+            "assert_called", "assert_called_once", "assert_not_called",
+            "assert_called_with", "assert_called_once_with",
+        }
+    )
 
 
 def validate_code(code, module, check_count):
@@ -131,8 +144,8 @@ def validate_code(code, module, check_count):
                 raise ValueError("테스트 메서드 이름은 파일 안에서 고유해야 합니다.")
             if not any(_runtime_assertion(child) for child in ast.walk(method)):
                 raise ValueError(
-                    "각 테스트 메서드에 실제 결과나 상태를 검사하는 unittest assertion이 필요합니다. "
-                    "상수만 비교하는 assertion은 검사로 인정하지 않습니다."
+                    f"{method.name}: 실제 결과·상태·mock 호출을 검사하는 assertion이 없거나 "
+                    "상수만 검사합니다. 빈 메서드와 self.assertTrue(True)는 유효한 검사가 아닙니다."
                 )
             methods[method.name] = method
 
@@ -246,7 +259,8 @@ def generate_tests(path, model=None):
             "import unittest와 설계 대상 모듈의 직접 import를 사용하세요. "
             "클래스는 unittest.TestCase를 직접 상속하세요. "
             "검사 사례마다 고유한 test_ 메서드 하나와 assertion을 작성하세요. "
-            "상수끼리 비교하지 말고 대상 함수 반환값·상태·호출 결과를 assertion으로 검사하세요. "
+            "self.assertTrue(True), self.assertEqual(1, 1) 같은 상수·상투 assertion과 빈 test_ 메서드는 금지합니다. "
+            "각 메서드에서 입력 준비, 대상 함수나 처리 호출, 반환값·변경 상태·mock 호출 여부를 실제 값으로 검사하세요. "
             "구현 파일이 아직 없어도 테스트 후보를 작성할 수 있습니다. "
             "mock 검사도 생략하지 말고 unittest.mock의 patch를 사용하세요. "
             "대상 모듈이 참조하는 함수 이름을 patch하세요. "
