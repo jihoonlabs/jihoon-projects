@@ -310,13 +310,15 @@ def attack_limb_runs(pose,frame,rightward,x,y):
             put(glove_x+2,y+2); put(glove_x+2,y+3)
     elif pose=='kick':
         phase=(frame//2)%2
-        # The chamber stays tucked under the hip. The extension bends at the
-        # knee and carries a distinct shoe beyond the scaled body silhouette.
+        # The chamber stays tucked under the hip. On extension the leg rises
+        # diagonally and ends in a shoe above the planted foot, so the kick
+        # remains readable after the shared body is scaled down.
         put(x+3,y+5); put(x+4,y+5)
         if phase:
-            put(x+4,y+4); put(x+5,y+4); put(x+6,y+4)
-            put(x+6,y+3); put(x+7,y+3)
-            put(x+7,y+4); put(x+8,y+3); put(x+8,y+4); put(x+9,y+3)
+            put(x+4,y+4); put(x+5,y+4)
+            put(x+5,y+3); put(x+6,y+3)
+            put(x+6,y+2); put(x+7,y+2); put(x+8,y+2)
+            put(x+8,y+3); put(x+9,y+3)
         else:
             put(x+4,y+4); put(x+5,y+4)
     if not rightward:
