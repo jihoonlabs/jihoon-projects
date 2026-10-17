@@ -5,7 +5,7 @@ owner_branch: feature/thumby-growth-character-design
 parent_branch: feature/thumby-growth
 role: child
 status: implementation-verified-pc; awaiting-user-device-check
-tested_sha: f1603066a7b76addbc56ce5ab96f01d28765c922
+tested_sha: 91c8ef16f3589f00f4700f5d53eccfe944a1de27
 base_sha: 694224bd26135d2abd97f9a2a79eb0a994b72f28
 
 ## Responsibility
@@ -24,15 +24,15 @@ Fix only character rendering issues reproduced from the user's Thumby screenshot
 - Verified that the local source snapshot's original ThumbyGrowth.py Git blob hash matched the public Epic blob 6a771e9aa7eb4419e69d1122074f5374881253fe.
 - Upper-lane sprite rows were clipped with the HUD boundary before the 10/16 coordinate transform. Row clipping is now applied after scaling in screen space.
 - Initial validation found that mathematically mirrored left-side attacks still blended into the reduced body, so they were difficult to see in the actual composited renderer.
-- Punch uses the neutral shared body and a straight, uniform one-pixel bar; the previous raised fist pixel is removed and reach remains unchanged.
-- Kick removes both default feet from the body frame, then draws one grounded support leg and one raised leg. The extended pose follows a uniform one-pixel ㄴ-shaped bar toward the facing direction; the raised toe pixel is removed.
-- Both attack poses mirror from one shared set of limbs around the fighter's true half-pixel center, correcting the one-pixel shorter visible reach on the left. Punch and kick retain equal horizontal reach in each direction.
+- Punch uses the neutral shared body and a straight, uniform two-pixel bar; reach remains unchanged.
+- Kick removes both default feet from the body frame, then draws one grounded support leg and one raised leg. The extended pose follows a uniform two-pixel ㄴ-shaped bar toward the facing direction.
+- Punch and kick reuse one small axis-aligned bar renderer with pose-specific position, orientation, and reach. Both attack poses mirror around the fighter's true half-pixel center and retain equal horizontal reach in each direction. This avoids duplicated sprite frames and drawing logic; runtime RAM reduction has not been measured.
 - No attack timing, hitboxes, or gameplay values changed.
 
 ## Verification
 - python3 -m py_compile ThumbyGrowth.py test_character_design.py test_attack_sprite_geometry.py: pass.
 - Related graphics tests after the visibility correction and one-pixel tip refinement: test_attack_sprite_geometry, test_character_design, test_background, test_combat_readability, test_combat_feedback: 47 pass.
-- Attack tests check uniform one-pixel punch and kick bars, left/right mirror symmetry and equal reach from the body center, two-frame reach, and the kick's single ground-contact foot plus forward ㄴ-shaped raised leg.
+- Attack tests check uniform two-pixel punch and kick bars, left/right mirror symmetry and equal reach from the body center, two-frame reach, and the kick's single ground-contact foot plus forward ㄴ-shaped raised leg.
 - Full scratch snapshot suite: 225 discovered; 13 failures and 1 import error remain in unrelated stale gameplay/UI compatibility tests and a missing replay_demo helper. These were not modified by this graphics-only task.
 - PC preview uses the actual 72x40 renderer with a Thumby test double; it is not a device capture. Real-device display/speed/heap still need user confirmation.
 - No production/gameplay change outside the rendering geometry listed above.
