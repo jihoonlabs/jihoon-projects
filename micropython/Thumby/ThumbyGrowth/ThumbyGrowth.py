@@ -135,8 +135,9 @@ def character_pose(state,player):
     if not player:
         return 'guard' if state.get('enemy_windup',0) else 'punch' if state.get('enemy_attack_cooldown',0)>=114 else 'idle'
     kind=state.get('attack_kind','punch')
-    threshold=20 if kind=='skill' else 23 if kind=='shot' else 5 if kind in ('kick','spear','sword') else 4
-    return kind if state['player_attack_cooldown']>=threshold else 'idle'
+    # Keep the attack art visible for the full recovery window. The old late
+    # thresholds reduced a 10-frame punch to only a handful of visible frames.
+    return kind if state['player_attack_cooldown']>0 else 'idle'
 
 
 def character_body(state,player):
@@ -145,6 +146,9 @@ def character_body(state,player):
     if pose=='guard': return GUARD_BODY
     if pose=='kick': return KICK_BODY
     if pose in ('punch','shot','skill','spear','sword'): return PUNCH_BODY
+    if state.get('campaign_mode'):
+        moving=state.get('player_moving' if player else 'enemy_moving',False)
+        return WALK_BODY_ROWS if moving and (state.get('frame',0)//4)%2 else BODY_ROWS
     return WALK_BODY_ROWS if (state.get('combat_frame',0)//5)%2 else BODY_ROWS
 
 
@@ -250,7 +254,7 @@ def draw_hero_hair(display,region,x,y,rightward):
 
 
 class ScaledFighterDisplay:
-    """Draw fighter rectangles slightly smaller, anchored to their feet."""
+    """Draw fighters at 11/16 size, anchored to their feet."""
     __slots__=('display','anchor_x','anchor_y')
     def __init__(self,display,anchor_x,anchor_y):
         self.display=display
@@ -258,7 +262,7 @@ class ScaledFighterDisplay:
         self.anchor_y=anchor_y
     @staticmethod
     def _edge(value,anchor):
-        delta=(value-anchor)*13
+        delta=(value-anchor)*11
         return anchor+(delta+8)//16 if delta>=0 else anchor-((-delta+8)//16)
     def drawFilledRectangle(self,x,y,width,height,color=1):
         left=self._edge(x,self.anchor_x);right=self._edge(x+width,self.anchor_x)
@@ -307,11 +311,13 @@ def draw_fighter(display,state,player,x,y):
                 (weapon!=4 or pose=='shot'))
     front=x+6 if rightward else x-5
     if pose=='kick':
-        # A short, flat shoe keeps the kick inside the squat silhouette.
-        scene_rect(display,front+1,y+4,3,2)
+        # A short horizontal leg and flat shoe project clearly from the squat body.
+        kick_left=x+7 if rightward else x-12
+        scene_rect(display,kick_left,y+4,5,2)
     elif swinging and weapon is None:
-        # Use a compact fist instead of stretching the whole character forward.
-        scene_rect(display,front+(1 if rightward else 2),y+2,2,2)
+        # Keep the shoulders compact while giving the clenched fist a clear reach.
+        fist_left=x+8 if rightward else x-11
+        scene_rect(display,fist_left,y+1,4,2)
     if pose=='skill':
         for offset in range(3):
             left=x+9+offset if rightward else x-5-offset
@@ -781,7 +787,8 @@ def draw_campaign_game(state):
             foe_state=dict(state,enemy_x=foe['x'],enemy_y=foe['y'],active_enemy=True,
                            progress=state['progress'],is_boss=foe['boss'],
                            enemy_windup=foe['windup'],enemy_attack_cooldown=0,
-                           enemy_hit_flash=foe['flash'],enemy_stun=foe['stun'])
+                           enemy_hit_flash=foe['flash'],enemy_stun=foe['stun'],
+                           enemy_moving=foe.get('moving',False))
             actors.append((False,foe['x']-camera,foe['y'],foe_state))
         for player,x,y,actor_state in sorted(actors,key=lambda value:value[2]):
             draw_fighter(display,actor_state,player,x,actor_screen_y(y,campaign=True))

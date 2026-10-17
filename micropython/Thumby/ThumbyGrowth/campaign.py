@@ -33,7 +33,7 @@ def new_game_state():
         equipped_armor=None,gun_owned=False,skill_owned=False,potions=0,
         hp_growth=0,atk_growth=0,def_growth=0,player_x=16,player_y=28,
         direction='R',player_attack_cooldown=0,attack_kind='punch',
-        player_stun=0,player_hit_flash=0,player_invuln=0,command_timer=0,command_ready=0,menu_selection=0,menu_scroll=0,
+        player_stun=0,player_hit_flash=0,player_invuln=0,player_moving=False,command_timer=0,command_ready=0,menu_selection=0,menu_scroll=0,
         menu_r_held=False,save_requested=False,save_status='',boss_active=False)
 
 
@@ -307,6 +307,7 @@ def _shop_update(state,inputs):
 
 def _explore_update(state,inputs):
     state['frame']+=1
+    state['player_moving']=False
     # Existing reactions lose a frame here; new hits later in the update keep
     # their full duration instead of being shortened immediately.
     state['player_stun']=max(0,state.get('player_stun',0)-1)
@@ -381,17 +382,22 @@ def _explore_update(state,inputs):
                     state['wave']+=1
                     state['wave_delay']=WAVE_DELAY
     state['player_attack_cooldown']=max(0,state['player_attack_cooldown']-1)
+    old_player_x,old_player_y=state['player_x'],state['player_y']
     state['player_x']=max(0,min(138,state['player_x']+dx))
     state['player_y']=max(12,min(36,state['player_y']+dy))
+    state['player_moving']=(state['player_x']!=old_player_x or state['player_y']!=old_player_y)
     boss_gate=(state['map_index']==map_count(state)-1 and state['player_x']>=132)
     if not state['foes'] and not boss_gate:
         state['wave_delay']=max(0,state.get('wave_delay',0)-1)
         if state['wave_delay']==0:
             state['foes']=spawn_wave(state)
     for foe in state['foes']:
+        foe['moving']=False
         if state['frame']%2==0 and not foe['stun']:
+            old_foe_x,old_foe_y=foe['x'],foe['y']
             foe['x']=max(0,min(138,foe['x']+(1 if state['player_x']>foe['x'] else -1 if state['player_x']<foe['x'] else 0)))
             foe['y']=max(12,min(36,foe['y']+(1 if state['player_y']>foe['y'] else -1 if state['player_y']<foe['y'] else 0)))
+            foe['moving']=(foe['x']!=old_foe_x or foe['y']!=old_foe_y)
         in_range=abs(state['player_x']-foe['x'])<=12 and abs(state['player_y']-foe['y'])<=3
         if foe['stun']>0:
             foe['windup']=0
