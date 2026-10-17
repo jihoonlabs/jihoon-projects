@@ -320,7 +320,9 @@ def attack_limb_runs(pose,frame,rightward,x,y):
             put(x+4,y+3); put(x+4,y+4); put(x+5,y+4)
             put(x+5,y+3); put(x+6,y+3)
     if not rightward:
-        pixels={(2*x+6-px,py):color for (px,py),color in pixels.items()}
+        # The shared 10-pixel fighter is centered at x+2.5; reflect around
+        # that half-pixel axis so the left pose keeps the same visible reach.
+        pixels={(2*x+5-px,py):color for (px,py),color in pixels.items()}
     runs=[]
     for py in sorted({point[1] for point in pixels}):
         row=sorted(px for px,yy in pixels if yy==py)
