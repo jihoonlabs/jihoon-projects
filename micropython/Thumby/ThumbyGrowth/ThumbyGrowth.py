@@ -38,9 +38,8 @@ FOE_HEAD = FOE_HEADS[0]
 BODY_ROWS = (0x1fe,0x3ff,0x1fe,0xfc,0x1ce,0x387)
 WALK_BODY_ROWS = (0x1fe,0x3ff,0x1fe,0xfc,0x1dc,0x38e)
 PUNCH_BODY = BODY_ROWS
-# Stop the shared body above the legs; the kick frame draws a broad planted
-# shoe and a straight kicking bar separately, with no one-pixel leg connector.
-KICK_BODY = (0x1fe,0x3ff,0x1fe,0xfc,0x000,0x000)
+# Keep the same default legs/feet while kicking; only the kicking leg changes.
+KICK_BODY = BODY_ROWS
 HURT_BODY = (0xfc,0x1fe,0x1fe,0xfc,0xec,0x1c7)
 GUARD_BODY = (0x3ff,0x3ff,0x1fe,0xfc,0x1ce,0x387)
 BOSS_HEADS = tuple(hair+HERO_HEAD[4:] for hair in
@@ -313,12 +312,8 @@ def attack_limb_runs(pose,frame,rightward,x,y):
         bar(x+4,y+2,fist_x+1,y+2)
     elif pose=='kick':
         phase=(frame//2)%2
-        # Skip the one-pixel connector leg; keep a broad shoe behind the kick.
-        shoe_x=x-2
-        for px in range(shoe_x+1,shoe_x+4): put(px,y+5)
-        for px in range(shoe_x,shoe_x+5): put(px,y+6)
         if phase:
-            # Extend one straight two-pixel kick bar directly from the body.
+            # Keep the shared standing legs and extend only this straight bar.
             bar(x+4,y+3,x+8,y+3)
         else:
             # Chambered pose uses the same straight bar at a shorter reach.

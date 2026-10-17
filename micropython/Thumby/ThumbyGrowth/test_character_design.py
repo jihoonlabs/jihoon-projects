@@ -36,7 +36,7 @@ class CharacterDesignTests(unittest.TestCase):
         self.assertNotEqual(punch0,punch1)
         self.assertNotEqual(kick0,kick1)
         for shapes,expected_components in ((punch0,1),(punch1,1),
-                                           (kick0,2),(kick1,2)):
+                                           (kick0,1),(kick1,1)):
             lit=[(x+offset,y) for x,y,width,height,color in shapes if color
                  for offset in range(width) for _ in range(height)]
             self.assertEqual(self.pixel_component_count(lit),expected_components)
