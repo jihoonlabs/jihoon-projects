@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { LoginApiError, loginApi } from '@/features/auth/api/login';
 import { resendVerificationEmailApi } from '@/features/auth/api/resendVerificationEmail';
@@ -26,6 +26,13 @@ export function LoginForm({
   const router = useRouter();
 
   const login = useAuthStore((state) => state.login);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
+
+  useEffect(() => {
+    // 履歴移動やセッション復元でも、認証済みのログイン画面を残さない。
+    if (isInitialized && isAuthenticated) router.replace('/tickets');
+  }, [isInitialized, isAuthenticated, router]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -64,6 +71,17 @@ export function LoginForm({
     useState(false);
   const [resendingVerificationEmail, setResendingVerificationEmail] =
     useState(false);
+  const verificationRevision = useRef(0);
+  const verificationRequest = useRef<AbortController | null>(null);
+
+  // 古い再送応答のSet-Cookieで新しいログインを取り消さない。
+  const cancelVerificationRequest = () => {
+    verificationRequest.current?.abort();
+    verificationRequest.current = null;
+    setResendingVerificationEmail(false);
+  };
+
+  useEffect(() => () => verificationRequest.current?.abort(), []);
 
   useEffect(() => {
     // 表示済みのクエリパラメータをURLから削除する
@@ -78,6 +96,8 @@ export function LoginForm({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    cancelVerificationRequest();
+    verificationRevision.current += 1;
 
     setServerError('');
     setSuccessMessage('');
@@ -100,8 +120,6 @@ export function LoginForm({
       });
 
       login(data.user);
-
-      router.push('/tickets');
     } catch (error) {
       if (error instanceof LoginApiError) {
         setServerError(error.message);
@@ -125,18 +143,26 @@ export function LoginForm({
   };
 
   const handleResendVerificationEmail = async () => {
+    cancelVerificationRequest();
+    const controller = new AbortController();
+    verificationRequest.current = controller;
+    const revision = verificationRevision.current;
     setServerError('');
     setSuccessMessage('');
     setResendingVerificationEmail(true);
 
     try {
-      const data = await resendVerificationEmailApi({
-        email,
-      });
+      const data = await resendVerificationEmailApi(
+        { email },
+        controller.signal,
+      );
 
+      // 入力変更・新しいログイン後に、古い再送応答を表示へ反映しない。
+      if (revision !== verificationRevision.current) return;
       setSuccessMessage(data.message);
       setVerificationEmailRequired(false);
     } catch (error) {
+      if (revision !== verificationRevision.current) return;
       if (error instanceof Error) {
         setServerError(error.message);
         return;
@@ -144,15 +170,30 @@ export function LoginForm({
 
       setServerError('認証メールの再送中にエラーが発生しました。');
     } finally {
-      setResendingVerificationEmail(false);
+      if (verificationRequest.current === controller) {
+        verificationRequest.current = null;
+        setResendingVerificationEmail(false);
+      }
     }
   };
+
+  if (!isInitialized || isAuthenticated) {
+    return <p role="status">認証情報を確認中...</p>;
+  }
 
   return (
     <div className={styles.container}>
       <div className={styles.card}>
-        <h1>タスク管理</h1>
-        <p>チケット管理</p>
+        <header className={styles.heading}>
+          <div className={styles.identity}>
+            <span className={styles.mark} aria-hidden="true">
+              T
+            </span>
+            <span className={styles.eyebrow}>TICKET WORKSPACE</span>
+          </div>
+          <h1>タスク管理</h1>
+          <p>チケット管理</p>
+        </header>
 
         {successMessage && (
           <div className={styles.successMessage} role="status">
@@ -192,6 +233,8 @@ export function LoginForm({
               aria-describedby={errors.email ? 'email-error' : undefined}
               value={email}
               onChange={(event) => {
+                cancelVerificationRequest();
+                verificationRevision.current += 1;
                 setEmail(event.target.value);
                 setVerificationEmailRequired(false);
 
@@ -216,37 +259,42 @@ export function LoginForm({
           <div className={styles.inputGroup}>
             <label htmlFor="password">パスワード</label>
 
-            <input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              placeholder="••••••••"
-              aria-invalid={Boolean(errors.password)}
-              aria-describedby={errors.password ? 'password-error' : undefined}
-              value={password}
-              onChange={(event) => {
-                setPassword(event.target.value);
-
-                if (errors.password) {
-                  setErrors((prev) => ({
-                    ...prev,
-                    password: undefined,
-                  }));
+            <div className={styles.passwordField}>
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                aria-invalid={Boolean(errors.password)}
+                aria-describedby={
+                  errors.password ? 'password-error' : undefined
                 }
-              }}
-              required
-              disabled={loading}
-            />
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
 
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              aria-label={
-                showPassword ? 'パスワードを隠す' : 'パスワードを表示'
-              }
-            >
-              {showPassword ? '隠す' : '表示'}
-            </button>
+                  if (errors.password) {
+                    setErrors((prev) => ({
+                      ...prev,
+                      password: undefined,
+                    }));
+                  }
+                }}
+                required
+                disabled={loading}
+              />
+
+              <button
+                type="button"
+                className={styles.passwordToggle}
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={
+                  showPassword ? 'パスワードを隠す' : 'パスワードを表示'
+                }
+              >
+                {showPassword ? '隠す' : '表示'}
+              </button>
+            </div>
 
             {errors.password && (
               <span id="password-error" className={styles.fieldError}>
@@ -265,21 +313,26 @@ export function LoginForm({
             {loading ? 'ログイン中...' : 'ログイン'}
           </button>
 
-          <button
-            type="button"
-            onClick={() => handleSocialLogin('google')}
-            disabled={loading}
-          >
-            Googleでログイン
-          </button>
+          <div className={styles.alternativeLabel}>その他のログイン方法</div>
+          <div className={styles.socialGroup}>
+            <button
+              type="button"
+              className={styles.socialButton}
+              onClick={() => handleSocialLogin('google')}
+              disabled={loading}
+            >
+              Googleでログイン
+            </button>
 
-          <button
-            type="button"
-            onClick={() => handleSocialLogin('line')}
-            disabled={loading}
-          >
-            LINEでログイン
-          </button>
+            <button
+              type="button"
+              className={styles.socialButton}
+              onClick={() => handleSocialLogin('line')}
+              disabled={loading}
+            >
+              LINEでログイン
+            </button>
+          </div>
         </form>
 
         <div className={styles.registerGuide}>

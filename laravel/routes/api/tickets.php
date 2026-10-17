@@ -17,6 +17,7 @@ Route::middleware([
     Route::get('/', [TicketController::class, 'index']);
     Route::post('/', [TicketController::class, 'store']);
     Route::get('/{ticket}', [TicketController::class, 'show']);
+    Route::patch('/{ticket}/move', [TicketController::class, 'move']);
     Route::patch('/{ticket}', [TicketController::class, 'updateStatus']);
     Route::delete('/{ticket}', [TicketController::class, 'destroy']);
     Route::get('/{ticket}/comments', [TicketCommentController::class, 'index']);

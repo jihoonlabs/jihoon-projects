@@ -5,11 +5,13 @@ namespace Tests\Feature\Ticket;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Feature\Ticket\Concerns\UsesGeneralProject;
 use Tests\TestCase;
 
 class ShowTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesGeneralProject;
 
     protected function setUp(): void
     {
@@ -20,6 +22,7 @@ class ShowTest extends TestCase
         ]);
 
         $this->actingAs($user);
+        $this->addToGeneralProject($user);
     }
 
     public function test_チケット詳細を取得できる(): void

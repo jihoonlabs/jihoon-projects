@@ -1,4 +1,7 @@
-import { fetchWithCsrf } from '@/shared/api/fetchWithCsrf';
+import {
+  protectedFetch as fetch,
+  protectedMutation as fetchWithCsrf,
+} from '@/features/auth/api/protectedRequest';
 import type {
   CreateTicketInput,
   Ticket,
@@ -12,19 +15,26 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 // Transport contract: Laravel Resource envelopes contain snake_case fields.
 export interface TicketResponse {
   id: string;
+  project_id: string;
   issue_key: string | null;
   title: string;
   description: string | null;
   status: TicketStatus;
+  position: number;
+  version: number;
   priority: TicketPriority;
   assignee: { id: number; name: string; avatar_url: string | null } | null;
   created_at: string | null;
   updated_at: string | null;
 }
 
-export function toTicket(data: TicketResponse, position = 0): Ticket {
+export function toTicket(data: TicketResponse): Ticket {
+  if (!Number.isSafeInteger(data.version) || data.version < 1) {
+    throw new Error('チケットのバージョンが不正です。');
+  }
   return {
     id: String(data.id),
+    projectId: String(data.project_id),
     issueKey: data.issue_key,
     title: data.title,
     description: data.description,
@@ -38,15 +48,33 @@ export function toTicket(data: TicketResponse, position = 0): Ticket {
             name: data.assignee.name,
             avatarUrl: data.assignee.avatar_url ?? undefined,
           },
-    position,
+    position: data.position,
+    version: data.version,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
 }
 
+export class TicketApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code?: string,
+  ) {
+    super(message);
+    this.name = 'TicketApiError';
+  }
+}
+
 async function resource<T>(response: Response): Promise<T> {
-  if (!response.ok)
-    throw new Error(`チケット操作に失敗しました (${response.status})`);
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new TicketApiError(
+      `チケット操作に失敗しました (${response.status})`,
+      response.status,
+      error?.code,
+    );
+  }
   const result = await response.json();
   if (
     !result ||
@@ -68,13 +96,18 @@ export async function fetchTickets(): Promise<Ticket[]> {
   );
   if (!Array.isArray(data))
     throw new Error('チケット一覧の応答形式が不正です。');
-  return data.map((ticket, index) => toTicket(ticket, index));
+  return data.map(toTicket);
 }
 
-export async function fetchTicket(id: string): Promise<Ticket> {
+export async function fetchTicket(
+  id: string,
+  signal?: AbortSignal,
+): Promise<Ticket> {
   return toTicket(
     await resource<TicketResponse>(
       await fetch(`${API_URL}/api/tickets/${encodeURIComponent(id)}`, {
+        cache: 'no-store',
+        signal,
         credentials: 'include',
         headers: { Accept: 'application/json' },
       }),
@@ -83,6 +116,10 @@ export async function fetchTicket(id: string): Promise<Ticket> {
 }
 
 export async function createTicket(input: CreateTicketInput): Promise<Ticket> {
+  const projectId = Number(input.projectId);
+  if (!Number.isSafeInteger(projectId) || projectId <= 0) {
+    throw new Error('プロジェクトIDが不正です。');
+  }
   const assigneeId = input.assigneeId == null ? null : Number(input.assigneeId);
   if (
     assigneeId !== null &&
@@ -96,6 +133,7 @@ export async function createTicket(input: CreateTicketInput): Promise<Ticket> {
         method: 'POST',
         body: JSON.stringify({
           title: input.title,
+          project_id: projectId,
           description: input.description,
           status: input.status,
           priority: input.priority,
@@ -140,6 +178,9 @@ export async function updateTicket(
   }
 
   const body = {
+    ...(input.expectedVersion !== undefined
+      ? { expected_version: input.expectedVersion }
+      : {}),
     ...(input.title !== undefined ? { title: input.title } : {}),
     ...(input.description !== undefined
       ? { description: input.description }
@@ -166,4 +207,57 @@ export async function deleteTicket(id: string): Promise<void> {
   );
   if (!response.ok)
     throw new Error(`チケットの削除に失敗しました (${response.status})`);
+}
+
+export interface MoveTicketResult {
+  ticket: Ticket;
+  boardVersion: number;
+}
+
+export async function moveTicket(
+  id: string,
+  status: TicketStatus,
+  position: number,
+  boardVersion: number,
+): Promise<MoveTicketResult> {
+  const response = await fetchWithCsrf(
+    `/api/tickets/${encodeURIComponent(id)}/move`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({
+        status,
+        position,
+        board_version: boardVersion,
+      }),
+    },
+  );
+
+  if (response.status === 409) {
+    throw new TicketApiError(
+      'ボードが更新されています。最新の状態を再取得します。',
+      409,
+    );
+  }
+  if (!response.ok) {
+    throw new TicketApiError(
+      `チケットの移動に失敗しました (${response.status})`,
+      response.status,
+    );
+  }
+
+  const result = await response.json();
+  if (
+    !result ||
+    typeof result !== 'object' ||
+    !('data' in result) ||
+    !('board_version' in result) ||
+    typeof result.board_version !== 'number'
+  ) {
+    throw new Error('チケット移動APIの応答形式が不正です。');
+  }
+
+  return {
+    ticket: toTicket(result.data as TicketResponse),
+    boardVersion: result.board_version,
+  };
 }

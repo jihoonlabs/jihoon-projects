@@ -17,10 +17,13 @@ class TicketResource extends JsonResource
     {
         return [
             'id' => (string) $this->id,
+            'project_id' => (string) $this->project_id,
             'issue_key' => $this->issue_key,
             'title' => $this->title,
             'description' => $this->description,
             'status' => $this->status,
+            'position' => (int) $this->position,
+            'version' => (int) $this->version,
             'priority' => $this->priority,
             'assignee' => new UserSummaryResource($this->whenLoaded('assignee')),
             'created_at' => $this->created_at?->toISOString(),

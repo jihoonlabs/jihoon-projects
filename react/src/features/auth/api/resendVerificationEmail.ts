@@ -7,11 +7,13 @@ import type {
 
 export const resendVerificationEmailApi = async (
   params: VerificationEmailResendRequest,
+  signal?: AbortSignal,
 ): Promise<VerificationEmailResendResponse> => {
   const response = await fetchWithCsrf(
     '/api/auth/email/verification-notification',
     {
       method: 'POST',
+      signal,
       body: JSON.stringify({
         email: params.email.trim(),
       }),

@@ -221,6 +221,7 @@ class AuthController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'status' => $user->status,
+            'role' => $user->role,
             'createdAt' => $user->created_at?->toISOString(),
         ];
     }

@@ -2,9 +2,11 @@
 
 namespace Database\Seeders;
 
+use App\Models\Project;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class TicketSeeder extends Seeder
 {
@@ -15,10 +17,10 @@ class TicketSeeder extends Seeder
             ['email' => 'jihoon@example.com'],
             ['name' => 'パク・ジフン', 'password' => bcrypt('password')]
         );
+        $project = Project::firstOrCreate(['name' => 'General']);
 
         $tickets = [
             [
-                'issue_key' => 'TICK-101',
                 'title' => 'ログインAPIおよびJWTトークン処理の連携',
                 'description' => 'Laravelバックエンド認証APIの構築',
                 'status' => 'DONE',
@@ -26,7 +28,6 @@ class TicketSeeder extends Seeder
                 'assignee_id' => $user->id,
             ],
             [
-                'issue_key' => 'TICK-102',
                 'title' => 'JiraスタイルかんばんボードのUI実装',
                 'description' => 'Next.jsベースのドラッグ＆ドロップボード構築',
                 'status' => 'IN_PROGRESS',
@@ -34,7 +35,6 @@ class TicketSeeder extends Seeder
                 'assignee_id' => $user->id,
             ],
             [
-                'issue_key' => 'TICK-103',
                 'title' => 'チケット検索および担当者フィルターの実装',
                 'description' => 'リアルタイム検索クエリの状態バインディング',
                 'status' => 'IN_REVIEW',
@@ -42,7 +42,6 @@ class TicketSeeder extends Seeder
                 'assignee_id' => $user->id,
             ],
             [
-                'issue_key' => 'TICK-104',
                 'title' => 'DND-Kit マウストラッキングオーバーレイのバグ修正',
                 'description' => 'CSS Translateによるポータルアニメーション調整',
                 'status' => 'TODO',
@@ -50,7 +49,6 @@ class TicketSeeder extends Seeder
                 'assignee_id' => null,
             ],
             [
-                'issue_key' => 'TICK-105',
                 'title' => 'Laravel DBマイグレーションおよびAPI接続',
                 'description' => 'REST APIエンドポイントおよびCORSの設定',
                 'status' => 'BACKLOG',
@@ -59,11 +57,44 @@ class TicketSeeder extends Seeder
             ],
         ];
 
-        foreach ($tickets as $ticketData) {
-            Ticket::updateOrCreate(
-                ['issue_key' => $ticketData['issue_key']],
-                $ticketData
-            );
-        }
+        DB::transaction(function () use ($project, $tickets) {
+            $lockedProject = Project::query()->lockForUpdate()->findOrFail($project->id);
+            // 再seedで既存leaderや閲覧権限を変更せず、未参加のactive userだけを追加する。
+            $memberIds = $lockedProject->members()->pluck('users.id');
+            $members = User::where('status', 'active')
+                ->whereNotIn('id', $memberIds)
+                ->pluck('id')
+                ->mapWithKeys(fn ($id) => [
+                    $id => ['role' => 'member', 'permission' => 'write'],
+                ])
+                ->all();
+            $lockedProject->members()->syncWithoutDetaching($members);
+
+            $nextNumber = (int) $lockedProject->next_ticket_number;
+            $keyPattern = '/^'.preg_quote($lockedProject->project_key, '/').'-(\d+)$/';
+
+            // Keep the counter ahead of existing keys if a prior seed left it stale.
+            foreach ($lockedProject->tickets()->pluck('issue_key') as $issueKey) {
+                if (preg_match($keyPattern, (string) $issueKey, $matches) === 1) {
+                    $nextNumber = max($nextNumber, (int) $matches[1] + 1);
+                }
+            }
+
+            foreach ($tickets as $ticketData) {
+                $ticket = Ticket::query()->firstOrNew([
+                    'project_id' => $lockedProject->id,
+                    'title' => $ticketData['title'],
+                ]);
+
+                if (! $ticket->exists) {
+                    $ticketData['issue_key'] = sprintf('%s-%02d', $lockedProject->project_key, $nextNumber++);
+                }
+
+                $ticket->fill([...$ticketData, 'project_id' => $lockedProject->id])->save();
+            }
+
+            $lockedProject->forceFill(['next_ticket_number' => $nextNumber])->save();
+        });
+
     }
 }

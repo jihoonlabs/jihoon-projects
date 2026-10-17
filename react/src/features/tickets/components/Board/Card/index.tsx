@@ -2,19 +2,28 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useRef, type CSSProperties } from 'react';
 import { Ticket, TicketStatus } from '@/features/tickets/types/ticket';
+import { getProjectBorderColor } from '@/features/tickets/utils/projectColor';
 import styles from './index.module.css';
 
 interface CardProps {
   ticket: Ticket;
+  projectKey?: string | null;
+  projectColor?: string | null;
   isOverlay?: boolean;
   onStatusChange?: (id: string, status: TicketStatus) => void;
-  onEdit?: (ticket: Ticket) => void;
-  onDelete?: (ticket: Ticket) => void;
+  onOpenDetails?: (ticket: Ticket, trigger: HTMLButtonElement) => void;
+  canWrite?: boolean;
+  canDrag?: boolean;
 }
 
 const PRIORITY_LABELS: Record<string, string> = {
-  HIGHEST: '最高', HIGH: '高', MEDIUM: '中', LOW: '低', LOWEST: '最低',
+  HIGHEST: '最高',
+  HIGH: '高',
+  MEDIUM: '中',
+  LOW: '低',
+  LOWEST: '最低',
 };
 
 const STATUS_LABELS: Record<TicketStatus, string> = {
@@ -27,55 +36,104 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
 
 export default function Card({
   ticket,
+  projectColor = null,
   isOverlay,
   onStatusChange,
-  onEdit,
-  onDelete,
+  onOpenDetails,
+  canWrite = true,
+  canDrag = canWrite,
 }: CardProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: ticket.id });
+  const titleButton = useRef<HTMLButtonElement>(null);
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: ticket.id, disabled: !canDrag });
 
-  const style = {
+  const style: CSSProperties & { '--project-background-color'?: string } = {
     transform: CSS.Translate.toString(transform),
     transition,
     opacity: isDragging ? 0.3 : 1,
+    '--project-background-color':
+      getProjectBorderColor(projectColor) ?? undefined,
   };
 
   return (
-    <div
+    <article
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      className={`${styles.card} ${isOverlay ? styles.overlayCard : ''}`}
+      onDoubleClick={(event) => {
+        if (
+          isOverlay ||
+          (event.target as HTMLElement).closest(
+            'button, select, input, textarea, a',
+          )
+        )
+          return;
+        if (titleButton.current) onOpenDetails?.(ticket, titleButton.current);
+      }}
+      aria-disabled={undefined}
+      role="group"
+      aria-label={
+        ticket.issueKey ? `${ticket.issueKey}: ${ticket.title}` : ticket.title
+      }
+      className={`${styles.card} ${!canDrag ? styles.staticCard : ''} ${isOverlay ? styles.overlayCard : ''}`}
     >
-      <p className={styles.title}>{ticket.title}</p>
+      <div className={styles.heading}>
+        <button
+          ref={titleButton}
+          type="button"
+          className={styles.title}
+          aria-label={`${ticket.issueKey ?? ticket.title} の詳細を開く`}
+          onPointerDown={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ')
+              event.stopPropagation();
+          }}
+          onClick={(event) => onOpenDetails?.(ticket, event.currentTarget)}
+        >
+          {ticket.title}
+        </button>
+      </div>
 
       {!isOverlay && (
         <div
           className={styles.controls}
           onPointerDown={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ')
+              event.stopPropagation();
+          }}
         >
-          <select
-            aria-label={`${ticket.title} のステータス`}
-            value={ticket.status}
-            onChange={(event) =>
-              onStatusChange?.(ticket.id, event.target.value as TicketStatus)
-            }
-          >
-            {Object.entries(STATUS_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-          <button type="button" onClick={() => onEdit?.(ticket)}>編集</button>
-          <button type="button" onClick={() => onDelete?.(ticket)}>削除</button>
+          {canWrite && (
+            <select
+              aria-label={`${ticket.title} のステータス`}
+              value={ticket.status}
+              onChange={(event) =>
+                onStatusChange?.(ticket.id, event.target.value as TicketStatus)
+              }
+            >
+              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       )}
 
       <div className={styles.footer}>
         <div className={styles.metaInfo}>
           <span className={styles.issueKey}>{ticket.issueKey ?? '—'}</span>
-          <span className={`${styles.priorityBadge} ${styles[ticket.priority]}`}>
+          <span
+            className={`${styles.priorityBadge} ${styles[ticket.priority]}`}
+          >
             {PRIORITY_LABELS[ticket.priority] || ticket.priority}
           </span>
         </div>
@@ -85,9 +143,14 @@ export default function Card({
             {ticket.assignee.name.charAt(0)}
           </div>
         ) : (
-          <div className={`${styles.avatar} ${styles.unassigned}`} title="未割り当て">?</div>
+          <div
+            className={`${styles.avatar} ${styles.unassigned}`}
+            title="未割り当て"
+          >
+            ?
+          </div>
         )}
       </div>
-    </div>
+    </article>
   );
 }

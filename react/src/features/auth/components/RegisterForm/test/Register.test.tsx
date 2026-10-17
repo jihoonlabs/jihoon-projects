@@ -43,6 +43,7 @@ describe('RegisterForm 会員登録処理', () => {
             name: 'テストユーザー',
             email: 'user@example.com',
             status: 'active',
+            role: 'user',
             createdAt: '2026-09-17T00:00:00.000Z',
           },
         });

@@ -13,17 +13,25 @@ import styles from './index.module.css';
 interface ColumnProps {
   column: ColumnConfig;
   tickets: Ticket[];
+  projectKey?: string | null;
+  projectColor?: string | null;
+  projectColors?: Record<string, string | null>;
   onStatusChange?: (id: string, status: TicketStatus) => void;
-  onEdit?: (ticket: Ticket) => void;
-  onDelete?: (ticket: Ticket) => void;
+  onOpenDetails?: (ticket: Ticket, trigger: HTMLButtonElement) => void;
+  canWrite?: boolean;
+  canDrag?: boolean;
 }
 
 export default function Column({
   column,
   tickets,
+  projectKey,
+  projectColor,
+  projectColors,
   onStatusChange,
-  onEdit,
-  onDelete,
+  onOpenDetails,
+  canWrite,
+  canDrag,
 }: ColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
@@ -44,9 +52,12 @@ export default function Column({
             <Card
               key={ticket.id}
               ticket={ticket}
+              projectKey={projectKey}
+              projectColor={projectColors?.[ticket.projectId] ?? projectColor}
               onStatusChange={onStatusChange}
-              onEdit={onEdit}
-              onDelete={onDelete}
+              onOpenDetails={onOpenDetails}
+              canWrite={canWrite}
+              canDrag={canDrag}
             />
           ))}
         </div>
