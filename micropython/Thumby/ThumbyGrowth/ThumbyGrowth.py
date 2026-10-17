@@ -300,19 +300,23 @@ def attack_limb_runs(pose,frame,rightward,x,y):
         phase=(frame//2)%2
         # Author one right-facing pose, then mirror around the fighter's
         # centerline so both directions share reach and animation timing.
-        for offset in range(2+phase): put(x+4+offset,y+3)
+        # Extend the glove beyond the scaled sleeve so the punch reads in
+        # both directions instead of disappearing into the body silhouette.
         glove_x=x+5+phase
+        for px in range(x+4,glove_x+2): put(px,y+3)
         put(glove_x,y+2); put(glove_x+1,y+2)
         put(glove_x,y+3); put(glove_x+1,y+3)
+        if phase:
+            put(glove_x+2,y+2); put(glove_x+2,y+3)
     elif pose=='kick':
         phase=(frame//2)%2
-        # The chamber stays tucked under the waist; extension bends once and
-        # ends in a compact 2x2 shoe instead of a long horizontal bar.
+        # The chamber stays tucked under the hip. The extension bends at the
+        # knee and carries a distinct shoe beyond the scaled body silhouette.
         put(x+3,y+5); put(x+4,y+5)
         if phase:
-            put(x+4,y+4); put(x+5,y+4)
-            put(x+5,y+3); put(x+6,y+3)
-            put(x+5,y+4); put(x+6,y+4)
+            put(x+4,y+4); put(x+5,y+4); put(x+6,y+4)
+            put(x+6,y+3); put(x+7,y+3)
+            put(x+7,y+4); put(x+8,y+3); put(x+8,y+4); put(x+9,y+3)
         else:
             put(x+4,y+4); put(x+5,y+4)
     if not rightward:
