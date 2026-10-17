@@ -300,11 +300,12 @@ def attack_limb_runs(pose,frame,rightward,x,y):
         pixels[(px,py)]=color
     if pose in ('punch','shot','skill','spear','sword'):
         phase=(frame//2)%2
-        # Keep the arm straight on one horizontal row. The final two pixels
-        # rise by one row to make a compact 2x2 fist at the end of the stroke.
+        # Keep the previous reach. A one-pixel level forearm ends in a 2x2
+        # fist cap, so only the fist is one pixel taller than the arm.
         fist_x=x+5+phase*2
-        for px in range(x+4,fist_x+2): put(px,y+3)
-        put(fist_x,y+2); put(fist_x+1,y+2)
+        for px in range(x+4,fist_x): put(px,y+3)
+        for px in (fist_x,fist_x+1):
+            put(px,y+2); put(px,y+3)
     elif pose=='kick':
         phase=(frame//2)%2
         # One supporting leg stays under the hip with a single grounded shoe.
