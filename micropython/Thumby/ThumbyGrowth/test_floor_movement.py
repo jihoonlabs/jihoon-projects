@@ -20,11 +20,16 @@ class FloorTests(unittest.TestCase):
         for screen in ('safe','defeat'):
             s=update_state(state(screen_state=screen,player_y=15,enemy_y=33),keys(A=True))
             self.assertEqual((s['screen_state'],s['player_y'],s['enemy_y']),('battle',28,28))
+    def test_player_moves_two_pixels_per_held_frame(self):
+        s=update_state(state(screen_state='battle',active_enemy=False),keys(R=True))
+        self.assertEqual(s['player_x'],18)
+        s=update_state(s,keys(D_held=True))
+        self.assertEqual(s['player_y'],30)
     def test_held_vertical_movement_and_release(self):
         s=state(screen_state='battle')
         for _ in range(5):s=update_state(s,keys(U_held=True))
-        self.assertEqual(s['player_y'],23)
-        s=update_state(s,keys());self.assertEqual(s['player_y'],23)
+        self.assertEqual(s['player_y'],18)
+        s=update_state(s,keys());self.assertEqual(s['player_y'],18)
         for _ in range(5):s=update_state(s,keys(D_held=True))
         self.assertEqual(s['player_y'],28)
     def test_world_bounds_all_axes(self):
@@ -49,7 +54,7 @@ class FloorTests(unittest.TestCase):
         t=update_state(s,keys(D_held=True));self.assertEqual(t['player_y'],21)
     def test_pass_on_separate_lane(self):
         s=state(screen_state='battle',active_enemy=True,enemy_x=22,enemy_y=28,player_y=15,enemy_hp=6)
-        t=update_state(s,keys(R=True));self.assertEqual(t['player_x'],17)
+        t=update_state(s,keys(R=True));self.assertEqual(t['player_x'],18)
     def test_enemy_follows_both_axes(self):
         s=state(screen_state='battle',active_enemy=True,enemy_x=100,enemy_y=33,player_y=15,enemy_hp=6)
         for _ in range(2):s=update_state(s,keys())

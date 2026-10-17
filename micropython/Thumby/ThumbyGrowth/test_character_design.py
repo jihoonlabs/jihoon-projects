@@ -28,15 +28,33 @@ class CharacterDesignTests(unittest.TestCase):
         self.assertIn((16,17,1,1,0),calls)
         self.assertNotIn((14,19,2,1,0),calls)
 
-    def test_punch_and_kick_use_attached_animated_limb_shapes(self):
-        for country in range(3):
-            punch=[game.period_sprite(country,'punch',frame)[0] for frame in range(3)]
-            kick=[game.period_sprite(country,'kick',frame)[0] for frame in range(3)]
-            self.assertGreaterEqual(len(set(punch)),2)
-            self.assertGreaterEqual(len(set(kick)),2)
-            for rows in punch+kick:
-                self.assertEqual(len(rows),14)
-                self.assertTrue(all(0<=row<1<<12 for row in rows))
+    def test_attack_limb_frames_extend_from_the_old_character_silhouette(self):
+        punch0=game.attack_limb_rects('punch',0,True,20,20)
+        punch1=game.attack_limb_rects('punch',2,True,20,20)
+        kick0=game.attack_limb_rects('kick',0,True,20,20)
+        kick1=game.attack_limb_rects('kick',2,True,20,20)
+        self.assertNotEqual(punch0,punch1)
+        self.assertNotEqual(kick0,kick1)
+        for shapes in (punch0,punch1,kick0,kick1):
+            lit=[shape for shape in shapes if shape[4]]
+            self.assertEqual(self.rectangle_component_count(lit),1)
+
+    @staticmethod
+    def rectangle_component_count(shapes):
+        pixels=set()
+        for x,y,width,height,_ in shapes:
+            pixels.update((px,py) for px in range(x,x+width) for py in range(y,y+height))
+        count=0
+        while pixels:
+            count+=1
+            stack=[pixels.pop()]
+            while stack:
+                x,y=stack.pop()
+                for neighbor in ((x-1,y),(x+1,y),(x,y-1),(x,y+1)):
+                    if neighbor in pixels:
+                        pixels.remove(neighbor)
+                        stack.append(neighbor)
+        return count
 
     def test_country_weapon_sprites_are_visibly_distinct(self):
         fixtures.TestAdapter.setUp(self)

@@ -274,112 +274,62 @@ class ScaledFighterDisplay:
             self.display.drawFilledRectangle(left,top,right-left,bottom-top,color)
 
 
-def period_sprite(country,pose,frame=0):
-    """Build a connected 12x14 fighter pose at native Thumby pixels."""
-    pixels=set()
-    cuts=set()
-    def box(x,y,w,h,target=pixels):
-        for py in range(y,y+h):
-            for px in range(x,x+w):
-                if 0<=px<12 and 0<=py<14: target.add((px,py))
-    # Compact side-view head: cap/hair, face and one eye remain readable at 1x.
-    box(4,1,4,1);box(3,2,7,1);box(2,3,8,1);box(2,4,8,1);box(3,5,7,1)
-    if country==0:  # Korea: topknot, headband and short back ribbon
-        box(5,0,3,1);box(4,1,5,1);box(4,3,3,1,cuts)
-        box(1,4,2,1);box(1,5,2,1);box(0,6,3,1)
-    elif country==1:  # China: round cap and tied side flap
-        box(4,0,4,1);box(3,1,6,1);box(2,2,8,1)
-        box(1,4,2,2);box(5,2,3,1,cuts)
-    else:  # Japan: topknot and short side locks
-        box(6,0,3,1);box(5,1,5,1);box(3,2,2,1);box(9,2,2,1)
-        box(3,4,1,2,cuts)
-    box(7,4,1,1,cuts) # eye
-
-    # Shoulder, sleeve and jacket are a single connected silhouette.
-    box(5,6,3,1);box(3,7,7,1);box(3,8,8,1)
-    box(4,9,6,1);box(4,10,6,1);box(5,11,4,1)
-    # Country marks are small negative-space ties/buttons, not extra limbs.
-    if country==0:
-        box(5,9,1,1,cuts);box(6,8,1,2,cuts);box(5,10,3,1)
-    elif country==1:
-        box(6,8,1,1,cuts);box(7,9,1,1,cuts);box(6,10,1,1,cuts)
-    else:
-        box(4,8,3,1,cuts);box(6,9,1,2,cuts)
-
-    # The hips join both legs. Each shoe stays attached to its own leg.
-    box(4,10,6,1)
-    if pose=='walk':
-        if frame%2:
-            box(5,11,2,1);box(8,11,2,1)
-            box(4,12,3,1);box(9,12,2,1);box(2,13,4,1);box(9,13,3,1)
-        else:
-            box(5,11,2,1);box(8,11,2,1)
-            box(6,12,2,1);box(8,12,2,1);box(5,13,3,1);box(8,13,4,1)
-    elif pose=='punch':
-        # A continuous sleeve/forearm reaches forward; the fist is its squared tip.
-        box(5,11,2,2);box(8,11,2,2);box(4,13,3,1);box(8,13,3,1)
-        reach=frame%3
-        box(7,6,1,2);box(8+reach//2,6,2,2)
-    elif pose=='kick':
-        # The planted leg and the kicking leg both start at the hip; no floating shoe.
-        box(4,11,2,2);box(3,13,4,1)
-        if frame%3==0: # knee lifts first
-            box(8,11,2,1);box(9,12,2,1);box(8,12,2,1)
-        else:          # then the lower leg extends into the kick
-            box(8,11,2,1);box(9,12,2,1);box(10,12,2,1);box(10,13,2,1)
-        box(9,7,1,2);box(8,8,2,1) # arm tucked back for balance
-    else:
-        box(5,11,2,2);box(8,11,2,2);box(4,13,3,1);box(8,13,3,1)
-        # Relaxed near arm hangs from the sleeve rather than appearing detached.
-        box(2,8,1,2);box(2,10,2,1)
-    def encode(points):
-        rows=[]
-        for y in range(14):
-            mask=0
-            for x in range(12):
-                if (x,y) in points: mask |= 1 << (11-x)
-            rows.append(mask)
-        return tuple(rows)
-    for point in cuts: pixels.discard(point)
-    return encode(pixels),encode(cuts)
-
-
-def draw_period_fighter(display,state,player,x,y,rightward,pose):
-    country=hero_region(state) if player else stage_index(state)%3
-    moving=(state.get('player_moving' if player else 'enemy_moving',False)
-            if state.get('campaign_mode') else
-            state.get('combat_frame',0)%10>=5)
-    if pose=='idle' and moving: pose='walk'
-    frame=state.get('frame',state.get('combat_frame',0))//3
-    rows,details=period_sprite(country,pose,frame)
-    # Draw 12x14 directly: the joints stay crisp instead of collapsing in a scaler.
-    draw_rows(display,rows,x-3,y-10,12,not rightward,14)
-    draw_rows(display,details,x-3,y-10,12,not rightward,14,ink=0)
+def attack_limb_rects(pose,frame,rightward,x,y):
+    """Return compact limb pieces that overlap the fighter's shoulder or hip."""
+    if pose in ('punch','shot','skill','spear','sword'):
+        reach=3+(frame//2)%2
+        if rightward:
+            return ((x+4,y+1,reach,2,1),(x+3+reach,y+1,2,2,1))
+        return ((x-2-reach,y+1,reach,2,1),(x-4-reach,y+1,2,2,1))
+    if pose=='kick':
+        phase=(frame//2)%3
+        if rightward:
+            if phase==1:
+                return ((x+2,y+4,2,2,0),(x+4,y+3,3,2,1),(x+7,y+3,3,2,1))
+            return ((x+2,y+4,2,2,0),(x+4,y+3,2,2,1),(x+5,y+3,2,2,1))
+        if phase==1:
+            return ((x+4,y+4,2,2,0),(x+1,y+3,3,2,1),(x-2,y+3,3,2,1))
+        return ((x+4,y+4,2,2,0),(x+2,y+3,2,2,1),(x+1,y+3,2,2,1))
+    return ()
 
 
 def draw_fighter(display,state,player,x,y):
     if player and state.get('player_invuln',0) and state.get('frame',0)%2:
         return
+    display=ScaledFighterDisplay(display,x+3,y+7)
     rightward=state['direction']=='R' if player else state['player_x']>state['enemy_x']
     pose=character_pose(state,player)
     hurt=pose=='hurt'
-    # Visual recoil does not move the simulation hitbox.
     lean=(-2 if rightward else 2) if hurt else 0
-    art_pose='idle' if hurt or pose=='guard' else pose
-    draw_period_fighter(display,state,player,x+lean,y,rightward,art_pose)
-    if hurt: draw_hurt_face(display,x-2+lean,y-7)
+    if player:
+        draw_hero_hair(display,hero_region(state),x+lean,y,rightward)
+    elif state['progress']%STAGES_PER_REGION != STAGES_PER_REGION-1:
+        hair=FOE_SIDE_HAIR[stage_index(state)%len(FOE_SIDE_HAIR)]
+        hair_x=x-3 if rightward else x+7
+        draw_rows(display,hair,hair_x,y-6,2,not rightward,14)
+    draw_rows(display,character_head(state,player),x-2+lean,y-7,10,not rightward,14)
+    if player and hero_region(state) in (0,2):
+        fringe_x=x+7+lean if rightward else x-3+lean
+        scene_rect(display,fringe_x if rightward else fringe_x-1,y-7,3,6,0)
+        draw_rows(display,HERO_FRINGE,fringe_x,y-6,2,not rightward,14)
+    draw_rows(display,character_body(state,player),x-2,y+1,10,not rightward,14)
+    draw_fighter_details(display,x-2,y,pose,rightward)
+    if hurt:
+        draw_hurt_face(display,x-2+lean,y-7)
     if player and state['equipped_armor']==2:
-        # Vest: light shoulder straps and an open center.
         scene_rect(display,x+1,y+2,2,3,1);scene_rect(display,x+5,y+2,2,3,1)
         scene_rect(display,x+2,y+3,4,1,0)
     elif player and state['equipped_armor']==3:
-        # Armor: wider shoulder plates and a solid chest plate silhouette.
         scene_rect(display,x,y+2,8,2,1);scene_rect(display,x+1,y+3,6,3,1)
         scene_rect(display,x+3,y+3,2,2,0);scene_rect(display,x+2,y+5,4,1,1)
     weapon=state['equipped_weapon'] if player else None
     swinging=pose in ('punch','shot','skill','spear','sword')
     draw_weapon(display,weapon,x,y,rightward,swinging and
                 (weapon!=4 or pose=='shot'))
+    # Attack limbs begin inside the existing sleeve/hip and use two visible frames.
+    for left,top,width,height,color in attack_limb_rects(
+            pose,state.get('frame',state.get('combat_frame',0)),rightward,x,y):
+        scene_rect(display,left,top,width,height,color)
     if pose=='skill':
         for offset in range(3):
             left=x+9+offset if rightward else x-5-offset
@@ -389,6 +339,7 @@ def draw_fighter(display,state,player,x,y):
     if hurt:
         impact_x=x+8 if rightward else x-2
         draw_impact(display,impact_x,y+2)
+
 
 def draw_enemy_health(display, foe, screen_x, screen_y, hud_x=None):
     """Draw a foe gauge over its head, or in a fixed campaign HUD slot."""

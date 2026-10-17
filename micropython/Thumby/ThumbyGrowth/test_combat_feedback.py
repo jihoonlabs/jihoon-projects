@@ -37,7 +37,7 @@ class CombatFeedbackTests(unittest.TestCase):
             state=self.step(state,U_held=True)
         for _ in range(8):
             state=self.step(state)
-        self.assertEqual((state['HP'],state['player_y'],state['enemy_y']),(10,24,28))
+        self.assertEqual((state['HP'],state['player_y'],state['enemy_y']),(10,20,28))
         self.assertEqual((state['enemy_windup'],state['enemy_attack_cooldown']),(0,120))
 
     def test_both_attacks_interrupt_warning_and_stun_only_on_hit(self):

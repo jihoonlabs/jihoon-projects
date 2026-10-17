@@ -317,8 +317,9 @@ def update_state(state, inputs):
     dy = int(bool(inputs.get('D_held', inputs['D']))) - int(bool(inputs.get('U_held', inputs['U'])))
     if dx:
         new_state['direction'] = 'R' if dx > 0 else 'L'
-    moved = max(0, min(138, player + dx))
-    moved_y = max(15, min(33, py + dy))
+    # Two pixels per held frame makes short-screen combat less sluggish.
+    moved = max(0, min(138, player + dx * 2))
+    moved_y = max(15, min(33, py + dy * 2))
     # Resolve each axis separately so actors can slide past one another.
     if new_state['active_enemy'] and abs(moved-enemy) < 6 and abs(py-ey) < 7:
         moved = player
