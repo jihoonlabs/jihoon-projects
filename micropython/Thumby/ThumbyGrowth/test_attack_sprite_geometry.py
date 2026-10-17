@@ -11,7 +11,10 @@ class AttackSpriteGeometryTests(unittest.TestCase):
             for frame in range(8):
                 right=self.pixels(game.attack_limb_runs(pose,frame,True,x,y))
                 left=self.pixels(game.attack_limb_runs(pose,frame,False,x,y))
-                self.assertEqual(left,{(2*x+6-px,py) for px,py in right},
+                self.assertEqual(left,{(2*x+5-px,py) for px,py in right},
+                                 (pose,frame))
+                self.assertEqual(max(px for px,py in right)-(x+2.5),
+                                 (x+2.5)-min(px for px,py in left),
                                  (pose,frame))
 
     def test_punch_arm_is_straight_and_extends_in_two_frames(self):
@@ -34,8 +37,8 @@ class AttackSpriteGeometryTests(unittest.TestCase):
                 self.assertLessEqual(max(px for px,py in extended),x+8)
                 self.assertEqual(max(px for px,py in extended),x+8)
             else:
-                self.assertGreaterEqual(min(px for px,py in extended),x-2)
-                self.assertEqual(min(px for px,py in extended),x-2)
+                self.assertGreaterEqual(min(px for px,py in extended),x-3)
+                self.assertEqual(min(px for px,py in extended),x-3)
 
     def test_kick_has_one_planted_foot_and_one_raised_leg(self):
         x,y=24,28
@@ -54,9 +57,9 @@ class AttackSpriteGeometryTests(unittest.TestCase):
                 self.assertEqual(toe,{x+8})
                 self.assertEqual(max(px for px,py in extended),x+8)
             else:
-                toe={px for px,py in extended if py==y+3 and px<=x-1}
-                self.assertEqual(toe,{x-2})
-                self.assertEqual(min(px for px,py in extended),x-2)
+                toe={px for px,py in extended if py==y+3 and px<=x-2}
+                self.assertEqual(toe,{x-3})
+                self.assertEqual(min(px for px,py in extended),x-3)
 
     @staticmethod
     def pixels(shapes):
