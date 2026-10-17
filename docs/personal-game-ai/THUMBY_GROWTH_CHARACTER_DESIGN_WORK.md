@@ -5,6 +5,7 @@ owner_branch: feature/thumby-growth-character-design
 parent_branch: feature/thumby-growth
 role: child
 status: implementation-verified-pc; awaiting-user-device-check
+tested_sha: 14b63f5b6d87e3ff508e3b5009c7b8b5c4b985a6
 base_sha: 694224bd26135d2abd97f9a2a79eb0a994b72f28
 
 ## Responsibility
