@@ -5,7 +5,7 @@ owner_branch: feature/thumby-growth-character-design
 parent_branch: feature/thumby-growth
 role: child
 status: implementation-verified-pc; awaiting-user-device-check
-tested_sha: 80e878ac55be4eb7d5a02ea881f2763a124ea81d
+tested_sha: 5f4ccdec9db164b556de4462958b895373622386
 base_sha: 694224bd26135d2abd97f9a2a79eb0a994b72f28
 
 ## Responsibility
@@ -24,14 +24,15 @@ Fix only character rendering issues reproduced from the user's Thumby screenshot
 - Verified that the local source snapshot's original ThumbyGrowth.py Git blob hash matched the public Epic blob 6a771e9aa7eb4419e69d1122074f5374881253fe.
 - Upper-lane sprite rows were clipped with the HUD boundary before the 10/16 coordinate transform. Row clipping is now applied after scaling in screen space.
 - Initial validation found that mathematically mirrored left-side attacks still blended into the reduced body, so they were difficult to see in the actual composited renderer.
-- Punch uses the neutral shared body plus a level 2-pixel arm and square fist; its reach extends in the second frame.
-- Kick removes both default feet from the body frame, then draws one grounded support leg and one raised kicking leg. Both attack poses mirror from one shared set of limbs.
+- Punch uses the neutral shared body and a level forearm with a fist one pixel taller at its tip; its reach extends in the second frame.
+- Kick removes both default feet from the body frame, then draws one grounded support leg and one raised leg. The extended pose follows a ㄴ-shaped knee-to-shin outline toward the facing direction.
+- Both attack poses mirror from one shared set of limbs.
 - No attack timing, hitboxes, or gameplay values changed.
 
 ## Verification
 - python3 -m py_compile ThumbyGrowth.py test_character_design.py test_attack_sprite_geometry.py: pass.
 - Related graphics tests after the visibility correction: test_attack_sprite_geometry, test_character_design, test_background, test_combat_readability, test_combat_feedback: 47 pass.
-- Attack tests check straight punch rows, left/right mirror symmetry, two-frame reach, and the kick's single ground-contact foot plus raised leg.
+- Attack tests check a straight punch arm with a slightly larger fist, left/right mirror symmetry, two-frame reach, and the kick's single ground-contact foot plus forward ㄴ-shaped raised leg.
 - Full scratch snapshot suite: 225 discovered; 13 failures and 1 import error remain in unrelated stale gameplay/UI compatibility tests and a missing replay_demo helper. These were not modified by this graphics-only task.
 - PC preview uses the actual 72x40 renderer with a Thumby test double; it is not a device capture. Real-device display/speed/heap still need user confirmation.
 - No production/gameplay change outside the rendering geometry listed above.
