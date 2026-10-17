@@ -64,27 +64,38 @@ class TestAdapter(unittest.TestCase):
         return [str(call.args[0]) for call in fake_thumby.display.drawText.call_args_list]
 
     def test_case_1(self):
-        # Vertical held input moves in battle; edges still navigate menus.
-        for key in ('L','R','A','B','U','D','U_held','D_held','A_held','B_held'):
-            button = getattr(fake_thumby, 'button'+key.split('_')[0])
-            method = 'pressed' if key in ('L','R','U_held','D_held','A_held','B_held') else 'justPressed'
-            getattr(button,method).return_value = True
-            result = ThumbyGrowth.handle_inputs()
-            expected=inputs(**{key:True})
-            if key in ('U','D'):
-                expected[key+'_tap']=True
-            self.assertEqual(result,expected)
-            self.assertTrue(all(type(value) is bool for value in result.values()))
-            self.assertGreater(getattr(button,method).call_count,0)
-            getattr(button,method).return_value = False
-        for key in ('U','D'):
-            button = getattr(fake_thumby, 'button'+key)
-            button.pressed.return_value = True
-            button.justPressed.return_value = True
-            self.assertEqual(ThumbyGrowth.handle_inputs(),inputs(**{
-                key:True,key+'_held':True,key+'_tap':True}))
-            button.pressed.return_value = False
-            button.justPressed.return_value = False
+        # Directional movement is edge-triggered, even while a key stays held.
+        for key in ('L','R','U','D'):
+            button=getattr(fake_thumby,'button'+key)
+            button.pressed.return_value=True
+            button.justPressed.return_value=False
+        self.assertEqual(ThumbyGrowth.handle_inputs(),inputs())
+        for key in ('L','R','U','D'):
+            button=getattr(fake_thumby,'button'+key)
+            button.justPressed.return_value=True
+        result=ThumbyGrowth.handle_inputs()
+        for key in ('L','R','U','D'):
+            self.assertTrue(result[key])
+            self.assertTrue(result[key+'_tap'])
+        self.assertTrue(result['U_held'] and result['D_held'])
+        self.assertTrue(all(type(value) is bool for value in result.values()))
+        for key in ('L','R','U','D'):
+            getattr(fake_thumby,'button'+key).justPressed.return_value=False
+        self.assertEqual(ThumbyGrowth.handle_inputs(),inputs())
+
+        # Attack buttons still expose both press edges and held state.
+        for key in ('A','B'):
+            button=getattr(fake_thumby,'button'+key)
+            button.pressed.return_value=True
+            button.justPressed.return_value=False
+        self.assertEqual(ThumbyGrowth.handle_inputs(),inputs(A_held=True,B_held=True))
+        for key in ('A','B'):
+            getattr(fake_thumby,'button'+key).justPressed.return_value=True
+        self.assertEqual(ThumbyGrowth.handle_inputs(),inputs(A=True,B=True,A_held=True,B_held=True))
+        for key in ('L','R','U','D','A','B'):
+            button=getattr(fake_thumby,'button'+key)
+            button.pressed.return_value=False
+            button.justPressed.return_value=False
         self.assertEqual(ThumbyGrowth.handle_inputs(),inputs())
         self.assertEqual(fake_thumby.saveData.mock_calls,[])
 

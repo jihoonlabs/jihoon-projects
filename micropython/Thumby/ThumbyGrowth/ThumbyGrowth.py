@@ -231,18 +231,37 @@ def draw_hero_hair(display,region,x,y,rightward):
         left=x-2-offset-width if rightward else x+8+offset
         scene_rect(display,left,y+dy,width,height,color)
     rect(0,-6,6,12,0)
-    if region in (0,1):
+    if region==1:
         left=x-5 if rightward else x+9
-        draw_rows(display,BRAID_ROWS,left,y-6,2,not rightward,14,
-                  row_count=8 if region==0 else 11)
-        if region==0:
-            # The bow follows the third round bead instead of replacing it.
-            rect(0,2,1,1);rect(2,2,1,1);rect(1,3,1,1)
-    else:
+        draw_rows(display,BRAID_ROWS,left,y-6,2,not rightward,14,row_count=11)
+    elif region==2:
         # A high fan sweeps backward; the short tip keeps the mass above the waist.
         left=x-8 if rightward else x+9
         draw_rows(display,PONY_ROWS,left,y-6,5,not rightward,14)
         rect(-1,-5,2,1)
+
+
+def draw_hero_hair_accents(display,region,x,y,rightward):
+    """Keep each national hairstyle recognizable after the body is reduced."""
+    if region==0:
+        # A topknot sits above the scalp; the dark row reads as a manggeon.
+        scene_rect(display,x+2,y-5,2,3,1)
+        scene_rect(display,x+1,y-1,4,1,0)
+        scene_rect(display,x+2,y-1,2,1,1)
+    elif region==1:
+        # The Chinese queue hangs from the back of the head, not from the crown.
+        back=x-1 if rightward else x+6
+        for offset in range(5):
+            px=back+(offset%2 if rightward else -(offset%2))
+            scene_rect(display,px,y-1+offset,1,1,1)
+    else:
+        # The Japanese tie and short high sweep stay behind the crown.
+        if rightward:
+            scene_rect(display,x-1,y-3,2,1,1)
+            scene_rect(display,x-2,y-4,2,1,1)
+        else:
+            scene_rect(display,x+5,y-3,2,1,1)
+            scene_rect(display,x+6,y-4,2,1,1)
 
 
 class ScaledFighterDisplay:
@@ -334,12 +353,14 @@ def draw_fighter(display,state,player,x,y):
         hair_x=x-3 if rightward else x+7
         draw_rows(display,hair,hair_x,y-6,2,not rightward,14)
     draw_rows(display,character_head(state,player),x-2+lean,y-7,10,not rightward,14)
-    if player and hero_region(state) in (0,2):
+    if player and hero_region(state)==2:
         fringe_x=x+7+lean if rightward else x-3+lean
         scene_rect(display,fringe_x if rightward else fringe_x-1,y-7,3,6,0)
         draw_rows(display,HERO_FRINGE,fringe_x,y-6,2,not rightward,14)
     draw_rows(display,character_body(state,player),x-2,y+1,10,not rightward,14)
     draw_fighter_details(display,x-2,y,pose,rightward)
+    if player:
+        draw_hero_hair_accents(raw_display,hero_region(state),x+lean,y,rightward)
     if hurt:
         draw_hurt_face(display,x-2+lean,y-7)
     if player and state['equipped_armor']==2:
@@ -723,7 +744,8 @@ def cutscene_frame(kind,frame,state):
     display.drawFilledRectangle(x-2,17,13,15,0)
     draw_hero_hair(display,hero_region(state),x+2,25,picture!=3)
     draw_rows(display,character_head(state,True),x,18,10,picture==3)
-    if hero_region(state) in (0,2):
+    draw_hero_hair_accents(display,hero_region(state),x+2,25,picture!=3)
+    if hero_region(state)==2:
         draw_rows(display,HERO_FRINGE,x+2,20,6,picture==3,0,0)
     draw_rows(display,WALK_BODY_ROWS if (frame//5)%2 else BODY_ROWS,x,26,10,picture==3)
     if picture==1:
@@ -1033,16 +1055,17 @@ def handle_inputs():
     up_tap=bool(thumby.buttonU.justPressed())
     down_tap=bool(thumby.buttonD.justPressed())
     return {
-        'L': bool(thumby.buttonL.pressed()),
-        'R': bool(thumby.buttonR.pressed()),
+        # Direction keys move once per press; a held or latched key cannot run on.
+        'L': left_tap,
+        'R': right_tap,
         'L_tap': left_tap,
         'R_tap': right_tap,
         'A': bool(thumby.buttonA.justPressed()),
         'B': bool(thumby.buttonB.justPressed()),
         'U': up_tap,
         'D': down_tap,
-        'U_held': bool(thumby.buttonU.pressed()),
-        'D_held': bool(thumby.buttonD.pressed()),
+        'U_held': up_tap,
+        'D_held': down_tap,
         'U_tap': up_tap,
         'D_tap': down_tap,
         'A_held': bool(thumby.buttonA.pressed()),

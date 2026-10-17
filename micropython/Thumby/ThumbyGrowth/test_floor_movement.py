@@ -101,13 +101,27 @@ class FloorTests(unittest.TestCase):
     def test_update_does_not_mutate_input(self):
         s=state(screen_state='battle');before=deepcopy(s)
         update_state(s,keys(R=True,U_held=True,A=True));self.assertEqual(s,before)
-    def test_adapter_held_input(self):
-        for name in ('L','R','U','D','A','B'):
+    def test_adapter_direction_press_moves_once_and_does_not_repeat_while_held(self):
+        for name in ('L','R','U','D'):
             button=getattr(game.thumby,'button'+name)
             button.pressed.return_value=True;button.justPressed.return_value=False
         k=game.handle_inputs()
-        self.assertTrue(k['U_held'] and k['D_held'] and k['L'] and k['R'])
-        self.assertFalse(k['U'] or k['D'] or k['A'] or k['B'])
+        self.assertFalse(any(k[name] for name in ('L','R','U','D','U_held','D_held')))
+        game.thumby.buttonR.justPressed.return_value=True
+        first=game.handle_inputs()
+        self.assertTrue(first['R'] and first['R_tap'])
+        game.thumby.buttonR.justPressed.return_value=False
+        second=game.handle_inputs()
+        self.assertFalse(second['R'] or second['R_tap'])
+        current=update_state(state(screen_state='battle',active_enemy=False),first)
+        current=update_state(current,second)
+        self.assertEqual(current['player_x'],18)
+        from campaign import new_game_state,update
+        current=new_game_state()
+        current.update(screen_state='explore',current_city=0,route=[0],foes=[])
+        one=update(current,first)
+        two=update(one,second)
+        self.assertEqual((one['player_x'],two['player_x']),(19,19))
     def test_hud_and_all_render_bounds(self):
         for px in (0,16,70,138):
             for ex in (0,32,71,138):

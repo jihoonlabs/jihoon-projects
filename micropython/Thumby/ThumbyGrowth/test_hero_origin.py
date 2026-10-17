@@ -39,13 +39,14 @@ class HeroOriginTests(unittest.TestCase):
                     self.assertIs(game.character_head(loaded,True),game.HERO_HEAD)
                     self.assertEqual(state,before)
 
-    def test_braid_and_ponytail_mirror_around_the_same_body_and_do_not_mutate_data(self):
+    def test_national_hair_accents_mirror_around_the_same_body(self):
         original=(game.HERO_HEAD,game.BRAID_ROWS,game.HERO_FRINGE,game.PONY_ROWS);designs=[]
         for region in range(3):
             versions=[]
             for rightward in (True,False):
                 game.thumby.display.reset_mock()
                 game.draw_hero_hair(game.thumby.display,region,28,29,rightward)
+                game.draw_hero_hair_accents(game.thumby.display,region,28,29,rightward)
                 pixels=set()
                 for call in game.thumby.display.drawFilledRectangle.call_args_list:
                     x,y,w,h,ink=call.args
@@ -56,17 +57,11 @@ class HeroOriginTests(unittest.TestCase):
                 versions.append(pixels)
             self.assertEqual({(61-x,y) for x,y in versions[0]},versions[1])
             self.assertTrue(versions[0])
-            self.assertEqual(max(y for _,y in versions[0]),(32,33,30)[region])
-            if region==0:
-                self.assertEqual({x for x,y in versions[0] if y==31},{23,25})
-                self.assertEqual({x for x,y in versions[0] if y==32},{24})
             designs.append(frozenset(versions[0]))
         self.assertEqual(len(set(designs)),3)
-        self.assertEqual({p for p in designs[0] if p[1]<31},{p for p in designs[1] if p[1]<31})
-        self.assertTrue(all(23<=x<=25 and 31<=y<=33 for x,y in designs[0]^designs[1]))
         self.assertEqual((game.HERO_HEAD,game.BRAID_ROWS,game.HERO_FRINGE,game.PONY_ROWS),original)
 
-    def test_round_braid_is_one_shared_pattern_and_fringe_only_for_korea_and_japan(self):
+    def test_korea_uses_a_topknot_china_a_queue_and_japan_a_ponytail(self):
         self.assertEqual(game.BRAID_ROWS,b'\x03\x03\x00'*3+b'\x03\x03')
         for region in range(3):
             for direction in ('R','L'):
@@ -75,11 +70,21 @@ class HeroOriginTests(unittest.TestCase):
                     game.draw_fighter(game.thumby.display,state,True,28,29)
                     braids=[c for c in rows.call_args_list if c.args[1] is game.BRAID_ROWS]
                     fringes=[c for c in rows.call_args_list if c.args[1] is game.HERO_FRINGE]
-                    self.assertEqual(len(braids),1 if region in (0,1) else 0)
-                    self.assertEqual(len(fringes),1 if region in (0,2) else 0)
+                    self.assertEqual(len(braids),1 if region==1 else 0)
+                    self.assertEqual(len(fringes),1 if region==2 else 0)
                     if fringes:
                         self.assertEqual(fringes[0].args[4],2)
                         self.assertEqual(fringes[0].args[2],35 if direction=='R' else 25)
+                game.thumby.display.reset_mock()
+                game.draw_hero_hair_accents(game.thumby.display,region,28,29,direction=='R')
+                rects=[call.args for call in game.thumby.display.drawFilledRectangle.call_args_list]
+                if region==0:
+                    self.assertIn((30,24,2,3,1),rects)
+                    self.assertIn((29,28,4,1,0),rects)
+                elif region==1:
+                    self.assertEqual(sum(1 for call in rects if call[2:4]==(1,1)),5)
+                else:
+                    self.assertTrue(any(call[2:4]==(2,1) for call in rects))
 
     def test_only_initial_country_menu_previews_different_hero_heads(self):
         for state,expected in ((new_game_state(),1),(f.state(progress=5,route=[2]),0)):
