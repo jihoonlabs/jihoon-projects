@@ -15,6 +15,7 @@ class AttackSpriteGeometryTests(unittest.TestCase):
                                  (pose,frame))
 
     def test_punch_reach_animates_and_stays_connected_in_both_directions(self):
+        x,y=24,28
         for rightward in (True, False):
             first=game.attack_limb_runs('punch',0,rightward,24,28)
             extended=game.attack_limb_runs('punch',2,rightward,24,28)
@@ -23,9 +24,15 @@ class AttackSpriteGeometryTests(unittest.TestCase):
                 self.assertEqual(self.component_count(shapes),1)
                 width,height=self.bounds(shapes)
                 self.assertEqual(height,2)
-                self.assertLessEqual(width,4)
+                self.assertLessEqual(width,5)
+            extended_pixels=self.pixels(extended)
+            if rightward:
+                self.assertGreaterEqual(max(px for px,py in extended_pixels),x+8)
+            else:
+                self.assertLessEqual(min(px for px,py in extended_pixels),x-2)
 
     def test_kick_chambers_and_extends_from_the_hip(self):
+        x,y=24,28
         for rightward in (True, False):
             chamber=game.attack_limb_runs('kick',0,rightward,24,28)
             extended=game.attack_limb_runs('kick',2,rightward,24,28)
@@ -34,8 +41,13 @@ class AttackSpriteGeometryTests(unittest.TestCase):
             self.assertEqual(self.component_count(extended),1)
             self.assertLessEqual(self.bounds(chamber)[0],3)
             width,height=self.bounds(extended)
-            self.assertLessEqual(width,4)
+            self.assertLessEqual(width,7)
             self.assertLessEqual(height,3)
+            pixels=self.pixels(extended)
+            if rightward:
+                self.assertGreaterEqual(max(px for px,py in pixels),x+9)
+            else:
+                self.assertLessEqual(min(px for px,py in pixels),x-3)
 
     @staticmethod
     def bounds(shapes):
