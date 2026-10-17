@@ -44,6 +44,8 @@ export function TicketBoardView() {
     deleteTicket,
   } = useTicketStore();
   const currentUser = useAuthStore((state) => state.user);
+  const sessionExpired = useAuthStore((state) => state.sessionExpired);
+  const sessionRevision = useAuthStore((state) => state.sessionRevision);
   const currentUserId = currentUser?.id ?? null;
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,6 +66,8 @@ export function TicketBoardView() {
     message: string;
   } | null>(null);
   const [membersProjectId, setMembersProjectId] = useState('');
+  const [membersSession, setMembersSession] = useState(sessionRevision);
+  const [projectsSession, setProjectsSession] = useState(sessionRevision);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [managingMembers, setManagingMembers] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
@@ -87,10 +91,11 @@ export function TicketBoardView() {
   }, [isModalOpen]);
 
   useEffect(() => {
-    fetchTickets();
-  }, [fetchTickets]);
+    if (!sessionExpired) void fetchTickets();
+  }, [fetchTickets, sessionExpired, sessionRevision]);
 
   useEffect(() => {
+    if (sessionExpired) return;
     let active = true;
     const revision = projectRevision.current;
     const sequence = ++projectListSequence.current;
@@ -103,6 +108,7 @@ export function TicketBoardView() {
         )
           return;
         setProjects(items);
+        setProjectsSession(sessionRevision);
         setProjectError(null);
         setSelectedProjectId((current) =>
           current === ALL_PROJECTS || items.some((item) => item.id === current)
@@ -128,16 +134,22 @@ export function TicketBoardView() {
     return () => {
       active = false;
     };
-  }, [showArchived, projectListAttempt]);
+  }, [showArchived, projectListAttempt, sessionExpired, sessionRevision]);
 
   useEffect(() => {
-    if (!selectedProjectId || selectedProjectId === ALL_PROJECTS) return;
+    if (
+      sessionExpired ||
+      !selectedProjectId ||
+      selectedProjectId === ALL_PROJECTS
+    )
+      return;
     let active = true;
     const revision = memberRevision.current;
     fetchProjectMembers(selectedProjectId)
       .then((items) => {
         if (active && revision === memberRevision.current) {
           setProjectMembers(items);
+          setMembersSession(sessionRevision);
           setMembersProjectId(selectedProjectId);
           setMemberError(null);
         }
@@ -157,7 +169,7 @@ export function TicketBoardView() {
     return () => {
       active = false;
     };
-  }, [selectedProjectId, memberAttempt]);
+  }, [selectedProjectId, memberAttempt, sessionExpired, sessionRevision]);
 
   const retryMembers = () => {
     memberRevision.current += 1;
@@ -169,15 +181,19 @@ export function TicketBoardView() {
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) ?? null;
   const currentMembership =
-    membersProjectId === selectedProjectId
+    membersSession === sessionRevision && membersProjectId === selectedProjectId
       ? projectMembers.find((member) => member.id === String(currentUserId))
       : undefined;
   const isAdmin = currentUser?.role === 'admin';
   const isArchived = Boolean(selectedProject?.archivedAt);
   const canManageProject =
+    !sessionExpired &&
+    projectsSession === sessionRevision &&
     Boolean(selectedProject) &&
     (isAdmin || currentMembership?.role === 'leader');
   const canWrite =
+    !sessionExpired &&
+    projectsSession === sessionRevision &&
     Boolean(selectedProject) &&
     !isArchived &&
     (isAdmin || currentMembership?.permission === 'write');

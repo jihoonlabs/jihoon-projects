@@ -10,6 +10,7 @@ import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import * as api from '../../../api/ticketApi';
+import { TicketApiError } from '../../../api/ticketApi';
 import { responseTicket } from '../../../api/test/ticketFixture';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useTicketStore } from '../../../store/useTicketStore';
@@ -523,6 +524,40 @@ it('keeps the create modal open and shows the save error when creation fails', a
   ).toHaveTextContent('create failed');
   expect(screen.getByRole('dialog')).toBeInTheDocument();
   expect(screen.getByLabelText('タイトル')).toHaveValue('New ticket');
+});
+
+it('keeps a create draft retryable after session expiry and reauthentication', async () => {
+  vi.mocked(api.fetchTickets).mockResolvedValue([]);
+  vi.mocked(api.createTicket)
+    .mockImplementationOnce(async () => {
+      useAuthStore.getState().expireSession();
+      throw new TicketApiError('session expired', 401);
+    })
+    .mockResolvedValueOnce(api.toTicket(responseTicket));
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+
+  await renderSelectedProject();
+  fireEvent.click(
+    await screen.findByRole('button', { name: '+ チケット作成' }),
+  );
+  fireEvent.change(screen.getByLabelText('タイトル'), {
+    target: { value: 'Retry after reauthentication' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: '保存' }));
+
+  await within(screen.getByRole('dialog')).findByRole('alert');
+  expect(useAuthStore.getState().sessionExpired).toBe(true);
+  expect(screen.getByLabelText('タイトル')).toHaveValue(
+    'Retry after reauthentication',
+  );
+
+  act(() => useAuthStore.getState().login(useAuthStore.getState().user!));
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: '保存' })).toBeEnabled(),
+  );
+  fireEvent.click(screen.getByRole('button', { name: '保存' }));
+  await waitFor(() => expect(api.createTicket).toHaveBeenCalledTimes(2));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
 it('keeps the modal open when the backdrop is clicked while saving', async () => {

@@ -311,7 +311,7 @@ function TicketModalContent({
       } else {
         if (
           error instanceof TicketApiError &&
-          [401, 403, 404].includes(error.status)
+          [403, 404].includes(error.status)
         )
           setUnavailable(true);
         setSaveError(
