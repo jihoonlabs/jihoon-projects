@@ -300,26 +300,25 @@ def attack_limb_runs(pose,frame,rightward,x,y):
         pixels[(px,py)]=color
     if pose in ('punch','shot','skill','spear','sword'):
         phase=(frame//2)%2
-        # Keep the forearm level: a 2-pixel-thick horizontal bar with a square
-        # fist at its end. The second frame reaches farther without bending.
-        fist_x=x+6+phase*2
-        for px in range(x+4,fist_x+2):
-            put(px,y+2); put(px,y+3)
+        # Keep the arm straight on one horizontal row. The final two pixels
+        # rise by one row to make a compact 2x2 fist at the end of the stroke.
+        fist_x=x+5+phase*2
+        for px in range(x+4,fist_x+2): put(px,y+3)
+        put(fist_x,y+2); put(fist_x+1,y+2)
     elif pose=='kick':
         phase=(frame//2)%2
         # One supporting leg stays under the hip with a single grounded shoe.
         put(x+2,y+4); put(x+2,y+5); put(x+1,y+6); put(x+2,y+6)
         if phase:
-            # Lift the other leg, bend once at the knee, then extend it level.
-            put(x+4,y+5); put(x+5,y+5)
-            put(x+5,y+4); put(x+6,y+4)
-            put(x+6,y+3); put(x+7,y+3)
-            put(x+8,y+3); put(x+9,y+3); put(x+9,y+4)
+            # Raised leg forms a clear ㄴ: vertical thigh, then a level
+            # forward shin with a slightly taller toe. Mirror toward facing.
+            put(x+4,y+2); put(x+4,y+3); put(x+4,y+4)
+            for px in range(x+5,x+9): put(px,y+4)
+            put(x+8,y+3); put(x+8,y+4); put(x+9,y+4)
         else:
             # Chambered knee and raised foot; this leg does not touch the floor.
-            put(x+4,y+5); put(x+5,y+5)
-            put(x+5,y+4); put(x+6,y+4)
-            put(x+6,y+3); put(x+7,y+3)
+            put(x+4,y+3); put(x+4,y+4); put(x+5,y+4)
+            put(x+5,y+3); put(x+6,y+3)
     if not rightward:
         pixels={(2*x+6-px,py):color for (px,py),color in pixels.items()}
     runs=[]
