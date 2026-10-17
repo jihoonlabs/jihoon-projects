@@ -36,7 +36,7 @@ class AttackSpriteGeometryTests(unittest.TestCase):
                 self.assertGreaterEqual(min(px for px,py in extended),x-3)
                 self.assertEqual(min(px for px,py in extended),x-3)
 
-    def test_kick_has_one_planted_foot_and_one_raised_leg(self):
+    def test_kick_has_a_broad_planted_shoe_and_straight_two_pixel_bar(self):
         x,y=24,28
         state={'player_attack_cooldown':8,'attack_kind':'kick'}
         self.assertEqual(game.character_body(state,True)[4:],(0,0))
@@ -44,22 +44,28 @@ class AttackSpriteGeometryTests(unittest.TestCase):
             chamber=self.pixels(game.attack_limb_runs('kick',0,rightward,x,y))
             extended=self.pixels(game.attack_limb_runs('kick',2,rightward,x,y))
             self.assertNotEqual(chamber,extended)
-            for pixels in (chamber,extended):
-                # Only the supporting shoe reaches the floor row; its sole is
-                # three contiguous pixels while the support leg stays narrow.
-                floor={px for px,py in pixels if py==y+6}
-                self.assertEqual(len(floor),3)
-                self.assertEqual(floor,set(range(min(floor),max(floor)+1)))
+            shoe_x=x-2 if rightward else x+3
+            for pixels,reach in ((chamber,2),(extended,4)):
+                # The shoe has a rounded 3/5-pixel profile and no thin leg
+                # connecting it to the body.
+                self.assertEqual({px for px,py in pixels if py==y+5},
+                                 set(range(shoe_x+1,shoe_x+4)))
+                self.assertEqual({px for px,py in pixels if py==y+6},
+                                 set(range(shoe_x,shoe_x+5)))
+                self.assertFalse(any(py==y+2 for px,py in pixels))
                 self.assertEqual(self.component_count_pixels(pixels),2)
+                for py in (y+3,y+4):
+                    bar={px for px,yy in pixels if yy==py and
+                         (px>=x+4 if rightward else px<=x+1)}
+                    if rightward:
+                        self.assertEqual(bar,set(range(x+4,x+5+reach)))
+                    else:
+                        self.assertEqual(bar,set(range(x-reach+1,x+2)))
+            self.assertEqual({px for px,py in extended if py==y+3},
+                             {px for px,py in extended if py==y+4})
             if rightward:
-                self.assertEqual({px for px,py in extended if py==y+2},{x+4,x+5})
-                kick_bar={px for px,py in extended if py==y+3 and px>=x+4}
-                self.assertEqual(kick_bar,set(range(x+4,x+9)))
                 self.assertEqual(max(px for px,py in extended),x+8)
             else:
-                self.assertEqual({px for px,py in extended if py==y+2},{x,x+1})
-                kick_bar={px for px,py in extended if py==y+3 and px<=x+1}
-                self.assertEqual(kick_bar,set(range(x-3,x+2)))
                 self.assertEqual(min(px for px,py in extended),x-3)
 
     @staticmethod
