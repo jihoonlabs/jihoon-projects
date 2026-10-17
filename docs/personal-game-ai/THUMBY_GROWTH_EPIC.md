@@ -1,4 +1,4 @@
-# ThumbyGrowth 게임 Epic
+# 썸비난투 (Thumby Brawl) Epic
 
 ## 목표와 범위
 일반 Thumby 72x40 안에서 주요 게임 구성이 한 바퀴 돌아가는 쿠니오군 시대극풍 축소판 액션 RPG 데모를 만든다.
@@ -14,7 +14,7 @@
 Ollama 도구 Epic `feature/personal-game-ai`와 게임 Epic을 구분한다.
 
 ## 작업 위치
-- 브랜치: `epic/thumby-growth`
+- 브랜치: `feature/thumby-growth`
 - 맥 checkout: `/Users/parkjihoon/workspace/My PRJ`
 - 도구: `ai/personal-game-ai/`
 - 게임: `micropython/Thumby/ThumbyGrowth/`
@@ -22,8 +22,10 @@ Ollama 도구 Epic `feature/personal-game-ai`와 게임 Epic을 구분한다.
 - Color 게임: `micropython/ThumbyColor/<게임명>/` (현재 비어 있음)
 - target.json의 expected_branch와 branch_document는 이 Epic을 가리킨다.
 - 보조 도구는 저장소 상대 위치와 target.json의 브랜치를 사용한다.
-- 기본 작업은 이 Epic에서 이어가며 새 checkout/worktree를 만들지 않는다.
-- 원격 변경은 fetch 후 현재 상태를 확인해서 적용한다. 티켓 개발 브랜치와 게임 Epic을 서로 merge하지 않는다.
+- 이 브랜치는 게임 전체의 기준 Epic이다.
+- 기능 구현은 `feature/thumby-growth-<작업>` 형식의 Child 브랜치에서 진행하고, Child별 WORK와 검증 결과를 갖춘다.
+- 완료한 Child는 검토 후 이 Epic으로 merge한다. `main`에는 별도 지시 없이 merge하지 않는다.
+- Epic에는 기준 코드, 통합 상태, 승인된 Child merge 기록을 유지한다.
 
 ## 통합과 현재 상태
 - Mac 미커밋 작업 보존: `8f5139e`.
@@ -85,7 +87,7 @@ Ollama 도구 Epic `feature/personal-game-ai`와 게임 Epic을 구분한다.
 - 공개 일반 Thumby 게임 4개를 구조 참고했다. 코드/스프라이트는 복사하지 않았다.
 - 현재는 1대1 전투 초안. 복수 적은 동시 4명 이하를 목표로 1–2명부터 확장한다.
 - 점프는 이번 범위에서 제외. 잡기·던지기·복수 적·이동 지도는 미구현 후속 후보. 실기 FPS·메모리·조작감은 미검증.
-- 같은 Epic에서 커밋·푸시한다. 사용자 지시에 따라 merge하지 않으며 새 브랜치/worktree를 만들지 않는다.
+- 구현은 책임별 Child branch에서 진행하고, WORK와 검증을 갖춘 뒤 본 Epic으로 merge한다. `main` 통합은 별도 지시가 있을 때만 한다.
 - 알아보기 어려웠던 임시 연출을 전용 72×32 흑백 그림으로 교체했다. 성문에서 출발→세 목적지, 승리→귀환. 국가 이벤트는 승리 그림을 공유한다. A/B 건너뛰기와 상태/음악 흐름은 유지한다.
 - 짧은 자작 단음 BGM을 추가했다. 기본 audio.play/stop만 허용하고 playBlocking/음소거 강제 해제는 허용하지 않는다. 상태창/패배는 정지, 클리어 음악은 한 번만 재생한다.
 - 총/회복약/HP·공격·방어 성장/구입형 기술을 현재 구현에 연결했다. 아래 현재 작업 절이 최신 상태다.
@@ -179,4 +181,11 @@ Ollama 도구 Epic `feature/personal-game-ai`와 게임 Epic을 구분한다.
 - 12×14ピクセルの通常・歩行・パンチ・キックを描き分ける。パンチは肩から拳を接続し、キックは膝上げから脚を伸ばす2段階にした。3か国の外見は描き分ける。
 - 縦移動・ゲーム座標・衝突/攻撃判定・保存形式は変更していない。
 - 確認: `py_compile` とキャラクター・攻撃・移動の76テストが通過。72×40 PCプレビュー確認。実機での表示/性能確認はユーザーのローカルテスト待ち。
-- `epic/thumby-growth` に反映し、mainへのmergeは行わない。
+- `feature/thumby-growth` に反映した。Child branchの成果はレビュー後に本Epicへmergeし、main統合は別途指示がある場合のみ行う。
+
+
+## 現在の保存チェックポイント — 2026-10-17
+- 保存先Epic: `feature/thumby-growth`。現在の未完成プレイ可能ベースをこのEpicに保持する。
+- ユーザーから、現状のビルドが実機Thumbyで起動・動作することを確認済みとの報告があった。これはユーザー確認であり、本セッションでは実機測定・全機能検証を行っていない。
+- 今後の機能追加（キャラクター/背景/性能/アニメーション/オープニング/エンディング等）は `feature/thumby-growth-<作業>` のChild branchで作業し、ChildのWORK・テスト結果を確認してからEpicへmergeする。
+- Epicへの保存は完了したが、15ステージ、複数敵、実機FPS/heap、各機能の完成は未完了・未検証のものを含む。
