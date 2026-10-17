@@ -1,4 +1,4 @@
-"""Attack limb rectangles overlap the old, smaller fighter silhouette."""
+"""Check attack limbs remain readable after the shared fighter is scaled."""
 import unittest
 import test_ThumbyGrowth  # installs the Thumby API test double
 import ThumbyGrowth as game
@@ -14,47 +14,35 @@ class AttackSpriteGeometryTests(unittest.TestCase):
                 self.assertEqual(left,{(2*x+6-px,py) for px,py in right},
                                  (pose,frame))
 
-    def test_punch_reach_animates_and_stays_connected_in_both_directions(self):
+    def test_punch_arm_is_straight_and_extends_in_two_frames(self):
         x,y=24,28
-        for rightward in (True, False):
-            first=game.attack_limb_runs('punch',0,rightward,24,28)
-            extended=game.attack_limb_runs('punch',2,rightward,24,28)
+        for rightward in (True,False):
+            first=self.pixels(game.attack_limb_runs('punch',0,rightward,x,y))
+            extended=self.pixels(game.attack_limb_runs('punch',2,rightward,x,y))
             self.assertNotEqual(first,extended)
-            for shapes in (first,extended):
-                self.assertEqual(self.component_count(shapes),1)
-                width,height=self.bounds(shapes)
-                self.assertEqual(height,2)
-                self.assertLessEqual(width,5)
-            extended_pixels=self.pixels(extended)
+            for pixels in (first,extended):
+                rows={py:{px for px,yy in pixels if yy==py} for py in (y+2,y+3)}
+                self.assertEqual(rows[y+2],rows[y+3])
+                self.assertEqual(max(rows[y+2])-min(rows[y+2])+1,len(rows[y+2]))
+                self.assertEqual(self.component_count_pixels(pixels),1)
             if rightward:
-                self.assertGreaterEqual(max(px for px,py in extended_pixels),x+8)
+                self.assertGreater(max(px for px,py in extended),x+7)
             else:
-                self.assertLessEqual(min(px for px,py in extended_pixels),x-2)
+                self.assertLess(min(px for px,py in extended),x-1)
 
-    def test_kick_chambers_and_extends_from_the_hip(self):
+    def test_kick_has_one_planted_foot_and_one_raised_leg(self):
         x,y=24,28
-        for rightward in (True, False):
-            chamber=game.attack_limb_runs('kick',0,rightward,24,28)
-            extended=game.attack_limb_runs('kick',2,rightward,24,28)
+        state={'player_attack_cooldown':8,'attack_kind':'kick'}
+        self.assertEqual(game.character_body(state,True)[4:],(0,0))
+        for rightward in (True,False):
+            chamber=self.pixels(game.attack_limb_runs('kick',0,rightward,x,y))
+            extended=self.pixels(game.attack_limb_runs('kick',2,rightward,x,y))
             self.assertNotEqual(chamber,extended)
-            self.assertEqual(self.component_count(chamber),1)
-            self.assertEqual(self.component_count(extended),1)
-            self.assertLessEqual(self.bounds(chamber)[0],3)
-            width,height=self.bounds(extended)
-            self.assertLessEqual(width,7)
-            self.assertLessEqual(height,4)
-            pixels=self.pixels(extended)
-            if rightward:
-                self.assertGreaterEqual(max(px for px,py in pixels),x+9)
-            else:
-                self.assertLessEqual(min(px for px,py in pixels),x-3)
-
-    @staticmethod
-    def bounds(shapes):
-        pixels=[(x+dx,y+dy) for x,y,width,height,color in shapes if color
-                for dx in range(width) for dy in range(height)]
-        return (max(x for x,y in pixels)-min(x for x,y in pixels)+1,
-                max(y for x,y in pixels)-min(y for x,y in pixels)+1)
+            for pixels in (chamber,extended):
+                # Only the supporting shoe reaches the floor row.
+                self.assertEqual(sum(py==y+6 for px,py in pixels),2)
+                self.assertEqual(self.component_count_pixels(pixels),2)
+            self.assertTrue(any(py<y+6 for px,py in extended))
 
     @staticmethod
     def pixels(shapes):
@@ -62,21 +50,17 @@ class AttackSpriteGeometryTests(unittest.TestCase):
                 for dx in range(width) for dy in range(height)}
 
     @staticmethod
-    def component_count(shapes):
-        pixels=set()
-        for x,y,width,height,color in shapes:
-            if color:
-                pixels.update((x+offset,y+row) for offset in range(width)
-                              for row in range(height))
+    def component_count_pixels(pixels):
+        remaining=set(pixels)
         count=0
-        while pixels:
+        while remaining:
             count+=1
-            stack=[pixels.pop()]
+            stack=[remaining.pop()]
             while stack:
                 x,y=stack.pop()
                 for neighbor in ((x-1,y),(x+1,y),(x,y-1),(x,y+1)):
-                    if neighbor in pixels:
-                        pixels.remove(neighbor)
+                    if neighbor in remaining:
+                        remaining.remove(neighbor)
                         stack.append(neighbor)
         return count
 
