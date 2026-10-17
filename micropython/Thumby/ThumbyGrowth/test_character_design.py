@@ -14,7 +14,7 @@ class CharacterDesignTests(unittest.TestCase):
         scaled=game.ScaledFighterDisplay(display,23,36)
         scaled.drawFilledRectangle(18,22,10,14,1)
         x,y,width,height,color=display.drawFilledRectangle.call_args.args
-        self.assertEqual((x,y,width,height),(20,26,6,10))
+        self.assertEqual((x,y,width,height),(20,27,6,9))
         self.assertEqual(color,1)
         self.assertGreaterEqual(y+height,34)
 
@@ -29,21 +29,22 @@ class CharacterDesignTests(unittest.TestCase):
         self.assertNotIn((14,19,2,1,0),calls)
 
     def test_attack_limb_frames_extend_from_the_old_character_silhouette(self):
-        punch0=game.attack_limb_rects('punch',0,True,20,20)
-        punch1=game.attack_limb_rects('punch',2,True,20,20)
-        kick0=game.attack_limb_rects('kick',0,True,20,20)
-        kick1=game.attack_limb_rects('kick',2,True,20,20)
+        punch0=game.attack_limb_runs('punch',0,True,20,20)
+        punch1=game.attack_limb_runs('punch',2,True,20,20)
+        kick0=game.attack_limb_runs('kick',0,True,20,20)
+        kick1=game.attack_limb_runs('kick',2,True,20,20)
         self.assertNotEqual(punch0,punch1)
         self.assertNotEqual(kick0,kick1)
         for shapes in (punch0,punch1,kick0,kick1):
-            lit=[shape for shape in shapes if shape[4]]
-            self.assertEqual(self.rectangle_component_count(lit),1)
+            lit=[(x+offset,y) for x,y,width,height,color in shapes if color
+                 for offset in range(width) for _ in range(height)]
+            self.assertEqual(self.pixel_component_count(lit),1)
+        self.assertGreater(max(x for x,y,w,h,color in punch1 if color),
+                           max(x for x,y,w,h,color in punch0 if color))
 
     @staticmethod
-    def rectangle_component_count(shapes):
-        pixels=set()
-        for x,y,width,height,_ in shapes:
-            pixels.update((px,py) for px in range(x,x+width) for py in range(y,y+height))
+    def pixel_component_count(pixel_list):
+        pixels=set(pixel_list)
         count=0
         while pixels:
             count+=1

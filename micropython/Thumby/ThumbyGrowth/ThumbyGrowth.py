@@ -203,17 +203,9 @@ def draw_fighter_details(display,x,y,pose,rightward):
     def detail(offset,dy,width,height,color):
         left=offset if rightward else 10-offset-width
         scene_rect(display,x+left,y+dy,width,height,color)
-    # Two eyes are enough at this scale; the blank lower face keeps the sprite clean.
+    # Keep only the eyes and one broad belt mark; tiny lapel pixels blurred at 1x.
     detail(1,-3,1,1,0);detail(6,-3,1,1,0)
-    # Open jacket lapels, obi belt and split trouser legs.
-    detail(2,1,1,1,0);detail(6,1,1,1,0)
-    detail(3,2,1,1,0);detail(5,2,1,1,0)
     detail(0,4,8,1,0);detail(3,4,2,1,1)
-    detail(3,5,1,2,0)
-    if pose=='guard':
-        detail(7,2,1,2,0)
-    elif pose=='kick':
-        detail(1,5,1,1,0)
 
 
 def draw_impact(display,x,y):
@@ -254,7 +246,7 @@ def draw_hero_hair(display,region,x,y,rightward):
 
 
 class ScaledFighterDisplay:
-    """Draw fighters at 11/16 size, anchored to their feet."""
+    """Draw fighters at 10/16 size, anchored to their feet."""
     __slots__=('display','anchor_x','anchor_y')
     def __init__(self,display,anchor_x,anchor_y):
         self.display=display
@@ -262,7 +254,7 @@ class ScaledFighterDisplay:
         self.anchor_y=anchor_y
     @staticmethod
     def _edge(value,anchor):
-        delta=(value-anchor)*11
+        delta=(value-anchor)*10
         return anchor+(delta+8)//16 if delta>=0 else anchor-((-delta+8)//16)
     def drawFilledRectangle(self,x,y,width,height,color=1):
         left=self._edge(x,self.anchor_x);right=self._edge(x+width,self.anchor_x)
@@ -274,27 +266,65 @@ class ScaledFighterDisplay:
             self.display.drawFilledRectangle(left,top,right-left,bottom-top,color)
 
 
-def attack_limb_rects(pose,frame,rightward,x,y):
-    """Return visible 1x attack pieces rooted in the scaled sleeve or hip."""
+def attack_limb_runs(pose,frame,rightward,x,y):
+    """Build small glove/shoe silhouettes and return their horizontal pixel runs."""
+    pixels={}
+    def put(px,py,color=1):
+        pixels[(px,py)]=color
+    def box(px,py,width,height,color=1):
+        for row in range(height):
+            for column in range(width): put(px+column,py+row,color)
+    def shape(px,py,rows,mirror=False):
+        width=max(len(row) for row in rows)
+        for row,mask in enumerate(rows):
+            for column in range(width):
+                source=width-1-column if mirror else column
+                if source<len(mask) and mask[source]=='1': put(px+column,py+row)
     if pose in ('punch','shot','skill','spear','sword'):
-        reach=5+(frame//2)%2
+        phase=(frame//2)%2
         if rightward:
-            return ((x+3,y+3,reach,2,1),(x+7+(frame//2)%2,y+3,3,2,1))
-        return ((x-2-reach,y+3,reach,2,1),(x-8-(frame//2)%2,y+3,3,2,1))
-    if pose=='kick':
-        phase=(frame//2)%3
+            sleeve_x=x+3; glove_x=x+5+phase
+            box(sleeve_x,y+3,glove_x-sleeve_x+1,2)
+            # A tiny cuff notch separates the hand from the sleeve at 1x scale.
+            put(glove_x,y+3,0)
+        else:
+            glove_x=x-7-phase; sleeve_x=x-3
+            box(glove_x+2,y+3,sleeve_x-glove_x,2)
+            put(glove_x+2,y+3,0)
+        shape(glove_x,y+2,('011','111','110'),mirror=not rightward)
+    elif pose=='kick':
+        phase=(frame//2)%2
         if rightward:
+            leg_x=x+3; shoe_x=x+(5 if phase!=1 else 6)
             if phase==1:
-                return ((x+2,y+6,2,2,0),(x+3,y+6,3,2,1),
-                        (x+5,y+5,3,2,1),(x+8,y+4,4,2,1))
-            return ((x+2,y+6,2,2,0),(x+3,y+6,3,2,1),
-                    (x+5,y+5,3,2,1))
-        if phase==1:
-            return ((x+4,y+6,2,2,0),(x+3,y+6,3,2,1),
-                    (x+1,y+5,3,2,1),(x-3,y+4,4,2,1))
-        return ((x+4,y+6,2,2,0),(x+3,y+6,3,2,1),
-                (x+1,y+5,3,2,1))
-    return ()
+                put(leg_x,y+6);put(leg_x+1,y+6)
+                put(leg_x+1,y+5);put(leg_x+2,y+5);put(leg_x+3,y+5)
+            else:
+                put(leg_x,y+6);put(leg_x+1,y+6)
+                put(leg_x+1,y+5);put(leg_x+2,y+5)
+            shape(shoe_x,y+4,('0110','1111','0111'))
+        else:
+            leg_x=x+4; shoe_x=x-(1 if phase!=1 else 2)
+            if phase==1:
+                put(leg_x,y+6);put(leg_x+1,y+6)
+                put(leg_x,y+5);put(leg_x-1,y+5);put(leg_x-2,y+5)
+            else:
+                put(leg_x,y+6);put(leg_x+1,y+6)
+                put(leg_x,y+5);put(leg_x-1,y+5)
+            shape(shoe_x,y+4,('0110','1111','0111'),mirror=True)
+    runs=[]
+    for py in sorted({point[1] for point in pixels}):
+        row=sorted(px for px,yy in pixels if yy==py)
+        if not row: continue
+        start=previous=row[0];color=pixels[(start,py)]
+        for px in row[1:]:
+            next_color=pixels[(px,py)]
+            if px!=previous+1 or next_color!=color:
+                runs.append((start,py,previous-start+1,1,color))
+                start,color=px,next_color
+            previous=px
+        runs.append((start,py,previous-start+1,1,color))
+    return tuple(runs)
 
 def draw_fighter(display,state,player,x,y):
     if player and state.get('player_invuln',0) and state.get('frame',0)%2:
@@ -331,7 +361,7 @@ def draw_fighter(display,state,player,x,y):
     draw_weapon(display,weapon,x,y,rightward,swinging and
                 (weapon!=4 or pose=='shot'))
     # Attack limbs begin inside the existing sleeve/hip and use two visible frames.
-    for left,top,width,height,color in attack_limb_rects(
+    for left,top,width,height,color in attack_limb_runs(
             pose,state.get('frame',state.get('combat_frame',0)),rightward,x,y):
         scene_rect(raw_display,left,top,width,height,color)
     if pose=='skill':
