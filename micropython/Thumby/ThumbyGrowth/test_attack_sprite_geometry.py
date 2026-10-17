@@ -12,6 +12,9 @@ class AttackSpriteGeometryTests(unittest.TestCase):
             self.assertNotEqual(first,extended)
             for shapes in (first,extended):
                 self.assertEqual(self.component_count(shapes),1)
+                width,height=self.bounds(shapes)
+                self.assertEqual(height,2)
+                self.assertLessEqual(width,4)
 
     def test_kick_chambers_and_extends_from_the_hip(self):
         for rightward in (True, False):
@@ -20,6 +23,17 @@ class AttackSpriteGeometryTests(unittest.TestCase):
             self.assertNotEqual(chamber,extended)
             self.assertEqual(self.component_count(chamber),1)
             self.assertEqual(self.component_count(extended),1)
+            self.assertLessEqual(self.bounds(chamber)[0],3)
+            width,height=self.bounds(extended)
+            self.assertLessEqual(width,4)
+            self.assertLessEqual(height,3)
+
+    @staticmethod
+    def bounds(shapes):
+        pixels=[(x+dx,y+dy) for x,y,width,height,color in shapes if color
+                for dx in range(width) for dy in range(height)]
+        return (max(x for x,y in pixels)-min(x for x,y in pixels)+1,
+                max(y for x,y in pixels)-min(y for x,y in pixels)+1)
 
     @staticmethod
     def component_count(shapes):

@@ -267,51 +267,43 @@ class ScaledFighterDisplay:
 
 
 def attack_limb_runs(pose,frame,rightward,x,y):
-    """Build small glove/shoe silhouettes and return their horizontal pixel runs."""
+    """Build compact, body-proportioned attack limbs at native display scale."""
     pixels={}
     def put(px,py,color=1):
         pixels[(px,py)]=color
-    def box(px,py,width,height,color=1):
-        for row in range(height):
-            for column in range(width): put(px+column,py+row,color)
-    def shape(px,py,rows,mirror=False):
-        width=max(len(row) for row in rows)
-        for row,mask in enumerate(rows):
-            for column in range(width):
-                source=width-1-column if mirror else column
-                if source<len(mask) and mask[source]=='1': put(px+column,py+row)
     if pose in ('punch','shot','skill','spear','sword'):
         phase=(frame//2)%2
         if rightward:
-            sleeve_x=x+3; glove_x=x+5+phase
-            box(sleeve_x,y+3,glove_x-sleeve_x+1,2)
-            # A tiny cuff notch separates the hand from the sleeve at 1x scale.
-            put(glove_x,y+3,0)
+            # Short sleeve and a 2x2 fist keep the arm in scale with the 6px torso.
+            for offset in range(2+phase): put(x+4+offset,y+3)
+            glove_x=x+5+phase
+            put(glove_x,y+2); put(glove_x+1,y+2)
+            put(glove_x,y+3); put(glove_x+1,y+3)
         else:
-            glove_x=x-7-phase; sleeve_x=x-3
-            box(glove_x+2,y+3,sleeve_x-glove_x,2)
-            put(glove_x+2,y+3,0)
-        shape(glove_x,y+2,('011','111','110'),mirror=not rightward)
+            for offset in range(2+phase): put(x+2-offset,y+3)
+            glove_x=x-phase
+            put(glove_x,y+2); put(glove_x+1,y+2)
+            put(glove_x,y+3); put(glove_x+1,y+3)
     elif pose=='kick':
         phase=(frame//2)%2
         if rightward:
-            leg_x=x+3; shoe_x=x+(5 if phase!=1 else 6)
-            if phase==1:
-                put(leg_x,y+6);put(leg_x+1,y+6)
-                put(leg_x+1,y+5);put(leg_x+2,y+5);put(leg_x+3,y+5)
+            # The chamber stays tucked under the waist; extension bends once and
+            # ends in a compact 2x2 shoe instead of a long horizontal bar.
+            put(x+3,y+5); put(x+4,y+5)
+            if phase:
+                put(x+4,y+4); put(x+5,y+4)
+                put(x+5,y+3); put(x+6,y+3)
+                put(x+5,y+4); put(x+6,y+4)
             else:
-                put(leg_x,y+6);put(leg_x+1,y+6)
-                put(leg_x+1,y+5);put(leg_x+2,y+5)
-            shape(shoe_x,y+4,('0110','1111','0111'))
+                put(x+4,y+4); put(x+5,y+4)
         else:
-            leg_x=x+4; shoe_x=x-(1 if phase!=1 else 2)
-            if phase==1:
-                put(leg_x,y+6);put(leg_x+1,y+6)
-                put(leg_x,y+5);put(leg_x-1,y+5);put(leg_x-2,y+5)
+            put(x+4,y+5); put(x+3,y+5)
+            if phase:
+                put(x+3,y+4); put(x+2,y+4)
+                put(x+2,y+3); put(x+1,y+3)
+                put(x+1,y+4); put(x+2,y+4)
             else:
-                put(leg_x,y+6);put(leg_x+1,y+6)
-                put(leg_x,y+5);put(leg_x-1,y+5)
-            shape(shoe_x,y+4,('0110','1111','0111'),mirror=True)
+                put(x+3,y+4); put(x+2,y+4)
     runs=[]
     for py in sorted({point[1] for point in pixels}):
         row=sorted(px for px,yy in pixels if yy==py)
