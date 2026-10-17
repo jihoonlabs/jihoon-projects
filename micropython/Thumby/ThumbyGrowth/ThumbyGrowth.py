@@ -298,23 +298,31 @@ def attack_limb_runs(pose,frame,rightward,x,y):
     pixels={}
     def put(px,py,color=1):
         pixels[(px,py)]=color
+    def bar(x1,y1,x2,y2,thickness=2):
+        """Draw one reusable axis-aligned limb bar with configurable thickness."""
+        if y1==y2:
+            for py in range(y1,y1+thickness):
+                for px in range(min(x1,x2),max(x1,x2)+1): put(px,py)
+        elif x1==x2:
+            for px in range(x1,x1+thickness):
+                for py in range(min(y1,y2),max(y1,y2)+1): put(px,py)
     if pose in ('punch','shot','skill','spear','sword'):
         phase=(frame//2)%2
-        # Keep the arm a uniform one-pixel bar in both frames.
+        # Both punch frames use the shared 2-pixel bar; only its reach changes.
         fist_x=x+5+phase*2
-        for px in range(x+4,fist_x+2): put(px,y+3)
+        bar(x+4,y+2,fist_x+1,y+2)
     elif pose=='kick':
         phase=(frame//2)%2
         # One supporting leg stays under the hip with a single grounded shoe.
         put(x+2,y+4); put(x+2,y+5); put(x+1,y+6); put(x+2,y+6)
         if phase:
-            # Raised leg forms a uniform one-pixel ㄴ-shaped bar.
-            put(x+4,y+2); put(x+4,y+3); put(x+4,y+4)
-            for px in range(x+5,x+9): put(px,y+4)
+            # Reuse the same two-pixel bar for the raised ㄴ-shaped kick.
+            bar(x+4,y+2,x+4,y+4)
+            bar(x+4,y+3,x+8,y+3)
         else:
-            # Chambered knee and raised foot; this leg does not touch the floor.
-            put(x+4,y+3); put(x+4,y+4); put(x+5,y+4)
-            put(x+5,y+3); put(x+6,y+3)
+            # Chambered leg uses the same bar thickness and stays off the floor.
+            bar(x+4,y+3,x+4,y+4)
+            bar(x+5,y+3,x+6,y+3)
     if not rightward:
         # The shared 10-pixel fighter is centered at x+2.5; reflect around
         # that half-pixel axis so the left pose keeps the same visible reach.
