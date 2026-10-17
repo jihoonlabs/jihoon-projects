@@ -23,13 +23,12 @@ class AttackSpriteGeometryTests(unittest.TestCase):
             for pixels in (first,extended):
                 upper={px for px,py in pixels if py==y+2}
                 arm={px for px,py in pixels if py==y+3}
-                self.assertEqual(len(upper),2)
-                self.assertTrue(upper.issubset(arm))
+                self.assertEqual(len(upper),1)
                 self.assertEqual(max(arm)-min(arm)+1,len(arm))
                 if rightward:
-                    self.assertEqual(upper,{max(arm)-1,max(arm)})
+                    self.assertEqual(upper,{max(arm)})
                 else:
-                    self.assertEqual(upper,{min(arm),min(arm)+1})
+                    self.assertEqual(upper,{min(arm)})
                 self.assertEqual(self.component_count_pixels(pixels),1)
             if rightward:
                 self.assertLessEqual(max(px for px,py in extended),x+8)
@@ -51,10 +50,13 @@ class AttackSpriteGeometryTests(unittest.TestCase):
                 self.assertEqual(sum(py==y+6 for px,py in pixels),2)
                 self.assertEqual(self.component_count_pixels(pixels),2)
             if rightward:
-                self.assertTrue(all(px>=x+4 for px,py in extended if py==y+4 and px>=x+4))
-                self.assertGreaterEqual(max(px for px,py in extended if py==y+4),x+8)
+                toe={px for px,py in extended if py==y+3 and px>=x+7}
+                self.assertEqual(toe,{x+8})
+                self.assertEqual(max(px for px,py in extended),x+8)
             else:
-                self.assertLessEqual(min(px for px,py in extended if py==y+4),x-2)
+                toe={px for px,py in extended if py==y+3 and px<=x-1}
+                self.assertEqual(toe,{x-2})
+                self.assertEqual(min(px for px,py in extended),x-2)
 
     @staticmethod
     def pixels(shapes):
