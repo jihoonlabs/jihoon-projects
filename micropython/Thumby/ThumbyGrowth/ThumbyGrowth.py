@@ -37,8 +37,10 @@ FOE_HEAD = FOE_HEADS[0]
 # Solid shoulders/arms, one compact torso and short legs; no collar or inner trim.
 BODY_ROWS = (0x1fe,0x3ff,0x1fe,0xfc,0x1ce,0x387)
 WALK_BODY_ROWS = (0x1fe,0x3ff,0x1fe,0xfc,0x1dc,0x38e)
-PUNCH_BODY = (0xf0,0x1f8,0xfc,0xfc,0x1ce,0x387)
-KICK_BODY = (0x1fe,0x3ff,0x1fc,0xfe,0x1c0,0x380)
+PUNCH_BODY = BODY_ROWS
+# Stop the shared body above the legs; the kick frame draws one planted leg
+# and one raised leg separately so two grounded feet cannot remain visible.
+KICK_BODY = (0x1fe,0x3ff,0x1fe,0xfc,0x000,0x000)
 HURT_BODY = (0xfc,0x1fe,0x1fe,0xfc,0xec,0x1c7)
 GUARD_BODY = (0x3ff,0x3ff,0x1fe,0xfc,0x1ce,0x387)
 BOSS_HEADS = tuple(hair+HERO_HEAD[4:] for hair in
@@ -292,35 +294,32 @@ class ScaledFighterDisplay:
 
 
 def attack_limb_runs(pose,frame,rightward,x,y):
-    """Build compact, body-proportioned attack limbs at native display scale."""
+    """Build shared punch and kick limb frames at native display scale."""
     pixels={}
     def put(px,py,color=1):
         pixels[(px,py)]=color
     if pose in ('punch','shot','skill','spear','sword'):
         phase=(frame//2)%2
-        # Author one right-facing pose, then mirror around the fighter's
-        # centerline so both directions share reach and animation timing.
-        # Extend the glove beyond the scaled sleeve so the punch reads in
-        # both directions instead of disappearing into the body silhouette.
-        glove_x=x+5+phase
-        for px in range(x+4,glove_x+2): put(px,y+3)
-        put(glove_x,y+2); put(glove_x+1,y+2)
-        put(glove_x,y+3); put(glove_x+1,y+3)
-        if phase:
-            put(glove_x+2,y+2); put(glove_x+2,y+3)
+        # Keep the forearm level: a 2-pixel-thick horizontal bar with a square
+        # fist at its end. The second frame reaches farther without bending.
+        fist_x=x+6+phase*2
+        for px in range(x+4,fist_x+2):
+            put(px,y+2); put(px,y+3)
     elif pose=='kick':
         phase=(frame//2)%2
-        # The chamber stays tucked under the hip. On extension the leg rises
-        # diagonally and ends in a shoe above the planted foot, so the kick
-        # remains readable after the shared body is scaled down.
-        put(x+3,y+5); put(x+4,y+5)
+        # One supporting leg stays under the hip with a single grounded shoe.
+        put(x+2,y+4); put(x+2,y+5); put(x+1,y+6); put(x+2,y+6)
         if phase:
-            put(x+4,y+4); put(x+5,y+4)
-            put(x+5,y+3); put(x+6,y+3)
-            put(x+6,y+2); put(x+7,y+2); put(x+8,y+2)
-            put(x+8,y+3); put(x+9,y+3)
+            # Lift the other leg, bend once at the knee, then extend it level.
+            put(x+4,y+5); put(x+5,y+5)
+            put(x+5,y+4); put(x+6,y+4)
+            put(x+6,y+3); put(x+7,y+3)
+            put(x+8,y+3); put(x+9,y+3); put(x+9,y+4)
         else:
-            put(x+4,y+4); put(x+5,y+4)
+            # Chambered knee and raised foot; this leg does not touch the floor.
+            put(x+4,y+5); put(x+5,y+5)
+            put(x+5,y+4); put(x+6,y+4)
+            put(x+6,y+3); put(x+7,y+3)
     if not rightward:
         pixels={(2*x+6-px,py):color for (px,py),color in pixels.items()}
     runs=[]
