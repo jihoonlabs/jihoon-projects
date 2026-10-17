@@ -214,6 +214,19 @@ class CharacterDesignTests(unittest.TestCase):
                         cx,cy,w,h,_=call.args
                         self.assertTrue(0<=cx<cx+w<=72 and 0<=cy<cy+h<=40)
 
+    def test_upper_lane_fighter_keeps_its_head_visible_after_scale_clipping(self):
+        fixtures.TestAdapter.setUp(self)
+        game.thumby=fixtures.fake_thumby
+        state=fixtures.state(screen_state='battle',player_y=12,enemy_y=12,
+                             player_x=24,enemy_x=80,active_enemy=True)
+        display=game.thumby.display
+        display.reset_mock()
+        game.draw_fighter(display,state,False,28,17)
+        white=[call.args for call in display.drawFilledRectangle.call_args_list
+               if call.args[4]==1]
+        self.assertTrue(any(y==16 for x,y,width,height,color in white),white)
+        self.assertTrue(all(14<=y<40 for x,y,width,height,color in white),white)
+
 
 if __name__=='__main__':
     unittest.main()
