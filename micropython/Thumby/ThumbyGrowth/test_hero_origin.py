@@ -82,7 +82,9 @@ class HeroOriginTests(unittest.TestCase):
                     self.assertIn((29,28,4,1,0),rects)
                     self.assertIn((29 if direction=='R' else 32,28,1,1,1),rects)
                     self.assertIn((29 if direction=='R' else 32,29,1,1,1),rects)
-                    self.assertFalse(any(call[1]<28 and call[4]==1 for call in rects))
+                    self.assertIn((27 if direction=='R' else 34,27,1,1,1),rects)
+                    self.assertIn((26 if direction=='R' else 35,28,1,1,1),rects)
+                    self.assertFalse(any(call[1]<27 and call[4]==1 for call in rects))
                 elif region==1:
                     self.assertEqual(sum(1 for call in rects if call[2:4]==(1,1)),5)
                 else:
