@@ -35,12 +35,13 @@ class CharacterDesignTests(unittest.TestCase):
         kick1=game.attack_limb_runs('kick',2,True,20,20)
         self.assertNotEqual(punch0,punch1)
         self.assertNotEqual(kick0,kick1)
-        for shapes in (punch0,punch1,kick0,kick1):
+        for shapes,expected_components in ((punch0,1),(punch1,1),
+                                           (kick0,2),(kick1,2)):
             lit=[(x+offset,y) for x,y,width,height,color in shapes if color
                  for offset in range(width) for _ in range(height)]
-            self.assertEqual(self.pixel_component_count(lit),1)
-        self.assertGreater(max(x for x,y,w,h,color in punch1 if color),
-                           max(x for x,y,w,h,color in punch0 if color))
+            self.assertEqual(self.pixel_component_count(lit),expected_components)
+        self.assertGreater(max(x+w for x,y,w,h,color in punch1 if color),
+                           max(x+w for x,y,w,h,color in punch0 if color))
 
     @staticmethod
     def pixel_component_count(pixel_list):
