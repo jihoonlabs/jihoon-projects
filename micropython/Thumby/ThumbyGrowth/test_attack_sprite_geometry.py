@@ -26,12 +26,8 @@ class AttackSpriteGeometryTests(unittest.TestCase):
             for pixels in (first,extended):
                 upper={px for px,py in pixels if py==y+2}
                 arm={px for px,py in pixels if py==y+3}
-                self.assertEqual(len(upper),1)
+                self.assertFalse(upper)
                 self.assertEqual(max(arm)-min(arm)+1,len(arm))
-                if rightward:
-                    self.assertEqual(upper,{max(arm)})
-                else:
-                    self.assertEqual(upper,{min(arm)})
                 self.assertEqual(self.component_count_pixels(pixels),1)
             if rightward:
                 self.assertLessEqual(max(px for px,py in extended),x+8)
@@ -53,12 +49,14 @@ class AttackSpriteGeometryTests(unittest.TestCase):
                 self.assertEqual(sum(py==y+6 for px,py in pixels),2)
                 self.assertEqual(self.component_count_pixels(pixels),2)
             if rightward:
-                toe={px for px,py in extended if py==y+3 and px>=x+7}
-                self.assertEqual(toe,{x+8})
+                self.assertEqual({px for px,py in extended if py==y+3},{x+4})
+                kick_bar={px for px,py in extended if py==y+4 and px>=x+4}
+                self.assertEqual(kick_bar,set(range(x+4,x+9)))
                 self.assertEqual(max(px for px,py in extended),x+8)
             else:
-                toe={px for px,py in extended if py==y+3 and px<=x-2}
-                self.assertEqual(toe,{x-3})
+                self.assertEqual({px for px,py in extended if py==y+3},{x+1})
+                kick_bar={px for px,py in extended if py==y+4 and px<=x+1}
+                self.assertEqual(kick_bar,set(range(x-3,x+2)))
                 self.assertEqual(min(px for px,py in extended),x-3)
 
     @staticmethod
