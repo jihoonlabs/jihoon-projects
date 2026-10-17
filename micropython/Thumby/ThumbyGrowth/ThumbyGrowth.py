@@ -233,11 +233,11 @@ def draw_hero_hair(display,region,x,y,rightward):
     rect(0,-6,6,12,0)
     if region==1:
         left=x-5 if rightward else x+9
-        draw_rows(display,BRAID_ROWS,left,y-6,2,not rightward,14,row_count=11)
+        draw_rows(display,BRAID_ROWS,left,y-6,2,not rightward,0,row_count=11)
     elif region==2:
         # A high fan sweeps backward; the short tip keeps the mass above the waist.
         left=x-8 if rightward else x+9
-        draw_rows(display,PONY_ROWS,left,y-6,5,not rightward,14)
+        draw_rows(display,PONY_ROWS,left,y-6,5,not rightward,0)
         rect(-1,-5,2,1)
 
 
@@ -284,7 +284,9 @@ class ScaledFighterDisplay:
         top=self._edge(y,self.anchor_y);bottom=self._edge(y+height,self.anchor_y)
         if width and right<=left: right=left+1
         if height and bottom<=top: bottom=top+1
-        left=max(0,left);top=max(0,top);right=min(72,right);bottom=min(40,bottom)
+        # Clip in final screen coordinates. Clipping source rows before scaling
+        # removes the fighter's head as they move toward the top of the lane.
+        left=max(0,left);top=max(14,top);right=min(72,right);bottom=min(40,bottom)
         if right>left and bottom>top:
             self.display.drawFilledRectangle(left,top,right-left,bottom-top,color)
 
@@ -296,37 +298,25 @@ def attack_limb_runs(pose,frame,rightward,x,y):
         pixels[(px,py)]=color
     if pose in ('punch','shot','skill','spear','sword'):
         phase=(frame//2)%2
-        if rightward:
-            # Short sleeve and a 2x2 fist keep the arm in scale with the 6px torso.
-            for offset in range(2+phase): put(x+4+offset,y+3)
-            glove_x=x+5+phase
-            put(glove_x,y+2); put(glove_x+1,y+2)
-            put(glove_x,y+3); put(glove_x+1,y+3)
-        else:
-            for offset in range(2+phase): put(x+2-offset,y+3)
-            glove_x=x-phase
-            put(glove_x,y+2); put(glove_x+1,y+2)
-            put(glove_x,y+3); put(glove_x+1,y+3)
+        # Author one right-facing pose, then mirror around the fighter's
+        # centerline so both directions share reach and animation timing.
+        for offset in range(2+phase): put(x+4+offset,y+3)
+        glove_x=x+5+phase
+        put(glove_x,y+2); put(glove_x+1,y+2)
+        put(glove_x,y+3); put(glove_x+1,y+3)
     elif pose=='kick':
         phase=(frame//2)%2
-        if rightward:
-            # The chamber stays tucked under the waist; extension bends once and
-            # ends in a compact 2x2 shoe instead of a long horizontal bar.
-            put(x+3,y+5); put(x+4,y+5)
-            if phase:
-                put(x+4,y+4); put(x+5,y+4)
-                put(x+5,y+3); put(x+6,y+3)
-                put(x+5,y+4); put(x+6,y+4)
-            else:
-                put(x+4,y+4); put(x+5,y+4)
+        # The chamber stays tucked under the waist; extension bends once and
+        # ends in a compact 2x2 shoe instead of a long horizontal bar.
+        put(x+3,y+5); put(x+4,y+5)
+        if phase:
+            put(x+4,y+4); put(x+5,y+4)
+            put(x+5,y+3); put(x+6,y+3)
+            put(x+5,y+4); put(x+6,y+4)
         else:
-            put(x+4,y+5); put(x+3,y+5)
-            if phase:
-                put(x+3,y+4); put(x+2,y+4)
-                put(x+2,y+3); put(x+1,y+3)
-                put(x+1,y+4); put(x+2,y+4)
-            else:
-                put(x+3,y+4); put(x+2,y+4)
+            put(x+4,y+4); put(x+5,y+4)
+    if not rightward:
+        pixels={(2*x+6-px,py):color for (px,py),color in pixels.items()}
     runs=[]
     for py in sorted({point[1] for point in pixels}):
         row=sorted(px for px,yy in pixels if yy==py)
@@ -355,13 +345,13 @@ def draw_fighter(display,state,player,x,y):
     elif state['progress']%STAGES_PER_REGION != STAGES_PER_REGION-1:
         hair=FOE_SIDE_HAIR[stage_index(state)%len(FOE_SIDE_HAIR)]
         hair_x=x-3 if rightward else x+7
-        draw_rows(display,hair,hair_x,y-6,2,not rightward,14)
-    draw_rows(display,character_head(state,player),x-2+lean,y-7,10,not rightward,14)
+        draw_rows(display,hair,hair_x,y-6,2,not rightward,0)
+    draw_rows(display,character_head(state,player),x-2+lean,y-7,10,not rightward,0)
     if player and hero_region(state)==2:
         fringe_x=x+7+lean if rightward else x-3+lean
         scene_rect(display,fringe_x if rightward else fringe_x-1,y-7,3,6,0)
-        draw_rows(display,HERO_FRINGE,fringe_x,y-6,2,not rightward,14)
-    draw_rows(display,character_body(state,player),x-2,y+1,10,not rightward,14)
+        draw_rows(display,HERO_FRINGE,fringe_x,y-6,2,not rightward,0)
+    draw_rows(display,character_body(state,player),x-2,y+1,10,not rightward,0)
     draw_fighter_details(display,x-2,y,pose,rightward)
     if player:
         draw_hero_hair_accents(raw_display,hero_region(state),x+lean,y,rightward)
@@ -483,7 +473,8 @@ def stage_code(progress):
 def scene_rect(display, x, y, width, height, color=1):
     # Clip decoration/actor backing to the world area; never paint over the HUD.
     right, bottom = min(72, x+width), min(40, y+height)
-    left, top = max(0, x), max(14, y)
+    clip_top=0 if isinstance(display,ScaledFighterDisplay) else 14
+    left, top = max(0, x), max(clip_top, y)
     if right > left and bottom > top:
         display.drawFilledRectangle(left, top, right-left, bottom-top, color)
 
