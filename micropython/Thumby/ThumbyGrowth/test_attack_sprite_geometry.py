@@ -26,11 +26,17 @@ class AttackSpriteGeometryTests(unittest.TestCase):
                 self.assertEqual(len(upper),2)
                 self.assertTrue(upper.issubset(arm))
                 self.assertEqual(max(arm)-min(arm)+1,len(arm))
+                if rightward:
+                    self.assertEqual(upper,{max(arm)-1,max(arm)})
+                else:
+                    self.assertEqual(upper,{min(arm),min(arm)+1})
                 self.assertEqual(self.component_count_pixels(pixels),1)
             if rightward:
-                self.assertGreater(max(px for px,py in extended),x+7)
+                self.assertLessEqual(max(px for px,py in extended),x+8)
+                self.assertEqual(max(px for px,py in extended),x+8)
             else:
-                self.assertLess(min(px for px,py in extended),x-1)
+                self.assertGreaterEqual(min(px for px,py in extended),x-2)
+                self.assertEqual(min(px for px,py in extended),x-2)
 
     def test_kick_has_one_planted_foot_and_one_raised_leg(self):
         x,y=24,28
