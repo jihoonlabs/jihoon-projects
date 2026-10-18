@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
+import { Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
@@ -291,8 +293,14 @@ export function LoginForm({
                 aria-label={
                   showPassword ? 'パスワードを隠す' : 'パスワードを表示'
                 }
+                aria-pressed={showPassword}
+                aria-controls="password"
               >
-                {showPassword ? '隠す' : '表示'}
+                {showPassword ? (
+                  <EyeOff size={20} aria-hidden="true" />
+                ) : (
+                  <Eye size={20} aria-hidden="true" />
+                )}
               </button>
             </div>
 
@@ -317,20 +325,35 @@ export function LoginForm({
           <div className={styles.socialGroup}>
             <button
               type="button"
-              className={styles.socialButton}
+              className={`${styles.socialButton} ${styles.googleButton}`}
               onClick={() => handleSocialLogin('google')}
               disabled={loading}
             >
-              Googleでログイン
+              <Image
+                src="/auth/google-g.svg"
+                width={20}
+                height={20}
+                alt=""
+                aria-hidden="true"
+              />
+              <span>Googleでログイン</span>
             </button>
 
             <button
               type="button"
-              className={styles.socialButton}
+              className={`${styles.socialButton} ${styles.lineButton}`}
               onClick={() => handleSocialLogin('line')}
               disabled={loading}
             >
-              LINEでログイン
+              <Image
+                src="/auth/line-login.png"
+                width={28}
+                height={28}
+                alt=""
+                aria-hidden="true"
+                unoptimized
+              />
+              <span>LINEでログイン</span>
             </button>
           </div>
         </form>
