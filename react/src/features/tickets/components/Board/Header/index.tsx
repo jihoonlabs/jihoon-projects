@@ -9,6 +9,8 @@ interface HeaderProps {
   assigneeFilter: string;
   onAssigneeChange: (value: string) => void;
   onCreate: () => void;
+  onCreateProject: () => void;
+  canCreateTicket: boolean;
   projects: Project[];
   selectedProjectId: string;
   onProjectChange: (projectId: string) => void;
@@ -29,6 +31,8 @@ export default function Header({
   assigneeFilter,
   onAssigneeChange,
   onCreate,
+  onCreateProject,
+  canCreateTicket,
   projects,
   selectedProjectId,
   onProjectChange,
@@ -59,18 +63,28 @@ export default function Header({
             disabled={projects.length === 0 || projectsBusy}
           >
             {projects.length === 0 ? (
-              <option value="">利用可能なプロジェクトがありません</option>
+              <option value="ALL">利用可能なプロジェクトがありません</option>
             ) : (
-              projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))
+              <>
+                <option value="ALL">全プロジェクト</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </>
             )}
           </select>
         </div>
 
         <div className={styles.rightSection}>
+          <button
+            type="button"
+            onClick={onCreateProject}
+            disabled={projectsBusy}
+          >
+            + プロジェクト作成
+          </button>
           <button
             type="button"
             disabled={projectsBusy}
@@ -103,7 +117,7 @@ export default function Header({
               メンバー
             </button>
           )}
-          {selectedProject && canWrite && (
+          {canCreateTicket && (
             <button
               type="button"
               className={styles.createBtn}
@@ -117,6 +131,15 @@ export default function Header({
         </div>
       </div>
       <div className={styles.bottomRow}>
+        {!selectedProject &&
+          projects.length > 0 &&
+          selectedProjectId === 'ALL' && (
+            <p className={styles.projectContext}>
+              <strong>全プロジェクト</strong>
+              <span>{projects.length}件</span>
+              <span>編集・移動はプロジェクトを選択</span>
+            </p>
+          )}
         {selectedProject && (
           <p className={styles.projectContext}>
             <strong>{selectedProject.name}</strong>

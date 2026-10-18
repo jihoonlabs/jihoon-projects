@@ -15,6 +15,7 @@ interface ColumnProps {
   tickets: Ticket[];
   projectKey?: string | null;
   projectColor?: string | null;
+  projectColors?: Record<string, string | null>;
   onStatusChange?: (id: string, status: TicketStatus) => void;
   onOpenDetails?: (ticket: Ticket, trigger: HTMLButtonElement) => void;
   canWrite?: boolean;
@@ -26,6 +27,7 @@ export default function Column({
   tickets,
   projectKey,
   projectColor,
+  projectColors,
   onStatusChange,
   onOpenDetails,
   canWrite,
@@ -51,7 +53,7 @@ export default function Column({
               key={ticket.id}
               ticket={ticket}
               projectKey={projectKey}
-              projectColor={projectColor}
+              projectColor={projectColors?.[ticket.projectId] ?? projectColor}
               onStatusChange={onStatusChange}
               onOpenDetails={onOpenDetails}
               canWrite={canWrite}

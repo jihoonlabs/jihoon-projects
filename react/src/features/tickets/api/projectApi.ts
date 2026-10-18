@@ -1,4 +1,7 @@
-import { fetchWithCsrf } from '@/shared/api/fetchWithCsrf';
+import {
+  protectedFetch as fetch,
+  protectedMutation as fetchWithCsrf,
+} from '@/features/auth/api/protectedRequest';
 import type {
   Project,
   ProjectMember,

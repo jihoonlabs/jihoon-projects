@@ -26,6 +26,13 @@ export function LoginForm({
   const router = useRouter();
 
   const login = useAuthStore((state) => state.login);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
+
+  useEffect(() => {
+    // 履歴移動やセッション復元でも、認証済みのログイン画面を残さない。
+    if (isInitialized && isAuthenticated) router.replace('/tickets');
+  }, [isInitialized, isAuthenticated, router]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -113,8 +120,6 @@ export function LoginForm({
       });
 
       login(data.user);
-
-      router.push('/tickets');
     } catch (error) {
       if (error instanceof LoginApiError) {
         setServerError(error.message);
@@ -171,6 +176,10 @@ export function LoginForm({
       }
     }
   };
+
+  if (!isInitialized || isAuthenticated) {
+    return <p role="status">認証情報を確認中...</p>;
+  }
 
   return (
     <div className={styles.container}>

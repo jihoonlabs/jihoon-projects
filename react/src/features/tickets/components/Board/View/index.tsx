@@ -29,6 +29,8 @@ import {
 import type { Project, ProjectMember } from '@/features/tickets/types/project';
 import styles from './index.module.css';
 
+const ALL_PROJECTS = 'ALL';
+
 export function TicketBoardView() {
   const {
     tickets,
@@ -42,6 +44,8 @@ export function TicketBoardView() {
     deleteTicket,
   } = useTicketStore();
   const currentUser = useAuthStore((state) => state.user);
+  const sessionExpired = useAuthStore((state) => state.sessionExpired);
+  const sessionRevision = useAuthStore((state) => state.sessionRevision);
   const currentUserId = currentUser?.id ?? null;
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,7 +57,7 @@ export function TicketBoardView() {
   const projectRevision = useRef(0);
   const projectListSequence = useRef(0);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState(ALL_PROJECTS);
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const memberRevision = useRef(0);
   const [memberAttempt, setMemberAttempt] = useState(0);
@@ -62,12 +66,15 @@ export function TicketBoardView() {
     message: string;
   } | null>(null);
   const [membersProjectId, setMembersProjectId] = useState('');
+  const [membersSession, setMembersSession] = useState(sessionRevision);
+  const [projectsSession, setProjectsSession] = useState(sessionRevision);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [managingMembers, setManagingMembers] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [projectListAttempt, setProjectListAttempt] = useState(0);
   const [operationsOpen, setOperationsOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(false);
+  const [createFocusRequest, setCreateFocusRequest] = useState(0);
   const [projectsBusy, setProjectsBusy] = useState(false);
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectNotice, setProjectNotice] = useState<string | null>(null);
@@ -84,10 +91,11 @@ export function TicketBoardView() {
   }, [isModalOpen]);
 
   useEffect(() => {
-    fetchTickets();
-  }, [fetchTickets]);
+    if (!sessionExpired) void fetchTickets();
+  }, [fetchTickets, sessionExpired, sessionRevision]);
 
   useEffect(() => {
+    if (sessionExpired) return;
     let active = true;
     const revision = projectRevision.current;
     const sequence = ++projectListSequence.current;
@@ -100,11 +108,12 @@ export function TicketBoardView() {
         )
           return;
         setProjects(items);
+        setProjectsSession(sessionRevision);
         setProjectError(null);
         setSelectedProjectId((current) =>
-          current && items.some((item) => item.id === current)
+          current === ALL_PROJECTS || items.some((item) => item.id === current)
             ? current
-            : (items[0]?.id ?? ''),
+            : ALL_PROJECTS,
         );
       })
       .catch((reason) => {
@@ -125,16 +134,22 @@ export function TicketBoardView() {
     return () => {
       active = false;
     };
-  }, [showArchived, projectListAttempt]);
+  }, [showArchived, projectListAttempt, sessionExpired, sessionRevision]);
 
   useEffect(() => {
-    if (!selectedProjectId) return;
+    if (
+      sessionExpired ||
+      !selectedProjectId ||
+      selectedProjectId === ALL_PROJECTS
+    )
+      return;
     let active = true;
     const revision = memberRevision.current;
     fetchProjectMembers(selectedProjectId)
       .then((items) => {
         if (active && revision === memberRevision.current) {
           setProjectMembers(items);
+          setMembersSession(sessionRevision);
           setMembersProjectId(selectedProjectId);
           setMemberError(null);
         }
@@ -154,7 +169,7 @@ export function TicketBoardView() {
     return () => {
       active = false;
     };
-  }, [selectedProjectId, memberAttempt]);
+  }, [selectedProjectId, memberAttempt, sessionExpired, sessionRevision]);
 
   const retryMembers = () => {
     memberRevision.current += 1;
@@ -166,21 +181,33 @@ export function TicketBoardView() {
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) ?? null;
   const currentMembership =
-    membersProjectId === selectedProjectId
+    membersSession === sessionRevision && membersProjectId === selectedProjectId
       ? projectMembers.find((member) => member.id === String(currentUserId))
       : undefined;
   const isAdmin = currentUser?.role === 'admin';
   const isArchived = Boolean(selectedProject?.archivedAt);
   const canManageProject =
+    !sessionExpired &&
+    projectsSession === sessionRevision &&
     Boolean(selectedProject) &&
     (isAdmin || currentMembership?.role === 'leader');
   const canWrite =
+    !sessionExpired &&
+    projectsSession === sessionRevision &&
     Boolean(selectedProject) &&
     !isArchived &&
     (isAdmin || currentMembership?.permission === 'write');
   const canManageMembers = !isArchived && canManageProject;
-  const projectTickets = tickets.filter(
-    (ticket) => ticket.projectId === selectedProjectId,
+  // 全体表示でもProject一覧の権限・稼働/終了スコープを越えて表示しない。
+  const availableProjectIds = new Set(projects.map((project) => project.id));
+  const projectTickets = tickets.filter((ticket) =>
+    selectedProjectId === ALL_PROJECTS
+      ? availableProjectIds.has(ticket.projectId)
+      : ticket.projectId === selectedProjectId,
+  );
+  const modalProject = projects.find(
+    (project) =>
+      project.id === (selectedTicket?.projectId ?? selectedProjectId),
   );
   const canDrag =
     canWrite && searchQuery.trim() === '' && assigneeFilter === 'ALL';
@@ -198,9 +225,9 @@ export function TicketBoardView() {
       return;
     setProjects(items);
     setSelectedProjectId((current) =>
-      current && items.some((item) => item.id === current)
+      current === ALL_PROJECTS || items.some((item) => item.id === current)
         ? current
-        : (items[0]?.id ?? ''),
+        : ALL_PROJECTS,
     );
   };
 
@@ -246,7 +273,7 @@ export function TicketBoardView() {
     projectRevision.current += 1;
     setShowArchived(archived);
     setProjects([]);
-    setSelectedProjectId('');
+    setSelectedProjectId(ALL_PROJECTS);
     setOperationsOpen(false);
     setProjectNotice(null);
     setProjectError(null);
@@ -261,7 +288,7 @@ export function TicketBoardView() {
     items.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
     setProjects(items);
     if (!sameScope) {
-      setSelectedProjectId(items[0]?.id ?? '');
+      setSelectedProjectId(ALL_PROJECTS);
       setOperationsOpen(false);
       setSearchQuery('');
       setAssigneeFilter('ALL');
@@ -433,6 +460,17 @@ export function TicketBoardView() {
         assigneeFilter={assigneeFilter}
         onAssigneeChange={setAssigneeFilter}
         onCreate={openCreate}
+        onCreateProject={() => {
+          if (showArchived) changeProjectScope(false);
+          setProjectsOpen(true);
+          setCreateFocusRequest((request) => request + 1);
+        }}
+        canCreateTicket={
+          !showArchived &&
+          !projectsLoading &&
+          projects.length > 0 &&
+          (selectedProjectId === ALL_PROJECTS || canWrite)
+        }
         projects={projects}
         selectedProjectId={selectedProjectId}
         onProjectChange={selectProject}
@@ -449,6 +487,7 @@ export function TicketBoardView() {
 
       {projectsOpen && (
         <ProjectDirectory
+          createFocusRequest={createFocusRequest}
           showArchived={showArchived}
           externalBusy={projectsBusy}
           onArchivedChange={changeProjectScope}
@@ -516,6 +555,9 @@ export function TicketBoardView() {
       >
         <Main
           tickets={projectTickets}
+          projectColors={Object.fromEntries(
+            projects.map((project) => [project.id, project.color ?? null]),
+          )}
           projectKey={selectedProject?.projectKey}
           projectColor={selectedProject?.color}
           searchQuery={searchQuery}
@@ -548,13 +590,38 @@ export function TicketBoardView() {
           currentUserId={currentUserId}
           currentUserRole={currentUser?.role}
           projectId={selectedTicket?.projectId ?? selectedProjectId}
-          projectKey={selectedProject?.projectKey}
-          projectColor={selectedProject?.color}
+          projectKey={modalProject?.projectKey}
+          projectColor={modalProject?.color}
           projectMembers={
             membersProjectId === selectedProjectId ? projectMembers : []
           }
-          commentsReadOnly={isArchived}
-          readOnly={!canWrite}
+          commentsReadOnly={!modalProject || Boolean(modalProject.archivedAt)}
+          readOnly={
+            !canWrite ||
+            (!selectedTicket && membersProjectId !== selectedProjectId)
+          }
+          projectSelection={
+            !selectedTicket
+              ? {
+                  projects,
+                  onChange: selectProject,
+                  message:
+                    selectedProjectId === ALL_PROJECTS
+                      ? '作成先のプロジェクトを選択してください。'
+                      : memberError?.projectId === selectedProjectId
+                        ? memberError.message
+                        : membersProjectId !== selectedProjectId
+                          ? 'メンバーと権限を確認中...'
+                          : !canWrite
+                            ? 'このプロジェクトは閲覧のみです。作成できるプロジェクトを選択してください。'
+                            : undefined,
+                  onRetry:
+                    memberError?.projectId === selectedProjectId
+                      ? retryMembers
+                      : undefined,
+                }
+              : undefined
+          }
           onClose={closeModal}
           onCreate={handleCreate}
           onUpdate={handleUpdate}

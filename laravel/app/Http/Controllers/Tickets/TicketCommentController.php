@@ -31,6 +31,7 @@ class TicketCommentController extends Controller
 
         $comment = DB::transaction(function () use ($ticket, $request, $validated) {
             $this->lockActiveProject($ticket);
+            $this->authorizeProjectRead($request, $ticket);
             $comment = $ticket->comments()->make(['body' => $validated['body']]);
             $comment->user()->associate($request->user());
             $comment->save();
@@ -50,8 +51,9 @@ class TicketCommentController extends Controller
 
         $validated = $this->validateBody($request);
 
-        DB::transaction(function () use ($ticket, $comment, $validated) {
+        DB::transaction(function () use ($request, $ticket, $comment, $validated) {
             $this->lockActiveProject($ticket);
+            $this->authorizeProjectRead($request, $ticket);
             $comment->update(['body' => $validated['body']]);
         });
 
@@ -68,8 +70,9 @@ class TicketCommentController extends Controller
             403
         );
 
-        DB::transaction(function () use ($ticket, $comment) {
+        DB::transaction(function () use ($request, $ticket, $comment) {
             $this->lockActiveProject($ticket);
+            $this->authorizeProjectRead($request, $ticket);
             $comment->delete();
         });
 
@@ -97,6 +100,7 @@ class TicketCommentController extends Controller
     {
         $project = Project::query()->whereKey($ticket->project_id)->lockForUpdate()->firstOrFail();
         abort_if($project->archived_at !== null, 409, 'Restore this project before changing comments.');
+        $ticket->setRelation('project', $project);
     }
 
     private function validateBody(Request $request): array

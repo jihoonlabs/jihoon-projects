@@ -53,9 +53,11 @@ class TicketController extends Controller
         $this->authorizeProjectWrite($request, $project);
         $this->validateAssignee($project, $validated['assignee_id'] ?? null);
 
-        $ticket = DB::transaction(function () use ($validated) {
+        $ticket = DB::transaction(function () use ($request, $validated) {
             $project = Project::query()->lockForUpdate()->findOrFail($validated['project_id']);
-            $this->ensureActive($project);
+            // 権限変更と同じProjectロックの取得後に、最新の権限を再確認する。
+            $this->authorizeProjectWrite($request, $project);
+            $this->validateAssignee($project, $validated['assignee_id'] ?? null);
             $status = $validated['status'] ?? 'TODO';
             $ticketNumber = (int) $project->next_ticket_number;
             $position = ((int) (Ticket::query()
@@ -109,9 +111,13 @@ class TicketController extends Controller
         $expectedVersion = $validated['expected_version'] ?? null;
         unset($validated['expected_version']);
 
-        $saved = DB::transaction(function () use ($ticket, $validated, $expectedVersion) {
+        $saved = DB::transaction(function () use ($request, $ticket, $validated, $expectedVersion) {
             $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
-            $this->ensureActive($project);
+            // 権限変更と同じProjectロックの取得後に、最新の権限を再確認する。
+            $this->authorizeProjectWrite($request, $project);
+            if (array_key_exists('assignee_id', $validated)) {
+                $this->validateAssignee($project, $validated['assignee_id']);
+            }
             $ticket->refresh();
             $sourceStatus = $ticket->status;
             $changedStatus = isset($validated['status']) && $validated['status'] !== $sourceStatus;
@@ -163,9 +169,10 @@ class TicketController extends Controller
             'board_version' => ['required', 'integer', 'min:0'],
         ]);
 
-        $project = DB::transaction(function () use ($ticket, $validated) {
+        $project = DB::transaction(function () use ($request, $ticket, $validated) {
             $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
-            $this->ensureActive($project);
+            // 権限変更と同じProjectロックの取得後に、最新の権限を再確認する。
+            $this->authorizeProjectWrite($request, $project);
 
             abort_if(
                 (int) $project->board_version !== (int) $validated['board_version'],
@@ -217,9 +224,10 @@ class TicketController extends Controller
     {
         $this->authorizeProjectWrite($request, $ticket->project);
 
-        DB::transaction(function () use ($ticket) {
+        DB::transaction(function () use ($request, $ticket) {
             $project = Project::query()->lockForUpdate()->findOrFail($ticket->project_id);
-            $this->ensureActive($project);
+            // 権限変更と同じProjectロックの取得後に、最新の権限を再確認する。
+            $this->authorizeProjectWrite($request, $project);
             $ticket->refresh();
             $status = $ticket->status;
 

@@ -3,6 +3,7 @@ import * as api from '../../api/ticketApi';
 import { responseTicket } from '../../api/test/ticketFixture';
 import type { Ticket } from '../../types/ticket';
 import { useTicketStore } from '../useTicketStore';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
 vi.mock('../../api/ticketApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../api/ticketApi')>()),
@@ -31,6 +32,7 @@ function deferred<T>() {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  useAuthStore.getState().logout();
   vi.mocked(api.fetchTickets).mockImplementation(async () => state().tickets);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 });
@@ -434,5 +436,93 @@ describe('Ticket state and persisted order', () => {
     ).toEqual(['1', '3']);
     expect(api.fetchTickets).toHaveBeenCalledTimes(1);
     expect(state().error).toBe('refresh failed');
+  });
+});
+
+it('runs a later explicit queued drag after a failed drag without retrying the failed request', async () => {
+  useTicketStore.setState({ tickets: [ticket('1')] });
+  const first = deferred<Awaited<ReturnType<typeof api.moveTicket>>>();
+  vi.mocked(api.moveTicket)
+    .mockReturnValueOnce(first.promise)
+    .mockResolvedValueOnce({
+      ticket: ticket('1', 0, 'IN_REVIEW'),
+      boardVersion: 5,
+    });
+  const failed = state().moveTicket('1', 'DONE', 0, 4);
+  const later = state().moveTicket('1', 'IN_REVIEW', 0, 4);
+  const completed = Promise.allSettled([failed, later]);
+  first.reject(new Error('first drag failed'));
+  const results = await completed;
+  expect(results[0]).toMatchObject({
+    status: 'rejected',
+    reason: new Error('first drag failed'),
+  });
+  expect(api.moveTicket).toHaveBeenCalledTimes(2);
+  expect(vi.mocked(api.moveTicket).mock.calls.map((args) => args[1])).toEqual([
+    'DONE',
+    'IN_REVIEW',
+  ]);
+  expect(results[1]).toEqual({ status: 'fulfilled', value: 5 });
+});
+
+it('keeps a later queued drag conflict rejected without automatically retrying', async () => {
+  useTicketStore.setState({ tickets: [ticket('1')] });
+  const first = deferred<Awaited<ReturnType<typeof api.moveTicket>>>();
+  vi.mocked(api.moveTicket)
+    .mockReturnValueOnce(first.promise)
+    .mockRejectedValueOnce(new api.TicketApiError('later conflict', 409));
+  const failed = state().moveTicket('1', 'DONE', 0, 4);
+  const later = state().moveTicket('1', 'IN_REVIEW', 0, 4);
+  const completed = Promise.allSettled([failed, later]);
+  first.reject(new Error('first drag failed'));
+  const results = await completed;
+  expect(results[0]).toMatchObject({
+    status: 'rejected',
+    reason: new Error('first drag failed'),
+  });
+  expect(results[1]).toMatchObject({
+    status: 'rejected',
+    reason: { status: 409, message: 'later conflict' },
+  });
+  expect(api.moveTicket).toHaveBeenCalledTimes(2);
+});
+
+describe('session boundaries', () => {
+  it('does not restore a deleted card when an old request fails after logout', async () => {
+    useTicketStore.setState({ tickets: [ticket('1')] });
+    const pending = deferred<void>();
+    vi.mocked(api.deleteTicket).mockReturnValue(pending.promise);
+    const deletion = state().deleteTicket('1');
+    const rejected = expect(deletion).rejects.toThrow('Expired');
+    useAuthStore.getState().logout();
+    pending.reject(new Error('Expired'));
+    await rejected;
+    expect(state().tickets).toEqual([]);
+    expect(state().error).toBeNull();
+  });
+  it('discards an old list response after logout', async () => {
+    const pending = deferred<Ticket[]>();
+    vi.mocked(api.fetchTickets).mockReturnValue(pending.promise);
+    const loading = state().fetchTickets();
+    useAuthStore.getState().logout();
+    pending.resolve([ticket('1')]);
+    await loading;
+    expect(state().tickets).toEqual([]);
+  });
+  it('cancels queued writes from the previous session', async () => {
+    useTicketStore.setState({ tickets: [ticket('1')] });
+    const pending = deferred<Ticket>();
+    vi.mocked(api.updateTicket).mockReturnValue(pending.promise);
+    const first = state().updateTicket('1', { title: 'First' });
+    const second = state().updateTicket('1', { title: 'Second' });
+    const rejected = expect(second).rejects.toMatchObject({
+      name: 'AbortError',
+    });
+    useAuthStore.getState().logout();
+    pending.resolve(ticket('1'));
+    await first;
+    await rejected;
+    expect(api.updateTicket).toHaveBeenCalledTimes(1);
+    expect(state().tickets).toEqual([]);
   });
 });

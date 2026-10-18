@@ -3,20 +3,26 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LoginForm } from '../LoginForm';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
-const { pushMock } = vi.hoisted(() => ({
-  pushMock: vi.fn(),
+const { replaceMock } = vi.hoisted(() => ({
+  replaceMock: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: pushMock,
+    replace: replaceMock,
   }),
 }));
 
 describe('LoginForm 表示・入力検証', () => {
   beforeEach(() => {
-    pushMock.mockReset();
+    replaceMock.mockReset();
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      isInitialized: true,
+    });
   });
 
   it('ログインフォームが表示されること', () => {
@@ -45,6 +51,6 @@ describe('LoginForm 表示・入力検証', () => {
     expect(
       screen.getByText('パスワードを入力してください。'),
     ).toBeInTheDocument();
-    expect(pushMock).not.toHaveBeenCalled();
+    expect(replaceMock).not.toHaveBeenCalled();
   });
 });

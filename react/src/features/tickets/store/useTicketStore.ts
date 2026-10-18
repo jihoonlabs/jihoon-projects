@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import * as api from '../api/ticketApi';
 import type {
   CreateTicketInput,
@@ -45,22 +46,50 @@ export const useTicketStore = create<TicketState>((set, get) => {
     loading -= 1;
     set({ isLoading: loading > 0 });
   };
-  const fail = (error: unknown) =>
-    set({
-      error:
-        error instanceof Error
-          ? error.message
-          : '予期しないエラーが発生しました。',
-    });
+  const sessionContext = () => {
+    const revision = useAuthStore.getState().sessionRevision;
+    const isCurrent = () =>
+      revision === useAuthStore.getState().sessionRevision;
+    const sessionSet = (
+      partial:
+        Partial<TicketState> | ((state: TicketState) => Partial<TicketState>),
+    ) => {
+      if (isCurrent()) set(partial);
+    };
+    return {
+      set: sessionSet,
+      fail: (error: unknown) =>
+        sessionSet({
+          error:
+            error instanceof Error
+              ? error.message
+              : '予期しないエラーが発生しました。',
+        }),
+    };
+  };
 
   // Serialize writes to the same ticket; unrelated tickets can still progress.
   const write = <T>(id: string, operation: () => Promise<T>): Promise<T> => {
+    const session = useAuthStore.getState().sessionRevision;
+    const execute = () => {
+      if (
+        session !== useAuthStore.getState().sessionRevision ||
+        useAuthStore.getState().sessionExpired
+      ) {
+        return Promise.reject(
+          new DOMException('認証状態が変更されました。', 'AbortError'),
+        );
+      }
+      return operation();
+    };
     const previous = pending.get(id);
-    const request = previous ? previous.then(operation) : operation();
+    // 先行失敗を後続の明示操作へ伝播させず、各操作の結果は呼出元へ返す。
+    const request = previous ? previous.then(execute, execute) : execute();
     pending.set(id, request);
     return request.finally(() => {
       if (pending.get(id) === request) pending.delete(id);
-      return refreshWhenIdle();
+      if (session === useAuthStore.getState().sessionRevision)
+        return refreshWhenIdle();
     });
   };
 
@@ -69,6 +98,8 @@ export const useTicketStore = create<TicketState>((set, get) => {
     isLoading: false,
     error: null,
     fetchTickets: async () => {
+      if (useAuthStore.getState().sessionExpired) return;
+      const { set, fail } = sessionContext();
       const sequence = ++fetchSequence;
       const startedAt = revision;
       startLoading();
@@ -95,6 +126,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
     },
     updateStatus: (id, status) =>
       write(id, async () => {
+        const { set, fail } = sessionContext();
         const before = get().tickets.find((ticket) => ticket.id === id);
         if (!before || before.status === status) return;
         revision += 1;
@@ -121,6 +153,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
       }),
     moveTicket: (id, status, position, boardVersion) =>
       write(id, async () => {
+        const { set, fail } = sessionContext();
         const before = get().tickets;
         const moving = before.find((ticket) => ticket.id === id);
         if (!moving) return boardVersion;
@@ -182,6 +215,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
         }
       }),
     addTicket: async (input) => {
+      const { set, fail } = sessionContext();
       revision += 1;
       creating += 1;
       startLoading();
@@ -203,6 +237,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
     },
     updateTicket: (id, input) =>
       write(id, async () => {
+        const { set, fail } = sessionContext();
         const before = get().tickets.find((ticket) => ticket.id === id);
         if (!before)
           throw new Error('チケットが一覧にありません。再取得してください。');
@@ -226,6 +261,7 @@ export const useTicketStore = create<TicketState>((set, get) => {
       }),
     deleteTicket: (id) =>
       write(id, async () => {
+        const { set, fail } = sessionContext();
         const before = get().tickets.find((ticket) => ticket.id === id);
         if (!before) return;
         revision += 1;
@@ -245,4 +281,11 @@ export const useTicketStore = create<TicketState>((set, get) => {
         }
       }),
   };
+});
+
+// 認証境界で前アカウントのキャッシュを破棄する。遅延応答はsessionContextで無効化する。
+useAuthStore.subscribe((state, previous) => {
+  if (state.sessionRevision !== previous.sessionRevision) {
+    useTicketStore.setState({ tickets: [], error: null });
+  }
 });

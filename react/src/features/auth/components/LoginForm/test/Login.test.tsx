@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,13 +11,13 @@ import { LoginForm } from '../LoginForm';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
-const { pushMock } = vi.hoisted(() => ({
-  pushMock: vi.fn(),
+const { replaceMock } = vi.hoisted(() => ({
+  replaceMock: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: pushMock,
+    replace: replaceMock,
   }),
 }));
 
@@ -32,12 +32,12 @@ const mockUser: User = {
 
 describe('LoginForm ログイン処理', () => {
   beforeEach(() => {
-    pushMock.mockReset();
+    replaceMock.mockReset();
 
     useAuthStore.setState({
       user: null,
       isAuthenticated: false,
-      isInitialized: false,
+      isInitialized: true,
     });
   });
 
@@ -68,7 +68,7 @@ describe('LoginForm ログイン処理', () => {
     await user.click(screen.getByRole('button', { name: 'ログイン' }));
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith('/tickets');
+      expect(replaceMock).toHaveBeenCalledWith('/tickets');
     });
 
     expect(useAuthStore.getState().user).toEqual(mockUser);
@@ -106,7 +106,7 @@ describe('LoginForm ログイン処理', () => {
       ),
     ).toBeInTheDocument();
 
-    expect(pushMock).not.toHaveBeenCalled();
+    expect(replaceMock).not.toHaveBeenCalled();
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
   });
 
@@ -134,7 +134,33 @@ describe('LoginForm ログイン処理', () => {
       ),
     ).toBeInTheDocument();
 
-    expect(pushMock).not.toHaveBeenCalled();
+    expect(replaceMock).not.toHaveBeenCalled();
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
   });
+});
+
+it('does not expose login fields while initial session verification is pending', async () => {
+  useAuthStore.setState({
+    user: null,
+    isAuthenticated: false,
+    isInitialized: false,
+  });
+  render(<LoginForm />);
+  expect(screen.queryByLabelText('メールアドレス')).not.toBeInTheDocument();
+  expect(replaceMock).not.toHaveBeenCalled();
+  await act(async () => {
+    useAuthStore.getState().initialize();
+  });
+  expect(screen.getByLabelText('メールアドレス')).toBeInTheDocument();
+});
+
+it('replaces a restored authenticated login route without showing the login form', async () => {
+  useAuthStore.setState({
+    user: mockUser,
+    isAuthenticated: true,
+    isInitialized: true,
+  });
+  render(<LoginForm />);
+  expect(screen.queryByLabelText('メールアドレス')).not.toBeInTheDocument();
+  await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/tickets'));
 });
