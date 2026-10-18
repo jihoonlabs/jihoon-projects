@@ -90,7 +90,8 @@ export default function Header({
             disabled={projectsBusy}
             aria-label="プロジェクト一覧・作成"
             aria-expanded={projectsOpen}
-            aria-controls="project-directory"
+            aria-controls="project-directory-dialog"
+            aria-haspopup="dialog"
             onClick={onToggleProjects}
           >
             一覧・作成

@@ -21,6 +21,7 @@ import Card from '../Card';
 import TicketModal from '../TicketModal';
 import ProjectOperations from '../ProjectOperations';
 import ProjectDirectory from '../ProjectDirectory';
+import ProjectDirectoryDialog from '../ProjectDirectory/Dialog';
 import ProjectMembersDialog from '../ProjectMembersDialog';
 import {
   fetchProjects,
@@ -303,6 +304,7 @@ export function TicketBoardView() {
   };
 
   const handleProjectCreated = (project: Project) => {
+    setProjectsOpen(false);
     projectRevision.current += 1;
     setProjects((items) =>
       [...items.filter((item) => item.id !== project.id), project].sort(
@@ -482,26 +484,38 @@ export function TicketBoardView() {
         onToggleOperations={() => setOperationsOpen((open) => !open)}
         projectsBusy={projectsBusy}
         projectsOpen={projectsOpen}
-        onToggleProjects={() => setProjectsOpen((open) => !open)}
+        onToggleProjects={() => {
+          setCreateFocusRequest(0);
+          setProjectsOpen((open) => !open);
+        }}
       />
 
       {projectsOpen && (
-        <ProjectDirectory
-          createFocusRequest={createFocusRequest}
-          showArchived={showArchived}
-          externalBusy={projectsBusy}
-          onArchivedChange={changeProjectScope}
-          onRetry={() => {
-            setProjectsLoading(true);
-            setProjectListAttempt((attempt) => attempt + 1);
-          }}
-          loading={projectsLoading}
-          projects={projects}
-          selectedProjectId={selectedProjectId}
-          onSelect={selectProject}
-          onCreated={handleProjectCreated}
-          onPendingChange={setProjectsBusy}
-        />
+        <ProjectDirectoryDialog
+          busy={projectsBusy}
+          focusCreate={createFocusRequest > 0}
+          onClose={() => setProjectsOpen(false)}
+        >
+          <ProjectDirectory
+            createFocusRequest={createFocusRequest}
+            showArchived={showArchived}
+            externalBusy={projectsBusy}
+            onArchivedChange={changeProjectScope}
+            onRetry={() => {
+              setProjectsLoading(true);
+              setProjectListAttempt((attempt) => attempt + 1);
+            }}
+            loading={projectsLoading}
+            projects={projects}
+            selectedProjectId={selectedProjectId}
+            onSelect={(id) => {
+              selectProject(id);
+              setProjectsOpen(false);
+            }}
+            onCreated={handleProjectCreated}
+            onPendingChange={setProjectsBusy}
+          />
+        </ProjectDirectoryDialog>
       )}
       {operationsOpen && selectedProject && canManageProject && (
         <ProjectOperations
