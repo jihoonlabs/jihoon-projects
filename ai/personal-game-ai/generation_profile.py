@@ -233,9 +233,10 @@ def test_prompt(area):
     return prefix + (
         "\n# 일반 Thumby 테스트 계약\n"
         "순수 게임 규칙은 실제 thumby 모듈 없이 검사하세요. "
-        "폴더명 엔트리의 기기 어댑터 테스트는 import sys 후 대상 모듈 import 전에 "
-        "sys.modules['thumby']에 None이 아닌 가짜 thumby 객체를 직접 주입해 CPython에서 검사 가능하게 하세요. "
-        "아래 틀에 제시되는 대상 모듈 import 문장은 유지하되, 그 import보다 앞에 sys import와 fake 주입 코드를 삽입하세요. "
+        "폴더명 엔트리 테스트의 import 순서는 반드시 import sys, from unittest.mock import MagicMock, "
+        "sys.modules['thumby'] = MagicMock(), 제공된 대상 모듈 import 순서여야 합니다. "
+        "sys.modules에 가짜를 넣기 전에 엔트리를 import하지 마세요. "
+        "생성 후보에 제공된 sys import·MagicMock 주입·대상 import 접두부가 있으면 순서와 코드를 그대로 유지하세요. "
         + ("이동·공격·메뉴·장착·저장 중 승인 설계에 있는 조건을 checks에 따라 검사하세요. " if extended else
            "좌우 이동 경계·장애물 충돌·점수·재시작 조건을 설계 checks에 따라 직접 assertion으로 확인하세요. ")
         + "승인 설계의 functions에 없는 새 production 함수·클래스·상수 계약을 테스트에서 만들지 마세요. "
