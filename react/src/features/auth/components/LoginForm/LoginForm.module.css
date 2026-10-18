@@ -103,6 +103,9 @@
   padding-right: 4.2rem;
 }
 .passwordToggle {
+  display: grid;
+  place-items: center;
+  min-width: 36px;
   position: absolute;
   inset-block: 5px;
   right: 5px;
@@ -121,6 +124,10 @@
 .submitBtn,
 .resendButton,
 .socialButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   min-height: 44px;
   padding: 0.7rem 0.85rem;
   border-radius: 8px;
@@ -152,10 +159,31 @@
   border: 1px solid #dce2eb;
   background: #fff;
   color: #475569;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.socialButton img {
+  flex-shrink: 0;
+}
+.googleButton {
+  color: #1f1f1f;
+  border-color: #747775;
 }
 .socialButton:hover {
   background: #f8fafc;
+}
+.lineButton {
+  color: #fff;
+  background: #06c755;
+  border-color: #06c755;
+}
+.lineButton:hover {
+  background: #05b34d;
+  border-color: #05b34d;
+}
+.lineButton:active {
+  background: #048b3c;
+  border-color: #048b3c;
 }
 .alternativeLabel {
   display: flex;
