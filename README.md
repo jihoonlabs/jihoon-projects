@@ -12,6 +12,15 @@
 - 検索、担当者フィルター、ドラッグ＆ドロップ
 - コメント、プロジェクトの終了・復元
 
+### 画面イメージ
+
+| チケットボード | ログイン画面 |
+| --- | --- |
+| [<img src="docs/ticket/images/ticket-board-v1.png" alt="Ticket V1のプロジェクト選択、検索・担当者フィルターとカンバンボード" width="560">](docs/ticket/images/ticket-board-v1.png) | [<img src="docs/ticket/images/login-v1.png" alt="Ticket V1のメールログイン、パスワード表示切替、Google・LINEログインボタン" width="280">](docs/ticket/images/login-v1.png) |
+| プロジェクトごとにチケットの状態・優先度・担当者を確認できます。 | メールでのログインと、登録・パスワード再設定への入口です。 |
+
+ローカル環境のデモ画面です。画像をクリックすると元のサイズで表示できます。
+
 [機能別V1マニュアル](docs/ticket/README.md)では操作方法を説明し、[Ticket開発・検証記録](docs/ticket/TICKET.md)では公開範囲、実装上の前提、過去の検証記録を説明しています。操作説明と開発記録を分け、テスト記録が現在の全環境を保証するものではないことも明記しています。
 
 ## AIを活用した開発プロセス
