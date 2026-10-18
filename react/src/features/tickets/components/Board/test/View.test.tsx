@@ -940,9 +940,9 @@ it('keeps archived Project boards read-only even for admins and exposes restorat
     screen.getByRole('checkbox', { name: '終了したプロジェクトを表示' }),
   );
   await screen.findByRole('option', { name: 'General' });
-  fireEvent.change(screen.getByRole('combobox', { name: 'プロジェクト' }), {
-    target: { value: '1' },
-  });
+  fireEvent.click(
+    screen.getByRole('button', { name: 'General GEN ボードを開く' }),
+  );
   await waitFor(() =>
     expect(screen.getByRole('combobox', { name: 'プロジェクト' })).toHaveValue(
       '1',
@@ -1564,4 +1564,58 @@ it('opens the existing Project creation form directly from aggregate', async () 
   render(<TicketBoardView />);
   fireEvent.click(screen.getByRole('button', { name: '+ プロジェクト作成' }));
   expect(await screen.findByLabelText('プロジェクト名')).toHaveFocus();
+});
+
+it('keeps the project directory off the board until requested and closes after selection', async () => {
+  const user = userEvent.setup();
+  render(<TicketBoardView />);
+  await screen.findByRole('option', { name: 'General' });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  const trigger = screen.getByRole('button', {
+    name: 'プロジェクト一覧・作成',
+  });
+  await user.click(trigger);
+  const dialog = screen.getByRole('dialog', { name: 'プロジェクト一覧' });
+  expect(within(dialog).getByRole('searchbox')).toHaveFocus();
+  await user.click(
+    within(dialog).getByRole('button', { name: 'General GEN ボードを開く' }),
+  );
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'プロジェクト' })).toHaveValue(
+    '1',
+  );
+  expect(trigger).toHaveFocus();
+});
+
+it('opens creation directly and blocks closing until a failed save can be retried', async () => {
+  const user = userEvent.setup();
+  let rejectSave!: (reason: Error) => void;
+  vi.mocked(projectApi.createProject).mockImplementation(
+    () =>
+      new Promise((_, reject) => {
+        rejectSave = reject;
+      }),
+  );
+  render(<TicketBoardView />);
+  await screen.findByRole('option', { name: 'General' });
+  const trigger = screen.getByRole('button', { name: '+ プロジェクト作成' });
+  await user.click(trigger);
+  const dialog = screen.getByRole('dialog', { name: 'プロジェクト一覧' });
+  const input = within(dialog).getByLabelText('プロジェクト名');
+  expect(input).toHaveFocus();
+  await user.type(input, 'Draft team');
+  await user.click(
+    within(dialog).getByRole('button', { name: 'プロジェクトを作成' }),
+  );
+  expect(
+    within(dialog).getByRole('button', { name: 'プロジェクト一覧を閉じる' }),
+  ).toBeDisabled();
+  fireEvent(dialog, new Event('cancel', { cancelable: true }));
+  expect(dialog).toBeInTheDocument();
+  await act(async () => rejectSave(new Error('Please retry')));
+  expect(within(dialog).getByRole('alert')).toHaveTextContent('Please retry');
+  expect(input).toHaveValue('Draft team');
+  fireEvent(dialog, new Event('cancel', { cancelable: true }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(trigger).toHaveFocus();
 });
