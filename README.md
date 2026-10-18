@@ -36,9 +36,11 @@ AIをコード生成だけに使わず、作業範囲、検証、レビュー、
 - **品質確認:** Vitest、Testing Library、PHPUnit、ESLint、TypeScript
 - **開発プロセス:** Git、AI支援開発、作業範囲と検証記録の管理
 
-## 趣味のAI開発・実験：Thumby
+## Thumbyゲームとエージェント開発の試験
 
-`micropython/` では、Thumby向けMicroPythonゲーム制作を題材に、ローカルAI（Ollama）を利用した開発環境・作業フローを試しています。AIによる実装支援と作業の引き継ぎは検証中で、完成・実証済みの自律開発とは扱っていません。メインのTicketとは区別しています。
+`micropython/Thumby/ThumbyBrawlBase/` では、個人で整備しているエージェント用Markdownの作業基準を使い、Thumby向けゲームのベースを開発しています。ユーザーが方向と要件を決め、エージェントが実装・テストを支援する進行です。これは完成ゲームの紹介ではなく、エージェント作業基準を実際の開発成果につなげる試験プロジェクトです。公開するゲームコードと利用案内を掲載しています。
+
+ゲームの概要、操作、テストと未確認事項は [Thumby Brawl Base README](micropython/Thumby/ThumbyBrawlBase/README.md) と [公開マニュアル](docs/thumby-brawl-base/MANUAL.md) を参照してください。
 
 ## リポジトリ構成
 
@@ -47,6 +49,7 @@ laravel/       Laravel API、認証、DBマイグレーション、バックエ�
 react/         Next.jsアプリ、認証・投稿・お知らせ・Ticket UI
 docs/ticket/   Ticket V1の機能別マニュアルと開発・検証記録
 docs/agent/    公開エージェント構成のポートフォリオ保存例
+docs/thumby-brawl-base/  Thumby Brawl Baseの公開マニュアル
 micropython/   Thumby向けゲームの試作
 vue/           Vue用の作業領域（現在は未実装）
 ```
