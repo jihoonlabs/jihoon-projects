@@ -10,6 +10,7 @@ class FakeDisplay:
     def __init__(self):
         self.text = []
         self.rectangles = []
+        self.pixels = []
 
     def fill(self, _color):
         self.text = []
@@ -26,8 +27,8 @@ class FakeDisplay:
     def drawLine(self, *_args):
         pass
 
-    def setPixel(self, *_args):
-        pass
+    def setPixel(self, *args):
+        self.pixels.append(args)
 
     def setFPS(self, _fps):
         pass
@@ -101,7 +102,9 @@ class SRPGMenuTests(unittest.TestCase):
         self.press("A", game.handle_target_input)
         self.assertEqual((game.state, game.attack_weapon["name"]),
                          (game.STATE_ATTACK, "FINAL"))
-        for _ in range(20):
+        for _ in range(50):
+            if game.state != game.STATE_ATTACK:
+                break
             game.update_attack()
         self.assertEqual(target["hp"], 15)
 
@@ -113,56 +116,97 @@ class SRPGMenuTests(unittest.TestCase):
         game.cursor_x, game.cursor_y = target["x"], target["y"]
 
         game.start_attack(game.selected_unit["weapons"][0])
-        self.assertEqual(game.attack_phase, 1)
+        self.assertEqual(game.attack_phase, 0)
         self.assertFalse(game.attack_is_special)
+        for _ in range(10):
+            game.update_attack()
+        self.assertEqual(game.attack_phase, 2)
 
         game.start_attack(game.selected_unit["weapons"][-1])
         self.assertEqual(game.attack_phase, 0)
         self.assertTrue(game.attack_is_special)
+        for _ in range(10):
+            game.update_attack()
+        self.assertEqual(game.attack_phase, 1)
 
     def test_melee_attacker_advances_but_ranged_attacker_holds_position(self):
         game.selected_unit = create_units()[1]
         target = create_units()[-1]
         game.attack_target = target
-        game.attack_phase = 1
+        game.attack_phase = 2
         game.attack_weapon = game.selected_unit["weapons"][0]
         game.attack_timer = 0
-        fake_display.rectangles = []
+        fake_display.pixels = []
         game.draw_battle_units(game.selected_unit, target)
-        melee_start = next(r[0] for r in fake_display.rectangles
-                           if r[2:4] == (5, 4))
+        melee_start = min(x for x, y, _color in fake_display.pixels
+                          if y == 7 and x < 50)
         game.attack_timer = 5
-        fake_display.rectangles = []
+        fake_display.pixels = []
         game.draw_battle_units(game.selected_unit, target)
-        melee_lunge = next(r[0] for r in fake_display.rectangles
-                           if r[2:4] == (5, 4))
+        melee_lunge = min(x for x, y, _color in fake_display.pixels
+                          if y == 7 and x < 50)
         self.assertGreater(melee_lunge, melee_start)
 
         game.selected_unit = create_units()[0]
         game.attack_weapon = game.selected_unit["weapons"][0]
         game.attack_timer = 0
-        fake_display.rectangles = []
+        fake_display.pixels = []
         game.draw_battle_units(game.selected_unit, target)
-        ranged_start = next(r[0] for r in fake_display.rectangles
-                            if r[2:4] == (5, 4))
+        ranged_start = min(x for x, y, _color in fake_display.pixels
+                           if y == 7 and x < 50)
         game.attack_timer = 7
-        fake_display.rectangles = []
+        fake_display.pixels = []
         game.draw_battle_units(game.selected_unit, target)
-        ranged_end = next(r[0] for r in fake_display.rectangles
-                          if r[2:4] == (5, 4))
+        ranged_end = min(x for x, y, _color in fake_display.pixels
+                         if y == 7 and x < 50)
         self.assertEqual(ranged_start, ranged_end)
 
-    def test_battle_header_has_hp_and_energy_gauges_for_both_units(self):
+    def test_status_is_shown_before_and_after_battle_but_hidden_during_action(self):
         units = create_units()
         game.attack_weapon = units[0]["weapons"][0]
         fake_display.text = []
         fake_display.rectangles = []
-        game.draw_battle_units(units[0], units[-1])
+        game.draw_combat_status(units[0], units[-1])
         labels = [text for text, _x, _y in fake_display.text]
         self.assertEqual(labels.count("HP"), 2)
-        self.assertEqual(labels.count("EN"), 2)
-        gauge_bars = [r for r in fake_display.rectangles if r[3:4] == (3,)]
-        self.assertEqual(len(gauge_bars), 4)
+        self.assertIn("EN30", labels)
+        self.assertIn("EN20", labels)
+        hp_bars = [r for r in fake_display.rectangles if r[3:4] == (3,)]
+        self.assertEqual(len(hp_bars), 2)
+
+        fake_display.text = []
+        fake_display.rectangles = []
+        for phase in (2, 3):
+            fake_display.text = []
+            game.attack_phase = phase
+            game.draw_battle_units(units[0], units[-1], impact=phase == 3)
+            during_text = [text for text, _x, _y in fake_display.text]
+            self.assertNotIn("HP", during_text)
+            self.assertFalse(any(text.startswith("EN") for text in during_text))
+
+        fake_display.text = []
+        game.attack_damage = 13
+        game.draw_combat_status(units[0], units[-1], result=True)
+        result_text = [text for text, _x, _y in fake_display.text]
+        self.assertIn("-13", result_text)
+
+    def test_custom_unit_sprite_is_used_and_mirrored_for_the_opponent(self):
+        unit = create_units()[0]
+        rows = ("#" + "." * 15,) + ("." * 16,) * 15
+        previous = game.CUSTOM_BATTLE.get(unit["id"])
+        game.CUSTOM_BATTLE[unit["id"]] = rows
+        try:
+            fake_display.pixels = []
+            game.draw_combat_mech(fake_display, unit, 4, 7)
+            self.assertIn((4, 7, 0), fake_display.pixels)
+            fake_display.pixels = []
+            game.draw_combat_mech(fake_display, unit, 4, 7, facing=-1)
+            self.assertIn((19, 7, 0), fake_display.pixels)
+        finally:
+            if previous is None:
+                del game.CUSTOM_BATTLE[unit["id"]]
+            else:
+                game.CUSTOM_BATTLE[unit["id"]] = previous
 
     def test_status_command_opens_and_returns_to_command_menu(self):
         game.selected_unit = create_units()[0]
