@@ -220,14 +220,12 @@ def draw_battle_units(attacker, defender, impact=False):
     display = thumby.display
     # A clean manga-style combat panel: two large figures fill the tiny screen.
     display.fill(1)
-    display.drawLine(0, 6, 71, 6, 0)
+    display.drawLine(0, 12, 71, 12, 0)
     display.drawLine(0, 32, 71, 32, 0)
-    draw_text(attacker["id"] + " " + str(attacker["hp"]), 1, 0, 0)
-    draw_text(defender["id"] + " " + str(defender["hp"]), 43, 0, 0)
-    display.drawRectangle(1, 4, 32, 2, 0)
-    display.drawRectangle(39, 4, 32, 2, 0)
-    display.drawFilledRectangle(2, 5, max(0, attacker["hp"] * 30 // attacker["max_hp"]), 1, 0)
-    display.drawFilledRectangle(40, 5, max(0, defender["hp"] * 30 // defender["max_hp"]), 1, 0)
+    draw_text(attacker["id"], 1, 0, 0)
+    draw_text(defender["id"], 60, 0, 0)
+    draw_battle_gauges(display, attacker, 1, 10, 25)
+    draw_battle_gauges(display, defender, 36, 45, 26)
     melee = attack_weapon is not None and attack_weapon["style"] == "blade"
     attacker_x = 5
     attacker_pose = "idle"
@@ -248,40 +246,56 @@ def draw_battle_units(attacker, defender, impact=False):
         defender_x += 2
         defender_pose = "recoil"
 
-    draw_combat_mech(display, attacker, attacker_x, 10, facing=1,
+    draw_combat_mech(display, attacker, attacker_x, 13, facing=1,
                      pose=attacker_pose, weapon=attack_weapon)
-    draw_combat_mech(display, defender, defender_x, 10, facing=-1,
+    draw_combat_mech(display, defender, defender_x, 13, facing=-1,
                      pose=defender_pose)
 
     # Sparse manga speed lines frame the moving figures.
     if melee and attack_phase == 1 and attack_timer >= 4:
-        display.drawLine(0, 14, 7, 14, 0)
-        display.drawLine(0, 25, 10, 25, 0)
+        display.drawLine(0, 17, 7, 17, 0)
+        display.drawLine(0, 28, 10, 28, 0)
     elif not melee and attack_phase == 1 and attack_timer < 2:
-        display.drawLine(0, 14, 5, 14, 0)
-        display.drawLine(0, 25, 5, 25, 0)
+        display.drawLine(0, 17, 5, 17, 0)
+        display.drawLine(0, 28, 5, 28, 0)
 
     shot_x = min(52, 23 + attack_timer * 4)
     if melee:
         if attack_phase == 1 and attack_timer >= 5:
             # Distinct sword arc or punch impact at close range.
-            display.drawLine(attacker_x + 11, 17, attacker_x + 17, 11, 0)
-            display.drawLine(attacker_x + 12, 18, attacker_x + 18, 12, 0)
+            display.drawLine(attacker_x + 11, 20, attacker_x + 17, 14, 0)
+            display.drawLine(attacker_x + 12, 21, attacker_x + 18, 15, 0)
         elif attack_phase == 2 and attack_timer < 5:
-            display.drawLine(45, 17, 51, 11, 0)
+            display.drawLine(45, 20, 51, 14, 0)
     elif attack_phase == 1:
         if attack_weapon is not None and attack_weapon["style"] == "beam":
-            display.drawLine(20, 17, shot_x, 17, 0)
-            display.drawLine(20, 19, shot_x, 19, 0)
+            display.drawLine(20, 20, shot_x, 20, 0)
+            display.drawLine(20, 22, shot_x, 22, 0)
         else:
-            display.drawLine(max(20, shot_x - 5), 18, shot_x, 18, 0)
-            display.drawFilledRectangle(shot_x, 17, 2, 2, 0)
+            display.drawLine(max(20, shot_x - 5), 21, shot_x, 21, 0)
+            display.drawFilledRectangle(shot_x, 20, 2, 2, 0)
 
     if impact:
-        for x, y in ((47, 15), (50, 12), (53, 18), (48, 22), (56, 14), (58, 21)):
+        for x, y in ((47, 18), (50, 15), (53, 21), (48, 25), (56, 17), (58, 24)):
             display.setPixel(x, y, 0)
         draw_text("-" + str(attack_damage), 52, 26, 0)
     draw_text(attack_name(attacker), 3, 34, 0)
+
+
+def draw_battle_gauges(display, unit, label_x, bar_x, bar_width):
+    """Show HP and EN for each fighter in the compact combat header."""
+    hp = max(0, min(unit["max_hp"], unit["hp"]))
+    en = max(0, min(unit.get("max_en", 0), unit.get("en", 0)))
+    max_hp = max(1, unit["max_hp"])
+    max_en = max(1, unit.get("max_en", 0))
+    draw_text("HP", label_x, 4, 0)
+    display.drawRectangle(bar_x, 4, bar_width, 3, 0)
+    display.drawFilledRectangle(bar_x + 1, 5,
+                                hp * (bar_width - 2) // max_hp, 1, 0)
+    draw_text("EN", label_x, 8, 0)
+    display.drawRectangle(bar_x, 8, bar_width, 3, 0)
+    display.drawFilledRectangle(bar_x + 1, 9,
+                                en * (bar_width - 2) // max_en, 1, 0)
 
 
 def draw_combat_mech(display, unit, x, y, facing=1, pose="idle", weapon=None):
