@@ -221,8 +221,9 @@ def draw_battle_units(attacker, defender, impact=False):
     # Hide all HP/EN text during the action; the combat panel stays uncluttered.
     display.fill(1)
     display.drawLine(0, 32, 71, 32, 0)
-    melee = attack_weapon is not None and attack_weapon["style"] == "blade"
+    melee = attack_weapon is not None and attack_weapon["style"] in ("blade", "fist")
     attacker_x = 5
+    attacker_y = 7
     attacker_pose = "idle"
     defender_x = 51
     defender_pose = "idle"
@@ -237,10 +238,17 @@ def draw_battle_units(attacker, defender, impact=False):
         if attack_timer < 5:
             defender_x += 3
             defender_pose = "recoil"
+    elif not melee and attack_phase == 2:
+        # Recoil and settle around the launch frame so ranged attacks also move.
+        attacker_pose = "fire"
+        if attack_timer in (0, 1):
+            attacker_y = 6
+        elif attack_timer in (2, 3):
+            attacker_x = 3
     elif attack_phase == 3 and attack_timer < 5:
         defender_x += 2
         defender_pose = "recoil"
-    draw_combat_mech(display, attacker, attacker_x, 7, facing=1,
+    draw_combat_mech(display, attacker, attacker_x, attacker_y, facing=1,
                      pose=attacker_pose, weapon=attack_weapon)
     draw_combat_mech(display, defender, defender_x, 7, facing=-1,
                      pose=defender_pose)
@@ -256,9 +264,12 @@ def draw_battle_units(attacker, defender, impact=False):
     shot_x = min(52, 23 + attack_timer * 4)
     if melee:
         if attack_phase == 2 and attack_timer >= 5:
-            # Distinct sword arc or punch impact at close range.
-            display.drawLine(attacker_x + 11, 14, attacker_x + 17, 8, 0)
-            display.drawLine(attacker_x + 12, 15, attacker_x + 18, 9, 0)
+            if attack_weapon["style"] == "fist":
+                display.drawLine(attacker_x + 11, 16, attacker_x + 18, 16, 0)
+                display.drawFilledRectangle(attacker_x + 17, 14, 3, 4, 0)
+            else:
+                display.drawLine(attacker_x + 11, 14, attacker_x + 17, 8, 0)
+                display.drawLine(attacker_x + 12, 15, attacker_x + 18, 9, 0)
     elif attack_phase == 2:
         if attack_weapon is not None and attack_weapon["style"] == "beam":
             display.drawLine(20, 14, shot_x, 14, 0)
@@ -333,16 +344,21 @@ def draw_combat_mech(display, unit, x, y, facing=1, pose="idle", weapon=None):
         display.drawLine(*point(6, 11), *point(5 + stride, 15), 0)
         display.drawLine(*point(8, 11), *point(10 - stride, 15), 0)
 
-    if weapon is not None and weapon["style"] != "blade":
+    if weapon is not None and weapon["style"] not in ("blade", "fist"):
         # A held rifle/cannon stays attached while its shot crosses the panel.
         hand_x, hand_y = point(*forward_hand)
         muzzle_x, muzzle_y = point(16, forward_hand[1])
         display.drawLine(hand_x, hand_y, muzzle_x, muzzle_y, 0)
         display.drawLine(hand_x, hand_y - 1, muzzle_x - facing, muzzle_y - 1, 0)
-    elif pose == "strike" and weapon is not None:
+    elif pose == "strike" and weapon is not None and weapon["style"] == "blade":
         hand_x, hand_y = point(*forward_hand)
         blade_x, blade_y = point(15, 2)
         display.drawLine(hand_x, hand_y, blade_x, blade_y, 0)
+    elif pose == "strike" and weapon is not None and weapon["style"] == "fist":
+        hand_x, hand_y = point(*forward_hand)
+        fist_x, fist_y = point(15, forward_hand[1])
+        display.drawLine(hand_x, hand_y, fist_x, fist_y, 0)
+        display.drawFilledRectangle(fist_x - 1, fist_y - 1, 2, 2, 0)
 
 
 def draw_custom_mech(display, x, y, rows, facing):
