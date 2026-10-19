@@ -104,6 +104,21 @@ class SRPGMenuTests(unittest.TestCase):
             game.update_attack()
         self.assertEqual(target["hp"], 15)
 
+    def test_only_finisher_attacks_open_with_a_cut_in(self):
+        game.units = create_units()
+        game.selected_unit = game.units[0]
+        target = game.units[-1]
+        target["x"], target["y"] = 3, 2
+        game.cursor_x, game.cursor_y = target["x"], target["y"]
+
+        game.start_attack(game.selected_unit["weapons"][0])
+        self.assertEqual(game.attack_phase, 1)
+        self.assertFalse(game.attack_is_special)
+
+        game.start_attack(game.selected_unit["weapons"][-1])
+        self.assertEqual(game.attack_phase, 0)
+        self.assertTrue(game.attack_is_special)
+
     def test_status_command_opens_and_returns_to_command_menu(self):
         game.selected_unit = create_units()[0]
         game.menu_index = 2
