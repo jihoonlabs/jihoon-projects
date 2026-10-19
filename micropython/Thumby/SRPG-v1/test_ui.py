@@ -9,6 +9,7 @@ from rules import create_units
 class FakeDisplay:
     def __init__(self):
         self.text = []
+        self.rectangles = []
 
     def fill(self, _color):
         self.text = []
@@ -19,8 +20,8 @@ class FakeDisplay:
     def drawFilledRectangle(self, *_args):
         pass
 
-    def drawRectangle(self, *_args):
-        pass
+    def drawRectangle(self, *args):
+        self.rectangles.append(args)
 
     def drawLine(self, *_args):
         pass
@@ -118,6 +119,38 @@ class SRPGMenuTests(unittest.TestCase):
         game.start_attack(game.selected_unit["weapons"][-1])
         self.assertEqual(game.attack_phase, 0)
         self.assertTrue(game.attack_is_special)
+
+    def test_melee_attacker_advances_but_ranged_attacker_holds_position(self):
+        game.selected_unit = create_units()[1]
+        target = create_units()[-1]
+        game.attack_target = target
+        game.attack_phase = 1
+        game.attack_weapon = game.selected_unit["weapons"][0]
+        game.attack_timer = 0
+        fake_display.rectangles = []
+        game.draw_battle_units(game.selected_unit, target)
+        melee_start = next(r[0] for r in fake_display.rectangles
+                           if r[2:4] == (5, 4))
+        game.attack_timer = 5
+        fake_display.rectangles = []
+        game.draw_battle_units(game.selected_unit, target)
+        melee_lunge = next(r[0] for r in fake_display.rectangles
+                           if r[2:4] == (5, 4))
+        self.assertGreater(melee_lunge, melee_start)
+
+        game.selected_unit = create_units()[0]
+        game.attack_weapon = game.selected_unit["weapons"][0]
+        game.attack_timer = 0
+        fake_display.rectangles = []
+        game.draw_battle_units(game.selected_unit, target)
+        ranged_start = next(r[0] for r in fake_display.rectangles
+                            if r[2:4] == (5, 4))
+        game.attack_timer = 7
+        fake_display.rectangles = []
+        game.draw_battle_units(game.selected_unit, target)
+        ranged_end = next(r[0] for r in fake_display.rectangles
+                          if r[2:4] == (5, 4))
+        self.assertEqual(ranged_start, ranged_end)
 
     def test_status_command_opens_and_returns_to_command_menu(self):
         game.selected_unit = create_units()[0]
