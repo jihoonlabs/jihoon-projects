@@ -25,6 +25,23 @@ class SRPGRulesTests(unittest.TestCase):
         positions = {(unit["x"], unit["y"]) for unit in self.units}
         self.assertEqual(len(positions), len(self.units))
 
+    def test_real_and_super_loadouts_stay_within_five_weapons(self):
+        allies = alive_units(self.units, "ally")
+        real_units = [unit for unit in allies if unit["kind"] == "REAL"]
+        super_units = [unit for unit in allies if unit["kind"] == "SUPER"]
+        for unit in real_units:
+            self.assertEqual([weapon["short"] for weapon in unit["weapons"][:3]],
+                             ["VUL", "SAB", "BEAM"])
+            self.assertEqual(len(unit["weapons"]), 4)
+            self.assertTrue(unit["weapons"][-1].get("finisher"))
+        for unit in super_units:
+            self.assertEqual(len(unit["weapons"]), 5)
+            self.assertEqual(sum(weapon.get("finisher", False)
+                                 for weapon in unit["weapons"]), 2)
+        self.assertEqual((real_units[0]["en"], real_units[0]["armor"],
+                          real_units[0]["mobility"], real_units[0]["move"]),
+                         (30, 5, 24, 3))
+
     def test_map_bounds_terrain_and_occupied_tiles_block_movement(self):
         unit = self.units[0]
         self.assertFalse(tile_is_open(-1, 0, self.units, unit))
@@ -50,12 +67,26 @@ class SRPGRulesTests(unittest.TestCase):
 
     def test_normal_and_special_damage_reduce_hp_and_mark_action(self):
         attacker, defender = self.units[0], self.units[3]
-        self.assertEqual(resolve_attack(attacker, defender), 15)
-        self.assertEqual(defender["hp"], 35)
+        self.assertEqual(resolve_attack(attacker, defender), 12)
+        self.assertEqual(defender["hp"], 38)
         self.assertTrue(attacker["acted"])
         attacker["acted"] = False
-        self.assertEqual(resolve_attack(attacker, defender, special=True), 25)
-        self.assertEqual(defender["hp"], 10)
+        self.assertEqual(resolve_attack(attacker, defender, special=True), 22)
+        self.assertEqual(defender["hp"], 16)
+
+    def test_weapon_range_and_power_control_targeting_and_damage(self):
+        attacker, defender = self.units[0], self.units[3]
+        beam = attacker["weapons"][2]
+        finisher = attacker["weapons"][3]
+        defender["x"], defender["y"] = 4, 2
+        self.assertFalse(in_range(attacker, defender))
+        self.assertTrue(in_range(attacker, defender, beam))
+        self.assertEqual(resolve_attack(attacker, defender, weapon=beam), 16)
+        attacker["acted"] = False
+        defender["hp"] = defender["max_hp"]
+        defender["x"] = 5
+        self.assertTrue(in_range(attacker, defender, finisher))
+        self.assertEqual(resolve_attack(attacker, defender, weapon=finisher), 26)
 
     def test_mission_result_distinguishes_victory_defeat_and_ongoing(self):
         self.assertIsNone(mission_result(self.units))

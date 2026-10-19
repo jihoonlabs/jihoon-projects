@@ -27,8 +27,10 @@ STATE_TARGET = 4
 STATE_ATTACK = 5
 STATE_VICTORY = 6
 STATE_DEFEAT = 7
+STATE_WEAPONS = 8
+STATE_STATUS = 9
 
-COMMANDS = ("MOVE", "FIRE", "TECH", "END")
+COMMANDS = ("MOVE", "ATTACK", "STATUS", "END")
 
 units = create_units()
 mission_index = 0
@@ -40,7 +42,9 @@ selected_unit = None
 menu_index = 0
 attack_target = None
 attack_is_special = False
-target_is_special = False
+selected_weapon = None
+attack_weapon = None
+weapon_index = 0
 attack_damage = 0
 attack_timer = 0
 attack_phase = 0
@@ -104,8 +108,36 @@ def draw_unit_panel(unit):
     hp_width = max(0, min(25, unit["hp"] * 25 // unit["max_hp"]))
     if hp_width:
         display.drawFilledRectangle(PANEL_X + 1, 23, hp_width, 3, 1)
-    draw_text("A" + str(unit["attack"]), PANEL_X, 29)
-    draw_text("M" + str(unit["move"]) + "R" + str(unit["range"]), PANEL_X, 35)
+    draw_text("EN" + str(unit["en"]), PANEL_X, 29)
+    draw_text("AR" + str(unit["armor"]), PANEL_X, 35)
+
+
+def draw_weapon_menu():
+    display = thumby.display
+    display.fill(0)
+    draw_text(selected_unit["id"] + " WEAPON", 1, 0)
+    weapons = selected_unit["weapons"]
+    for index, weapon in enumerate(weapons):
+        y = 6 + index * 5
+        line = weapon["short"] + " " + str(weapon["power"]) + " R" + str(weapon["range"])
+        if index == weapon_index:
+            display.drawFilledRectangle(0, y - 1, 72, 6, 1)
+            draw_text(line, 2, y, 0)
+        else:
+            draw_text(line, 2, y, 1)
+    draw_text("A:OK B:BACK", 1, 34)
+
+
+def draw_status_screen(unit):
+    display = thumby.display
+    display.fill(0)
+    draw_text(unit["id"] + " " + unit["kind"], 1, 0)
+    draw_text("HP " + str(unit["hp"]) + "/" + str(unit["max_hp"]), 1, 7)
+    draw_text("EN " + str(unit["en"]) + "/" + str(unit["max_en"]), 1, 13)
+    draw_text("ARM " + str(unit["armor"]), 1, 19)
+    draw_text("MOB " + str(unit["mobility"]), 1, 25)
+    draw_text("MOVE " + str(unit["move"]), 1, 31)
+    draw_text("B:BK", 48, 31)
 
 
 def draw_map():
@@ -138,8 +170,10 @@ def draw_map():
                     display.setPixel(x + 1, y + 1, 1)
                     display.setPixel(x + 2, y + 1, 1)
             elif selected_unit is not None and state == STATE_TARGET:
+                weapon_range = (selected_weapon["range"] if selected_weapon
+                                else selected_unit["range"])
                 if (abs(wx - selected_unit["x"]) + abs(wy - selected_unit["y"])
-                        <= selected_unit["range"]):
+                        <= weapon_range):
                     display.setPixel(x + 1, y + 6, 1)
             unit = unit_at(units, wx, wy)
             if unit is not None:
@@ -159,6 +193,12 @@ def draw_map():
     display.drawRectangle(cx + 1, cy + 1, TILE - 2, TILE - 2, 1)
     focus = selected_unit if selected_unit is not None else unit_at(units, cursor_x, cursor_y)
     draw_unit_panel(focus)
+    if state == STATE_WEAPONS:
+        draw_weapon_menu()
+        return
+    if state == STATE_STATUS:
+        draw_status_screen(selected_unit)
+        return
     if state == STATE_COMMAND:
         display.drawFilledRectangle(PANEL_X, 0, SCREEN_W - PANEL_X, SCREEN_H, 0)
         display.drawLine(41, 0, 41, 39, 1)
@@ -167,8 +207,8 @@ def draw_map():
             y = 9 + index * 7
             if command == "MOVE" and (selected_unit["moved"] or selected_unit["move"] == 0):
                 command = "MOV-"
-            if command in ("FIRE", "TECH") and selected_unit["acted"]:
-                command = command[:3] + "-"
+            if command == "ATTACK" and selected_unit["acted"]:
+                command = "ATK-"
             if index == menu_index:
                 display.drawFilledRectangle(PANEL_X, y - 1, 29, 7, 1)
                 draw_text(command, PANEL_X + 2, y, 0)
@@ -204,13 +244,12 @@ def draw_battle_units(attacker, defender, impact=False):
     defender_sprite = battle_sprite(defender)
     draw_bitmap(display, 7, 14, attacker_sprite)
     draw_bitmap(display, 51, 14, defender_sprite, mirror=True)
-    if attacker["kind"] in ("REAL", "SHIP"):
+    if attack_weapon is not None and attack_weapon["style"] != "blade":
         # A small outlined cannon stays attached during a ranged shot.
         display.drawFilledRectangle(19, 19, 8, 3, 1)
         display.drawLine(21, 20, 26, 20, 0)
-        display.drawLine(20, 21, 22, 24, 1)
     else:
-        # The super-unit keeps its blade in hand while the slash travels outward.
+        # A short blade silhouette also reads as a heavy melee swing at this scale.
         display.drawLine(19, 23, 26, 16, 1)
         display.drawLine(20, 24, 27, 17, 1)
         display.drawLine(20, 23, 23, 25, 1)
@@ -218,10 +257,15 @@ def draw_battle_units(attacker, defender, impact=False):
         for x, y in ((45, 19), (48, 17), (49, 21), (47, 24), (52, 18), (52, 23)):
             display.setPixel(x, y, 1)
         draw_text("-" + str(attack_damage), 46, 31)
-    elif attacker["kind"] in ("REAL", "SHIP"):
+    elif attack_weapon is not None and attack_weapon["style"] == "blade":
+        slash_x = min(48, 26 + attack_timer * 2)
+        slash_y = max(13, 27 - attack_timer * 2)
+        display.drawLine(24, 27, slash_x, slash_y, 1)
+        display.drawLine(25, 28, slash_x + 1, slash_y + 1, 1)
+    elif attacker["kind"] in ("REAL", "SHIP") or attack_weapon is not None:
         # The miniature stays in place while its shot travels across the screen.
         shot_x = min(47, 28 + attack_timer * 2)
-        if attack_is_special:
+        if attack_weapon is not None and attack_weapon["style"] == "beam":
             display.drawLine(27, 20, shot_x, 20, 1)
             display.drawLine(27, 22, shot_x, 22, 1)
         else:
@@ -248,11 +292,7 @@ def battle_sprite(unit):
 
 
 def attack_name(attacker):
-    if attacker["kind"] == "SHIP":
-        return "GUN SALVO" if attack_is_special else "MAIN GUN"
-    if attacker["kind"] == "REAL":
-        return "BEAM RIFLE" if attack_is_special else "RIFLE SHOT"
-    return "POWER CUT" if attack_is_special else "SWORD SWING"
+    return attack_weapon["name"] if attack_weapon is not None else "COUNTER"
 
 
 def draw_cut_in(attacker):
@@ -272,18 +312,19 @@ def draw_cut_in(attacker):
     draw_text("B", 67, 34)
 
 
-def start_attack(special):
-    global attack_is_special, attack_target, attack_damage
+def start_attack(weapon):
+    global attack_is_special, attack_target, attack_damage, attack_weapon
     global attack_phase, attack_timer, state, message
     target = unit_at(units, cursor_x, cursor_y)
     if target is None or target["team"] == "ally":
         message = "NO TARGET"
         return
-    if not in_range(selected_unit, target):
+    if not in_range(selected_unit, target, weapon):
         message = "OUT RANGE"
         return
     attack_target = target
-    attack_is_special = special
+    attack_weapon = weapon
+    attack_is_special = weapon.get("finisher", False)
     attack_damage = 0
     attack_phase = 0
     attack_timer = 0
@@ -292,11 +333,13 @@ def start_attack(special):
 
 
 def finish_attack():
-    global selected_unit, attack_target, state
+    global selected_unit, attack_target, selected_weapon, attack_weapon, state
     selected_unit["acted"] = True
     result = mission_result(units, base_hp)
     selected_unit = None
     attack_target = None
+    selected_weapon = None
+    attack_weapon = None
     if result == "victory":
         state = STATE_VICTORY
     elif result == "defeat":
@@ -317,7 +360,8 @@ def update_attack():
             attack_timer = 0
     elif attack_phase == 1:
         if attack_timer >= 8:
-            attack_damage = resolve_attack(selected_unit, attack_target, attack_is_special)
+            attack_damage = resolve_attack(selected_unit, attack_target,
+                                           attack_is_special, attack_weapon)
             attack_phase = 2
             attack_timer = 0
     elif attack_phase == 2 and attack_timer >= 20:
@@ -390,7 +434,7 @@ def handle_map_input():
 
 
 def handle_command_input():
-    global menu_index, state, message, cursor_x, cursor_y, selected_unit, target_is_special
+    global menu_index, state, message, cursor_x, cursor_y, selected_unit, weapon_index
     if thumby.buttonU.justPressed():
         menu_index = (menu_index - 1) % len(COMMANDS)
     elif thumby.buttonD.justPressed():
@@ -404,16 +448,11 @@ def handle_command_input():
             cursor_x, cursor_y = selected_unit["x"], selected_unit["y"]
             state = STATE_MOVE
             message = "RANGE " + str(selected_unit["move"])
-        elif command == "FIRE" and not selected_unit["acted"]:
-            state = STATE_TARGET
-            message = "RIFLE"
-            target_is_special = False
-            move_cursor(1, 0)
-        elif command == "TECH" and not selected_unit["acted"]:
-            state = STATE_TARGET
-            message = "TECH"
-            target_is_special = True
-            move_cursor(1, 0)
+        elif command == "ATTACK" and not selected_unit["acted"]:
+            weapon_index = 0
+            state = STATE_WEAPONS
+        elif command == "STATUS":
+            state = STATE_STATUS
         elif command == "END":
             selected_unit["acted"] = True
             selected_unit = None
@@ -442,16 +481,34 @@ def handle_move_input():
             message = "MOVED"
 
 
+def handle_weapon_input():
+    global state, weapon_index, selected_weapon, cursor_x, cursor_y, message
+    weapons = selected_unit["weapons"]
+    if thumby.buttonU.justPressed():
+        weapon_index = (weapon_index - 1) % len(weapons)
+    elif thumby.buttonD.justPressed():
+        weapon_index = (weapon_index + 1) % len(weapons)
+    elif thumby.buttonB.justPressed():
+        state = STATE_COMMAND
+    elif thumby.buttonA.justPressed():
+        selected_weapon = weapons[weapon_index]
+        cursor_x, cursor_y = selected_unit["x"], selected_unit["y"]
+        message = selected_weapon["short"]
+        move_cursor(1, 0)
+        state = STATE_TARGET
+
+
 def handle_target_input():
-    global state
+    global state, selected_weapon
     if thumby.buttonU.justPressed(): move_cursor(0, -1)
     elif thumby.buttonD.justPressed(): move_cursor(0, 1)
     elif thumby.buttonL.justPressed(): move_cursor(-1, 0)
     elif thumby.buttonR.justPressed(): move_cursor(1, 0)
     if thumby.buttonB.justPressed():
+        selected_weapon = None
         state = STATE_COMMAND
     elif thumby.buttonA.justPressed():
-        start_attack(target_is_special)
+        start_attack(selected_weapon)
 
 
 def update():
@@ -463,6 +520,11 @@ def update():
         handle_map_input()
     elif state == STATE_COMMAND:
         handle_command_input()
+    elif state == STATE_WEAPONS:
+        handle_weapon_input()
+    elif state == STATE_STATUS:
+        if thumby.buttonA.justPressed() or thumby.buttonB.justPressed():
+            state = STATE_COMMAND
     elif state == STATE_MOVE:
         handle_move_input()
     elif state == STATE_TARGET:
@@ -471,7 +533,8 @@ def update():
         if thumby.buttonB.justPressed():
             # Skip remains deterministic: apply damage once if impact has not happened.
             if attack_damage == 0:
-                resolve_attack(selected_unit, attack_target, attack_is_special)
+                resolve_attack(selected_unit, attack_target, attack_is_special,
+                               attack_weapon)
             finish_attack()
         else:
             update_attack()

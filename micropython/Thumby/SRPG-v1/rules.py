@@ -35,15 +35,45 @@ def create_units():
         ("R3", "REAL", 3, 1), ("S3", "SUPER", 3, 6),
     )
     for unit_id, kind, x, y in roster:
+        if kind == "REAL":
+            weapons = [
+                {"name": "VULCAN", "short": "VUL", "power": 14, "range": 2, "style": "shot"},
+                {"name": "SABER", "short": "SAB", "power": 21, "range": 1, "style": "blade"},
+                {"name": "BEAM GUN", "short": "BEAM", "power": 24, "range": 3, "style": "beam"},
+            ]
+            signature = {
+                "R1": ("RAIL", 34, 4),
+                "R2": ("LANCE", 32, 2),
+                "R3": ("SCOPE", 30, 5),
+            }[unit_id]
+            weapons.append({"name": signature[0], "short": signature[0][:4],
+                            "power": signature[1], "range": signature[2],
+                            "style": "beam", "finisher": True})
+            en, armor, mobility = 30, 5, 24
+        else:
+            weapons = [
+                {"name": "PUNCH", "short": "PCH", "power": 20, "range": 1, "style": "blade"},
+                {"name": "KICK", "short": "KIK", "power": 22, "range": 1, "style": "blade"},
+                {"name": "SHOCK", "short": "SHK", "power": 24, "range": 2, "style": "beam"},
+                {"name": "DRIVE", "short": "DRV", "power": 32, "range": 2, "style": "beam", "finisher": True},
+                {"name": "FINAL", "short": "FIN", "power": 40, "range": 3, "style": "beam", "finisher": True},
+            ]
+            en, armor, mobility = 40, 8, 15
         allies.append({"id": unit_id, "team": "ally", "kind": kind,
                        "x": x, "y": y, "hp": 50, "max_hp": 50,
-                       "attack": 20, "move": 3, "range": 2, "guard": 5,
+                       "en": en, "max_en": en, "armor": armor,
+                       "mobility": mobility, "attack": 20, "move": 3,
+                       "range": 2, "guard": armor, "weapons": weapons,
                        "moved": False, "acted": False})
     # The battleship doubles as the protected base and a long-range support unit.
     allies.append({"id": "SH", "team": "ally", "kind": "SHIP",
                    "x": BASE_TILE[0], "y": BASE_TILE[1], "hp": BASE_MAX_HP,
-                   "max_hp": BASE_MAX_HP, "attack": 26, "move": 0,
-                   "range": 5, "guard": 10, "moved": False, "acted": False})
+                   "max_hp": BASE_MAX_HP, "en": 60, "max_en": 60,
+                   "armor": 10, "mobility": 0, "attack": 26, "move": 0,
+                   "range": 5, "guard": 10,
+                   "weapons": [{"name": "CANNON", "short": "CANN",
+                                "power": 26, "range": 5, "style": "beam"}],
+                   "moved": False, "acted": False})
     enemies = [
         {"id": "E1", "team": "enemy", "kind": "ENEMY", "x": 8, "y": 1},
         {"id": "E2", "team": "enemy", "kind": "ENEMY", "x": 9, "y": 3},
@@ -55,7 +85,8 @@ def create_units():
         {"id": "E8", "team": "enemy", "kind": "ENEMY", "x": 13, "y": 5},
     ]
     for enemy in enemies:
-        enemy.update({"hp": 50, "max_hp": 50, "attack": 20, "move": 3,
+        enemy.update({"hp": 50, "max_hp": 50, "en": 20, "max_en": 20,
+                      "armor": 5, "mobility": 12, "attack": 20, "move": 3,
                       "range": 2, "guard": 5, "moved": False,
                       "acted": False})
     return allies + enemies
@@ -106,15 +137,17 @@ def reachable_tiles(unit, units):
     return reached
 
 
-def in_range(attacker, defender):
+def in_range(attacker, defender, weapon=None):
     distance = abs(attacker["x"] - defender["x"]) + abs(attacker["y"] - defender["y"])
-    return distance <= attacker["range"]
+    weapon_range = weapon["range"] if weapon is not None else attacker["range"]
+    return distance <= weapon_range
 
 
-def resolve_attack(attacker, defender, special=False):
+def resolve_attack(attacker, defender, special=False, weapon=None):
     """Apply a deterministic hit so the prototype can focus on readable combat."""
-    power = attacker["attack"] + (10 if special else 0)
-    damage = max(1, power - defender["guard"])
+    power = weapon["power"] if weapon is not None else attacker["attack"] + (10 if special else 0)
+    armor = defender.get("armor", defender["guard"])
+    damage = max(1, power - armor)
     defender["hp"] = max(0, defender["hp"] - damage)
     attacker["acted"] = True
     return damage
