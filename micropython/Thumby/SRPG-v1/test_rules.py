@@ -1,7 +1,7 @@
 import unittest
 
-from assets import (ENEMY_BATTLE, REAL_BATTLE, REAL_CUTIN, SHIP_BATTLE,
-                    SHIP_CUTIN, SUPER_BATTLE, SUPER_CUTIN)
+from assets import (CUSTOM_BATTLE, ENEMY_BATTLE, REAL_BATTLE, REAL_CUTIN,
+                    SHIP_BATTLE, SHIP_CUTIN, SUPER_BATTLE, SUPER_CUTIN)
 from rules import (BASE_MAX_HP, BASE_TILE, alive_units, create_units,
                    in_range, mission_result, reachable_tiles, resolve_attack,
                    resolve_base_attack, tile_is_open)
@@ -116,6 +116,13 @@ class SpriteAssetTests(unittest.TestCase):
     def test_full_screen_cutins_use_the_thumby_72_by_40_vlsb_size(self):
         self.assertEqual((len(REAL_CUTIN), len(SUPER_CUTIN), len(SHIP_CUTIN)),
                          (360, 360, 360))
+
+    def test_first_unit_specific_pixel_drafts_fit_the_16_by_16_canvas(self):
+        self.assertNotEqual(CUSTOM_BATTLE["R1"], CUSTOM_BATTLE["S1"])
+        for sprite in (CUSTOM_BATTLE["R1"], CUSTOM_BATTLE["S1"]):
+            self.assertEqual(len(sprite), 16)
+            self.assertTrue(all(len(row) == 16 for row in sprite))
+            self.assertTrue(all(set(row) <= {"#", "."} for row in sprite))
 
 
 if __name__ == "__main__":
