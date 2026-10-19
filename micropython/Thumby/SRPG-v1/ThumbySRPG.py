@@ -218,55 +218,77 @@ def draw_title():
 
 def draw_battle_units(attacker, defender, impact=False):
     display = thumby.display
-    draw_hangar_background()
-    display.drawLine(0, 0, 71, 0, 1)
-    draw_text(attacker["id"] + " " + str(attacker["hp"]), 1, 1)
-    draw_text(defender["id"], 61, 1)
-    display.drawRectangle(1, 8, 28, 4, 1)
-    display.drawRectangle(43, 8, 28, 4, 1)
-    display.drawFilledRectangle(2, 9, max(0, attacker["hp"] * 26 // attacker["max_hp"]), 2, 1)
-    display.drawFilledRectangle(44, 9, max(0, defender["hp"] * 26 // defender["max_hp"]), 2, 1)
+    # A clean manga-style combat panel: two large figures fill the tiny screen.
+    display.fill(0)
+    display.drawLine(0, 6, 71, 6, 1)
+    display.drawLine(0, 32, 71, 32, 1)
+    draw_text(attacker["id"] + " " + str(attacker["hp"]), 1, 0)
+    draw_text(defender["id"] + " " + str(defender["hp"]), 43, 0)
+    display.drawRectangle(1, 4, 32, 2, 1)
+    display.drawRectangle(39, 4, 32, 2, 1)
+    display.drawFilledRectangle(2, 5, max(0, attacker["hp"] * 30 // attacker["max_hp"]), 1, 1)
+    display.drawFilledRectangle(40, 5, max(0, defender["hp"] * 30 // defender["max_hp"]), 1, 1)
+    # Sparse impact rays make the sprites read against a white manga panel.
+    display.drawLine(0, 16, 6, 13, 1)
+    display.drawLine(65, 13, 71, 16, 1)
+    display.drawLine(0, 27, 6, 24, 1)
+    display.drawLine(65, 24, 71, 27, 1)
     attacker_sprite = battle_sprite(attacker)
     defender_sprite = battle_sprite(defender)
-    draw_bitmap(display, 7, 14, attacker_sprite)
-    draw_bitmap(display, 51, 14, defender_sprite, mirror=True)
+    draw_battle_bitmap(display, 2, 8, attacker_sprite)
+    draw_battle_bitmap(display, 46, 8, defender_sprite, mirror=True)
     if attack_weapon is not None and attack_weapon["style"] != "blade":
-        # A small outlined cannon stays attached during a ranged shot.
-        display.drawFilledRectangle(19, 19, 8, 3, 1)
-        display.drawLine(21, 20, 26, 20, 0)
+        # Gun/cannon silhouette is visibly held by the attacker.
+        display.drawFilledRectangle(23, 18, 10, 4, 1)
+        display.drawLine(25, 19, 31, 19, 0)
+        display.drawLine(25, 20, 31, 20, 0)
     else:
-        # A short blade silhouette also reads as a heavy melee swing at this scale.
-        display.drawLine(19, 23, 26, 16, 1)
-        display.drawLine(20, 24, 27, 17, 1)
-        display.drawLine(20, 23, 23, 25, 1)
+        # A broad, separate blade gives melee attacks a different silhouette.
+        display.drawLine(23, 25, 34, 12, 1)
+        display.drawLine(24, 26, 35, 13, 1)
+        display.drawLine(23, 25, 27, 28, 1)
     if impact:
-        for x, y in ((45, 19), (48, 17), (49, 21), (47, 24), (52, 18), (52, 23)):
+        for x, y in ((43, 16), (45, 13), (47, 19), (44, 23), (50, 15), (51, 22), (55, 18)):
             display.setPixel(x, y, 1)
-        draw_text("-" + str(attack_damage), 46, 31)
+        draw_text("-" + str(attack_damage), 50, 26)
     elif attack_weapon is not None and attack_weapon["style"] == "blade":
-        slash_x = min(48, 26 + attack_timer * 2)
-        slash_y = max(13, 27 - attack_timer * 2)
-        display.drawLine(24, 27, slash_x, slash_y, 1)
-        display.drawLine(25, 28, slash_x + 1, slash_y + 1, 1)
+        slash_x = min(45, 34 + attack_timer)
+        slash_y = max(10, 29 - attack_timer * 2)
+        display.drawLine(29, 28, slash_x, slash_y, 1)
+        display.drawLine(30, 29, slash_x + 1, slash_y + 1, 1)
     elif attacker["kind"] in ("REAL", "SHIP") or attack_weapon is not None:
-        # The miniature stays in place while its shot travels across the screen.
-        shot_x = min(47, 28 + attack_timer * 2)
+        # A projectile visibly travels from the gun to the opposing mech.
+        shot_x = min(45, 34 + attack_timer)
         if attack_weapon is not None and attack_weapon["style"] == "beam":
-            display.drawLine(27, 20, shot_x, 20, 1)
-            display.drawLine(27, 22, shot_x, 22, 1)
+            display.drawLine(32, 18, shot_x, 18, 1)
+            display.drawLine(32, 21, shot_x, 21, 1)
         else:
-            display.drawLine(max(27, shot_x - 4), 21, shot_x, 21, 1)
-            display.drawFilledRectangle(shot_x, 20, 2, 2, 1)
+            display.drawLine(max(34, shot_x - 5), 20, shot_x, 20, 1)
+            display.drawFilledRectangle(shot_x, 19, 3, 3, 1)
     else:
-        # Super units swing a traveling slash; they never need to walk beside a target.
-        slash_x = min(48, 26 + attack_timer * 2)
-        slash_y = max(13, 27 - attack_timer * 2)
-        display.drawLine(24, 27, slash_x, slash_y, 1)
-        display.drawLine(25, 28, slash_x + 1, slash_y + 1, 1)
+        # Super units can use a broad traveling melee arc without moving the camera.
+        slash_x = min(45, 34 + attack_timer)
+        slash_y = max(10, 29 - attack_timer * 2)
+        display.drawLine(29, 28, slash_x, slash_y, 1)
+        display.drawLine(30, 29, slash_x + 1, slash_y + 1, 1)
         if attack_is_special:
-            display.drawLine(27, 28, slash_x + 2, slash_y, 1)
-    display.drawLine(0, 31, 71, 31, 1)
-    draw_text(attack_name(attacker), 4, 33)
+            display.drawLine(31, 28, slash_x + 2, slash_y, 1)
+    draw_text(attack_name(attacker), 3, 34)
+
+
+def draw_battle_bitmap(display, x, y, rows, mirror=False):
+    """Enlarge 16x16 art to 24x24 with nearest-neighbor pixels."""
+    for out_y in range(24):
+        row = rows[out_y * 2 // 3]
+        for out_x in range(24):
+            source_x = out_x * 2 // 3
+            if mirror:
+                source_x = 15 - source_x
+            pixel = row[source_x]
+            if pixel == ".":
+                continue
+            color = 0 if pixel == "x" else 1
+            display.drawFilledRectangle(x + out_x, y + out_y, 1, 1, color)
 
 
 def battle_sprite(unit):
@@ -312,7 +334,9 @@ def start_attack(weapon):
     attack_weapon = weapon
     attack_is_special = weapon.get("finisher", False)
     attack_damage = 0
-    attack_phase = 0
+    # Normal weapons go directly to the large battle view. Only finishers get
+    # the retained full-screen manga cut-in first.
+    attack_phase = 0 if attack_is_special else 1
     attack_timer = 0
     message = "ATTACK"
     state = STATE_ATTACK
