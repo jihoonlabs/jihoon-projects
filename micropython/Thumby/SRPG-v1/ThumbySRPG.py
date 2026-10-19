@@ -219,61 +219,61 @@ def draw_title():
 def draw_battle_units(attacker, defender, impact=False):
     display = thumby.display
     # A clean manga-style combat panel: two large figures fill the tiny screen.
-    display.fill(0)
-    display.drawLine(0, 6, 71, 6, 1)
-    display.drawLine(0, 32, 71, 32, 1)
-    draw_text(attacker["id"] + " " + str(attacker["hp"]), 1, 0)
-    draw_text(defender["id"] + " " + str(defender["hp"]), 43, 0)
-    display.drawRectangle(1, 4, 32, 2, 1)
-    display.drawRectangle(39, 4, 32, 2, 1)
-    display.drawFilledRectangle(2, 5, max(0, attacker["hp"] * 30 // attacker["max_hp"]), 1, 1)
-    display.drawFilledRectangle(40, 5, max(0, defender["hp"] * 30 // defender["max_hp"]), 1, 1)
+    display.fill(1)
+    display.drawLine(0, 6, 71, 6, 0)
+    display.drawLine(0, 32, 71, 32, 0)
+    draw_text(attacker["id"] + " " + str(attacker["hp"]), 1, 0, 0)
+    draw_text(defender["id"] + " " + str(defender["hp"]), 43, 0, 0)
+    display.drawRectangle(1, 4, 32, 2, 0)
+    display.drawRectangle(39, 4, 32, 2, 0)
+    display.drawFilledRectangle(2, 5, max(0, attacker["hp"] * 30 // attacker["max_hp"]), 1, 0)
+    display.drawFilledRectangle(40, 5, max(0, defender["hp"] * 30 // defender["max_hp"]), 1, 0)
     # Sparse impact rays make the sprites read against a white manga panel.
-    display.drawLine(0, 16, 6, 13, 1)
-    display.drawLine(65, 13, 71, 16, 1)
-    display.drawLine(0, 27, 6, 24, 1)
-    display.drawLine(65, 24, 71, 27, 1)
+    display.drawLine(0, 16, 6, 13, 0)
+    display.drawLine(65, 13, 71, 16, 0)
+    display.drawLine(0, 27, 6, 24, 0)
+    display.drawLine(65, 24, 71, 27, 0)
     attacker_sprite = battle_sprite(attacker)
     defender_sprite = battle_sprite(defender)
     draw_battle_bitmap(display, 2, 8, attacker_sprite)
     draw_battle_bitmap(display, 46, 8, defender_sprite, mirror=True)
     if attack_weapon is not None and attack_weapon["style"] != "blade":
         # Gun/cannon silhouette is visibly held by the attacker.
-        display.drawFilledRectangle(23, 18, 10, 4, 1)
-        display.drawLine(25, 19, 31, 19, 0)
-        display.drawLine(25, 20, 31, 20, 0)
+        display.drawFilledRectangle(23, 18, 10, 4, 0)
+        display.drawLine(25, 19, 31, 19, 1)
+        display.drawLine(25, 20, 31, 20, 1)
     else:
         # A broad, separate blade gives melee attacks a different silhouette.
-        display.drawLine(23, 25, 34, 12, 1)
-        display.drawLine(24, 26, 35, 13, 1)
-        display.drawLine(23, 25, 27, 28, 1)
+        display.drawLine(23, 25, 34, 12, 0)
+        display.drawLine(24, 26, 35, 13, 0)
+        display.drawLine(23, 25, 27, 28, 0)
     if impact:
         for x, y in ((43, 16), (45, 13), (47, 19), (44, 23), (50, 15), (51, 22), (55, 18)):
-            display.setPixel(x, y, 1)
-        draw_text("-" + str(attack_damage), 50, 26)
+            display.setPixel(x, y, 0)
+        draw_text("-" + str(attack_damage), 50, 26, 0)
     elif attack_weapon is not None and attack_weapon["style"] == "blade":
         slash_x = min(45, 34 + attack_timer)
         slash_y = max(10, 29 - attack_timer * 2)
-        display.drawLine(29, 28, slash_x, slash_y, 1)
-        display.drawLine(30, 29, slash_x + 1, slash_y + 1, 1)
+        display.drawLine(29, 28, slash_x, slash_y, 0)
+        display.drawLine(30, 29, slash_x + 1, slash_y + 1, 0)
     elif attacker["kind"] in ("REAL", "SHIP") or attack_weapon is not None:
         # A projectile visibly travels from the gun to the opposing mech.
         shot_x = min(45, 34 + attack_timer)
         if attack_weapon is not None and attack_weapon["style"] == "beam":
-            display.drawLine(32, 18, shot_x, 18, 1)
-            display.drawLine(32, 21, shot_x, 21, 1)
+            display.drawLine(32, 18, shot_x, 18, 0)
+            display.drawLine(32, 21, shot_x, 21, 0)
         else:
-            display.drawLine(max(34, shot_x - 5), 20, shot_x, 20, 1)
-            display.drawFilledRectangle(shot_x, 19, 3, 3, 1)
+            display.drawLine(max(34, shot_x - 5), 20, shot_x, 20, 0)
+            display.drawFilledRectangle(shot_x, 19, 3, 3, 0)
     else:
         # Super units can use a broad traveling melee arc without moving the camera.
         slash_x = min(45, 34 + attack_timer)
         slash_y = max(10, 29 - attack_timer * 2)
-        display.drawLine(29, 28, slash_x, slash_y, 1)
-        display.drawLine(30, 29, slash_x + 1, slash_y + 1, 1)
+        display.drawLine(29, 28, slash_x, slash_y, 0)
+        display.drawLine(30, 29, slash_x + 1, slash_y + 1, 0)
         if attack_is_special:
-            display.drawLine(31, 28, slash_x + 2, slash_y, 1)
-    draw_text(attack_name(attacker), 3, 34)
+            display.drawLine(31, 28, slash_x + 2, slash_y, 0)
+    draw_text(attack_name(attacker), 3, 34, 0)
 
 
 def draw_battle_bitmap(display, x, y, rows, mirror=False):
@@ -287,7 +287,7 @@ def draw_battle_bitmap(display, x, y, rows, mirror=False):
             pixel = row[source_x]
             if pixel == ".":
                 continue
-            color = 0 if pixel == "x" else 1
+            color = 1 if pixel == "x" else 0
             display.drawFilledRectangle(x + out_x, y + out_y, 1, 1, color)
 
 
