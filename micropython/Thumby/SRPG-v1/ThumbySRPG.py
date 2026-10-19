@@ -15,9 +15,8 @@ from rules import (BASE_MAX_HP, BASE_TILE, MAP_HEIGHT, MAP_TERRAIN,
 SCREEN_W = 72
 SCREEN_H = 40
 TILE = 8
-VIEW_TILES = 5
-MAP_PIXELS = TILE * VIEW_TILES
-PANEL_X = MAP_PIXELS + 2
+VIEW_TILES_W = SCREEN_W // TILE
+VIEW_TILES_H = SCREEN_H // TILE
 
 STATE_TITLE = 0
 STATE_MAP = 1
@@ -31,6 +30,7 @@ STATE_WEAPONS = 8
 STATE_STATUS = 9
 
 COMMANDS = ("MOVE", "ATTACK", "STATUS", "END")
+COMMAND_LABELS = ("MOVE", "ATK", "STAT", "END")
 
 units = create_units()
 mission_index = 0
@@ -67,8 +67,10 @@ def move_cursor(dx, dy):
 
 def update_camera():
     global camera_x, camera_y
-    camera_x = max(0, min(MAP_WIDTH - VIEW_TILES, cursor_x - VIEW_TILES // 2))
-    camera_y = max(0, min(MAP_HEIGHT - VIEW_TILES, cursor_y - VIEW_TILES // 2))
+    camera_x = max(0, min(MAP_WIDTH - VIEW_TILES_W,
+                          cursor_x - VIEW_TILES_W // 2))
+    camera_y = max(0, min(MAP_HEIGHT - VIEW_TILES_H,
+                          cursor_y - VIEW_TILES_H // 2))
 
 
 def draw_hangar_background():
@@ -89,27 +91,6 @@ def draw_hangar_background():
             display.setPixel(x, y, 1)
     for x in range(5, 71, 8):
         display.setPixel(x, 30 + ((x // 8) % 3), 1)
-
-
-def draw_unit_panel(unit):
-    display = thumby.display
-    display.drawLine(41, 0, 41, 39, 1)
-    if unit is None:
-        draw_text("M" + str(mission_index + 1), PANEL_X, 1)
-        draw_text("SHIP", PANEL_X, 9)
-        draw_text(str(base_hp), PANEL_X, 17)
-        draw_text("A:OK", PANEL_X, 28)
-        draw_text("B:BK", PANEL_X, 34)
-        return
-    draw_text(unit["kind"], PANEL_X, 1)
-    draw_text(unit["id"], PANEL_X, 8)
-    draw_text("H" + str(unit["hp"]), PANEL_X, 15)
-    display.drawRectangle(PANEL_X, 22, 27, 5, 1)
-    hp_width = max(0, min(25, unit["hp"] * 25 // unit["max_hp"]))
-    if hp_width:
-        display.drawFilledRectangle(PANEL_X + 1, 23, hp_width, 3, 1)
-    draw_text("EN" + str(unit["en"]), PANEL_X, 29)
-    draw_text("AR" + str(unit["armor"]), PANEL_X, 35)
 
 
 def draw_weapon_menu():
@@ -146,9 +127,9 @@ def draw_map():
     update_camera()
     movement_tiles = (reachable_tiles(selected_unit, units)
                       if selected_unit is not None and state == STATE_MOVE else ())
-    # The map uses the full 5x5 tile viewport; status occupies the right 32 px.
-    for vy in range(VIEW_TILES):
-        for vx in range(VIEW_TILES):
+    # Keep the map full-screen while idle; details appear only after selection.
+    for vy in range(VIEW_TILES_H):
+        for vx in range(VIEW_TILES_W):
             wx = camera_x + vx
             wy = camera_y + vy
             x = vx * TILE
@@ -191,8 +172,6 @@ def draw_map():
     cx = (cursor_x - camera_x) * TILE
     cy = (cursor_y - camera_y) * TILE
     display.drawRectangle(cx + 1, cy + 1, TILE - 2, TILE - 2, 1)
-    focus = selected_unit if selected_unit is not None else unit_at(units, cursor_x, cursor_y)
-    draw_unit_panel(focus)
     if state == STATE_WEAPONS:
         draw_weapon_menu()
         return
@@ -200,25 +179,32 @@ def draw_map():
         draw_status_screen(selected_unit)
         return
     if state == STATE_COMMAND:
-        display.drawFilledRectangle(PANEL_X, 0, SCREEN_W - PANEL_X, SCREEN_H, 0)
-        display.drawLine(41, 0, 41, 39, 1)
-        draw_text("ACT", PANEL_X, 1)
+        # The command/status overlay is contextual and appears only after A.
+        overlay_x = 42
+        display.drawFilledRectangle(overlay_x, 0, SCREEN_W - overlay_x, SCREEN_H, 0)
+        display.drawRectangle(overlay_x, 0, SCREEN_W - overlay_x, SCREEN_H, 1)
+        draw_text(selected_unit["id"], overlay_x + 3, 1)
+        draw_text("H" + str(selected_unit["hp"]), overlay_x + 14, 1)
+        hp_width = max(0, min(25, selected_unit["hp"] * 25 // selected_unit["max_hp"]))
+        display.drawRectangle(overlay_x + 2, 7, 25, 4, 1)
+        if hp_width:
+            display.drawFilledRectangle(overlay_x + 3, 8, hp_width, 2, 1)
         for index, command in enumerate(COMMANDS):
             y = 9 + index * 7
+            label = COMMAND_LABELS[index]
             if command == "MOVE" and (selected_unit["moved"] or selected_unit["move"] == 0):
-                command = "MOV-"
+                label = "MOV-"
             if command == "ATTACK" and selected_unit["acted"]:
-                command = "ATK-"
+                label = "ATK-"
             if index == menu_index:
-                display.drawFilledRectangle(PANEL_X, y - 1, 29, 7, 1)
-                draw_text(command, PANEL_X + 2, y, 0)
+                display.drawFilledRectangle(overlay_x + 1, y - 1, 28, 7, 1)
+                draw_text(label, overlay_x + 3, y, 0)
             else:
-                draw_text(command, PANEL_X, y, 1)
+                draw_text(label, overlay_x + 2, y, 1)
     elif state in (STATE_MOVE, STATE_TARGET):
-        draw_text("MOVE" if state == STATE_MOVE else "TARGET", PANEL_X, 1)
-        draw_text(message[:4], PANEL_X, 10)
-        draw_text("A:OK", PANEL_X, 27)
-        draw_text("B:BK", PANEL_X, 34)
+        draw_text("MOVE" if state == STATE_MOVE else "TARGET", 1, 1)
+        draw_text(message[:4], 1, 8)
+        draw_text("A:OK B:BK", 1, 34)
 
 
 def draw_title():
