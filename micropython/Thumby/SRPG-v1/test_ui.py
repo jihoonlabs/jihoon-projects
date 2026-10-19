@@ -19,6 +19,15 @@ class FakeDisplay:
     def drawFilledRectangle(self, *_args):
         pass
 
+    def drawRectangle(self, *_args):
+        pass
+
+    def drawLine(self, *_args):
+        pass
+
+    def setPixel(self, *_args):
+        pass
+
     def setFPS(self, _fps):
         pass
 
@@ -103,6 +112,26 @@ class SRPGMenuTests(unittest.TestCase):
         self.assertEqual(game.state, game.STATE_STATUS)
         self.press("B", game.update)
         self.assertEqual(game.state, game.STATE_COMMAND)
+
+    def test_idle_map_uses_full_width_without_status_text(self):
+        game.units = create_units()
+        game.state = game.STATE_MAP
+        game.selected_unit = None
+        game.cursor_x, game.cursor_y = 1, 2
+        fake_display.text = []
+        game.draw_map()
+        self.assertEqual((game.VIEW_TILES_W, game.VIEW_TILES_H), (9, 5))
+        self.assertEqual(game.camera_x, 0)
+        self.assertEqual(fake_display.text, [])
+
+    def test_selection_shows_commands_and_status_is_on_demand(self):
+        game.selected_unit = create_units()[0]
+        game.state = game.STATE_COMMAND
+        fake_display.text = []
+        game.draw_map()
+        labels = {text for text, _x, _y in fake_display.text}
+        self.assertTrue({"R1", "H50", "MOVE", "ATK", "STAT", "END"}.issubset(labels))
+        self.assertNotIn("EN30", labels)
 
 
 if __name__ == "__main__":
