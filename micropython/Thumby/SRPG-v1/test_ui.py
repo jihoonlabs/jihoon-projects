@@ -152,6 +152,18 @@ class SRPGMenuTests(unittest.TestCase):
                           if r[2:4] == (5, 4))
         self.assertEqual(ranged_start, ranged_end)
 
+    def test_battle_header_has_hp_and_energy_gauges_for_both_units(self):
+        units = create_units()
+        game.attack_weapon = units[0]["weapons"][0]
+        fake_display.text = []
+        fake_display.rectangles = []
+        game.draw_battle_units(units[0], units[-1])
+        labels = [text for text, _x, _y in fake_display.text]
+        self.assertEqual(labels.count("HP"), 2)
+        self.assertEqual(labels.count("EN"), 2)
+        gauge_bars = [r for r in fake_display.rectangles if r[3:4] == (3,)]
+        self.assertEqual(len(gauge_bars), 4)
+
     def test_status_command_opens_and_returns_to_command_menu(self):
         game.selected_unit = create_units()[0]
         game.menu_index = 2
