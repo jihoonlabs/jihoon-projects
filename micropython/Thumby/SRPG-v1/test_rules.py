@@ -40,6 +40,12 @@ class SRPGRulesTests(unittest.TestCase):
             self.assertEqual(len(unit["weapons"]), 5)
             self.assertEqual(sum(weapon.get("finisher", False)
                                  for weapon in unit["weapons"]), 2)
+            self.assertEqual(unit["weapons"][0]["style"], "fist")
+            self.assertTrue(all(weapon["style"] not in ("blade", "fist")
+                                for weapon in unit["weapons"][1:4]))
+            self.assertEqual(unit["weapons"][-1]["style"], "blade")
+        self.assertEqual({"SG", "SM", "ST"},
+                         {unit["id"] for unit in super_units})
         self.assertEqual((real_units[0]["en"], real_units[0]["armor"],
                           real_units[0]["mobility"], real_units[0]["move"]),
                          (30, 5, 24, 3))
@@ -120,8 +126,9 @@ class SpriteAssetTests(unittest.TestCase):
                          (360, 360, 360))
 
     def test_first_unit_specific_pixel_drafts_fit_the_16_by_16_canvas(self):
-        self.assertNotEqual(CUSTOM_BATTLE["RV"], CUSTOM_BATTLE["SG"])
-        for sprite in (CUSTOM_BATTLE["RV"], CUSTOM_BATTLE["SG"]):
+        self.assertEqual(set(CUSTOM_BATTLE), {"RV", "SG", "SM", "ST"})
+        self.assertEqual(len({CUSTOM_BATTLE[key] for key in ("SG", "SM", "ST")}), 3)
+        for sprite in CUSTOM_BATTLE.values():
             self.assertEqual(len(sprite), 16)
             self.assertTrue(all(len(row) == 16 for row in sprite))
             self.assertTrue(all(set(row) <= {"#", "."} for row in sprite))
