@@ -5,7 +5,7 @@ import thumby
 
 from assets import (ENEMY_BATTLE, ENEMY_ICON, REAL_BATTLE, REAL_CUTIN,
                     REAL_ICON, SHIP_BATTLE, SHIP_CUTIN, SHIP_ICON,
-                    SUPER_BATTLE, SUPER_CUTIN, SUPER_ICON)
+                    SUPER_BATTLE, SUPER_CUTIN, SUPER_ICON, CUSTOM_BATTLE)
 from assets import draw_bitmap
 from rules import (BASE_MAX_HP, BASE_TILE, MAP_HEIGHT, MAP_TERRAIN,
                    MAP_WIDTH, alive_units,
@@ -218,84 +218,87 @@ def draw_title():
 
 def draw_battle_units(attacker, defender, impact=False):
     display = thumby.display
-    # A clean manga-style combat panel: two large figures fill the tiny screen.
+    # Hide all HP/EN text during the action; the combat panel stays uncluttered.
     display.fill(1)
-    display.drawLine(0, 12, 71, 12, 0)
     display.drawLine(0, 32, 71, 32, 0)
-    draw_text(attacker["id"], 1, 0, 0)
-    draw_text(defender["id"], 60, 0, 0)
-    draw_battle_gauges(display, attacker, 1, 10, 25)
-    draw_battle_gauges(display, defender, 36, 45, 26)
     melee = attack_weapon is not None and attack_weapon["style"] == "blade"
     attacker_x = 5
     attacker_pose = "idle"
     defender_x = 51
     defender_pose = "idle"
-    if melee and attack_phase == 1:
+    if melee and attack_phase == 2:
         # Move into range, then strike. The figure advances instead of only
         # drawing a slash across the gap.
         attacker_x += min(24, attack_timer * 3)
         attacker_pose = "walk" if attack_timer < 5 else "strike"
-    elif melee and attack_phase == 2:
+    elif melee and attack_phase == 3:
         attacker_x += max(0, 24 - attack_timer * 3)
         attacker_pose = "recover"
         if attack_timer < 5:
             defender_x += 3
             defender_pose = "recoil"
-    elif impact and attack_timer < 5:
+    elif attack_phase == 3 and attack_timer < 5:
         defender_x += 2
         defender_pose = "recoil"
-
-    draw_combat_mech(display, attacker, attacker_x, 13, facing=1,
+    draw_combat_mech(display, attacker, attacker_x, 7, facing=1,
                      pose=attacker_pose, weapon=attack_weapon)
-    draw_combat_mech(display, defender, defender_x, 13, facing=-1,
+    draw_combat_mech(display, defender, defender_x, 7, facing=-1,
                      pose=defender_pose)
 
     # Sparse manga speed lines frame the moving figures.
-    if melee and attack_phase == 1 and attack_timer >= 4:
-        display.drawLine(0, 17, 7, 17, 0)
-        display.drawLine(0, 28, 10, 28, 0)
-    elif not melee and attack_phase == 1 and attack_timer < 2:
-        display.drawLine(0, 17, 5, 17, 0)
-        display.drawLine(0, 28, 5, 28, 0)
+    if melee and attack_phase == 2 and attack_timer >= 4:
+        display.drawLine(0, 11, 7, 11, 0)
+        display.drawLine(0, 22, 10, 22, 0)
+    elif not melee and attack_phase == 2 and attack_timer < 2:
+        display.drawLine(0, 11, 5, 11, 0)
+        display.drawLine(0, 22, 5, 22, 0)
 
     shot_x = min(52, 23 + attack_timer * 4)
     if melee:
-        if attack_phase == 1 and attack_timer >= 5:
+        if attack_phase == 2 and attack_timer >= 5:
             # Distinct sword arc or punch impact at close range.
-            display.drawLine(attacker_x + 11, 20, attacker_x + 17, 14, 0)
-            display.drawLine(attacker_x + 12, 21, attacker_x + 18, 15, 0)
-        elif attack_phase == 2 and attack_timer < 5:
-            display.drawLine(45, 20, 51, 14, 0)
-    elif attack_phase == 1:
+            display.drawLine(attacker_x + 11, 14, attacker_x + 17, 8, 0)
+            display.drawLine(attacker_x + 12, 15, attacker_x + 18, 9, 0)
+    elif attack_phase == 2:
         if attack_weapon is not None and attack_weapon["style"] == "beam":
-            display.drawLine(20, 20, shot_x, 20, 0)
-            display.drawLine(20, 22, shot_x, 22, 0)
+            display.drawLine(20, 14, shot_x, 14, 0)
+            display.drawLine(20, 16, shot_x, 16, 0)
         else:
-            display.drawLine(max(20, shot_x - 5), 21, shot_x, 21, 0)
-            display.drawFilledRectangle(shot_x, 20, 2, 2, 0)
+            display.drawLine(max(20, shot_x - 5), 15, shot_x, 15, 0)
+            display.drawFilledRectangle(shot_x, 14, 2, 2, 0)
 
     if impact:
-        for x, y in ((47, 18), (50, 15), (53, 21), (48, 25), (56, 17), (58, 24)):
+        for x, y in ((47, 12), (50, 9), (53, 15), (48, 19), (56, 11), (58, 18)):
             display.setPixel(x, y, 0)
-        draw_text("-" + str(attack_damage), 52, 26, 0)
+        draw_text("-" + str(attack_damage), 52, 24, 0)
     draw_text(attack_name(attacker), 3, 34, 0)
 
 
-def draw_battle_gauges(display, unit, label_x, bar_x, bar_width):
-    """Show HP and EN for each fighter in the compact combat header."""
+def draw_battle_gauges(display, unit, label_x, bar_x, bar_width, energy_x):
+    """Show an HP bar and a compact numeric EN value for each fighter."""
     hp = max(0, min(unit["max_hp"], unit["hp"]))
     en = max(0, min(unit.get("max_en", 0), unit.get("en", 0)))
     max_hp = max(1, unit["max_hp"])
-    max_en = max(1, unit.get("max_en", 0))
     draw_text("HP", label_x, 4, 0)
     display.drawRectangle(bar_x, 4, bar_width, 3, 0)
     display.drawFilledRectangle(bar_x + 1, 5,
                                 hp * (bar_width - 2) // max_hp, 1, 0)
-    draw_text("EN", label_x, 8, 0)
-    display.drawRectangle(bar_x, 8, bar_width, 3, 0)
-    display.drawFilledRectangle(bar_x + 1, 9,
-                                en * (bar_width - 2) // max_en, 1, 0)
+    draw_text("EN" + str(en), energy_x, 8, 0)
+
+
+def draw_combat_status(attacker, defender, result=False):
+    """Show status before combat and updated HP/EN after the attack."""
+    display = thumby.display
+    display.fill(1)
+    display.drawLine(0, 12, 71, 12, 0)
+    display.drawLine(0, 32, 71, 32, 0)
+    draw_text(attacker["id"], 1, 0, 0)
+    draw_text(defender["id"], 60, 0, 0)
+    draw_battle_gauges(display, attacker, 1, 10, 25, 1)
+    draw_battle_gauges(display, defender, 36, 45, 26, 52)
+    draw_text(attack_name(attacker), 3, 34, 0)
+    if result:
+        draw_text("-" + str(attack_damage), 52, 34, 0)
 
 
 def draw_combat_mech(display, unit, x, y, facing=1, pose="idle", weapon=None):
@@ -303,31 +306,32 @@ def draw_combat_mech(display, unit, x, y, facing=1, pose="idle", weapon=None):
     def point(px, py):
         return (x + (px if facing > 0 else 15 - px), y + py)
 
-    # Head, visor, and an antenna give the stick silhouette a robot read.
-    hx, hy = point(5, 0)
-    display.drawRectangle(hx, hy, 5, 4, 0)
-    ax, ay = point(7, 0)
-    display.drawLine(ax, ay, ax, ay - 2, 0)
-    vx, vy = point(8, 2)
-    display.drawLine(vx, vy, vx + facing, vy, 0)
-
-    if unit["kind"] == "SUPER":
-        tx, ty = point(4, 5)
-        display.drawFilledRectangle(min(tx, tx + 7), ty, 8, 6, 0)
-        display.drawLine(*point(3, 5), *point(12, 5), 0)
+    forward_hand = (15, 7 if pose == "strike" else 9) if pose in ("strike", "recover") else (12, 7)
+    custom_rows = CUSTOM_BATTLE.get(unit["id"])
+    if custom_rows:
+        draw_custom_mech(display, x, y, custom_rows, facing)
     else:
-        display.drawLine(*point(7, 4), *point(7, 11), 0)
-        display.drawLine(*point(5, 5), *point(10, 5), 0)
+        # Head, visor, and an antenna give the compact fallback a robot read.
+        hx, hy = point(5, 0)
+        display.drawRectangle(hx, hy, 5, 4, 0)
+        ax, ay = point(7, 0)
+        display.drawLine(ax, ay, ax, ay - 2, 0)
+        vx, vy = point(8, 2)
+        display.drawLine(vx, vy, vx + facing, vy, 0)
 
-    stride = 2 if pose == "walk" and attack_timer % 2 else -2 if pose == "walk" else 0
-    if pose in ("strike", "recover"):
-        forward_hand = (15, 7 if pose == "strike" else 9)
-    else:
-        forward_hand = (12, 7)
-    display.drawLine(*point(5, 6), *point(3, 9), 0)
-    display.drawLine(*point(10, 6), *point(*forward_hand), 0)
-    display.drawLine(*point(6, 11), *point(5 + stride, 15), 0)
-    display.drawLine(*point(8, 11), *point(10 - stride, 15), 0)
+        if unit["kind"] == "SUPER":
+            tx, ty = point(4, 5)
+            display.drawFilledRectangle(min(tx, tx + 7), ty, 8, 6, 0)
+            display.drawLine(*point(3, 5), *point(12, 5), 0)
+        else:
+            display.drawLine(*point(7, 4), *point(7, 11), 0)
+            display.drawLine(*point(5, 5), *point(10, 5), 0)
+
+        stride = 2 if pose == "walk" and attack_timer % 2 else -2 if pose == "walk" else 0
+        display.drawLine(*point(5, 6), *point(3, 9), 0)
+        display.drawLine(*point(10, 6), *point(*forward_hand), 0)
+        display.drawLine(*point(6, 11), *point(5 + stride, 15), 0)
+        display.drawLine(*point(8, 11), *point(10 - stride, 15), 0)
 
     if weapon is not None and weapon["style"] != "blade":
         # A held rifle/cannon stays attached while its shot crosses the panel.
@@ -339,6 +343,15 @@ def draw_combat_mech(display, unit, x, y, facing=1, pose="idle", weapon=None):
         hand_x, hand_y = point(*forward_hand)
         blade_x, blade_y = point(15, 2)
         display.drawLine(hand_x, hand_y, blade_x, blade_y, 0)
+
+
+def draw_custom_mech(display, x, y, rows, facing):
+    """Draw a user-authored 16x16 black-ink sprite from the local editor."""
+    for row_index, row in enumerate(rows):
+        for column, pixel in enumerate(row):
+            if pixel == "#":
+                screen_x = column if facing > 0 else 15 - column
+                display.setPixel(x + screen_x, y + row_index, 0)
 
 
 def battle_sprite(unit):
@@ -384,9 +397,8 @@ def start_attack(weapon):
     attack_weapon = weapon
     attack_is_special = weapon.get("finisher", False)
     attack_damage = 0
-    # Normal weapons go directly to the large battle view. Only finishers get
-    # the retained full-screen manga cut-in first.
-    attack_phase = 0 if attack_is_special else 1
+    # Phase 0 is the pre-battle status card. Finishers add a cut-in in phase 1.
+    attack_phase = 0
     attack_timer = 0
     message = "ATTACK"
     state = STATE_ATTACK
@@ -415,24 +427,35 @@ def update_attack():
     global attack_phase, attack_timer, attack_damage
     attack_timer += 1
     if attack_phase == 0:
-        if attack_timer >= 12:
-            attack_phase = 1
+        if attack_timer >= 10:
+            attack_phase = 1 if attack_is_special else 2
             attack_timer = 0
     elif attack_phase == 1:
+        if attack_timer >= 12:
+            attack_phase = 2
+            attack_timer = 0
+    elif attack_phase == 2:
         if attack_timer >= 8:
             attack_damage = resolve_attack(selected_unit, attack_target,
                                            attack_is_special, attack_weapon)
-            attack_phase = 2
+            attack_phase = 3
             attack_timer = 0
-    elif attack_phase == 2 and attack_timer >= 20:
+    elif attack_phase == 3 and attack_timer >= 8:
+        attack_phase = 4
+        attack_timer = 0
+    elif attack_phase == 4 and attack_timer >= 12:
         finish_attack()
 
 
 def draw_attack():
     if attack_phase == 0:
+        draw_combat_status(selected_unit, attack_target)
+    elif attack_phase == 1:
         draw_cut_in(selected_unit)
+    elif attack_phase == 4:
+        draw_combat_status(selected_unit, attack_target, result=True)
     else:
-        draw_battle_units(selected_unit, attack_target, attack_phase == 2)
+        draw_battle_units(selected_unit, attack_target, attack_phase == 3)
 
 
 def enemies_turn():
@@ -573,6 +596,7 @@ def handle_target_input():
 
 def update():
     global state, mission_index, cursor_x, cursor_y, base_hp
+    global attack_phase, attack_timer, attack_damage
     if state == STATE_TITLE:
         if thumby.buttonA.justPressed():
             state = STATE_MAP
@@ -591,11 +615,16 @@ def update():
         handle_target_input()
     elif state == STATE_ATTACK:
         if thumby.buttonB.justPressed():
-            # Skip remains deterministic: apply damage once if impact has not happened.
-            if attack_damage == 0:
-                resolve_attack(selected_unit, attack_target, attack_is_special,
-                               attack_weapon)
-            finish_attack()
+            if attack_phase == 4:
+                finish_attack()
+            else:
+                # Skipping the action still displays its final HP/EN result.
+                if attack_damage == 0:
+                    attack_damage = resolve_attack(
+                        selected_unit, attack_target, attack_is_special,
+                        attack_weapon)
+                attack_phase = 4
+                attack_timer = 0
         else:
             update_attack()
     elif state == STATE_VICTORY and thumby.buttonA.justPressed():
