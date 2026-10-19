@@ -228,67 +228,103 @@ def draw_battle_units(attacker, defender, impact=False):
     display.drawRectangle(39, 4, 32, 2, 0)
     display.drawFilledRectangle(2, 5, max(0, attacker["hp"] * 30 // attacker["max_hp"]), 1, 0)
     display.drawFilledRectangle(40, 5, max(0, defender["hp"] * 30 // defender["max_hp"]), 1, 0)
-    # Sparse impact rays make the sprites read against a white manga panel.
-    display.drawLine(0, 16, 6, 13, 0)
-    display.drawLine(65, 13, 71, 16, 0)
-    display.drawLine(0, 27, 6, 24, 0)
-    display.drawLine(65, 24, 71, 27, 0)
-    attacker_sprite = battle_sprite(attacker)
-    defender_sprite = battle_sprite(defender)
-    draw_battle_bitmap(display, 2, 8, attacker_sprite)
-    draw_battle_bitmap(display, 46, 8, defender_sprite, mirror=True)
-    if attack_weapon is not None and attack_weapon["style"] != "blade":
-        # Gun/cannon silhouette is visibly held by the attacker.
-        display.drawFilledRectangle(23, 18, 10, 4, 0)
-        display.drawLine(25, 19, 31, 19, 1)
-        display.drawLine(25, 20, 31, 20, 1)
-    else:
-        # A broad, separate blade gives melee attacks a different silhouette.
-        display.drawLine(23, 25, 34, 12, 0)
-        display.drawLine(24, 26, 35, 13, 0)
-        display.drawLine(23, 25, 27, 28, 0)
-    if impact:
-        for x, y in ((43, 16), (45, 13), (47, 19), (44, 23), (50, 15), (51, 22), (55, 18)):
-            display.setPixel(x, y, 0)
-        draw_text("-" + str(attack_damage), 50, 26, 0)
-    elif attack_weapon is not None and attack_weapon["style"] == "blade":
-        slash_x = min(45, 34 + attack_timer)
-        slash_y = max(10, 29 - attack_timer * 2)
-        display.drawLine(29, 28, slash_x, slash_y, 0)
-        display.drawLine(30, 29, slash_x + 1, slash_y + 1, 0)
-    elif attacker["kind"] in ("REAL", "SHIP") or attack_weapon is not None:
-        # A projectile visibly travels from the gun to the opposing mech.
-        shot_x = min(45, 34 + attack_timer)
+    melee = attack_weapon is not None and attack_weapon["style"] == "blade"
+    attacker_x = 5
+    attacker_pose = "idle"
+    defender_x = 51
+    defender_pose = "idle"
+    if melee and attack_phase == 1:
+        # Move into range, then strike. The figure advances instead of only
+        # drawing a slash across the gap.
+        attacker_x += min(24, attack_timer * 3)
+        attacker_pose = "walk" if attack_timer < 5 else "strike"
+    elif melee and attack_phase == 2:
+        attacker_x += max(0, 24 - attack_timer * 3)
+        attacker_pose = "recover"
+        if attack_timer < 5:
+            defender_x += 3
+            defender_pose = "recoil"
+    elif impact and attack_timer < 5:
+        defender_x += 2
+        defender_pose = "recoil"
+
+    draw_combat_mech(display, attacker, attacker_x, 10, facing=1,
+                     pose=attacker_pose, weapon=attack_weapon)
+    draw_combat_mech(display, defender, defender_x, 10, facing=-1,
+                     pose=defender_pose)
+
+    # Sparse manga speed lines frame the moving figures.
+    if melee and attack_phase == 1 and attack_timer >= 4:
+        display.drawLine(0, 14, 7, 14, 0)
+        display.drawLine(0, 25, 10, 25, 0)
+    elif not melee and attack_phase == 1 and attack_timer < 2:
+        display.drawLine(0, 14, 5, 14, 0)
+        display.drawLine(0, 25, 5, 25, 0)
+
+    shot_x = min(52, 23 + attack_timer * 4)
+    if melee:
+        if attack_phase == 1 and attack_timer >= 5:
+            # Distinct sword arc or punch impact at close range.
+            display.drawLine(attacker_x + 11, 17, attacker_x + 17, 11, 0)
+            display.drawLine(attacker_x + 12, 18, attacker_x + 18, 12, 0)
+        elif attack_phase == 2 and attack_timer < 5:
+            display.drawLine(45, 17, 51, 11, 0)
+    elif attack_phase == 1:
         if attack_weapon is not None and attack_weapon["style"] == "beam":
-            display.drawLine(32, 18, shot_x, 18, 0)
-            display.drawLine(32, 21, shot_x, 21, 0)
+            display.drawLine(20, 17, shot_x, 17, 0)
+            display.drawLine(20, 19, shot_x, 19, 0)
         else:
-            display.drawLine(max(34, shot_x - 5), 20, shot_x, 20, 0)
-            display.drawFilledRectangle(shot_x, 19, 3, 3, 0)
-    else:
-        # Super units can use a broad traveling melee arc without moving the camera.
-        slash_x = min(45, 34 + attack_timer)
-        slash_y = max(10, 29 - attack_timer * 2)
-        display.drawLine(29, 28, slash_x, slash_y, 0)
-        display.drawLine(30, 29, slash_x + 1, slash_y + 1, 0)
-        if attack_is_special:
-            display.drawLine(31, 28, slash_x + 2, slash_y, 0)
+            display.drawLine(max(20, shot_x - 5), 18, shot_x, 18, 0)
+            display.drawFilledRectangle(shot_x, 17, 2, 2, 0)
+
+    if impact:
+        for x, y in ((47, 15), (50, 12), (53, 18), (48, 22), (56, 14), (58, 21)):
+            display.setPixel(x, y, 0)
+        draw_text("-" + str(attack_damage), 52, 26, 0)
     draw_text(attack_name(attacker), 3, 34, 0)
 
 
-def draw_battle_bitmap(display, x, y, rows, mirror=False):
-    """Enlarge 16x16 art to 24x24 with nearest-neighbor pixels."""
-    for out_y in range(24):
-        row = rows[out_y * 2 // 3]
-        for out_x in range(24):
-            source_x = out_x * 2 // 3
-            if mirror:
-                source_x = 15 - source_x
-            pixel = row[source_x]
-            if pixel == ".":
-                continue
-            color = 1 if pixel == "x" else 0
-            display.drawFilledRectangle(x + out_x, y + out_y, 1, 1, color)
+def draw_combat_mech(display, unit, x, y, facing=1, pose="idle", weapon=None):
+    """Draw a compact articulated mech that leaves room for attack animation."""
+    def point(px, py):
+        return (x + (px if facing > 0 else 15 - px), y + py)
+
+    # Head, visor, and an antenna give the stick silhouette a robot read.
+    hx, hy = point(5, 0)
+    display.drawRectangle(hx, hy, 5, 4, 0)
+    ax, ay = point(7, 0)
+    display.drawLine(ax, ay, ax, ay - 2, 0)
+    vx, vy = point(8, 2)
+    display.drawLine(vx, vy, vx + facing, vy, 0)
+
+    if unit["kind"] == "SUPER":
+        tx, ty = point(4, 5)
+        display.drawFilledRectangle(min(tx, tx + 7), ty, 8, 6, 0)
+        display.drawLine(*point(3, 5), *point(12, 5), 0)
+    else:
+        display.drawLine(*point(7, 4), *point(7, 11), 0)
+        display.drawLine(*point(5, 5), *point(10, 5), 0)
+
+    stride = 2 if pose == "walk" and attack_timer % 2 else -2 if pose == "walk" else 0
+    if pose in ("strike", "recover"):
+        forward_hand = (15, 7 if pose == "strike" else 9)
+    else:
+        forward_hand = (12, 7)
+    display.drawLine(*point(5, 6), *point(3, 9), 0)
+    display.drawLine(*point(10, 6), *point(*forward_hand), 0)
+    display.drawLine(*point(6, 11), *point(5 + stride, 15), 0)
+    display.drawLine(*point(8, 11), *point(10 - stride, 15), 0)
+
+    if weapon is not None and weapon["style"] != "blade":
+        # A held rifle/cannon stays attached while its shot crosses the panel.
+        hand_x, hand_y = point(*forward_hand)
+        muzzle_x, muzzle_y = point(16, forward_hand[1])
+        display.drawLine(hand_x, hand_y, muzzle_x, muzzle_y, 0)
+        display.drawLine(hand_x, hand_y - 1, muzzle_x - facing, muzzle_y - 1, 0)
+    elif pose == "strike" and weapon is not None:
+        hand_x, hand_y = point(*forward_hand)
+        blade_x, blade_y = point(15, 2)
+        display.drawLine(hand_x, hand_y, blade_x, blade_y, 0)
 
 
 def battle_sprite(unit):
