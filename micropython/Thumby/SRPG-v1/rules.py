@@ -30,9 +30,9 @@ def create_units():
     """Return a fresh M1 roster; sprites differ while core stats stay balanced."""
     allies = []
     roster = (
-        ("R1", "REAL", 1, 2), ("S1", "SUPER", 1, 4),
-        ("R2", "REAL", 2, 3), ("S2", "SUPER", 2, 5),
-        ("R3", "REAL", 3, 1), ("S3", "SUPER", 3, 6),
+        ("RV", "REAL", 1, 2), ("SG", "SUPER", 1, 4),
+        ("RZ", "REAL", 2, 3), ("SM", "SUPER", 2, 5),
+        ("RF", "REAL", 3, 1), ("ST", "SUPER", 3, 6),
     )
     for unit_id, kind, x, y in roster:
         if kind == "REAL":
@@ -42,9 +42,9 @@ def create_units():
                 {"name": "BEAM GUN", "short": "BEAM", "power": 24, "range": 3, "style": "beam"},
             ]
             signature = {
-                "R1": ("RAIL", 34, 4),
-                "R2": ("LANCE", 32, 2),
-                "R3": ("SCOPE", 30, 5),
+                "RV": ("RAIL", 34, 4),
+                "RZ": ("LANCE", 32, 2),
+                "RF": ("SCOPE", 30, 5),
             }[unit_id]
             weapons.append({"name": signature[0], "short": signature[0][:4],
                             "power": signature[1], "range": signature[2],
