@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -10,24 +10,24 @@ import { LoginForm } from '../LoginForm';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
-const { pushMock } = vi.hoisted(() => ({
-  pushMock: vi.fn(),
+const { replaceMock } = vi.hoisted(() => ({
+  replaceMock: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: pushMock,
+    replace: replaceMock,
   }),
 }));
 
 describe('LoginForm メール認証処理', () => {
   beforeEach(() => {
-    pushMock.mockReset();
+    replaceMock.mockReset();
 
     useAuthStore.setState({
       user: null,
       isAuthenticated: false,
-      isInitialized: false,
+      isInitialized: true,
     });
   });
 
@@ -62,9 +62,92 @@ describe('LoginForm メール認証処理', () => {
       screen.getByRole('button', { name: '認証メールを再送する' }),
     ).toBeInTheDocument();
 
-    expect(pushMock).not.toHaveBeenCalled();
+    expect(replaceMock).not.toHaveBeenCalled();
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
   });
+
+  it.each([
+    [false, false],
+    [false, true],
+    [true, false],
+    [true, true],
+  ])(
+    'keeps newer login recovery after delayed resend (failure: %s, email change: %s)',
+    async (fails, changeEmail) => {
+      const user = userEvent.setup();
+      let release!: () => void;
+      let started = false;
+      let resendSignal: AbortSignal | undefined;
+      let loginCount = 0;
+      const pending = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      server.use(
+        http.post(`${API_URL}/api/auth/login`, () => {
+          loginCount += 1;
+          return HttpResponse.json(
+            {
+              message:
+                loginCount === 2
+                  ? 'New login needs verification'
+                  : 'First account needs verification',
+              code: 'email_not_verified',
+            },
+            { status: 403 },
+          );
+        }),
+        http.post(
+          `${API_URL}/api/auth/email/verification-notification`,
+          async ({ request }) => {
+            resendSignal = request.signal;
+            expect(await request.json()).toEqual({
+              email: 'first@example.com',
+            });
+            started = true;
+            await pending;
+            return fails
+              ? HttpResponse.json({}, { status: 429 })
+              : HttpResponse.json({
+                  message: 'First account resend completed',
+                });
+          },
+        ),
+      );
+      render(<LoginForm />);
+      const email = screen.getByLabelText('メールアドレス');
+      await user.type(email, 'first@example.com');
+      await user.type(screen.getByLabelText('パスワード'), 'password123');
+      await user.click(screen.getByRole('button', { name: 'ログイン' }));
+      await user.click(
+        await screen.findByRole('button', { name: '認証メールを再送する' }),
+      );
+      await waitFor(() => expect(started).toBe(true));
+
+      if (changeEmail) {
+        await user.clear(email);
+        await user.type(email, 'second@example.com');
+      }
+      await user.click(screen.getByRole('button', { name: 'ログイン' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'New login needs verification',
+      );
+      expect(resendSignal?.aborted).toBe(true);
+      await act(async () => {
+        release();
+      });
+      await screen.findByRole('button', { name: '認証メールを再送する' });
+
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'New login needs verification',
+      );
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      expect(email).toHaveValue(
+        changeEmail ? 'second@example.com' : 'first@example.com',
+      );
+      expect(replaceMock).not.toHaveBeenCalled();
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    },
+  );
 
   it('認証メールの再送に成功した場合、成功メッセージを表示すること', async () => {
     const user = userEvent.setup();

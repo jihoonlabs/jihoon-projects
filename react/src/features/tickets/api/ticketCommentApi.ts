@@ -1,4 +1,7 @@
-import { fetchWithCsrf } from '@/shared/api/fetchWithCsrf';
+import {
+  protectedFetch as fetch,
+  protectedMutation as fetchWithCsrf,
+} from '@/features/auth/api/protectedRequest';
 import type { TicketComment } from '../types/ticket';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';

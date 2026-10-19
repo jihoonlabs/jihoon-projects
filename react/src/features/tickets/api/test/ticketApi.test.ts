@@ -6,6 +6,7 @@ import {
   deleteTicket,
   fetchTicket,
   fetchTickets,
+  moveTicket,
   toTicket,
   updateTicket,
   updateTicketStatus,
@@ -16,16 +17,25 @@ const url = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 describe('Ticket API boundary', () => {
   it.each(['not-an-id', '', '0', '1.5'])(
-    'rejects invalid assignee ID %j rather than sending null',
-    async (assigneeId) => {
-      await expect(createTicket({ title: 'New', assigneeId })).rejects.toThrow(
-        '担当者ID',
+    'rejects invalid project ID %j',
+    async (projectId) => {
+      await expect(createTicket({ projectId, title: 'New' })).rejects.toThrow(
+        'プロジェクトID',
       );
     },
   );
+  it.each(['not-an-id', '', '0', '1.5'])(
+    'rejects invalid assignee ID %j rather than sending null',
+    async (assigneeId) => {
+      await expect(
+        createTicket({ projectId: '1', title: 'New', assigneeId }),
+      ).rejects.toThrow('担当者ID');
+    },
+  );
   it('maps snake_case, nullable fields, and numeric assignee IDs', () => {
-    expect(toTicket(responseTicket, 12)).toEqual({
+    expect(toTicket({ ...responseTicket, position: 12 })).toEqual({
       id: '1',
+      projectId: '1',
       issueKey: 'TICK-1',
       title: 'First ticket',
       description: null,
@@ -33,6 +43,7 @@ describe('Ticket API boundary', () => {
       priority: 'MEDIUM',
       assignee: { id: '7', name: 'Tester', avatarUrl: undefined },
       position: 12,
+      version: 1,
       createdAt: responseTicket.created_at,
       updatedAt: responseTicket.updated_at,
     });
@@ -56,7 +67,7 @@ describe('Ticket API boundary', () => {
       http.get(`${url}/api/tickets`, ({ request }) => {
         expect(request.credentials).toBe('include');
         return HttpResponse.json({
-          data: [responseTicket, { ...responseTicket, id: '2' }],
+          data: [responseTicket, { ...responseTicket, id: '2', position: 1 }],
         });
       }),
     );
@@ -92,6 +103,7 @@ describe('Ticket API boundary', () => {
         expect(request.credentials).toBe('include');
         expect(request.headers.get('X-XSRF-TOKEN')).toBe('test-csrf-token');
         expect(await request.json()).toEqual({
+          project_id: 1,
           title: 'New',
           description: null,
           assignee_id: 7,
@@ -103,7 +115,12 @@ describe('Ticket API boundary', () => {
       }),
     );
     expect(
-      await createTicket({ title: 'New', description: null, assigneeId: '7' }),
+      await createTicket({
+        projectId: '1',
+        title: 'New',
+        description: null,
+        assigneeId: '7',
+      }),
     ).toMatchObject({ title: 'New', issueKey: 'TICK-1' });
   });
   it('sends editable ticket fields through PATCH', async () => {
@@ -162,6 +179,42 @@ describe('Ticket API boundary', () => {
     );
     await expect(deleteTicket('1')).resolves.toBeUndefined();
   });
+  it('sends a versioned move and maps the authoritative board version', async () => {
+    server.use(
+      http.patch(`${url}/api/tickets/1/move`, async ({ request }) => {
+        expect(request.headers.get('X-XSRF-TOKEN')).toBe('test-csrf-token');
+        expect(await request.json()).toEqual({
+          status: 'IN_PROGRESS',
+          position: 2,
+          board_version: 4,
+        });
+        return HttpResponse.json({
+          data: { ...responseTicket, status: 'IN_PROGRESS', position: 2 },
+          board_version: 5,
+        });
+      }),
+    );
+
+    await expect(moveTicket('1', 'IN_PROGRESS', 2, 4)).resolves.toEqual({
+      ticket: toTicket({
+        ...responseTicket,
+        status: 'IN_PROGRESS',
+        position: 2,
+      }),
+      boardVersion: 5,
+    });
+  });
+  it('preserves a stale board conflict as a 409 API error', async () => {
+    server.use(
+      http.patch(`${url}/api/tickets/1/move`, () =>
+        HttpResponse.json({ message: 'stale' }, { status: 409 }),
+      ),
+    );
+
+    await expect(moveTicket('1', 'DONE', 0, 4)).rejects.toMatchObject({
+      status: 409,
+    });
+  });
   it.each([401, 403, 422, 500])('rejects HTTP %s', async (status) => {
     server.use(
       http.get(`${url}/api/tickets`, () =>
@@ -177,4 +230,53 @@ describe('Ticket API boundary', () => {
       await expect(fetchTickets()).rejects.toThrow();
     },
   );
+});
+
+it('transmits expected_version, adopts response version, and parses conflict code', async () => {
+  server.use(
+    http.patch(`${url}/api/tickets/1`, async ({ request }) => {
+      expect(await request.json()).toEqual({
+        title: 'Conditional',
+        expected_version: 4,
+      });
+      return HttpResponse.json({
+        data: { ...responseTicket, title: 'Conditional', version: 5 },
+      });
+    }),
+  );
+  expect(
+    await updateTicket('1', { title: 'Conditional', expectedVersion: 4 }),
+  ).toMatchObject({ version: 5 });
+  server.use(
+    http.patch(`${url}/api/tickets/1`, () =>
+      HttpResponse.json({ code: 'ticket_conflict' }, { status: 409 }),
+    ),
+  );
+  await expect(updateTicket('1', { expectedVersion: 4 })).rejects.toMatchObject(
+    { status: 409, code: 'ticket_conflict' },
+  );
+});
+
+it.each([undefined, null, 0, -1, 1.5, '1', Number.MAX_SAFE_INTEGER + 1])(
+  'rejects unsafe or missing response version %j',
+  (version) => {
+    expect(() =>
+      toTicket({ ...responseTicket, version } as typeof responseTicket),
+    ).toThrow('バージョン');
+  },
+);
+
+it('fetches detail without caching and forwards cancellation', async () => {
+  const controller = new AbortController();
+  server.use(
+    http.get(`${url}/api/tickets/1`, ({ request }) => {
+      expect(request.cache).toBe('no-store');
+      return HttpResponse.json({ data: responseTicket });
+    }),
+  );
+  expect(await fetchTicket('1', controller.signal)).toMatchObject({
+    version: 1,
+  });
+  controller.abort();
+  await expect(fetchTicket('1', controller.signal)).rejects.toThrow();
 });

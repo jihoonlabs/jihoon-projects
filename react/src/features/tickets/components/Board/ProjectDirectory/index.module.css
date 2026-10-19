@@ -1,0 +1,129 @@
+.dialog {
+  margin: auto;
+  width: min(760px, calc(100% - 2rem));
+  max-height: calc(100dvh - 3rem);
+  padding: 1.25rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #fff;
+  color: #111827;
+  box-shadow: 0 24px 80px #0f172a33;
+  overflow-y: auto;
+}
+.dialog::backdrop {
+  background: #0f172a66;
+}
+.dialogToolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+.dialogToolbar button {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.dialogToolbar button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+.dialogToolbar button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.container {
+  padding: 1.25rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  color: #111827;
+  display: grid;
+  gap: 1rem;
+}
+.heading,
+.createRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: end;
+  gap: 0.75rem;
+}
+.heading h2 {
+  font-size: 1.1rem;
+}
+.list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 0.75rem;
+}
+.project {
+  display: grid;
+  gap: 0.35rem;
+  width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.project span {
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+.project[aria-pressed='true'] {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+.form {
+  display: grid;
+  gap: 0.65rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+}
+.form p {
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+.field {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  flex: 1 1 220px;
+}
+.field input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.55rem;
+  font: inherit;
+  background: #fff;
+  color: #111827;
+}
+.container button {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.65rem;
+  font: inherit;
+  color: #111827;
+  background: #fff;
+  cursor: pointer;
+}
+.createRow button {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+.container button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.container button:focus-visible,
+.field input:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+.form .error {
+  color: #b91c1c;
+}

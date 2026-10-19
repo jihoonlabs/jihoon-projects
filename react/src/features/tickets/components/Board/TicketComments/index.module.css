@@ -1,0 +1,102 @@
+.container {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+  display: grid;
+  gap: 0.85rem;
+  color: #111827;
+  min-width: 0;
+}
+
+.list {
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.comment {
+  padding: 0.85rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  min-width: 0;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  align-items: baseline;
+  overflow-wrap: anywhere;
+}
+
+.meta time {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0.6rem 0;
+  line-height: 1.6;
+}
+
+.form,
+.form label {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.container textarea {
+  display: block;
+  width: 100%;
+  min-height: 90px;
+  padding: 0.65rem;
+  margin: 0.5rem 0;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #111827;
+  font: inherit;
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.container button {
+  padding: 0.4rem 0.75rem;
+  margin-right: 0.4rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #374151;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.form button {
+  justify-self: start;
+  background: #1d4ed8;
+  color: #fff;
+  border-color: #1d4ed8;
+}
+
+.container button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.container button:focus-visible,
+.container textarea:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.error {
+  color: #b91c1c;
+}

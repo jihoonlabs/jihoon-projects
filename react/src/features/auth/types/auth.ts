@@ -31,6 +31,9 @@ export interface VerificationEmailResendResponse {
 }
 
 export interface AuthState {
+  sessionRevision: number;
+  sessionExpired: boolean;
+  expireSession: () => void;
   user: User | null;
   isAuthenticated: boolean;
   isInitialized: boolean;

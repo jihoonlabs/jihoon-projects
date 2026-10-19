@@ -5,22 +5,30 @@ import styles from './index.module.css';
 
 interface MainProps {
   tickets: Ticket[];
+  projectKey?: string | null;
+  projectColor?: string | null;
+  projectColors?: Record<string, string | null>;
   searchQuery: string;
   assigneeFilter: string;
   currentUserId: number | null;
   onStatusChange?: (id: string, status: TicketStatus) => void;
-  onEdit?: (ticket: Ticket) => void;
-  onDelete?: (ticket: Ticket) => void;
+  onOpenDetails?: (ticket: Ticket, trigger: HTMLButtonElement) => void;
+  canWrite?: boolean;
+  canDrag?: boolean;
 }
 
 export default function Main({
   tickets,
+  projectKey,
+  projectColor,
+  projectColors,
   searchQuery,
   assigneeFilter,
   currentUserId,
   onStatusChange,
-  onEdit,
-  onDelete,
+  onOpenDetails,
+  canWrite = true,
+  canDrag = canWrite,
 }: MainProps) {
   const filteredTickets = tickets.filter((ticket) => {
     const matchesSearch =
@@ -50,9 +58,13 @@ export default function Main({
             key={column.id}
             column={column}
             tickets={columnTickets}
+            projectKey={projectKey}
+            projectColor={projectColor}
+            projectColors={projectColors}
             onStatusChange={onStatusChange}
-            onEdit={onEdit}
-            onDelete={onDelete}
+            onOpenDetails={onOpenDetails}
+            canWrite={canWrite}
+            canDrag={canDrag}
           />
         );
       })}
