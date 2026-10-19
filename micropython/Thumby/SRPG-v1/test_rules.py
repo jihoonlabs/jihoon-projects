@@ -16,6 +16,8 @@ class SRPGRulesTests(unittest.TestCase):
         enemies = alive_units(self.units, "enemy")
         self.assertEqual((len(allies), len(enemies)), (7, 8))
         mechs = [unit for unit in allies if unit["kind"] != "SHIP"]
+        self.assertEqual({unit["id"] for unit in mechs},
+                         {"RV", "RZ", "RF", "SG", "SM", "ST"})
         self.assertEqual({unit["kind"] for unit in mechs}, {"REAL", "SUPER"})
         self.assertEqual(sum(unit["kind"] == "REAL" for unit in allies), 3)
         self.assertEqual(sum(unit["kind"] == "SUPER" for unit in allies), 3)
@@ -118,11 +120,12 @@ class SpriteAssetTests(unittest.TestCase):
                          (360, 360, 360))
 
     def test_first_unit_specific_pixel_drafts_fit_the_16_by_16_canvas(self):
-        self.assertNotEqual(CUSTOM_BATTLE["R1"], CUSTOM_BATTLE["S1"])
-        for sprite in (CUSTOM_BATTLE["R1"], CUSTOM_BATTLE["S1"]):
+        self.assertNotEqual(CUSTOM_BATTLE["RV"], CUSTOM_BATTLE["SG"])
+        for sprite in (CUSTOM_BATTLE["RV"], CUSTOM_BATTLE["SG"]):
             self.assertEqual(len(sprite), 16)
             self.assertTrue(all(len(row) == 16 for row in sprite))
             self.assertTrue(all(set(row) <= {"#", "."} for row in sprite))
+        self.assertTrue(any("#####" in row for row in CUSTOM_BATTLE["RV"]))
 
 
 if __name__ == "__main__":
