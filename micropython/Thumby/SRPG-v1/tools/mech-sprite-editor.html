@@ -28,7 +28,7 @@
     <canvas id="grid" width="320" height="320" aria-label="16 by 16 pixel drawing grid"></canvas>
     <div class="controls">
       <label>기체 ID
-        <input id="unit" value="R1" maxlength="8" autocomplete="off">
+        <input id="unit" value="RV" maxlength="8" autocomplete="off">
       </label>
       <div class="buttons">
         <button id="draw" type="button">그리기</button>
@@ -52,7 +52,7 @@
     let drawing = false;
 
     function key() {
-      return 'srpg-sprite-' + (document.querySelector('#unit').value.trim().toUpperCase() || 'R1');
+      return 'srpg-sprite-' + (document.querySelector('#unit').value.trim().toUpperCase() || 'RV');
     }
 
     function loadDraft() {
@@ -116,7 +116,7 @@
     document.querySelector('#clear').onclick = () => { for (const row of pixels) row.fill(false); paint(); try { localStorage.removeItem(key()); } catch (_) { /* No saved draft. */ } };
     document.querySelector('#unit').addEventListener('change', load);
     document.querySelector('#export').onclick = () => {
-      const id = (document.querySelector('#unit').value.trim().toUpperCase() || 'R1').replace(/[^A-Z0-9_]/g, '_');
+      const id = (document.querySelector('#unit').value.trim().toUpperCase() || 'RV').replace(/[^A-Z0-9_]/g, '_');
       const rows = pixels.map(row => row.map(bit => bit ? '#' : '.').join(''));
       output.value = `"${id}": (\n${rows.map(row => `    "${row}",`).join('\n')}\n),`;
     };
