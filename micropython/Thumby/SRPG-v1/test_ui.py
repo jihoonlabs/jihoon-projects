@@ -85,7 +85,7 @@ class SRPGMenuTests(unittest.TestCase):
         game.units = create_units()
         game.selected_unit = game.units[1]
         target = game.units[-1]
-        target["x"], target["y"] = 4, 4
+        target["x"], target["y"] = 3, 4
         game.cursor_x, game.cursor_y = game.selected_unit["x"], game.selected_unit["y"]
         game.menu_index = 1
         game.weapon_index = 0
@@ -95,13 +95,13 @@ class SRPGMenuTests(unittest.TestCase):
         for _ in range(4):
             self.press("D", game.handle_weapon_input)
         self.press("A", game.handle_weapon_input)
+        finisher_name = game.selected_unit["weapons"][-1]["name"]
         self.assertEqual((game.state, game.selected_weapon["name"]),
-                         (game.STATE_TARGET, "FINAL"))
-        game.move_cursor(1, 0)
+                         (game.STATE_TARGET, finisher_name))
         game.move_cursor(1, 0)
         self.press("A", game.handle_target_input)
         self.assertEqual((game.state, game.attack_weapon["name"]),
-                         (game.STATE_ATTACK, "FINAL"))
+                         (game.STATE_ATTACK, finisher_name))
         for _ in range(50):
             if game.state != game.STATE_ATTACK:
                 break
@@ -129,12 +129,12 @@ class SRPGMenuTests(unittest.TestCase):
             game.update_attack()
         self.assertEqual(game.attack_phase, 1)
 
-    def test_melee_attacker_advances_but_ranged_attacker_holds_position(self):
-        game.selected_unit = create_units()[1]
+    def test_melee_lunges_and_ranged_fire_recoils(self):
+        game.selected_unit = create_units()[0]
         target = create_units()[-1]
         game.attack_target = target
         game.attack_phase = 2
-        game.attack_weapon = game.selected_unit["weapons"][0]
+        game.attack_weapon = game.selected_unit["weapons"][1]
         game.attack_timer = 0
         fake_display.pixels = []
         game.draw_battle_units(game.selected_unit, target)
@@ -147,18 +147,38 @@ class SRPGMenuTests(unittest.TestCase):
                           if y == 7 and x < 50)
         self.assertGreater(melee_lunge, melee_start)
 
+        game.selected_unit = create_units()[1]
+        game.attack_weapon = game.selected_unit["weapons"][0]
+        game.attack_timer = 0
+        fake_display.pixels = []
+        game.draw_battle_units(game.selected_unit, target)
+        fist_start = min(x for x, y, _color in fake_display.pixels
+                         if y == 7 and x < 50)
+        game.attack_timer = 5
+        fake_display.pixels = []
+        game.draw_battle_units(game.selected_unit, target)
+        fist_lunge = min(x for x, y, _color in fake_display.pixels
+                         if y == 7 and x < 50)
+        self.assertGreater(fist_lunge, fist_start)
+
         game.selected_unit = create_units()[0]
         game.attack_weapon = game.selected_unit["weapons"][0]
         game.attack_timer = 0
         fake_display.pixels = []
         game.draw_battle_units(game.selected_unit, target)
         ranged_start = min(x for x, y, _color in fake_display.pixels
-                           if y == 7 and x < 50)
+                           if y == 8 and x < 50)
+        game.attack_timer = 2
+        fake_display.pixels = []
+        game.draw_battle_units(game.selected_unit, target)
+        ranged_recoil = min(x for x, y, _color in fake_display.pixels
+                            if y == 8 and x < 50)
+        self.assertLess(ranged_recoil, ranged_start)
         game.attack_timer = 7
         fake_display.pixels = []
         game.draw_battle_units(game.selected_unit, target)
         ranged_end = min(x for x, y, _color in fake_display.pixels
-                         if y == 7 and x < 50)
+                         if y == 8 and x < 50)
         self.assertEqual(ranged_start, ranged_end)
 
     def test_status_is_shown_before_and_after_battle_but_hidden_during_action(self):
