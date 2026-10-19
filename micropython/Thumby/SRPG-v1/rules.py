@@ -52,12 +52,23 @@ def create_units():
             en, armor, mobility = 30, 5, 24
         else:
             weapons = [
-                {"name": "PUNCH", "short": "PCH", "power": 20, "range": 1, "style": "blade"},
-                {"name": "KICK", "short": "KIK", "power": 22, "range": 1, "style": "blade"},
-                {"name": "SHOCK", "short": "SHK", "power": 24, "range": 2, "style": "beam"},
-                {"name": "DRIVE", "short": "DRV", "power": 32, "range": 2, "style": "beam", "finisher": True},
-                {"name": "FINAL", "short": "FIN", "power": 40, "range": 3, "style": "beam", "finisher": True},
+                {"name": "PUNCH", "short": "PCH", "power": 20, "range": 1, "style": "fist"},
+                {"name": "ARM BLAST", "short": "ARM", "power": 22, "range": 2, "style": "beam"},
+                {"name": "SHOULDER", "short": "SHO", "power": 24, "range": 3, "style": "shot"},
             ]
+            signature = {
+                "SG": (("HORN BEAM", "HOR", 32, 4, "beam"),
+                       ("TITAN HIT", "TIT", 40, 2, "blade")),
+                "SM": (("CROSS RAY", "CRS", 32, 4, "beam"),
+                       ("CROSS RAM", "RAM", 40, 2, "blade")),
+                "ST": (("TRIAD SHOT", "TRI", 32, 4, "beam"),
+                       ("SPIRAL HIT", "SPI", 40, 2, "blade")),
+            }[unit_id]
+            for name, short, power, weapon_range, style in signature:
+                weapons.append({"name": name, "short": short, "power": power,
+                                "range": weapon_range,
+                                "style": style,
+                                "finisher": True})
             en, armor, mobility = 40, 8, 15
         allies.append({"id": unit_id, "team": "ally", "kind": kind,
                        "x": x, "y": y, "hp": 50, "max_hp": 50,
