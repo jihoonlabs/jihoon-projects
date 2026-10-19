@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SRPG 기체 도트 에디터</title>
+  <style>
+    :root { color-scheme: light; font: 15px/1.45 system-ui, sans-serif; }
+    body { max-width: 860px; margin: 24px auto; padding: 0 18px; color: #171717; }
+    h1 { margin-bottom: 4px; font-size: 1.5rem; }
+    p { margin-top: 4px; color: #555; }
+    .layout { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 22px; margin: 20px 0; }
+    canvas { width: min(82vw, 400px); height: min(82vw, 400px); border: 2px solid #222; touch-action: none; image-rendering: pixelated; }
+    .controls { display: grid; gap: 10px; min-width: 220px; }
+    label { display: grid; gap: 4px; }
+    input, button, textarea { font: inherit; }
+    input, button { min-height: 38px; padding: 6px 9px; }
+    button { cursor: pointer; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 7px; }
+    textarea { box-sizing: border-box; width: 100%; min-height: 210px; font: 13px/1.35 ui-monospace, monospace; }
+    .hint { font-size: .92rem; }
+  </style>
+</head>
+<body>
+  <h1>SRPG 기체 도트 에디터</h1>
+  <p>16×16 흑백 기체를 마우스나 손가락으로 그려. 검은 점은 기체, 흰 칸은 투명이야.</p>
+  <div class="layout">
+    <canvas id="grid" width="320" height="320" aria-label="16 by 16 pixel drawing grid"></canvas>
+    <div class="controls">
+      <label>기체 ID
+        <input id="unit" value="R1" maxlength="8" autocomplete="off">
+      </label>
+      <div class="buttons">
+        <button id="draw" type="button">그리기</button>
+        <button id="erase" type="button">지우개</button>
+        <button id="clear" type="button">전체 지우기</button>
+      </div>
+      <p class="hint">그림은 이 브라우저에 기체 ID별로 자동 저장돼.</p>
+      <button id="export" type="button">게임용 코드 만들기</button>
+    </div>
+  </div>
+  <label>생성된 코드를 복사해서 <code>assets.py</code>의 <code>CUSTOM_BATTLE</code> 안에 붙여 넣어.
+    <textarea id="output" spellcheck="false" placeholder="여기에 Python 코드가 표시돼"></textarea>
+  </label>
+  <button id="copy" type="button">코드 복사</button>
+  <script>
+    const canvas = document.querySelector('#grid');
+    const ctx = canvas.getContext('2d');
+    const output = document.querySelector('#output');
+    const pixels = Array.from({length: 16}, () => Array(16).fill(false));
+    let mode = true;
+    let drawing = false;
+
+    function key() {
+      return 'srpg-sprite-' + (document.querySelector('#unit').value.trim().toUpperCase() || 'R1');
+    }
+
+    function loadDraft() {
+      try { return localStorage.getItem(key()); } catch (_) { return null; }
+    }
+
+    function saveDraft(rows) {
+      try { localStorage.setItem(key(), JSON.stringify(rows)); } catch (_) { /* Export remains available. */ }
+    }
+
+    function paint() {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, 320, 320);
+      for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 16; x++) {
+          if (pixels[y][x]) {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(x * 20 + 1, y * 20 + 1, 18, 18);
+          }
+        }
+      }
+      ctx.strokeStyle = '#c9c9c9';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 16; i++) {
+        ctx.beginPath(); ctx.moveTo(i * 20 + .5, 0); ctx.lineTo(i * 20 + .5, 320); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i * 20 + .5); ctx.lineTo(320, i * 20 + .5); ctx.stroke();
+      }
+    }
+
+    function load() {
+      const saved = loadDraft();
+      if (saved) {
+        try {
+          const rows = JSON.parse(saved);
+          if (rows.length === 16 && rows.every(row => row.length === 16)) {
+            for (let y = 0; y < 16; y++) pixels[y] = rows[y].split('').map(cell => cell === '#');
+          }
+        } catch (_) { /* Ignore malformed browser-local drafts. */ }
+      } else {
+        for (let y = 0; y < 16; y++) pixels[y].fill(false);
+      }
+      paint();
+    }
+
+    function put(event) {
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor((event.clientX - rect.left) / rect.width * 16);
+      const y = Math.floor((event.clientY - rect.top) / rect.height * 16);
+      if (x < 0 || x > 15 || y < 0 || y > 15) return;
+      pixels[y][x] = mode;
+      saveDraft(pixels.map(row => row.map(bit => bit ? '#' : '.').join('')));
+      paint();
+    }
+
+    canvas.addEventListener('pointerdown', event => { drawing = true; canvas.setPointerCapture(event.pointerId); put(event); });
+    canvas.addEventListener('pointermove', event => { if (drawing) put(event); });
+    canvas.addEventListener('pointerup', () => { drawing = false; });
+    canvas.addEventListener('pointercancel', () => { drawing = false; });
+    document.querySelector('#draw').onclick = () => { mode = true; };
+    document.querySelector('#erase').onclick = () => { mode = false; };
+    document.querySelector('#clear').onclick = () => { for (const row of pixels) row.fill(false); paint(); try { localStorage.removeItem(key()); } catch (_) { /* No saved draft. */ } };
+    document.querySelector('#unit').addEventListener('change', load);
+    document.querySelector('#export').onclick = () => {
+      const id = (document.querySelector('#unit').value.trim().toUpperCase() || 'R1').replace(/[^A-Z0-9_]/g, '_');
+      const rows = pixels.map(row => row.map(bit => bit ? '#' : '.').join(''));
+      output.value = `"${id}": (\n${rows.map(row => `    "${row}",`).join('\n')}\n),`;
+    };
+    document.querySelector('#copy').onclick = async () => {
+      output.focus(); output.select();
+      try { await navigator.clipboard.writeText(output.value); } catch (_) { document.execCommand('copy'); }
+    };
+    load();
+  </script>
+</body>
+</html>
