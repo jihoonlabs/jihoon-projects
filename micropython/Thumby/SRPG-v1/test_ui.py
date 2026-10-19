@@ -76,7 +76,7 @@ class SRPGMenuTests(unittest.TestCase):
         fake_display.text = []
         game.draw_status_screen(unit)
         shown = {text for text, _x, _y in fake_display.text}
-        self.assertEqual(shown, {"R1 REAL", "HP 50/50", "EN 30/30",
+        self.assertEqual(shown, {"RV REAL", "HP 50/50", "EN 30/30",
                                  "ARM 5", "MOB 24", "MOVE 3", "B:BK"})
         self.assertTrue(all(x + len(text) * 6 <= 72
                             for text, x, _y in fake_display.text))
@@ -234,7 +234,7 @@ class SRPGMenuTests(unittest.TestCase):
         fake_display.text = []
         game.draw_map()
         labels = {text for text, _x, _y in fake_display.text}
-        self.assertTrue({"R1", "H50", "MOVE", "ATK", "STAT", "END"}.issubset(labels))
+        self.assertTrue({"RV", "H50", "MOVE", "ATK", "STAT", "END"}.issubset(labels))
         self.assertNotIn("EN30", labels)
 
 
