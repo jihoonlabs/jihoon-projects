@@ -6,4 +6,5 @@
 - Draft scale: four missions in the campaign plan; M1 is currently playable. See `THUMBY_SRPG_V1_DRAFT.md`.
 - Art direction: original 1-bit mini unit silhouettes and three 360-byte VLSB manga still cut-ins (REAL, SUPER, SHIP), followed by miniature weapon effects.
 - Battleship is fixed on the base tile, has range 5 and 100 HP, and its HP mirrors the base-defense counter.
+- Weapon design target: at most five per unit, usually two or three including a special; per-unit weapon selection is not implemented in M1 yet.
 - Verification: rules and display mock tests; hardware FPS and readability are not verified.
