@@ -46,6 +46,10 @@ class SRPGRulesTests(unittest.TestCase):
             self.assertEqual(unit["weapons"][-1]["style"], "blade")
         self.assertEqual({"SG", "SM", "ST"},
                          {unit["id"] for unit in super_units})
+        self.assertEqual({unit["weapons"][-2]["name"] for unit in super_units},
+                         {"HORN BEAM", "CROSS RAY", "TRIAD SHOT"})
+        self.assertEqual({unit["weapons"][-1]["name"] for unit in super_units},
+                         {"TITAN HIT", "CROSS RAM", "SPIRAL HIT"})
         self.assertEqual((real_units[0]["en"], real_units[0]["armor"],
                           real_units[0]["mobility"], real_units[0]["move"]),
                          (30, 5, 24, 3))
