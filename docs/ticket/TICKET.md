@@ -51,7 +51,7 @@
 | 対象 | 環境 | 実行する確認 |
 | --- | --- | --- |
 | React | Node.js 24、pnpm 11.25.0 | lockfile固定インストール、Vitest、TypeScript、ESLint、production build |
-| Laravel | PHP 8.3、Composer 2、SQLite | lockfileから依存を導入、テスト用アプリキー生成、PHPUnit |
+| Laravel | PHP 8.4、Composer 2、SQLite | lockfileから依存を導入、テスト用アプリキー生成、PHPUnit |
 
 ローカルでも同じ確認を実行できます。初回セットアップは [React README](../../react/README.md) と [Laravel README](../../laravel/README.md) を参照してください。
 
