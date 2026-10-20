@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -34,6 +35,11 @@ export function Header() {
   return (
     <header className={styles.header}>
       <span className={styles.brand}>タスク管理</span>
+
+      <nav className={styles.navigation} aria-label="メインメニュー">
+        <Link href="/tickets">チケット</Link>
+        <Link href="/attendance">勤怠管理</Link>
+      </nav>
 
       <div className={styles.userInfo}>
         <span>
