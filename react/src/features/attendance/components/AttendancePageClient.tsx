@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { LogIn, LogOut } from 'lucide-react';
 
 import {
   clockIn,
@@ -129,16 +130,20 @@ export function AttendancePageClient() {
         <div className={styles.actions}>
           <button
             type="button"
+            className={styles.clockIn}
             disabled={disabled || today?.status !== 'not_started'}
             onClick={() => recordAction('in')}
           >
+            <LogIn aria-hidden="true" size={20} strokeWidth={2} />
             出勤
           </button>
           <button
             type="button"
+            className={styles.clockOut}
             disabled={disabled || today?.status !== 'working'}
             onClick={() => recordAction('out')}
           >
+            <LogOut aria-hidden="true" size={20} strokeWidth={2} />
             退勤
           </button>
         </div>
