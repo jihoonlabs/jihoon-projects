@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class AttendanceRecord extends Model
 {
     protected $fillable = [
+        'user_id',
         'work_date',
         'clock_in_at',
         'clock_out_at',
