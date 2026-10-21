@@ -24,6 +24,60 @@
 - チケットのステータスと列内 position はサーバーへ保存する。移動APIはボードバージョンを比較し、古い状態からの更新を競合として拒否する。
 - プロジェクトの終了には、すべてのチケットが完了している必要がある。復元後に変更を再開できる。
 
+## 設計とテストの具体例
+
+### 1. バージョン付き編集で他の利用者の変更を上書きしない
+
+同じチケットを複数人が開いた場合、後から保存した古い画面の内容が先の変更を消す可能性があります。更新日時だけでは同じ秒の更新を区別できないため、チケットの整数 `version` とクライアントの `expected_version` を比較します。[TicketController](../../laravel/app/Http/Controllers/Tickets/TicketController.php) の更新SQLにバージョン条件と加算を含め、一致しない更新をHTTP 409として返します。並び替えはプロジェクト単位の `board_version` とトランザクションで整合性を扱います。
+
+[EditConcurrencyTest](../../laravel/tests/Feature/Ticket/EditConcurrencyTest.php) では、時刻を固定した二人の編集、更新SQLのバージョン条件、並び替え後の古い編集、再取得後の編集を検証しています。競合時にタイトルや状態が上書きされないことまで確認します。
+
+**制約:** 互換性のため `expected_version` を省略した更新も受け付けます。すべてのAPI利用者に楽観ロックを強制する設計ではありません。SQLiteでの回帰テストは、本番DBの物理的な同時実行・ロック待ちを保証しません。
+
+### 2. 遅い応答が新しい画面状態を壊さない
+
+一覧取得中に更新したりログアウトしたりすると、古い応答が後から到着します。[useTicketStore](../../react/src/features/tickets/store/useTicketStore.ts) は取得順序・変更リビジョン・認証セッションの世代を確認して状態への反映を制御します。同じチケットへの書き込みを順番に処理し、競合後は再取得します。セッション変更時は一覧を消去し、前のセッションに属する待機中の書き込みを実行しません。
+
+[useTicketStore.test](../../react/src/features/tickets/store/test/useTicketStore.test.ts) では、更新と重なった古いGET、409後の再取得、ログアウト後の遅い一覧応答・削除失敗・待機中の更新を再現しています。単なる成功時の描画に加え、応答順序が逆転した場合の状態を確認します。
+
+**制約:** UIの状態管理はサーバーの認可を代替しません。また、すでに送信されたHTTPリクエストをサーバー上で取り消す保証はありません。
+
+### 3. 保存直前にも権限と所属を確認する
+
+画面上で編集できた場合でも、処理中に権限が変更される可能性があります。[TicketController](../../laravel/app/Http/Controllers/Tickets/TicketController.php) はプロジェクトのロックを取得した後に書き込み権限と担当者の所属を再確認します。
+
+[PermissionBoundaryTest](../../laravel/tests/Feature/Ticket/PermissionBoundaryTest.php) は最初の認可と保存処理の間に権限・所属の変更を挿入し、作成・編集・移動・削除を拒否してデータを変更しないことを確認します。これは境界条件を再現するテストであり、複数DB接続のロック待ち試験とは区別しています。
+
+これらは公開コードとテストから確認できる例です。AIの生成量や開発時間の削減率を示すものではありません。
+
+## 自動検証と再実行
+
+[Ticket CI](../../.github/workflows/ticket-ci.yml) はReact・Laravel・ワークフロー変更のPRと対象ブランチへのpushで実行します。実行結果は [Actions](https://github.com/jihoonlabs/jihoon-projects/actions/workflows/ticket-ci.yml) で対象コミットごとに確認できます。ワークフローの存在自体は成功を意味しません。
+
+| 対象 | 環境 | 実行する確認 |
+| --- | --- | --- |
+| React | Node.js 24、pnpm 11.25.0 | lockfile固定インストール、Vitest、TypeScript、ESLint、production build |
+| Laravel | PHP 8.4、Composer 2、SQLite | lockfileから依存を導入、テスト用アプリキー生成、PHPUnit |
+
+ローカルでも同じ確認を実行できます。初回セットアップは [React README](../../react/README.md) と [Laravel README](../../laravel/README.md) を参照してください。
+
+```bash
+cd react
+pnpm install --frozen-lockfile
+pnpm test:run
+pnpm exec tsc --noEmit
+pnpm lint
+pnpm build
+```
+
+```bash
+cd laravel
+composer install --no-interaction --prefer-dist
+composer test
+```
+
+CIでは外部OAuth、メール配送、ブラウザーE2E、本番DBの負荷・同時実行は確認しません。ビルド時のGoogle Fonts取得にはネットワーク接続が必要です。
+
 ## 既知の制約
 
 - メンバー追加は登録済みユーザーのメールアドレスを指定する方式で、アプリ内の全利用者検索・招待フローはありません。
@@ -31,6 +85,10 @@
 - 詳細な未着手作業、内部AI引き継ぎ、運用上のノウハウは非公開の作業文書で管理します。
 
 ## 検証記録
+
+公開V1はテストと動作確認を経てmainへ採用しています。以下は実施時点ごとの記録です。
+
+2026-10-20、補強ブランチの `fe40e95` で [GitHub Actions run 39352159731](https://github.com/jihoonlabs/jihoon-projects/actions/runs/39352159731) が成功しました。React 250 tests・TypeScript・ESLint・production build、Laravel 158 tests・1,624 assertions（PHP 8.4 / SQLite）を確認しています。アプリケーションコードは公開main基準 `c1d705e` と同一です。以降のREADME・設計説明の変更は、このテストを新たに実行したという意味ではありません。
 
 2026-10-18のプロジェクト一覧ダイアログ改善では、React 248 tests、TypeScript、ESLint、production buildを通過しました。変更のないバックエンドは同一ソースの隔離環境でLaravel 158 tests、1,624 assertionsを再確認しました。
 
