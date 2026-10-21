@@ -4,6 +4,8 @@ Vueを中心としたフロントエンドの実務経験を基盤に、React / 
 
 メインプロジェクトの **Ticket** は、チーム内のタスク・担当者・進捗を共有するためのチケット管理アプリです。社内利用を目標に開発しており、このリポジトリではV1のコード、画面、利用手順、テストを公開しています。
 
+[画面](#画面イメージ) · [設計とテスト](#実装で確認できる工夫) · [検証結果](#検証結果) · [利用マニュアル](docs/ticket/README.md) · [実行手順：React](react/README.md) / [Laravel](laravel/README.md)
+
 ## メインプロジェクト：Ticket
 
 - Sanctumセッション認証
@@ -23,15 +25,23 @@ Vueを中心としたフロントエンドの実務経験を基盤に、React / 
 
 ### 実装で確認できる工夫
 
-- **権限:** 画面の表示制御に加え、APIでも所属・編集権限を検証。処理中に権限が変わるケースもテストしています。
-- **同時編集:** バージョンを比較し、古い画面からの更新を409で検出。並び替え後の競合も検証しています。
-- **非同期UI:** 遅い一覧応答やログアウト前の処理が、新しい画面状態を上書きしないよう制御しています。
+複数人で使う際の権限変更、編集の競合、通信の遅延を想定して実装しています。
+
+| 課題 | 実装上の対応 | 確認できるテスト |
+| --- | --- | --- |
+| 処理中に編集権限が取り消される | APIで所属・権限を検査し、DBロック取得後も再確認 | [権限変更時に保存を拒否する](laravel/tests/Feature/Ticket/PermissionBoundaryTest.php) |
+| 古い編集内容で他の人の変更を上書きする | 編集画面から送るバージョンを更新SQLで比較し、不一致は409。ボード移動もバージョンで検査 | [同じ秒の編集・移動後の競合](laravel/tests/Feature/Ticket/EditConcurrencyTest.php) |
+| 遅い応答や失敗時の復元で新しい状態が消える | 古いGETを無視し、同じチケットの書き込みを直列化。ログアウト後の応答も反映しない | [応答順序・部分復元・セッション切替](react/src/features/tickets/store/test/useTicketStore.test.ts) |
+
+編集競合時は入力を保持して再取得を案内します。[画面のテスト](react/src/features/tickets/components/Board/TicketModal/test/freshness.test.tsx)では、再取得の失敗や権限喪失時も確認しています。APIは互換性のためバージョンなしの更新も許可しており、競合防止を全クライアントに強制する構成ではありません。
 
 [設計・テストの具体例](docs/ticket/TICKET.md#設計とテストの具体例)から実装とテストを確認できます。操作方法は [機能別V1マニュアル](docs/ticket/README.md)、実行環境は [React](react/README.md) / [Laravel](laravel/README.md) を参照してください。
 
 ### 検証結果
 
-2026-10-20、コミット `fe40e95` の [GitHub Actions](https://github.com/jihoonlabs/jihoon-projects/actions/runs/39352159731) で次を確認しました。
+公開V1はテスト・動作確認を経てmainに採用しています。採用時の確認範囲は [開発・検証記録](docs/ticket/TICKET.md#検証記録) にまとめています。
+
+追加の自動検証として、2026-10-20、コミット `fe40e95` の [GitHub Actions](https://github.com/jihoonlabs/jihoon-projects/actions/runs/39352159731) で次を確認しました。
 
 | フロントエンド | バックエンド |
 | --- | --- |

@@ -26,7 +26,7 @@
 
 ## 設計とテストの具体例
 
-### 1. 同時編集で他の利用者の変更を上書きしない
+### 1. バージョン付き編集で他の利用者の変更を上書きしない
 
 同じチケットを複数人が開いた場合、後から保存した古い画面の内容が先の変更を消す可能性があります。更新日時だけでは同じ秒の更新を区別できないため、チケットの整数 `version` とクライアントの `expected_version` を比較します。[TicketController](../../laravel/app/Http/Controllers/Tickets/TicketController.php) の更新SQLにバージョン条件と加算を含め、一致しない更新をHTTP 409として返します。並び替えはプロジェクト単位の `board_version` とトランザクションで整合性を扱います。
 
@@ -41,6 +41,12 @@
 [useTicketStore.test](../../react/src/features/tickets/store/test/useTicketStore.test.ts) では、更新と重なった古いGET、409後の再取得、ログアウト後の遅い一覧応答・削除失敗・待機中の更新を再現しています。単なる成功時の描画に加え、応答順序が逆転した場合の状態を確認します。
 
 **制約:** UIの状態管理はサーバーの認可を代替しません。また、すでに送信されたHTTPリクエストをサーバー上で取り消す保証はありません。
+
+### 3. 保存直前にも権限と所属を確認する
+
+画面上で編集できた場合でも、処理中に権限が変更される可能性があります。[TicketController](../../laravel/app/Http/Controllers/Tickets/TicketController.php) はプロジェクトのロックを取得した後に書き込み権限と担当者の所属を再確認します。
+
+[PermissionBoundaryTest](../../laravel/tests/Feature/Ticket/PermissionBoundaryTest.php) は最初の認可と保存処理の間に権限・所属の変更を挿入し、作成・編集・移動・削除を拒否してデータを変更しないことを確認します。これは境界条件を再現するテストであり、複数DB接続のロック待ち試験とは区別しています。
 
 これらは公開コードとテストから確認できる例です。AIの生成量や開発時間の削減率を示すものではありません。
 
@@ -79,6 +85,10 @@ CIでは外部OAuth、メール配送、ブラウザーE2E、本番DBの負荷�
 - 詳細な未着手作業、内部AI引き継ぎ、運用上のノウハウは非公開の作業文書で管理します。
 
 ## 検証記録
+
+公開V1はテストと動作確認を経てmainへ採用しています。以下は実施時点ごとの記録です。
+
+2026-10-20、補強ブランチの `fe40e95` で [GitHub Actions run 39352159731](https://github.com/jihoonlabs/jihoon-projects/actions/runs/39352159731) が成功しました。React 250 tests・TypeScript・ESLint・production build、Laravel 158 tests・1,624 assertions（PHP 8.4 / SQLite）を確認しています。アプリケーションコードは公開main基準 `c1d705e` と同一です。以降のREADME・設計説明の変更は、このテストを新たに実行したという意味ではありません。
 
 2026-10-18のプロジェクト一覧ダイアログ改善では、React 248 tests、TypeScript、ESLint、production buildを通過しました。変更のないバックエンドは同一ソースの隔離環境でLaravel 158 tests、1,624 assertionsを再確認しました。
 
