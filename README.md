@@ -1,13 +1,12 @@
 # jihoon-projects
 
-Vue.jsを中心としたフロントエンドの実務経験を基盤に、個人開発ではReact / Next.jsとLaravelを組み合わせた業務アプリケーションを制作しています。あわせて、生成AIを活用した開発プロセスの設計・改善にも取り組んでいます。
+実務ではVue.jsを中心にフロントエンド開発を経験してきました。このポートフォリオでは、技術の幅を広げるために**React / Next.jsとLaravelを中心に**、業務アプリケーションの設計・実装・検証に取り組んでいます。あわせて、生成AIを活用した開発プロセスの設計・改善も紹介しています。
 
 メインプロジェクトは、社内利用を想定したチケット管理アプリ **Ticket** です。公開V1では、プロジェクト・メンバーの権限管理からチケット操作、コメントまでを実装しています。
 
 ## メインプロジェクト：Ticket
 
 **個人開発 / React・Next.js + Laravel** — チケット管理の基本操作に加え、認証・認可、APIとの状態同期、更新競合への対応を含む業務アプリケーションです。
-
 
 - Sanctumセッション認証
 - プロジェクト作成、メンバー管理、閲覧・編集権限
@@ -45,12 +44,6 @@ AIをコード生成だけに使わず、作業範囲、検証、レビュー、
 - **品質確認:** Vitest、Testing Library、PHPUnit、ESLint、TypeScript
 - **開発プロセス:** Git、AI支援開発、作業範囲と検証記録の管理
 
-## Thumbyゲームとエージェント開発の試験
-
-`micropython/Thumby/ThumbyBrawlBase/` では、個人で整備しているエージェント用Markdownの作業基準を使い、Thumby向けゲームのベースを開発しています。ユーザーが方向と要件を決め、エージェントが実装・テストを支援する進行です。これは完成ゲームの紹介ではなく、エージェント作業基準を実際の開発成果につなげる試験プロジェクトです。公開するゲームコードと利用案内を掲載しています。
-
-ゲームの概要、操作、テストと未確認事項は [Thumby Brawl Base README](micropython/Thumby/ThumbyBrawlBase/README.md) と [公開マニュアル](docs/thumby-brawl-base/MANUAL.md) を参照してください。
-
 ## リポジトリ構成
 
 ```text
@@ -58,9 +51,8 @@ laravel/       Laravel API、認証、DBマイグレーション、バックエ�
 react/         Next.jsアプリ、認証・投稿・お知らせ・Ticket UI
 docs/ticket/   Ticket V1の機能別マニュアルと開発・検証記録
 docs/agent/    公開エージェント構成のポートフォリオ保存例
-docs/thumby-brawl-base/  Thumby Brawl Baseの公開マニュアル
-micropython/   Thumby向けゲームの試作
-vue/           Vue関連の作業領域（本READMEでは成果物として紹介していません）
+micropython/   趣味のMicroPython・Thumby制作
+vue/           Vue関連の作業領域
 ```
 
 詳細な機能範囲と検証条件は [Ticket開発・検証記録](docs/ticket/TICKET.md) を参照してください。
