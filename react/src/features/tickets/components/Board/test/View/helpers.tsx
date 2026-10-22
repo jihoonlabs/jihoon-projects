@@ -1,17 +1,11 @@
-import { expect } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { TicketBoardView } from '../../View';
 
 export async function renderSelectedProject() {
   render(<TicketBoardView />);
-  await waitFor(() =>
-    expect(
-      screen
-        .getByRole('combobox', { name: 'プロジェクト' })
-        .querySelector('option[value="1"]'),
-    ).not.toBeNull(),
-  );
-  fireEvent.change(screen.getByRole('combobox', { name: 'プロジェクト' }), {
+  const projectSelect = screen.getByRole('combobox', { name: 'プロジェクト' });
+  await screen.findByRole('option', { name: 'General' });
+  fireEvent.change(projectSelect, {
     target: { value: '1' },
   });
 }

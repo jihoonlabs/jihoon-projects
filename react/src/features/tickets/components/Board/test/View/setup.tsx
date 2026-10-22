@@ -1,10 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
-import { afterEach, beforeEach, expect, vi } from 'vitest';
+import { afterEach, beforeEach, vi } from 'vitest';
 import * as api from '../../../../api/ticketApi';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useTicketStore } from '../../../../store/useTicketStore';
-import { TicketBoardView } from '../../View';
 import * as projectApi from '@/features/tickets/api/projectApi';
 
 vi.mock('../../../../api/ticketApi', async (importOriginal) => ({
@@ -74,20 +72,6 @@ vi.mock('@dnd-kit/core', async (importOriginal) => {
     ),
   };
 });
-
-export async function renderSelectedProject() {
-  render(<TicketBoardView />);
-  await waitFor(() =>
-    expect(
-      screen
-        .getByRole('combobox', { name: 'プロジェクト' })
-        .querySelector('option[value="1"]'),
-    ).not.toBeNull(),
-  );
-  fireEvent.change(screen.getByRole('combobox', { name: 'プロジェクト' }), {
-    target: { value: '1' },
-  });
-}
 
 beforeEach(() => {
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
