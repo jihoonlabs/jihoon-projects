@@ -1,4 +1,3 @@
-import './setup';
 import { http, HttpResponse } from 'msw';
 import { expect, it } from 'vitest';
 import {
@@ -8,7 +7,8 @@ import {
   updateTicket,
 } from '../../ticketApi';
 import { responseTicket } from '../ticketFixture';
-import { server, url } from './setup';
+import { server } from '@/test/mocks/server';
+import { url } from '../setup';
 
 it.each(['not-an-id', '', '0', '1.5'])(
   'rejects invalid project ID %j',

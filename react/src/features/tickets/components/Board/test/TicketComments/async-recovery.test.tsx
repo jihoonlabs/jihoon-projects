@@ -1,4 +1,4 @@
-import './setup';
+import { deferred, mine, other } from './setup';
 import {
   act,
   fireEvent,
@@ -9,7 +9,6 @@ import {
 import { expect, it, vi } from 'vitest';
 import * as api from '../../../../api/ticketCommentApi';
 import TicketComments from '../../TicketComments';
-import { deferred, mine, other } from './setup';
 
 it('blocks submission while the initial list is pending instead of losing a new comment to an older GET', async () => {
   const list = deferred<(typeof mine)[]>();

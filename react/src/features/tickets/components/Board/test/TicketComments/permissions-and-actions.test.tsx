@@ -1,9 +1,14 @@
-import './setup';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { mine } from './setup';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import * as api from '../../../../api/ticketCommentApi';
 import TicketComments from '../../TicketComments';
-import { mine } from './setup';
 
 it('shows edit and delete actions only for the signed-in author', async () => {
   render(<TicketComments ticketId="1" currentUserId={7} />);
@@ -11,8 +16,14 @@ it('shows edit and delete actions only for the signed-in author', async () => {
   const myComment = (await screen.findByText('my comment')).closest('li')!;
   const otherComment = screen.getByText('other comment').closest('li')!;
 
-  expect(myComment.querySelectorAll('button')).toHaveLength(2);
-  expect(otherComment.querySelectorAll('button')).toHaveLength(0);
+  expect(within(myComment).getByRole('button', { name: '編集' })).toBeVisible();
+  expect(within(myComment).getByRole('button', { name: '削除' })).toBeVisible();
+  expect(
+    within(otherComment).queryByRole('button', { name: '編集' }),
+  ).not.toBeInTheDocument();
+  expect(
+    within(otherComment).queryByRole('button', { name: '削除' }),
+  ).not.toBeInTheDocument();
 });
 
 it("allows an application admin to delete another user's comment without editing it", async () => {
@@ -24,8 +35,7 @@ it("allows an application admin to delete another user's comment without editing
   const otherComment = (await screen.findByText('other comment')).closest(
     'li',
   )!;
-  expect(otherComment.querySelectorAll('button')).toHaveLength(1);
-  fireEvent.click(otherComment.querySelector('button')!);
+  fireEvent.click(within(otherComment).getByRole('button', { name: '削除' }));
   await waitFor(() =>
     expect(api.deleteTicketComment).toHaveBeenCalledWith('1', '11'),
   );
@@ -60,7 +70,7 @@ it('edits an owned comment', async () => {
   render(<TicketComments ticketId="1" currentUserId={7} />);
 
   const myComment = (await screen.findByText('my comment')).closest('li')!;
-  fireEvent.click(myComment.querySelectorAll('button')[0]);
+  fireEvent.click(within(myComment).getByRole('button', { name: '編集' }));
   fireEvent.change(screen.getByLabelText('コメント編集'), {
     target: { value: ' updated ' },
   });
@@ -77,7 +87,7 @@ it('deletes an owned comment', async () => {
   render(<TicketComments ticketId="1" currentUserId={7} />);
 
   const myComment = (await screen.findByText('my comment')).closest('li')!;
-  fireEvent.click(myComment.querySelectorAll('button')[1]);
+  fireEvent.click(within(myComment).getByRole('button', { name: '削除' }));
 
   await waitFor(() =>
     expect(api.deleteTicketComment).toHaveBeenCalledWith('1', '10'),
