@@ -66,88 +66,95 @@ describe('LoginForm メール認証処理', () => {
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
   });
 
-  it.each([
-    [false, false],
-    [false, true],
-    [true, false],
-    [true, true],
-  ])(
-    'keeps newer login recovery after delayed resend (failure: %s, email change: %s)',
-    async (fails, changeEmail) => {
-      const user = userEvent.setup();
-      let release!: () => void;
-      let started = false;
-      let resendSignal: AbortSignal | undefined;
-      let loginCount = 0;
-      const pending = new Promise<void>((resolve) => {
-        release = resolve;
-      });
-      server.use(
-        http.post(`${API_URL}/api/auth/login`, () => {
-          loginCount += 1;
-          return HttpResponse.json(
-            {
-              message:
-                loginCount === 2
-                  ? 'New login needs verification'
-                  : 'First account needs verification',
-              code: 'email_not_verified',
-            },
-            { status: 403 },
-          );
-        }),
-        http.post(
-          `${API_URL}/api/auth/email/verification-notification`,
-          async ({ request }) => {
-            resendSignal = request.signal;
-            expect(await request.json()).toEqual({
-              email: 'first@example.com',
-            });
-            started = true;
-            await pending;
-            return fails
-              ? HttpResponse.json({}, { status: 429 })
-              : HttpResponse.json({
-                  message: 'First account resend completed',
-                });
+  const assertNewerLoginSurvivesDelayedResend = async (
+    fails: boolean,
+    changeEmail: boolean,
+  ) => {
+    const user = userEvent.setup();
+    let release!: () => void;
+    let started = false;
+    let resendSignal: AbortSignal | undefined;
+    let loginCount = 0;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.post(`${API_URL}/api/auth/login`, () => {
+        loginCount += 1;
+        return HttpResponse.json(
+          {
+            message:
+              loginCount === 2
+                ? 'New login needs verification'
+                : 'First account needs verification',
+            code: 'email_not_verified',
           },
-        ),
-      );
-      render(<LoginForm />);
-      const email = screen.getByLabelText('メールアドレス');
-      await user.type(email, 'first@example.com');
-      await user.type(screen.getByLabelText('パスワード'), 'password123');
-      await user.click(screen.getByRole('button', { name: 'ログイン' }));
-      await user.click(
-        await screen.findByRole('button', { name: '認証メールを再送する' }),
-      );
-      await waitFor(() => expect(started).toBe(true));
+          { status: 403 },
+        );
+      }),
+      http.post(
+        `${API_URL}/api/auth/email/verification-notification`,
+        async ({ request }) => {
+          resendSignal = request.signal;
+          expect(await request.json()).toEqual({
+            email: 'first@example.com',
+          });
+          started = true;
+          await pending;
+          return fails
+            ? HttpResponse.json({}, { status: 429 })
+            : HttpResponse.json({
+                message: 'First account resend completed',
+              });
+        },
+      ),
+    );
+    render(<LoginForm />);
+    const email = screen.getByLabelText('メールアドレス');
+    await user.type(email, 'first@example.com');
+    await user.type(screen.getByLabelText('パスワード'), 'password123');
+    await user.click(screen.getByRole('button', { name: 'ログイン' }));
+    await user.click(
+      await screen.findByRole('button', { name: '認証メールを再送する' }),
+    );
+    await waitFor(() => expect(started).toBe(true));
 
-      if (changeEmail) {
-        await user.clear(email);
-        await user.type(email, 'second@example.com');
-      }
-      await user.click(screen.getByRole('button', { name: 'ログイン' }));
-      expect(await screen.findByRole('alert')).toHaveTextContent(
-        'New login needs verification',
-      );
-      expect(resendSignal?.aborted).toBe(true);
-      await act(async () => {
-        release();
-      });
-      await screen.findByRole('button', { name: '認証メールを再送する' });
+    if (changeEmail) {
+      await user.clear(email);
+      await user.type(email, 'second@example.com');
+    }
+    await user.click(screen.getByRole('button', { name: 'ログイン' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'New login needs verification',
+    );
+    expect(resendSignal?.aborted).toBe(true);
+    await act(async () => {
+      release();
+    });
+    await screen.findByRole('button', { name: '認証メールを再送する' });
 
-      expect(screen.getByRole('alert')).toHaveTextContent(
-        'New login needs verification',
-      );
-      expect(screen.queryByRole('status')).not.toBeInTheDocument();
-      expect(email).toHaveValue(
-        changeEmail ? 'second@example.com' : 'first@example.com',
-      );
-      expect(replaceMock).not.toHaveBeenCalled();
-      expect(useAuthStore.getState().isAuthenticated).toBe(false);
-    },
-  );
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'New login needs verification',
+    );
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(email).toHaveValue(
+      changeEmail ? 'second@example.com' : 'first@example.com',
+    );
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+  };
+
+  it('keeps the newer login after a delayed successful resend for the same email', () =>
+    assertNewerLoginSurvivesDelayedResend(false, false));
+
+  it('keeps the newer login after a delayed successful resend when the email changes', () =>
+    assertNewerLoginSurvivesDelayedResend(false, true));
+
+  it('keeps the newer login after a delayed failed resend for the same email', () =>
+    assertNewerLoginSurvivesDelayedResend(true, false));
+
+  it('keeps the newer login after a delayed failed resend when the email changes', () =>
+    assertNewerLoginSurvivesDelayedResend(true, true));
 
   it('認証メールの再送に成功した場合、成功メッセージを表示すること', async () => {
     const user = userEvent.setup();

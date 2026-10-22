@@ -215,15 +215,12 @@ class ProcessTest extends TestCase
             'REMOTE_ADDR' => '203.0.113.10',
         ]);
 
-        // 잘못된 토큰이므로 컨트롤러는 422를 반환하지만 요청은 5회까지 허용된다.
-        for ($i = 0; $i < 5; $i++) {
-            $this->postJson('/api/auth/reset-password', [
-                'email' => $user->email,
-                'token' => 'invalid-token',
-                'password' => 'NewPassword123',
-                'password_confirmation' => 'NewPassword123',
-            ])->assertStatus(422);
-        }
+        // 不正トークンの422を5回受け付け、次の試行で429となる境界を明示する。
+        $this->postJson('/api/auth/reset-password', ['email' => $user->email, 'token' => 'invalid-token', 'password' => 'NewPassword123', 'password_confirmation' => 'NewPassword123'])->assertStatus(422);
+        $this->postJson('/api/auth/reset-password', ['email' => $user->email, 'token' => 'invalid-token', 'password' => 'NewPassword123', 'password_confirmation' => 'NewPassword123'])->assertStatus(422);
+        $this->postJson('/api/auth/reset-password', ['email' => $user->email, 'token' => 'invalid-token', 'password' => 'NewPassword123', 'password_confirmation' => 'NewPassword123'])->assertStatus(422);
+        $this->postJson('/api/auth/reset-password', ['email' => $user->email, 'token' => 'invalid-token', 'password' => 'NewPassword123', 'password_confirmation' => 'NewPassword123'])->assertStatus(422);
+        $this->postJson('/api/auth/reset-password', ['email' => $user->email, 'token' => 'invalid-token', 'password' => 'NewPassword123', 'password_confirmation' => 'NewPassword123'])->assertStatus(422);
 
         // 같은 출처의 여섯 번째 요청은 Rate Limit에 의해 차단된다.
         $this->postJson('/api/auth/reset-password', [

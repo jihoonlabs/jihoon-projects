@@ -142,12 +142,10 @@ class LinkRequestTest extends TestCase
     {
         Notification::fake();
 
-        // 허용된 3번의 요청은 정상 처리된다.
-        for ($i = 0; $i < 3; $i++) {
-            $this->postJson('/api/auth/forgot-password', [
-                'email' => 'unknown@example.com',
-            ])->assertOk();
-        }
+        // 3回までは受理される境界を個別のリクエストで表す。
+        $this->postJson('/api/auth/forgot-password', ['email' => 'unknown@example.com'])->assertOk();
+        $this->postJson('/api/auth/forgot-password', ['email' => 'unknown@example.com'])->assertOk();
+        $this->postJson('/api/auth/forgot-password', ['email' => 'unknown@example.com'])->assertOk();
 
         // 같은 출처의 네 번째 요청은 거절된다.
         $this->postJson('/api/auth/forgot-password', [

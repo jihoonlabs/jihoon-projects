@@ -78,15 +78,24 @@ describe('LoginForm 表示・入力検証', () => {
 
   it('ブランドアイコンを表示してもソーシャルログインボタンの名前が変わらないこと', () => {
     render(<LoginForm />);
-    for (const name of ['Googleでログイン', 'LINEでログイン']) {
-      const button = screen.getByRole('button', { name });
-      expect(button).toHaveAttribute('type', 'button');
-      expect(button).toBeEnabled();
-      expect(button.querySelector('img')).toHaveAttribute('alt', '');
-      expect(button.querySelector('img')).toHaveAttribute(
-        'aria-hidden',
-        'true',
-      );
-    }
+    const googleButton = screen.getByRole('button', {
+      name: 'Googleでログイン',
+    });
+    expect(googleButton).toHaveAttribute('type', 'button');
+    expect(googleButton).toBeEnabled();
+    expect(googleButton.querySelector('img')).toHaveAttribute('alt', '');
+    expect(googleButton.querySelector('img')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    );
+
+    const lineButton = screen.getByRole('button', { name: 'LINEでログイン' });
+    expect(lineButton).toHaveAttribute('type', 'button');
+    expect(lineButton).toBeEnabled();
+    expect(lineButton.querySelector('img')).toHaveAttribute('alt', '');
+    expect(lineButton.querySelector('img')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    );
   });
 });
