@@ -1,4 +1,4 @@
-import './setup';
+import { deferred, edit, props, ticket } from './setup';
 import {
   act,
   fireEvent,
@@ -9,7 +9,6 @@ import {
 import { expect, it, vi } from 'vitest';
 import * as api from '../../../../../api/ticketApi';
 import TicketModal from '../..';
-import { deferred, edit, props, ticket } from './setup';
 
 it('hides stale card data while loading and displays the latest detail', async () => {
   const request = deferred<typeof ticket>();

@@ -1,4 +1,3 @@
-import './setup';
 import { http, HttpResponse } from 'msw';
 import { expect, it } from 'vitest';
 import {
@@ -11,7 +10,8 @@ import {
   toTicket,
 } from '../../ticketApi';
 import { responseTicket } from '../ticketFixture';
-import { server, url } from './setup';
+import { server } from '@/test/mocks/server';
+import { url } from '../setup';
 
 it('maps detail and PATCH responses through the same boundary', async () => {
   server.use(

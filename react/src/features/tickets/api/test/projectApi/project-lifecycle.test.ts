@@ -1,7 +1,7 @@
-import './setup';
 import { http, HttpResponse } from 'msw';
 import { expect, it } from 'vitest';
-import { server, url } from './setup';
+import { server } from '@/test/mocks/server';
+import { url } from '../setup';
 
 it('maps archived Projects and uses existing CSRF routes for lifecycle and leadership', async () => {
   const resource = {
