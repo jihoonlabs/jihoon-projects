@@ -118,6 +118,10 @@ it('locks mutation and dismissal while the save is pending', async () => {
     name: 'Ren の権限',
   });
   fireEvent.change(permission, { target: { value: 'write' } });
+  expect(api.updateProjectMember).toHaveBeenCalledWith('1', '8', {
+    role: 'member',
+    permission: 'write',
+  });
   fireEvent.click(screen.getByRole('button', { name: '閉じる' }));
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   fireEvent.mouseDown(screen.getByRole('dialog').parentElement!);
