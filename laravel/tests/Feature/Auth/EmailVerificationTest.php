@@ -163,12 +163,13 @@ class EmailVerificationTest extends TestCase
     {
         Notification::fake();
 
-        // 許可されている6回までは正常に処理される
-        for ($i = 0; $i < 6; $i++) {
-            $this->postJson('/api/auth/email/verification-notification', [
-                'email' => 'unknown@example.com',
-            ])->assertOk();
-        }
+        // Rate limit境界を明示するため、許可される6回を個別に確認する。
+        $this->postJson('/api/auth/email/verification-notification', ['email' => 'unknown@example.com'])->assertOk();
+        $this->postJson('/api/auth/email/verification-notification', ['email' => 'unknown@example.com'])->assertOk();
+        $this->postJson('/api/auth/email/verification-notification', ['email' => 'unknown@example.com'])->assertOk();
+        $this->postJson('/api/auth/email/verification-notification', ['email' => 'unknown@example.com'])->assertOk();
+        $this->postJson('/api/auth/email/verification-notification', ['email' => 'unknown@example.com'])->assertOk();
+        $this->postJson('/api/auth/email/verification-notification', ['email' => 'unknown@example.com'])->assertOk();
 
         // 7回目のリクエストは拒否される
         $this->postJson('/api/auth/email/verification-notification', [

@@ -118,34 +118,37 @@ it('does not let an obsolete session success restore a session after logout', as
   expect(useAuthStore.getState().isAuthenticated).toBe(false);
 });
 
-it.each(['login', 'logout'])(
-  'aborts initial session lookup before %s sends a credential-changing request',
-  async (action) => {
-    let initialSignal: AbortSignal | undefined;
-    server.use(
-      http.get(`${API_URL}/api/auth/me`, async ({ request }) => {
-        initialSignal = request.signal;
-        await new Promise<void>((resolve) =>
-          request.signal.addEventListener('abort', () => resolve(), {
-            once: true,
-          }),
-        );
-        return HttpResponse.json(user);
-      }),
-      http.post(`${API_URL}/api/auth/${action}`, () => {
-        expect(initialSignal?.aborted).toBe(true);
-        return HttpResponse.json({ message: 'OK', user });
-      }),
-    );
-    render(<AuthInitializer />);
-    await waitFor(() => expect(initialSignal).toBeDefined());
-    if (action === 'login')
-      await loginApi({ email: 'session@example.com', password: 'password123' });
-    else await logoutApi();
-    expect(initialSignal?.aborted).toBe(true);
-    await waitFor(() =>
-      expect(useAuthStore.getState().isInitialized).toBe(true),
-    );
-    expect(useAuthStore.getState().isAuthenticated).toBe(false);
-  },
-);
+const assertCredentialChangeAbortsSessionLookup = async (
+  action: 'login' | 'logout',
+) => {
+  let initialSignal: AbortSignal | undefined;
+  server.use(
+    http.get(`${API_URL}/api/auth/me`, async ({ request }) => {
+      initialSignal = request.signal;
+      await new Promise<void>((resolve) =>
+        request.signal.addEventListener('abort', () => resolve(), {
+          once: true,
+        }),
+      );
+      return HttpResponse.json(user);
+    }),
+    http.post(`${API_URL}/api/auth/${action}`, () => {
+      expect(initialSignal?.aborted).toBe(true);
+      return HttpResponse.json({ message: 'OK', user });
+    }),
+  );
+  render(<AuthInitializer />);
+  await waitFor(() => expect(initialSignal).toBeDefined());
+  if (action === 'login')
+    await loginApi({ email: 'session@example.com', password: 'password123' });
+  else await logoutApi();
+  expect(initialSignal?.aborted).toBe(true);
+  await waitFor(() => expect(useAuthStore.getState().isInitialized).toBe(true));
+  expect(useAuthStore.getState().isAuthenticated).toBe(false);
+};
+
+it('aborts initial session lookup before login sends credentials', () =>
+  assertCredentialChangeAbortsSessionLookup('login'));
+
+it('aborts initial session lookup before logout sends credentials', () =>
+  assertCredentialChangeAbortsSessionLookup('logout'));

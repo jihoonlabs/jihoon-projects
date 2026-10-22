@@ -88,10 +88,10 @@ class EditConcurrencyTest extends TestCase
         $this->patchJson('/api/tickets/'.$second->id.'/move', [
             'status' => 'TODO', 'position' => 0, 'board_version' => $project->board_version,
         ])->assertOk();
-        foreach ([$first, $second] as $ticket) {
-            $this->assertGreaterThan(1, $ticket->refresh()->version);
-            $this->patchJson('/api/tickets/'.$ticket->id, ['title' => 'Stale', 'expected_version' => 1])->assertConflict();
-        }
+        $this->assertGreaterThan(1, $first->refresh()->version);
+        $this->patchJson('/api/tickets/'.$first->id, ['title' => 'Stale', 'expected_version' => 1])->assertConflict();
+        $this->assertGreaterThan(1, $second->refresh()->version);
+        $this->patchJson('/api/tickets/'.$second->id, ['title' => 'Stale', 'expected_version' => 1])->assertConflict();
         $this->assertSame(1, $first->position);
         $this->assertSame(0, $second->position);
     }
@@ -148,10 +148,12 @@ class EditConcurrencyTest extends TestCase
     {
         $this->actingAs($this->writer());
         $ticket = Ticket::factory()->create();
-        foreach ([null, 0, -1, 'bad', 1.5] as $version) {
-            $this->patchJson('/api/tickets/'.$ticket->id, ['title' => 'Invalid', 'expected_version' => $version])
-                ->assertUnprocessable()->assertJsonValidationErrors('expected_version');
-        }
+        $path = '/api/tickets/'.$ticket->id;
+        $this->patchJson($path, ['title' => 'Invalid', 'expected_version' => null])->assertUnprocessable()->assertJsonValidationErrors('expected_version');
+        $this->patchJson($path, ['title' => 'Invalid', 'expected_version' => 0])->assertUnprocessable()->assertJsonValidationErrors('expected_version');
+        $this->patchJson($path, ['title' => 'Invalid', 'expected_version' => -1])->assertUnprocessable()->assertJsonValidationErrors('expected_version');
+        $this->patchJson($path, ['title' => 'Invalid', 'expected_version' => 'bad'])->assertUnprocessable()->assertJsonValidationErrors('expected_version');
+        $this->patchJson($path, ['title' => 'Invalid', 'expected_version' => 1.5])->assertUnprocessable()->assertJsonValidationErrors('expected_version');
         $this->assertSame(1, $ticket->refresh()->version);
     }
 }
