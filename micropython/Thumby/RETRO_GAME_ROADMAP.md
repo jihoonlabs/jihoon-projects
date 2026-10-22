@@ -73,3 +73,42 @@
 - Original Thumby와 Thumby Color를 같은 성능 단계로 묶지 않는다. Color는 일반적으로 훨씬 높은 MCU 처리 성능과 더 큰 컬러 화면을 제공하므로 GB/GBC 이후 별도 단계로 둔다.
 - 단, MCU 클럭만으로 콘솔 간 게임 성능의 절대 서열을 정할 수 없다. GB/GBC의 전용 타일·스프라이트 하드웨어, Color의 런타임·화면 전송 비용 등 차이가 있다.
 - 이 순서는 **제작 도구의 학습·지원 확대 순서**이며 게임기 전체 성능 순위는 아니다.
+
+## 하드웨어 조사 기반 플랫폼 순서 검증 (2026-10-22)
+
+### 확인된 주요 사양
+| 플랫폼 | CPU / 실행 환경 | RAM | 화면 | 개발 시 주요 제약 |
+|---|---|---|---|---|
+| Original Thumby | RP2040, 듀얼 Cortex-M0+ (칩 사양 최대 133MHz) / MicroPython·네이티브 | 264KB SRAM(칩 사양) | 72×40 흑백 OLED | 극소형 화면, 가독성, 화면 갱신 |
+| Game Boy (DMG) | Sharp SM83 약 4.19MHz | 8KB WRAM | 160×144, 4계조 | 타일·스프라이트, VRAM 타이밍, ROM 뱅킹 |
+| Game Boy Color (CGB) | SM83 최대 약 8.39MHz | 32KB WRAM | 160×144 컬러 | 팔레트, 뱅킹, 하위 호환 |
+| Thumby Color | RP2350 듀얼코어 약 150MHz(제품 명시) / MicroPython·Arduino | 520KB SRAM | 128×128, 16비트 컬러 TFT | 프레임버퍼/전송, Python 오버헤드, 소형 UI |
+| Game Boy Advance | ARM7TDMI 약 16.78MHz | 32KB 내부+256KB 외부 WRAM | 240×160 컬러 | VRAM/OAM/팔레트, DMA, 타이밍 |
+
+**주의:** MHz와 RAM 크기는 콘솔 간 성능 순위를 뜻하지 않는다. Game Boy/GBC/GBA는 전용 그래픽 회로를 갖고, Thumby는 MCU 및 실행 런타임/디스플레이 전송 비용에 좌우된다. Thumby Color의 128×128 해상도는 GB/GBC의 160×144보다 작다. 따라서 'Color가 GB보다 모든 면에서 우수하다'는 표현은 부정확하다.
+
+### 확정한 학습/제품 개발 순서
+**Original Thumby → Game Boy → Game Boy Color → Thumby Color → (NES / GBA, 검증 후 세부 순서 결정) → SNES / Mega Drive / PC Engine → 이후 연구 단계.**
+
+이 순서는 '게임기 성능 서열'이 아니라 **제작 도구의 기능 확장 순서**다. Original Thumby는 CPU가 느려서가 아니라 화면 제약이 극단적이고 현재 프로젝트 자산이 있기 때문에 첫 플랫폼이다. GB/GBC는 전통적인 콘솔 타일/스프라이트·카트리지 구조를 배우는 단계이며, Thumby Color는 컬러·효과·게임 엔진 확장 단계로 배치한다.
+
+### Ollama 툴 백엔드 설계
+- 공통 게임 정의: 장르별 게임 상태/규칙, 맵·캐릭터·아이템 스키마, 시나리오, 테스트 시나리오.
+- 기기별 타깃 프로파일: 화면/팔레트/스프라이트/타일/메모리/입력/사운드/저장 한도.
+- 플랫폼별 코드 생성·빌드: Thumby MicroPython, GB/GBC용 네이티브 툴체인, Color 전용 런타임, 이후 GBA·16비트 콘솔 백엔드.
+- 검증: 정적 제한 검사 → 빌드 → 에뮬레이터 자동 테스트 → 실기 성능 측정. LLM 출력은 검증 전까지 완료로 간주하지 않는다.
+- 콘텐츠 품질: 생성한 게임의 깊이와 조작성을 장르별 기준 게임의 테스트로 비교한다.
+
+### 출처 (조사 기준)
+- Original Thumby 제조사: https://tinycircuits.com/products/thumby
+- RP2040 제조사: https://www.raspberrypi.com/products/rp2040/specifications/
+- Thumby Color 제조사: https://tinycircgo.shop/products/thumby-color
+- Nintendo GB/GBC 기술 사양: https://www.nintendo.com/en-gb/Support/Legacy-system/Technical-data-619585.html
+- GB 하드웨어 문서: https://mgba-emu.github.io/gbdoc/
+- GBA 개발 매뉴얼: https://www.manualslib.com/manual/3342081/Nintendo-Game-Boy-Advance.html?page=23
+- Nintendo GBA 기술 사양: https://www.nintendo.com/en-gb/Support/Legacy-system/Technical-data-619479.html
+
+### 다음 조사 과제
+- 각 플랫폼 SDK·컴파일러·에뮬레이터의 현재 유지보수 상태와 라이선스 확인.
+- 실기/에뮬레이터 기반 프레임·메모리·에셋 한도 측정 후 플랫폼별 타깃 프로파일 확정.
+- SRPG/로그라이크/액션 장르 각각의 공통 데이터 스키마와 플랫폼별 렌더링 샘플 비교.
