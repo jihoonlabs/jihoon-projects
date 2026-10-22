@@ -1,4 +1,4 @@
-import './setup';
+import { deferred, edit, props, ticket } from './setup';
 import {
   act,
   fireEvent,
@@ -9,7 +9,6 @@ import {
 import userEvent from '@testing-library/user-event';
 import { expect, it, vi } from 'vitest';
 import TicketModal from '../..';
-import { deferred, edit, props, ticket } from './setup';
 
 it.each(['create', 'edit'])(
   'locks draft fields during %s save and restores them after failure',

@@ -1,4 +1,4 @@
-import './setup';
+import { deferred, edit, props, ticket } from './setup';
 import {
   act,
   fireEvent,
@@ -10,7 +10,6 @@ import {
 import { expect, it, vi } from 'vitest';
 import * as api from '../../../../../api/ticketApi';
 import TicketModal from '../..';
-import { deferred, edit, props, ticket } from './setup';
 
 it('preserves all input on conflict and refetch, with no automatic retry or rebase', async () => {
   props.onUpdate.mockRejectedValueOnce(
