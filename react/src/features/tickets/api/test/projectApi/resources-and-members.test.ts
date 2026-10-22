@@ -1,4 +1,3 @@
-import './setup';
 import { http, HttpResponse } from 'msw';
 import { expect, it } from 'vitest';
 import {
@@ -9,7 +8,8 @@ import {
   removeProjectMember,
   updateProjectMember,
 } from '../../projectApi';
-import { server, url } from './setup';
+import { server } from '@/test/mocks/server';
+import { url } from '../setup';
 
 it('maps accessible Project and member resources to string IDs', async () => {
   server.use(
