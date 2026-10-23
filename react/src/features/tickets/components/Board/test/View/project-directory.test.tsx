@@ -1,9 +1,50 @@
 import './setup';
 import { expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { TicketBoardView } from '../../View';
 import * as projectApi from '@/features/tickets/api/projectApi';
+import * as ticketApi from '../../../../api/ticketApi';
+import { responseTicket } from '../../../../api/test/ticketFixture';
+import { useTicketStore } from '../../../../store/useTicketStore';
+
+it('restores the selected project after a ticket is dragged and the board is reloaded', async () => {
+  const ticket = ticketApi.toTicket(responseTicket);
+  vi.mocked(ticketApi.fetchTickets).mockResolvedValue([ticket]);
+  vi.mocked(ticketApi.moveTicket).mockResolvedValue({
+    ticket,
+    boardVersion: 4,
+  });
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+
+  const firstRender = render(<TicketBoardView />);
+  const projectSelect = await screen.findByRole('combobox', {
+    name: 'プロジェクト',
+  });
+  await screen.findByRole('option', { name: 'General' });
+  fireEvent.change(projectSelect, { target: { value: '1' } });
+  await waitFor(() =>
+    expect(window.localStorage.getItem('ticket-selected-project:7')).toBe('1'),
+  );
+  await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' });
+  fireEvent.click(screen.getByText('drop DONE'));
+  await waitFor(() => expect(ticketApi.moveTicket).toHaveBeenCalled());
+
+  firstRender.unmount();
+  render(<TicketBoardView />);
+  await screen.findByRole('option', { name: 'General' });
+
+  expect(
+    screen.getByRole('combobox', { name: 'プロジェクト' }),
+  ).toHaveValue('1');
+});
 
 it('keeps the project directory off the board until requested and closes after selection', async () => {
   const user = userEvent.setup();

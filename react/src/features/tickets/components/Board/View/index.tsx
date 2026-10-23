@@ -59,6 +59,9 @@ export function TicketBoardView() {
   const projectListSequence = useRef(0);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState(ALL_PROJECTS);
+  const [projectSelectionOwner, setProjectSelectionOwner] = useState<
+    string | null
+  >(null);
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
   const memberRevision = useRef(0);
   const [memberAttempt, setMemberAttempt] = useState(0);
@@ -79,6 +82,39 @@ export function TicketBoardView() {
   const [projectsBusy, setProjectsBusy] = useState(false);
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectNotice, setProjectNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (currentUserId === null) {
+      setSelectedProjectId(ALL_PROJECTS);
+      setProjectSelectionOwner(null);
+      return;
+    }
+
+    const owner = String(currentUserId);
+    let savedProjectId = ALL_PROJECTS;
+    try {
+      savedProjectId =
+        window.localStorage.getItem(`ticket-selected-project:${owner}`) ??
+        ALL_PROJECTS;
+    } catch {
+      // Storage may be unavailable; keep the in-memory selection usable.
+    }
+    setSelectedProjectId(savedProjectId);
+    setProjectSelectionOwner(owner);
+  }, [currentUserId, sessionRevision]);
+
+  useEffect(() => {
+    const owner = String(currentUserId ?? '');
+    if (!owner || projectSelectionOwner !== owner) return;
+    try {
+      window.localStorage.setItem(
+        `ticket-selected-project:${owner}`,
+        selectedProjectId,
+      );
+    } catch {
+      // Storage may be unavailable; the current session still works normally.
+    }
+  }, [currentUserId, projectSelectionOwner, selectedProjectId]);
 
   useEffect(() => {
     if (isModalOpen || !modalTrigger.current) return;

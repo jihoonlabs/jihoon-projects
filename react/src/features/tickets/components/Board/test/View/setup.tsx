@@ -74,6 +74,7 @@ vi.mock('@dnd-kit/core', async (importOriginal) => {
 });
 
 beforeEach(() => {
+  window.localStorage.clear();
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
   vi.mocked(api.fetchTickets).mockResolvedValue([]);
   vi.mocked(projectApi.fetchProjectMembers).mockReset();
