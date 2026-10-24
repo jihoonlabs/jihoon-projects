@@ -10,42 +10,55 @@ import userEvent from '@testing-library/user-event';
 import { expect, it, vi } from 'vitest';
 import TicketModal from '../..';
 
-it.each(['create', 'edit'])(
-  'locks draft fields during %s save and restores them after failure',
-  async (mode) => {
-    const pending = deferred<typeof ticket>();
-    const onCreate = vi.fn().mockReturnValue(pending.promise);
-    props.onUpdate.mockReturnValue(pending.promise);
-    render(
-      <TicketModal
-        {...props}
-        ticket={mode === 'create' ? null : ticket}
-        onCreate={onCreate}
-      />,
-    );
-    if (mode === 'edit') await edit();
-    const title = screen.getByLabelText('タイトル');
-    fireEvent.change(title, { target: { value: 'Submitted draft' } });
-    fireEvent.change(screen.getByLabelText('説明'), {
-      target: { value: 'Draft description' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: '保存' }));
+const assertDraftFieldsUnlockAfterFailedSave = async (
+  mode: 'create' | 'edit',
+) => {
+  const pending = deferred<typeof ticket>();
+  const onCreate = vi.fn().mockReturnValue(pending.promise);
+  props.onUpdate.mockReturnValue(pending.promise);
+  render(
+    <TicketModal
+      {...props}
+      ticket={mode === 'create' ? null : ticket}
+      onCreate={onCreate}
+    />,
+  );
+  if (mode === 'edit') await edit();
+  const title = screen.getByLabelText('タイトル');
+  fireEvent.change(title, { target: { value: 'Submitted draft' } });
+  fireEvent.change(screen.getByLabelText('説明'), {
+    target: { value: 'Draft description' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: '保存' }));
 
-    const fields = ['タイトル', '説明', 'ステータス', '優先度', '担当者'].map(
-      (label) => screen.getByLabelText(label),
-    );
-    const blocked = fields.map((field) => (field as HTMLInputElement).disabled);
-    await userEvent.setup().type(title, ' unsent input');
-    await act(async () => pending.reject(new Error('save failed')));
-    await screen.findByRole('alert');
+  const description = screen.getByLabelText('説明');
+  const status = screen.getByLabelText('ステータス');
+  const priority = screen.getByLabelText('優先度');
+  const assignee = screen.getByLabelText('担当者');
+  expect(title).toBeDisabled();
+  expect(description).toBeDisabled();
+  expect(status).toBeDisabled();
+  expect(priority).toBeDisabled();
+  expect(assignee).toBeDisabled();
+  await userEvent.setup().type(title, ' unsent input');
+  await act(async () => pending.reject(new Error('save failed')));
+  await screen.findByRole('alert');
 
-    expect(blocked).toEqual([true, true, true, true, true]);
-    expect(title).toHaveValue('Submitted draft');
-    expect(screen.getByLabelText('説明')).toHaveValue('Draft description');
-    fields.forEach((field) => expect(field).not.toBeDisabled());
-    expect(screen.getByRole('button', { name: '保存' })).toBeEnabled();
-  },
-);
+  expect(title).toHaveValue('Submitted draft');
+  expect(description).toHaveValue('Draft description');
+  expect(title).not.toBeDisabled();
+  expect(description).not.toBeDisabled();
+  expect(status).not.toBeDisabled();
+  expect(priority).not.toBeDisabled();
+  expect(assignee).not.toBeDisabled();
+  expect(screen.getByRole('button', { name: '保存' })).toBeEnabled();
+};
+
+it('locks and restores draft fields after a failed ticket creation', () =>
+  assertDraftFieldsUnlockAfterFailedSave('create'));
+
+it('locks and restores draft fields after a failed ticket edit', () =>
+  assertDraftFieldsUnlockAfterFailedSave('edit'));
 
 it('uses the successful save version for subsequent editing and keeps assignee', async () => {
   props.onUpdate.mockResolvedValue({

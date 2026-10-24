@@ -182,57 +182,67 @@ it('saves edits from detail and returns to the refreshed detail view', async () 
   );
 });
 
-it.each(['7', ''])(
-  'restores the initial assignee %s after two saves in the same detail',
-  async (initialAssignee) => {
-    const ticket = api.toTicket({
-      ...responseTicket,
-      assignee: initialAssignee
-        ? { id: 7, name: 'Tester', avatar_url: null }
-        : null,
-    });
-    vi.mocked(projectApi.fetchProjectMembers).mockResolvedValue([
-      {
-        id: '7',
-        name: 'Tester',
-        email: null,
-        role: 'member',
-        permission: 'write',
-      },
-      {
-        id: '8',
-        name: 'Other',
-        email: null,
-        role: 'member',
-        permission: 'write',
-      },
-    ]);
-    vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
-    vi.mocked(api.updateTicket).mockImplementation(async (_id, input) => ({
-      ...ticket,
-      assignee: input.assigneeId
-        ? { id: input.assigneeId, name: 'Member' }
-        : null,
-    }));
-    useTicketStore.setState({ tickets: [], error: null, isLoading: false });
-    await renderSelectedProject();
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' }),
-    );
-    for (const assignee of ['8', initialAssignee]) {
-      fireEvent.click(await screen.findByRole('button', { name: '編集' }));
-      fireEvent.change(screen.getByLabelText('担当者'), {
-        target: { value: assignee },
-      });
-      fireEvent.click(screen.getByRole('button', { name: '保存' }));
-      await screen.findByRole('heading', { name: 'チケット詳細' });
-    }
-    expect(api.updateTicket).toHaveBeenLastCalledWith(
-      '1',
-      expect.objectContaining({ assigneeId: initialAssignee || null }),
-    );
-    expect(useTicketStore.getState().tickets[0].assignee?.id ?? '').toBe(
-      initialAssignee,
-    );
-  },
-);
+const assertAssigneeCanBeChangedAndRestored = async (
+  initialAssignee: string,
+) => {
+  const ticket = api.toTicket({
+    ...responseTicket,
+    assignee: initialAssignee
+      ? { id: 7, name: 'Tester', avatar_url: null }
+      : null,
+  });
+  vi.mocked(projectApi.fetchProjectMembers).mockResolvedValue([
+    {
+      id: '7',
+      name: 'Tester',
+      email: null,
+      role: 'member',
+      permission: 'write',
+    },
+    {
+      id: '8',
+      name: 'Other',
+      email: null,
+      role: 'member',
+      permission: 'write',
+    },
+  ]);
+  vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
+  vi.mocked(api.updateTicket).mockImplementation(async (_id, input) => ({
+    ...ticket,
+    assignee: input.assigneeId
+      ? { id: input.assigneeId, name: 'Member' }
+      : null,
+  }));
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+  await renderSelectedProject();
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' }),
+  );
+  fireEvent.click(await screen.findByRole('button', { name: '編集' }));
+  fireEvent.change(screen.getByLabelText('担当者'), {
+    target: { value: '8' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: '保存' }));
+  await screen.findByRole('heading', { name: 'チケット詳細' });
+
+  fireEvent.click(await screen.findByRole('button', { name: '編集' }));
+  fireEvent.change(screen.getByLabelText('担当者'), {
+    target: { value: initialAssignee },
+  });
+  fireEvent.click(screen.getByRole('button', { name: '保存' }));
+  await screen.findByRole('heading', { name: 'チケット詳細' });
+  expect(api.updateTicket).toHaveBeenLastCalledWith(
+    '1',
+    expect.objectContaining({ assigneeId: initialAssignee || null }),
+  );
+  expect(useTicketStore.getState().tickets[0].assignee?.id ?? '').toBe(
+    initialAssignee,
+  );
+};
+
+it('restores the original member assignee after two saves in one detail', () =>
+  assertAssigneeCanBeChangedAndRestored('7'));
+
+it('restores an unassigned ticket after two saves in one detail', () =>
+  assertAssigneeCanBeChangedAndRestored(''));
