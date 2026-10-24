@@ -33,24 +33,40 @@ it('hides stale card data while loading and displays the latest detail', async (
   );
 });
 
-it.each([
-  [new Error('offline'), '最新のチケット情報を取得できませんでした'],
-  [new api.TicketApiError('deleted', 404), '削除されたか、存在しません'],
-  [new api.TicketApiError('forbidden', 403), 'アクセス権限がありません'],
-  [new api.TicketApiError('expired', 401), 'アクセス権限がありません'],
-])(
-  'shows fetch error %s without stale editing and supports retry',
-  async (error, message) => {
-    vi.mocked(api.fetchTicket).mockRejectedValueOnce(error);
-    render(<TicketModal {...props} />);
-    expect(await screen.findByRole('alert')).toHaveTextContent(message);
-    expect(
-      screen.queryByRole('button', { name: '編集' }),
-    ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '再試行' }));
-    expect(await screen.findByText(ticket.title)).toBeInTheDocument();
-  },
-);
+const assertFetchFailureAllowsRetry = async (error: Error, message: string) => {
+  vi.mocked(api.fetchTicket).mockRejectedValueOnce(error);
+  render(<TicketModal {...props} />);
+  expect(await screen.findByRole('alert')).toHaveTextContent(message);
+  expect(
+    screen.queryByRole('button', { name: '編集' }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '再試行' }));
+  expect(await screen.findByText(ticket.title)).toBeInTheDocument();
+};
+
+it('shows an offline detail error without stale editing and supports retry', () =>
+  assertFetchFailureAllowsRetry(
+    new Error('offline'),
+    '最新のチケット情報を取得できませんでした',
+  ));
+
+it('shows a deleted-ticket detail error without stale editing and supports retry', () =>
+  assertFetchFailureAllowsRetry(
+    new api.TicketApiError('deleted', 404),
+    '削除されたか、存在しません',
+  ));
+
+it('shows a forbidden detail error without stale editing and supports retry', () =>
+  assertFetchFailureAllowsRetry(
+    new api.TicketApiError('forbidden', 403),
+    'アクセス権限がありません',
+  ));
+
+it('shows an expired-session detail error without stale editing and supports retry', () =>
+  assertFetchFailureAllowsRetry(
+    new api.TicketApiError('expired', 401),
+    'アクセス権限がありません',
+  ));
 
 it('ignores reversed detail responses and late errors after switching tickets', async () => {
   const first = deferred<typeof ticket>();
