@@ -95,58 +95,68 @@ it('does not treat an archived-project 409 as an edit version conflict', async (
   ).not.toBeInTheDocument();
 });
 
-it.each(['success', 'conflict'])(
-  'ignores late save %s after changing Ticket',
-  async (outcome) => {
-    const pending = deferred<typeof ticket>();
-    props.onUpdate.mockReturnValue(pending.promise);
-    const view = render(<TicketModal {...props} />);
-    await edit();
-    fireEvent.click(screen.getByRole('button', { name: '保存' }));
-    vi.mocked(api.fetchTicket).mockResolvedValue({
-      ...ticket,
-      id: '2',
-      title: 'Second ticket',
-    });
-    view.rerender(<TicketModal {...props} ticket={{ ...ticket, id: '2' }} />);
-    await screen.findByText('Second ticket');
-    await act(async () =>
-      outcome === 'success'
-        ? pending.resolve({ ...ticket, title: 'Late save', version: 2 })
-        : pending.reject(
-            new api.TicketApiError('conflict', 409, 'ticket_conflict'),
-          ),
-    );
-    expect(screen.getByText('Second ticket')).toBeInTheDocument();
-    expect(screen.queryByText('Late save')).not.toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  },
-);
+const assertLateSaveIsIgnoredAfterTicketChange = async (
+  outcome: 'success' | 'conflict',
+) => {
+  const pending = deferred<typeof ticket>();
+  props.onUpdate.mockReturnValue(pending.promise);
+  const view = render(<TicketModal {...props} />);
+  await edit();
+  fireEvent.click(screen.getByRole('button', { name: '保存' }));
+  vi.mocked(api.fetchTicket).mockResolvedValue({
+    ...ticket,
+    id: '2',
+    title: 'Second ticket',
+  });
+  view.rerender(<TicketModal {...props} ticket={{ ...ticket, id: '2' }} />);
+  await screen.findByText('Second ticket');
+  await act(async () =>
+    outcome === 'success'
+      ? pending.resolve({ ...ticket, title: 'Late save', version: 2 })
+      : pending.reject(
+          new api.TicketApiError('conflict', 409, 'ticket_conflict'),
+        ),
+  );
+  expect(screen.getByText('Second ticket')).toBeInTheDocument();
+  expect(screen.queryByText('Late save')).not.toBeInTheDocument();
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+};
 
-it.each(['success', 'forbidden'])(
-  'ignores late conflict refetch %s after changing Ticket',
-  async (outcome) => {
-    props.onUpdate.mockRejectedValue(
-      new api.TicketApiError('conflict', 409, 'ticket_conflict'),
-    );
-    const view = render(<TicketModal {...props} />);
-    await edit();
-    fireEvent.click(screen.getByRole('button', { name: '保存' }));
-    await screen.findByRole('alert');
-    const pending = deferred<typeof ticket>();
-    vi.mocked(api.fetchTicket)
-      .mockReturnValueOnce(pending.promise)
-      .mockResolvedValueOnce({ ...ticket, id: '2', title: 'Second ticket' });
-    fireEvent.click(screen.getByRole('button', { name: '最新情報を再取得' }));
-    view.rerender(<TicketModal {...props} ticket={{ ...ticket, id: '2' }} />);
-    await screen.findByText('Second ticket');
-    await act(async () =>
-      outcome === 'success'
-        ? pending.resolve({ ...ticket, title: 'Late reload', version: 9 })
-        : pending.reject(new api.TicketApiError('denied', 403)),
-    );
-    expect(screen.getByText('Second ticket')).toBeInTheDocument();
-    expect(screen.queryByText('Late reload')).not.toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  },
-);
+it('ignores a late successful save after changing tickets', () =>
+  assertLateSaveIsIgnoredAfterTicketChange('success'));
+
+it('ignores a late save conflict after changing tickets', () =>
+  assertLateSaveIsIgnoredAfterTicketChange('conflict'));
+
+const assertLateConflictRefetchIsIgnoredAfterTicketChange = async (
+  outcome: 'success' | 'forbidden',
+) => {
+  props.onUpdate.mockRejectedValue(
+    new api.TicketApiError('conflict', 409, 'ticket_conflict'),
+  );
+  const view = render(<TicketModal {...props} />);
+  await edit();
+  fireEvent.click(screen.getByRole('button', { name: '保存' }));
+  await screen.findByRole('alert');
+  const pending = deferred<typeof ticket>();
+  vi.mocked(api.fetchTicket)
+    .mockReturnValueOnce(pending.promise)
+    .mockResolvedValueOnce({ ...ticket, id: '2', title: 'Second ticket' });
+  fireEvent.click(screen.getByRole('button', { name: '最新情報を再取得' }));
+  view.rerender(<TicketModal {...props} ticket={{ ...ticket, id: '2' }} />);
+  await screen.findByText('Second ticket');
+  await act(async () =>
+    outcome === 'success'
+      ? pending.resolve({ ...ticket, title: 'Late reload', version: 9 })
+      : pending.reject(new api.TicketApiError('denied', 403)),
+  );
+  expect(screen.getByText('Second ticket')).toBeInTheDocument();
+  expect(screen.queryByText('Late reload')).not.toBeInTheDocument();
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+};
+
+it('ignores a late successful conflict refresh after changing tickets', () =>
+  assertLateConflictRefetchIsIgnoredAfterTicketChange('success'));
+
+it('ignores a late forbidden conflict refresh after changing tickets', () =>
+  assertLateConflictRefetchIsIgnoredAfterTicketChange('forbidden'));
