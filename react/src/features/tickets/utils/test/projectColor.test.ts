@@ -7,8 +7,19 @@ describe('stored project color', () => {
       getProjectBorderColor('#e3f2fd'),
     );
   });
-  it('keeps missing or malformed legacy data neutral', () => {
-    for (const value of [null, 'ABC', '   ', '#fff', 'url(example)'])
-      expect(getProjectBorderColor(value)).toBeNull();
+  it('keeps a missing legacy color neutral', () => {
+    expect(getProjectBorderColor(null)).toBeNull();
+  });
+  it('keeps a color without a leading hash neutral', () => {
+    expect(getProjectBorderColor('ABC')).toBeNull();
+  });
+  it('keeps a whitespace-only color neutral', () => {
+    expect(getProjectBorderColor('   ')).toBeNull();
+  });
+  it('keeps a short hex color neutral', () => {
+    expect(getProjectBorderColor('#fff')).toBeNull();
+  });
+  it('keeps a CSS expression neutral', () => {
+    expect(getProjectBorderColor('url(example)')).toBeNull();
   });
 });
