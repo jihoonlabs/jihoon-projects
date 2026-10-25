@@ -14,7 +14,7 @@
 
 ### 動作デモ
 
-![Ticketの操作デモ：ログインからプロジェクト作成、チケットの追加・移動・削除、再読み込み後の選択プロジェクト保持まで](docs/ticket/images/ticket-demo-clean.gif)
+![Ticketの操作デモ：ログイン、プロジェクト作成、チケット追加・ドラッグ移動・削除、再読み込み後の選択維持](docs/ticket/images/ticket-demo-clean.gif)
 
 [機能別V1マニュアル](docs/ticket/README.md)では操作方法を説明し、[Ticket開発・検証記録](docs/ticket/TICKET.md)では公開範囲、実装上の前提、過去の検証記録を説明しています。操作説明と開発記録を分け、テスト記録が現在の全環境を保証するものではないことも明記しています。
 
