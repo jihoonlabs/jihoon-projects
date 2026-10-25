@@ -16,7 +16,7 @@
 
 ### 動作デモ
 
-![Ticketの操作デモ：ログイン、プロジェクト作成、チケット追加・ドラッグ移動・削除、再読み込み後の選択維持](docs/ticket/images/ticket-demo-clean.gif)
+![Ticketの操作デモ：ログインからプロジェクト作成、チケット追加・ドラッグ移動・削除、ブラウザー再読み込み後の選択プロジェクト維持](docs/ticket/images/ticket-demo-clean.gif)
 
 ### 画面イメージ
 
