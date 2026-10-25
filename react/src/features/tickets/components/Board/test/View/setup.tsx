@@ -90,6 +90,7 @@ export async function renderSelectedProject() {
 }
 
 beforeEach(() => {
+  window.history.replaceState(window.history.state, '', '/');
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
   vi.mocked(api.fetchTickets).mockResolvedValue([]);
   vi.mocked(projectApi.fetchProjectMembers).mockReset();
