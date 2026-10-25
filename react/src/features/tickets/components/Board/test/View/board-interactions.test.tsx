@@ -1,11 +1,19 @@
 import './setup';
 import { renderSelectedProject } from './helpers';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import * as api from '../../../../api/ticketApi';
 import { responseTicket } from '../../../../api/test/ticketFixture';
 import { useTicketStore } from '../../../../store/useTicketStore';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import * as projectApi from '@/features/tickets/api/projectApi';
+import { TicketBoardView } from '../../View';
 
 it('persists a board drop with the selected project version', async () => {
   const ticket = api.toTicket(responseTicket);
@@ -166,4 +174,69 @@ it('allows manual status changes while search disables dragging', async () => {
   await waitFor(() =>
     expect(api.updateTicketStatus).toHaveBeenCalledWith('1', 'DONE'),
   );
+});
+
+it('restores the selected project after a board move and page reload', async () => {
+  window.history.replaceState(
+    window.history.state,
+    '',
+    '/tickets?tab=board#kanban',
+  );
+  const baseTicket = api.toTicket(responseTicket);
+  const otherProjectTicket = {
+    ...baseTicket,
+    id: 'other',
+    projectId: '1',
+    title: 'General ticket',
+  };
+  const selectedProjectTicket = {
+    ...baseTicket,
+    id: '1',
+    projectId: '2',
+    title: 'Project two ticket',
+  };
+  vi.mocked(projectApi.fetchProjects).mockResolvedValue([
+    { id: '1', name: 'General', projectKey: 'GEN', boardVersion: 3 },
+    { id: '2', name: 'Other', projectKey: 'OTH', boardVersion: 8 },
+  ]);
+  vi.mocked(api.fetchTickets).mockResolvedValue([
+    otherProjectTicket,
+    selectedProjectTicket,
+  ]);
+  vi.mocked(api.moveTicket).mockResolvedValue({
+    ticket: { ...selectedProjectTicket, status: 'DONE' },
+    boardVersion: 9,
+  });
+  useAuthStore.setState({
+    user: { ...useAuthStore.getState().user!, role: 'admin' },
+  });
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+
+  const firstPage = render(<TicketBoardView />);
+  const projectSelect = await screen.findByRole('combobox', {
+    name: 'プロジェクト',
+  });
+  await screen.findByRole('option', { name: 'Other' });
+  fireEvent.change(projectSelect, { target: { value: '2' } });
+  expect(await screen.findByText('Project two ticket')).toBeInTheDocument();
+  expect(screen.queryByText('General ticket')).not.toBeInTheDocument();
+  expect(new URL(window.location.href).searchParams.get('project')).toBe('2');
+  expect(new URL(window.location.href).searchParams.get('tab')).toBe('board');
+  expect(new URL(window.location.href).hash).toBe('#kanban');
+
+  fireEvent.click(screen.getByText('drop DONE'));
+  await waitFor(() =>
+    expect(api.moveTicket).toHaveBeenCalledWith('1', 'DONE', 0, 8),
+  );
+
+  firstPage.unmount();
+  useTicketStore.setState({ tickets: [], error: null, isLoading: false });
+  render(<TicketBoardView />);
+  const restoredProjectSelect = await screen.findByRole('combobox', {
+    name: 'プロジェクト',
+  });
+
+  await waitFor(() => expect(restoredProjectSelect).toHaveValue('2'));
+  expect(await screen.findByText('Project two ticket')).toBeInTheDocument();
+  expect(screen.queryByText('General ticket')).not.toBeInTheDocument();
 });
