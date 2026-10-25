@@ -16,7 +16,7 @@
 
 ### 動作デモ
 
-![Ticketの操作デモ：プロジェクト切替・ボード操作・チケット詳細](docs/ticket/images/ticket-demo-clean.gif)
+![Ticketの操作デモ：選択中のプロジェクトでチケットをドラッグして移動し、詳細を確認](docs/ticket/images/ticket-demo-clean.gif)
 
 ### 画面イメージ
 
