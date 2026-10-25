@@ -16,7 +16,7 @@
 
 ### 動作デモ
 
-![Ticketの操作デモ：選択中のプロジェクトでチケットをドラッグして移動し、詳細を確認](docs/ticket/images/ticket-demo-clean.gif)
+![Ticketの操作デモ：ログインからプロジェクト作成、チケットの追加・移動・削除、再読み込み後の選択プロジェクト保持まで](docs/ticket/images/ticket-demo-clean.gif)
 
 ### 画面イメージ
 
