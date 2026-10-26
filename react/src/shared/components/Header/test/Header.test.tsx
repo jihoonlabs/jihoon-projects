@@ -26,10 +26,9 @@ beforeEach(() => {
   });
 });
 
-it('shows ticket and attendance navigation without changing auth behavior', () => {
+it('shows workspace identity and user role', () => {
   render(<Header />);
-  expect(screen.getByRole('link', { name: 'チケット' })).toHaveAttribute('href', '/tickets');
-  expect(screen.getByRole('link', { name: '勤怠管理' })).toHaveAttribute('href', '/attendance');
+  expect(screen.getByText('WORKSPACE')).toBeInTheDocument();
   expect(screen.getByText(/管理者/)).toBeInTheDocument();
 });
 

@@ -8,6 +8,7 @@
   background: #fff;
   color: #17243b;
   color-scheme: light;
+  min-height: 4.25rem;
   padding: 0.8rem 1.5rem;
   border-bottom: 1px solid #e4e8ef;
 }
@@ -15,27 +16,6 @@
   font-size: 1.1rem;
   font-weight: 650;
   letter-spacing: -0.02em;
-}
-.navigation {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.navigation a {
-  border-radius: 6px;
-  color: #334155;
-  font-size: 0.875rem;
-  font-weight: 600;
-  padding: 0.45rem 0.65rem;
-  text-decoration: none;
-}
-.navigation a:hover {
-  background: #f1f5f9;
-  color: #1d4ed8;
-}
-.navigation a:focus-visible {
-  outline: 2px solid #3b6de0;
-  outline-offset: 2px;
 }
 .userInfo {
   display: flex;
@@ -79,9 +59,5 @@
   }
   .userInfo {
     gap: 0.5rem;
-  }
-  .navigation {
-    order: 3;
-    flex-basis: 100%;
   }
 }
