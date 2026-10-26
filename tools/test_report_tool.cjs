@@ -27,9 +27,6 @@ test("keeps custom charts and export controls", () => {
   assert.match(html, /function getColumnCounts\(col\)/);
   assert.doesNotMatch(html, /getCustomCounts/);
   assert.match(html, /function getAggregatedData\(targetCol\) \{\s*const counts = getColumnCounts\(targetCol\);/);
-  assert.match(html, /function getColumnCounts\(col\)/);
-  assert.doesNotMatch(html, /getCustomCounts/);
-  assert.match(html, /function getAggregatedData\(targetCol\) \{\s*const counts = getColumnCounts\(targetCol\);/);
   assert.match(html, /pptx\.writeFile/);
   assert.match(html, /id="chart-type"/);
 });
