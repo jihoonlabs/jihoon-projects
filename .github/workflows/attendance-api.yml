@@ -33,7 +33,7 @@ jobs:
       - name: Set up PHP and Composer
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.4'
           tools: composer:v2
           extensions: mbstring, pdo_sqlite, sqlite3, intl
           coverage: none
@@ -47,7 +47,6 @@ jobs:
           app/Http/Controllers/Attendance/AttendanceController.php
           app/Http/Resources/Attendance/AttendanceRecordResource.php
           app/Models/AttendanceRecord.php
-          app/Models/User.php
           database/migrations/2026_10_20_000001_create_attendance_records_table.php
           routes/api.php
           routes/api/attendance.php
