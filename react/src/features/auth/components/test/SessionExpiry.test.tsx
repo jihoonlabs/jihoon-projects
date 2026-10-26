@@ -9,6 +9,9 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ replace }) }));
 vi.mock('@/shared/components/Header', () => ({
   Header: () => <header>Private header</header>,
 }));
+vi.mock('@/shared/components/AppSidebar', () => ({
+  AppSidebar: () => <aside>Private navigation</aside>,
+}));
 vi.mock('../LoginForm/LoginForm', () => ({
   LoginForm: () => <div>Login form</div>,
 }));

@@ -17,6 +17,7 @@ const { replaceMock } = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: replaceMock }),
+  usePathname: () => '/tickets',
 }));
 
 const user: User = {

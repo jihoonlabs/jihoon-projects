@@ -1,0 +1,158 @@
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+  color: #111827;
+}
+
+.page h1 {
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.panel {
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.panel h2 {
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+}
+
+.status {
+  display: inline-flex;
+  margin: 0;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #1d4ed8;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2.5rem;
+  margin: 1rem 0 1.25rem;
+}
+
+.times dt {
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.times dd {
+  margin: 0.25rem 0 0;
+  font-weight: 600;
+}
+
+.actions,
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.actions button {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 52px;
+  padding: 0.7rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.clockIn {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.clockIn:hover:not(:disabled) {
+  background: #1e40af;
+}
+
+.clockOut {
+  border-color: #d1d5db;
+  background: #fff;
+  color: #374151;
+}
+
+.clockOut:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.actions button:focus-visible,
+.pagination button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.pagination button {
+  padding: 0.55rem 0.9rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+}
+
+.actions button:disabled,
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  margin: 1rem 0;
+  color: #b91c1c;
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.tableScroll table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.tableScroll th,
+.tableScroll td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.pagination {
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding: 1rem 0.75rem 3rem;
+  }
+
+  .panel {
+    padding: 1rem;
+  }
+
+  .actions button {
+    min-height: 48px;
+  }
+}

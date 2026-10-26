@@ -33,7 +33,7 @@ export function Header() {
 
   return (
     <header className={styles.header}>
-      <span className={styles.brand}>タスク管理</span>
+      <span className={styles.brand}>WORKSPACE</span>
 
       <div className={styles.userInfo}>
         <span>
