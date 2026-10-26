@@ -15,6 +15,7 @@ class ReportToolTests(unittest.TestCase):
         self.assertEqual(len(re.findall(r"<style\b", HTML, re.I)), 1)
         self.assertEqual(len(re.findall(r"<script\s*>", HTML, re.I)), 1)
         self.assertNotRegex(HTML, r"(?:src|href)=\"(?:\./|\.\./)(?:css|js)/")
+        self.assertLessEqual(len(HTML.splitlines()), 800)
 
     def test_keeps_excel_and_clipboard_imports(self):
         self.assertIn("XLSX.read", HTML)
