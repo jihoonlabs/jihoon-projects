@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
-| 도메인별 API Route 파일을 이곳에서 등록한다.
+| ドメイン別のAPIルートファイルをここで登録する。
 |--------------------------------------------------------------------------
 */
 
@@ -23,6 +23,11 @@ Route::prefix('posts')->group(
 // /api/auth/*
 Route::prefix('auth')->group(
     base_path('routes/api/auth.php')
+);
+
+// /api/attendance/*
+Route::prefix('attendance')->group(
+    base_path('routes/api/attendance.php')
 );
 
 // /api/tickets/*
