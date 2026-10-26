@@ -8,6 +8,7 @@
   background: #fff;
   color: #17243b;
   color-scheme: light;
+  min-height: 4.25rem;
   padding: 0.8rem 1.5rem;
   border-bottom: 1px solid #e4e8ef;
 }

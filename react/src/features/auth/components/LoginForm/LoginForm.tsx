@@ -33,7 +33,7 @@ export function LoginForm({
 
   useEffect(() => {
     // 履歴移動やセッション復元でも、認証済みのログイン画面を残さない。
-    if (isInitialized && isAuthenticated) router.replace('/tickets');
+    if (isInitialized && isAuthenticated) router.replace('/attendance');
   }, [isInitialized, isAuthenticated, router]);
 
   const [email, setEmail] = useState('');
