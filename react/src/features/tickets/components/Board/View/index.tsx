@@ -31,6 +31,19 @@ import type { Project, ProjectMember } from '@/features/tickets/types/project';
 import styles from './index.module.css';
 
 const ALL_PROJECTS = 'ALL';
+const PROJECT_QUERY_PARAM = 'project';
+
+function updateProjectQuery(projectId: string) {
+  const url = new URL(window.location.href);
+  if (projectId === ALL_PROJECTS) url.searchParams.delete(PROJECT_QUERY_PARAM);
+  else url.searchParams.set(PROJECT_QUERY_PARAM, projectId);
+
+  window.history.replaceState(
+    window.history.state,
+    '',
+    `${url.pathname}${url.search}${url.hash}`,
+  );
+}
 
 export function TicketBoardView() {
   const {
@@ -57,6 +70,7 @@ export function TicketBoardView() {
   const modalTrigger = useRef<HTMLButtonElement | null>(null);
   const projectRevision = useRef(0);
   const projectListSequence = useRef(0);
+  const initialProjectSelectionRestored = useRef(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState(ALL_PROJECTS);
   const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
@@ -111,11 +125,19 @@ export function TicketBoardView() {
         setProjects(items);
         setProjectsSession(sessionRevision);
         setProjectError(null);
-        setSelectedProjectId((current) =>
-          current === ALL_PROJECTS || items.some((item) => item.id === current)
-            ? current
-            : ALL_PROJECTS,
-        );
+        if (!initialProjectSelectionRestored.current) {
+          const requestedProjectId = new URL(
+            window.location.href,
+          ).searchParams.get(PROJECT_QUERY_PARAM);
+          const initialProjectId =
+            requestedProjectId &&
+            items.some((item) => item.id === requestedProjectId)
+              ? requestedProjectId
+              : ALL_PROJECTS;
+          initialProjectSelectionRestored.current = true;
+          setSelectedProjectId(initialProjectId);
+          updateProjectQuery(initialProjectId);
+        }
       })
       .catch((reason) => {
         if (
@@ -136,6 +158,19 @@ export function TicketBoardView() {
       active = false;
     };
   }, [showArchived, projectListAttempt, sessionExpired, sessionRevision]);
+
+  useEffect(() => {
+    if (
+      !initialProjectSelectionRestored.current ||
+      projectsLoading ||
+      selectedProjectId === ALL_PROJECTS ||
+      projects.some((project) => project.id === selectedProjectId)
+    )
+      return;
+
+    setSelectedProjectId(ALL_PROJECTS);
+    updateProjectQuery(ALL_PROJECTS);
+  }, [projects, projectsLoading, selectedProjectId]);
 
   useEffect(() => {
     if (
@@ -225,11 +260,6 @@ export function TicketBoardView() {
     )
       return;
     setProjects(items);
-    setSelectedProjectId((current) =>
-      current === ALL_PROJECTS || items.some((item) => item.id === current)
-        ? current
-        : ALL_PROJECTS,
-    );
   };
 
   const handleStatusChange = async (id: string, status: TicketStatus) => {
@@ -263,6 +293,7 @@ export function TicketBoardView() {
   const selectProject = (projectId: string) => {
     if (projectsBusy) return;
     setSelectedProjectId(projectId);
+    updateProjectQuery(projectId);
     setOperationsOpen(false);
     setSearchQuery('');
     setAssigneeFilter('ALL');
@@ -275,6 +306,7 @@ export function TicketBoardView() {
     setShowArchived(archived);
     setProjects([]);
     setSelectedProjectId(ALL_PROJECTS);
+    updateProjectQuery(ALL_PROJECTS);
     setOperationsOpen(false);
     setProjectNotice(null);
     setProjectError(null);
@@ -290,6 +322,7 @@ export function TicketBoardView() {
     setProjects(items);
     if (!sameScope) {
       setSelectedProjectId(ALL_PROJECTS);
+      updateProjectQuery(ALL_PROJECTS);
       setOperationsOpen(false);
       setSearchQuery('');
       setAssigneeFilter('ALL');
@@ -312,6 +345,7 @@ export function TicketBoardView() {
       ),
     );
     setSelectedProjectId(project.id);
+    updateProjectQuery(project.id);
     setSearchQuery('');
     setAssigneeFilter('ALL');
     setProjectNotice(

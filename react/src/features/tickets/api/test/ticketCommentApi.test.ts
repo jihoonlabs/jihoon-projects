@@ -75,24 +75,35 @@ describe('Ticket comment API boundary', () => {
     await expect(deleteTicketComment('1', '10')).resolves.toBeUndefined();
   });
 
-  it.each([401, 403, 422, 500])('rejects HTTP %s', async (status) => {
+  const rejectsListRequestWithStatus = async (status: number) => {
     server.use(
       http.get(`${url}/api/tickets/1/comments`, () =>
         HttpResponse.json({ message: 'Error' }, { status }),
       ),
     );
     await expect(fetchTicketComments('1')).rejects.toThrow(String(status));
-  });
+  };
 
-  it.each([{}, { data: null }, { data: {} }])(
-    'rejects invalid list envelope %j',
-    async (body) => {
-      server.use(
-        http.get(`${url}/api/tickets/1/comments`, () =>
-          HttpResponse.json(body),
-        ),
-      );
-      await expect(fetchTicketComments('1')).rejects.toThrow();
-    },
-  );
+  it('rejects an unauthorized comments response', () =>
+    rejectsListRequestWithStatus(401));
+  it('rejects a forbidden comments response', () =>
+    rejectsListRequestWithStatus(403));
+  it('rejects an invalid comments response', () =>
+    rejectsListRequestWithStatus(422));
+  it('rejects a server-error comments response', () =>
+    rejectsListRequestWithStatus(500));
+
+  const rejectsInvalidListEnvelope = async (body: Record<string, unknown>) => {
+    server.use(
+      http.get(`${url}/api/tickets/1/comments`, () => HttpResponse.json(body)),
+    );
+    await expect(fetchTicketComments('1')).rejects.toThrow();
+  };
+
+  it('rejects a missing comments data envelope', () =>
+    rejectsInvalidListEnvelope({}));
+  it('rejects null comments data', () =>
+    rejectsInvalidListEnvelope({ data: null }));
+  it('rejects an object where the comments list is expected', () =>
+    rejectsInvalidListEnvelope({ data: {} }));
 });
