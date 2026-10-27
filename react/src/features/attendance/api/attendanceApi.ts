@@ -7,6 +7,13 @@ import type {
 } from '../types/attendance';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+export const ATTENDANCE_ERROR_MESSAGE =
+  '勤怠を処理できませんでした。時間をおいて再度お試しください。';
+
+const CONFLICT_MESSAGES: Record<string, string> = {
+  already_clocked_in: '本日はすでに出勤しています。',
+  not_working: '退勤できる出勤記録がありません。',
+};
 
 interface RecordResponse {
   id: number;
@@ -45,13 +52,27 @@ function toRecord(record: RecordResponse): AttendanceRecord {
 }
 
 async function json<T>(response: Response): Promise<T> {
-  const body = await response.json();
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    throw new AttendanceApiError(ATTENDANCE_ERROR_MESSAGE, response.status);
+  }
 
   if (!response.ok) {
+    const errorBody =
+      typeof body === 'object' && body !== null && !Array.isArray(body)
+        ? (body as Record<string, unknown>)
+        : {};
+    const code =
+      typeof errorBody.code === 'string' ? errorBody.code : undefined;
+
     throw new AttendanceApiError(
-      body.message ?? '勤怠情報を取得できませんでした。',
+      response.status === 409 && code && CONFLICT_MESSAGES[code]
+        ? CONFLICT_MESSAGES[code]
+        : ATTENDANCE_ERROR_MESSAGE,
       response.status,
-      body.code,
+      code,
     );
   }
 

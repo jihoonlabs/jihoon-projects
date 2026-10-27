@@ -26,6 +26,7 @@ export function LoginForm({
   registered,
 }: LoginRedirectParams) {
   const router = useRouter();
+  const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
   const login = useAuthStore((state) => state.login);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -311,59 +312,72 @@ export function LoginForm({
             )}
           </div>
 
-          <div className={styles.forgotPasswordGuide}>
-            <Link href="/forgot-password" className={styles.forgotPasswordLink}>
-              パスワードをお忘れですか？
-            </Link>
-          </div>
+          {!DEMO_MODE && (
+            <div className={styles.forgotPasswordGuide}>
+              <Link
+                href="/forgot-password"
+                className={styles.forgotPasswordLink}
+              >
+                パスワードをお忘れですか？
+              </Link>
+            </div>
+          )}
 
           <button type="submit" className={styles.submitBtn} disabled={loading}>
             {loading ? 'ログイン中...' : 'ログイン'}
           </button>
 
-          <div className={styles.alternativeLabel}>その他のログイン方法</div>
-          <div className={styles.socialGroup}>
-            <button
-              type="button"
-              className={`${styles.socialButton} ${styles.googleButton}`}
-              onClick={() => handleSocialLogin('google')}
-              disabled={loading}
-            >
-              <Image
-                src="/auth/google-g.svg"
-                width={20}
-                height={20}
-                alt=""
-                aria-hidden="true"
-              />
-              <span>Googleでログイン</span>
-            </button>
+          {!DEMO_MODE && (
+            <>
+              <div className={styles.alternativeLabel}>
+                その他のログイン方法
+              </div>
+              <div className={styles.socialGroup}>
+                <button
+                  type="button"
+                  className={`${styles.socialButton} ${styles.googleButton}`}
+                  onClick={() => handleSocialLogin('google')}
+                  disabled={loading}
+                >
+                  <Image
+                    src="/auth/google-g.svg"
+                    width={20}
+                    height={20}
+                    alt=""
+                    aria-hidden="true"
+                  />
+                  <span>Googleでログイン</span>
+                </button>
 
-            <button
-              type="button"
-              className={`${styles.socialButton} ${styles.lineButton}`}
-              onClick={() => handleSocialLogin('line')}
-              disabled={loading}
-            >
-              <Image
-                src="/auth/line-login.png"
-                width={28}
-                height={28}
-                alt=""
-                aria-hidden="true"
-                unoptimized
-              />
-              <span>LINEでログイン</span>
-            </button>
-          </div>
+                <button
+                  type="button"
+                  className={`${styles.socialButton} ${styles.lineButton}`}
+                  onClick={() => handleSocialLogin('line')}
+                  disabled={loading}
+                >
+                  <Image
+                    src="/auth/line-login.png"
+                    width={28}
+                    height={28}
+                    alt=""
+                    aria-hidden="true"
+                    unoptimized
+                  />
+                  <span>LINEでログイン</span>
+                </button>
+              </div>
+            </>
+          )}
         </form>
 
-        <div className={styles.registerGuide}>
-          <span>アカウントをお持ちでない方は</span>
-          <Link href="/register" className={styles.registerLink}>
-            新規会員登録へ
-          </Link>
-        </div>
+        {!DEMO_MODE && (
+          <div className={styles.registerGuide}>
+            <span>アカウントをお持ちでない方は</span>
+            <Link href="/register" className={styles.registerLink}>
+              新規会員登録へ
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
