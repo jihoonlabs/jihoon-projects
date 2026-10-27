@@ -34,11 +34,16 @@ export function LoginForm({
 
   useEffect(() => {
     // 履歴移動やセッション復元でも、認証済みのログイン画面を残さない。
-    if (isInitialized && isAuthenticated) router.replace('/attendance');
-  }, [isInitialized, isAuthenticated, router]);
+    if (isInitialized && isAuthenticated)
+      router.replace(DEMO_MODE ? '/tickets' : '/attendance');
+  }, [isInitialized, isAuthenticated, router, DEMO_MODE]);
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(() =>
+    DEMO_MODE ? 'demo@example.com' : '',
+  );
+  const [password, setPassword] = useState(() =>
+    DEMO_MODE ? 'TicketDemo2026!' : '',
+  );
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<LoginValidationErrors>({});
   const [serverError, setServerError] = useState(() => {
