@@ -1,0 +1,65 @@
+name: React validation
+
+on:
+  push:
+    branches:
+      - ci/react-validation-v1
+      - epic/portfolio-live-demo-v1
+    paths:
+      - 'react/**'
+      - '.github/workflows/react-validation.yml'
+  pull_request:
+    branches:
+      - epic/portfolio-live-demo-v1
+      - main
+    paths:
+      - 'react/**'
+      - '.github/workflows/react-validation.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: react-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  react:
+    name: React tests, lint, types and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: react
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: react/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run React tests
+        run: pnpm run test:run
+
+      - name: Run ESLint
+        run: pnpm lint
+
+      - name: Check formatting
+        run: pnpm exec prettier --check .
+
+      - name: Check TypeScript
+        run: pnpm exec tsc --noEmit
+
+      - name: Build production app
+        run: pnpm build
