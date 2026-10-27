@@ -72,5 +72,26 @@ it('uses the existing CSRF flow for clock actions and surfaces conflicts', async
     name: 'AttendanceApiError',
     status: 409,
     code: 'not_working',
+    message: '退勤できる出勤記録がありません。',
   } satisfies Partial<AttendanceApiError>);
+});
+
+it('hides server debug details from internal errors', async () => {
+  server.use(
+    http.get(`${API_URL}/api/attendance/today`, () =>
+      HttpResponse.json(
+        {
+          message:
+            'SQLSTATE[HY000]: no such table: attendance_records at /Users/example/app/database.sqlite',
+        },
+        { status: 500 },
+      ),
+    ),
+  );
+
+  await expect(fetchAttendanceToday()).rejects.toMatchObject({
+    name: 'AttendanceApiError',
+    status: 500,
+    message: '勤怠を処理できませんでした。時間をおいて再度お試しください。',
+  });
 });
