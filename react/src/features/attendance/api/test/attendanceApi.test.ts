@@ -74,3 +74,24 @@ it('uses the existing CSRF flow for clock actions and surfaces conflicts', async
     code: 'not_working',
   } satisfies Partial<AttendanceApiError>);
 });
+
+it('does not expose server debug details from an unexpected response', async () => {
+  server.use(
+    http.get(`${API_URL}/api/attendance/today`, () =>
+      HttpResponse.json(
+        {
+          message:
+            'SQLSTATE[HY000]: database path /private/app.sqlite missing attendance_records',
+          exception: 'Illuminate\\Database\\QueryException',
+        },
+        { status: 500 },
+      ),
+    ),
+  );
+
+  await expect(fetchAttendanceToday()).rejects.toMatchObject({
+    name: 'AttendanceApiError',
+    status: 500,
+    message: '勤怠情報を取得できませんでした。',
+  });
+});

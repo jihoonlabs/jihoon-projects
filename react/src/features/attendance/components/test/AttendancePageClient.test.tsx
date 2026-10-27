@@ -108,3 +108,23 @@ it('keeps the original work date visible while an overnight shift is active', as
   expect(screen.getByRole('button', { name: '出勤' })).toBeDisabled();
   expect(screen.getByRole('button', { name: '退勤' })).toBeEnabled();
 });
+
+it('shows a generic message when the API failure contains server debug details', async () => {
+  vi.mocked(api.fetchAttendanceToday).mockRejectedValue(
+    Object.assign(
+      new Error(
+        'SQLSTATE[HY000]: /private/app.sqlite attendance_records query failed',
+      ),
+      { status: 500 },
+    ),
+  );
+
+  render(<AttendancePageClient />);
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    '勤怠情報を取得できませんでした。',
+  );
+  expect(
+    screen.queryByText(/SQLSTATE|private\/app\.sqlite|attendance_records/),
+  ).not.toBeInTheDocument();
+});
