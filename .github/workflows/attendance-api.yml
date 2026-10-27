@@ -1,13 +1,16 @@
-name: Attendance API
+name: Laravel API and security
 
 on:
   push:
     branches:
       - feature/attendance-api-v1
       - epic/attendance-v1
+      - security/laravel-dependencies-v2
   pull_request:
     branches:
       - epic/attendance-v1
+      - epic/portfolio-live-demo-v1
+      - main
     paths:
       - 'laravel/**'
       - '.github/workflows/attendance-api.yml'
@@ -16,12 +19,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: attendance-api-${{ github.ref }}
+  group: laravel-api-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   laravel:
-    name: Laravel tests and Pint
+    name: Laravel audit, tests and Pint
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -33,13 +36,20 @@ jobs:
       - name: Set up PHP and Composer
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
+          php-version: '8.5'
           tools: composer:v2
           extensions: mbstring, pdo_sqlite, sqlite3, intl
           coverage: none
 
+      - name: Verify patched PHP runtime
+        run: |
+          php -r 'if (version_compare(PHP_VERSION, "8.5.12", "<")) { fwrite(STDERR, "PHP 8.5.12 or newer is required".PHP_EOL); exit(1); } echo PHP_VERSION, PHP_EOL;'
+
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Audit locked dependencies
+        run: composer audit --locked --no-interaction
 
       - name: Check attendance code formatting
         run: >-
@@ -47,6 +57,7 @@ jobs:
           app/Http/Controllers/Attendance/AttendanceController.php
           app/Http/Resources/Attendance/AttendanceRecordResource.php
           app/Models/AttendanceRecord.php
+          app/Models/User.php
           database/migrations/2026_10_20_000001_create_attendance_records_table.php
           routes/api.php
           routes/api/attendance.php
