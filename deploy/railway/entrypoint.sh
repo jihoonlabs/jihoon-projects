@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-PORT="${PORT:-8080}"
+PORT="${PORT:-10000}"
 case "$PORT" in
     ''|*[!0-9]*) echo "PORT must be a numeric TCP port." >&2; exit 1 ;;
 esac
@@ -26,10 +26,11 @@ export QUEUE_CONNECTION=sync
 export MAIL_MAILER=log
 export LOG_CHANNEL=stderr
 
-if [ -n "${RAILWAY_PUBLIC_DOMAIN:-}" ]; then
-    export APP_URL="https://${RAILWAY_PUBLIC_DOMAIN}"
-    export FRONTEND_URL="https://${RAILWAY_PUBLIC_DOMAIN}"
-    export SANCTUM_STATEFUL_DOMAINS="${RAILWAY_PUBLIC_DOMAIN}"
+PUBLIC_HOSTNAME="${RAILWAY_PUBLIC_DOMAIN:-${RENDER_EXTERNAL_HOSTNAME:-}}"
+if [ -n "$PUBLIC_HOSTNAME" ]; then
+    export APP_URL="https://$PUBLIC_HOSTNAME"
+    export FRONTEND_URL="https://$PUBLIC_HOSTNAME"
+    export SANCTUM_STATEFUL_DOMAINS="$PUBLIC_HOSTNAME"
 fi
 
 if [ ! -f "$DB_DATABASE" ]; then
