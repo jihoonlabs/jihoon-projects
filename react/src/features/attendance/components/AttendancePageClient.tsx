@@ -38,9 +38,22 @@ function formatDuration(minutes: number | null): string {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error
-    ? error.message
-    : '勤怠情報を取得できませんでした。';
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'status' in error &&
+    'code' in error &&
+    error.status === 409
+  ) {
+    if (error.code === 'already_clocked_in') {
+      return '本日はすでに出勤しています。';
+    }
+    if (error.code === 'not_working') {
+      return '退勤できる出勤記録がありません。';
+    }
+  }
+
+  return '勤怠情報を取得できませんでした。';
 }
 
 export function AttendancePageClient() {
