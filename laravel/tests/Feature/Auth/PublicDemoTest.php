@@ -16,20 +16,7 @@ class PublicDemoTest extends TestCase
 
     public function test_demo_seed_allows_real_login_and_board_access(): void
     {
-        config(['demo.enabled' => true]);
-        // このシーダーは空の専用DBだけで動かすため、他Featureテストの残存データを除去する。
-        foreach ([
-            'ticket_comments',
-            'project_audit_events',
-            'attendance_records',
-            'tickets',
-            'project_members',
-            'projects',
-            'users',
-        ] as $table) {
-            DB::table($table)->delete();
-        }
-        $this->seed(DemoSeeder::class);
+        $this->seedPublicDemo();
         $this->withHeader('Origin', 'http://localhost:3000')->postJson('/api/auth/login', [
             'email' => 'demo@example.com', 'password' => 'TicketDemo2026!',
         ])->assertOk()->assertJsonPath('user.role', 'user');
@@ -39,17 +26,20 @@ class PublicDemoTest extends TestCase
             ->assertJsonPath('data.0.name', '採用チームの業務改善');
         $this->getJson('/api/tickets')->assertOk()->assertJsonCount(5, 'data');
 
-        $this->postJson('/api/auth/logout')->assertOk();
-        $this->postJson('/api/auth/login', [
-            'email' => 'demo-admin@example.com', 'password' => 'TicketAdmin2026!',
-        ])->assertOk()->assertJsonPath('user.role', 'admin');
-        $this->getJson('/api/projects')->assertOk()->assertJsonCount(2, 'data');
-        $this->getJson('/api/tickets')->assertOk()->assertJsonCount(8, 'data');
-
         $this->assertDatabaseCount('users', 2);
         $this->assertDatabaseCount('projects', 2);
         $this->assertDatabaseCount('tickets', 8);
         $this->assertDatabaseHas('project_members', ['role' => 'leader', 'permission' => 'write']);
+    }
+
+    public function test_demo_admin_can_login_and_access_all_sample_projects(): void
+    {
+        $this->seedPublicDemo();
+        $this->withHeader('Origin', 'http://localhost:3000')->postJson('/api/auth/login', [
+            'email' => 'demo-admin@example.com', 'password' => 'TicketAdmin2026!',
+        ])->assertOk()->assertJsonPath('user.role', 'admin');
+        $this->getJson('/api/projects')->assertOk()->assertJsonCount(2, 'data');
+        $this->getJson('/api/tickets')->assertOk()->assertJsonCount(8, 'data');
     }
 
     public function test_demo_blocks_account_creation_mail_and_oauth(): void
@@ -96,6 +86,24 @@ class PublicDemoTest extends TestCase
         config(['demo.enabled' => true]);
         Project::factory()->create();
         $this->expectException(RuntimeException::class);
+        $this->seed(DemoSeeder::class);
+    }
+
+    private function seedPublicDemo(): void
+    {
+        config(['demo.enabled' => true]);
+        // このシーダーは空の専用DBだけで動かすため、他Featureテストの残存データを除去する。
+        foreach ([
+            'ticket_comments',
+            'project_audit_events',
+            'attendance_records',
+            'tickets',
+            'project_members',
+            'projects',
+            'users',
+        ] as $table) {
+            DB::table($table)->delete();
+        }
         $this->seed(DemoSeeder::class);
     }
 }

@@ -45,7 +45,7 @@ describe('LoginForm 表示・入力検証', () => {
     render(<LoginForm />);
 
     const adminChoice = screen.getByRole('button', {
-      name: '管理者 2プロジェクト',
+      name: /管理者.*2プロジェクト/,
     });
     await user.click(adminChoice);
 
