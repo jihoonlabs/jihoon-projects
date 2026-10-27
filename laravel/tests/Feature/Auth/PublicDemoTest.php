@@ -34,7 +34,8 @@ class PublicDemoTest extends TestCase
             'email' => 'demo@example.com', 'password' => 'TicketDemo2026!',
         ])->assertOk()->assertJsonPath('user.role', 'user');
         $this->getJson('/api/projects')->assertOk();
-        $this->assertDatabaseCount('tickets', 5);
+        $this->assertDatabaseCount('projects', 2);
+        $this->assertDatabaseCount('tickets', 8);
         $this->assertDatabaseHas('project_members', ['role' => 'leader', 'permission' => 'write']);
     }
 
