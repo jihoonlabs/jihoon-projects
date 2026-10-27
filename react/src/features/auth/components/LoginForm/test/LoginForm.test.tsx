@@ -17,6 +17,7 @@ vi.mock('next/navigation', () => ({
 
 describe('LoginForm 表示・入力検証', () => {
   beforeEach(() => {
+    vi.unstubAllEnvs();
     replaceMock.mockReset();
     useAuthStore.setState({
       user: null,
@@ -36,6 +37,25 @@ describe('LoginForm 表示・入力検証', () => {
     expect(
       screen.getByRole('button', { name: 'ログイン' }),
     ).toBeInTheDocument();
+  });
+
+  it('公開デモで管理者アカウントを選択できること', async () => {
+    vi.stubEnv('NEXT_PUBLIC_DEMO_MODE', 'true');
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    const adminChoice = screen.getByRole('button', {
+      name: /管理者.*2プロジェクト/,
+    });
+    await user.click(adminChoice);
+
+    expect(screen.getByLabelText('メールアドレス')).toHaveValue(
+      'demo-admin@example.com',
+    );
+    expect(screen.getByLabelText('パスワード')).toHaveValue(
+      'TicketAdmin2026!',
+    );
+    expect(adminChoice).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('未入力の場合、エラーを表示してログインAPIを呼び出さないこと', async () => {
