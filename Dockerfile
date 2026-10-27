@@ -38,5 +38,5 @@ RUN chmod +x /usr/local/bin/ticket-demo-entrypoint \
         storage/framework/views storage/logs bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache /data
 
-EXPOSE 8080
+EXPOSE 10000
 ENTRYPOINT ["/usr/local/bin/ticket-demo-entrypoint"]
