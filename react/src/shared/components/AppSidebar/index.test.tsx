@@ -6,7 +6,7 @@ import { AppSidebar } from './index';
 const { pathname } = vi.hoisted(() => ({ pathname: vi.fn() }));
 vi.mock('next/navigation', () => ({ usePathname: pathname }));
 
-beforeEach(() => pathname.mockReturnValue('/attendance'));
+beforeEach(() => pathname.mockReturnValue('/tickets'));
 
 it('shows implemented modules and marks the current page', () => {
   render(<AppSidebar />);
@@ -14,19 +14,19 @@ it('shows implemented modules and marks the current page', () => {
   expect(
     screen.getByRole('navigation', { name: 'アプリメニュー' }),
   ).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: '出退勤' })).toHaveAttribute(
-    'href',
-    '/attendance',
-  );
-  expect(screen.getByRole('link', { name: '出退勤' })).toHaveAttribute(
-    'aria-current',
-    'page',
-  );
   expect(screen.getByRole('link', { name: 'チケット' })).toHaveAttribute(
     'href',
     '/tickets',
   );
-  expect(screen.getByRole('link', { name: 'チケット' })).not.toHaveAttribute(
+  expect(screen.getByRole('link', { name: 'チケット' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  expect(screen.getByRole('link', { name: '出退勤' })).toHaveAttribute(
+    'href',
+    '/attendance',
+  );
+  expect(screen.getByRole('link', { name: '出退勤' })).not.toHaveAttribute(
     'aria-current',
   );
 });
