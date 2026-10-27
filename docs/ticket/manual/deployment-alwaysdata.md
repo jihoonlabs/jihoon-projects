@@ -19,11 +19,11 @@
 
 ## 2. 手元で配布物を作る
 
-対象の作業ブランチを取得してから、リポジトリのルートで実行します。Node.js 22以上、pnpm、Git、tarが必要です。依存関係はlockfileを更新しません。
+`main` の最新コミットを取得してから、リポジトリのルートで実行します。Node.js 22以上、pnpm、Git、tarが必要です。依存関係はlockfileを更新しません。
 
 ```bash
-git fetch origin deploy/ticket-alwaysdata-demo
-git switch deploy/ticket-alwaysdata-demo
+git switch main
+git pull --ff-only origin main
 pnpm --dir react install --frozen-lockfile
 node deploy/alwaysdata/build.mjs
 ```
