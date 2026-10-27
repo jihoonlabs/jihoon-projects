@@ -134,7 +134,7 @@ export function TicketBoardView() {
             requestedProjectId &&
             items.some((item) => item.id === requestedProjectId)
               ? requestedProjectId
-              : DEMO_MODE && items.length === 1
+              : DEMO_MODE && items.length > 0
                 ? items[0].id
                 : ALL_PROJECTS;
           initialProjectSelectionRestored.current = true;
@@ -500,6 +500,9 @@ export function TicketBoardView() {
             <li>チケットの「状態」を選ぶと、進み具合を更新できます。</li>
             <li>チケット名を押すと、詳細・編集・コメントを確認できます。</li>
             <li>左の「出退勤」から、出勤・退勤の操作を試せます。</li>
+            <li>
+              「全プロジェクト」にすると色とチケットを見比べられます。変更するときは、個別プロジェクトを選んでください。
+            </li>
           </ol>
           <p>ここは共通デモです。変更内容は他の閲覧者にも表示されます。個人情報は入力しないでください。</p>
         </aside>
