@@ -110,6 +110,11 @@ export function AttendancePageClient() {
   return (
     <main className={styles.page}>
       <h1>勤怠管理</h1>
+      {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
+        <p className={styles.demoNote}>
+          「出勤」を押してから「退勤」を押すだけで試せます。共通デモのため記録は他の閲覧者にも表示されます。
+        </p>
+      )}
 
       <section className={styles.panel} aria-labelledby="today-heading">
         <h2 id="today-heading">今日の勤怠</h2>

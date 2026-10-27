@@ -32,6 +32,7 @@ import styles from './index.module.css';
 
 const ALL_PROJECTS = 'ALL';
 const PROJECT_QUERY_PARAM = 'project';
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
 function updateProjectQuery(projectId: string) {
   const url = new URL(window.location.href);
@@ -133,7 +134,9 @@ export function TicketBoardView() {
             requestedProjectId &&
             items.some((item) => item.id === requestedProjectId)
               ? requestedProjectId
-              : ALL_PROJECTS;
+              : DEMO_MODE && items.length === 1
+                ? items[0].id
+                : ALL_PROJECTS;
           initialProjectSelectionRestored.current = true;
           setSelectedProjectId(initialProjectId);
           updateProjectQuery(initialProjectId);
@@ -490,6 +493,17 @@ export function TicketBoardView() {
 
   return (
     <div className={styles.container}>
+      {DEMO_MODE && (
+        <aside className={styles.demoGuide} aria-label="デモの使い方">
+          <strong>まずはこの3つをお試しください</strong>
+          <ol>
+            <li>チケットの「状態」を選ぶと、進み具合を更新できます。</li>
+            <li>チケット名を押すと、詳細・編集・コメントを確認できます。</li>
+            <li>左の「出退勤」から、出勤・退勤の操作を試せます。</li>
+          </ol>
+          <p>ここは共通デモです。変更内容は他の閲覧者にも表示されます。個人情報は入力しないでください。</p>
+        </aside>
+      )}
       <Header
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}

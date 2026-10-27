@@ -7,8 +7,8 @@ import { Clock3, Ticket } from 'lucide-react';
 import styles from './AppSidebar.module.css';
 
 const items = [
-  { href: '/attendance', label: '出退勤', Icon: Clock3 },
   { href: '/tickets', label: 'チケット', Icon: Ticket },
+  { href: '/attendance', label: '出退勤', Icon: Clock3 },
 ];
 
 export function AppSidebar() {
