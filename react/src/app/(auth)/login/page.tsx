@@ -11,9 +11,9 @@ function LoginContent() {
       {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
         <aside style={{ padding: '1rem', textAlign: 'center' }}>
           <strong>公開デモ</strong>
-          <p>メール: demo@example.com ／ パスワード: TicketDemo2026!</p>
+          <p>一般ユーザーと管理者を選んで、プロジェクトの表示範囲を比べられます。</p>
           <p>
-            架空データを使用しています。入力内容は他の閲覧者と共有されます。個人情報は入力しないでください。
+            データは全員で共有する架空データです。個人情報は入力しないでください。
           </p>
           <p>新規登録・メール送信・Google/LINE認証はデモでは利用できません。</p>
         </aside>

@@ -42,9 +42,20 @@ class DemoSeeder extends Seeder
             ]);
             $user->forceFill(['email_verified_at' => now()])->save();
 
+            $admin = User::create([
+                'name' => 'デモ管理者',
+                'email' => 'demo-admin@example.com',
+                'password' => 'TicketAdmin2026!',
+            ]);
+            $admin->forceFill([
+                'role' => 'admin',
+                'email_verified_at' => now(),
+            ])->save();
+
             foreach ([
                 [
                     'name' => '採用チームの業務改善',
+                    'user_is_member' => true,
                     'tickets' => [
                         ['BACKLOG', '面接評価シートを見直す'],
                         ['TODO', '面接日程の案内を作成する'],
@@ -55,19 +66,23 @@ class DemoSeeder extends Seeder
                 ],
                 [
                     'name' => 'リファラル採用の準備',
+                    'user_is_member' => false,
                     'tickets' => [
                         ['TODO', '社員向け紹介案内を作成する'],
                         ['IN_PROGRESS', '紹介制度の説明資料を更新する'],
                         ['DONE', '説明会の日程を共有する'],
                     ],
                 ],
-            ] as ['name' => $name, 'tickets' => $tickets]) {
+            ] as ['name' => $name, 'user_is_member' => $userIsMember, 'tickets' => $tickets]) {
                 $project = Project::create(['name' => $name]);
+                $owner = $userIsMember ? $user : $admin;
                 $project->forceFill([
-                    'created_by' => $user->id,
+                    'created_by' => $owner->id,
                     'next_ticket_number' => count($tickets) + 1,
                 ])->save();
-                $project->members()->attach($user->id, ['role' => 'leader', 'permission' => 'write']);
+                if ($userIsMember) {
+                    $project->members()->attach($user->id, ['role' => 'leader', 'permission' => 'write']);
+                }
 
                 foreach ($tickets as $index => [$status, $title]) {
                     Ticket::create([
@@ -78,7 +93,7 @@ class DemoSeeder extends Seeder
                         'status' => $status,
                         'priority' => 'MEDIUM',
                         'position' => 0,
-                        'assignee_id' => $user->id,
+                        'assignee_id' => $userIsMember ? $user->id : null,
                     ]);
                 }
             }

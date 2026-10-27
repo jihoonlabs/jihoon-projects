@@ -18,6 +18,10 @@ import { validateLoginForm } from '@/features/auth/validation/auth';
 import styles from './LoginForm.module.css';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+const DEMO_ACCOUNTS = {
+  user: { email: 'demo@example.com', password: 'TicketDemo2026!' },
+  admin: { email: 'demo-admin@example.com', password: 'TicketAdmin2026!' },
+};
 
 export function LoginForm({
   error,
@@ -87,6 +91,17 @@ export function LoginForm({
     verificationRequest.current?.abort();
     verificationRequest.current = null;
     setResendingVerificationEmail(false);
+  };
+
+  const selectDemoAccount = (account: keyof typeof DEMO_ACCOUNTS) => {
+    cancelVerificationRequest();
+    verificationRevision.current += 1;
+    setEmail(DEMO_ACCOUNTS[account].email);
+    setPassword(DEMO_ACCOUNTS[account].password);
+    setErrors({});
+    setServerError('');
+    setSuccessMessage('');
+    setVerificationEmailRequired(false);
   };
 
   useEffect(() => () => verificationRequest.current?.abort(), []);
@@ -229,6 +244,35 @@ export function LoginForm({
         )}
 
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
+          {DEMO_MODE && (
+            <div
+              className={styles.demoAccountChoices}
+              role="group"
+              aria-label="デモ用アカウント"
+            >
+              <button
+                type="button"
+                className={styles.demoAccountButton}
+                aria-pressed={email === DEMO_ACCOUNTS.user.email}
+                disabled={loading}
+                onClick={() => selectDemoAccount('user')}
+              >
+                一般ユーザー
+                <span>1プロジェクト</span>
+              </button>
+              <button
+                type="button"
+                className={styles.demoAccountButton}
+                aria-pressed={email === DEMO_ACCOUNTS.admin.email}
+                disabled={loading}
+                onClick={() => selectDemoAccount('admin')}
+              >
+                管理者
+                <span>2プロジェクト</span>
+              </button>
+            </div>
+          )}
+
           <div className={styles.inputGroup}>
             <label htmlFor="email">メールアドレス</label>
 

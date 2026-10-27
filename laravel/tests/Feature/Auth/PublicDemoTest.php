@@ -33,7 +33,20 @@ class PublicDemoTest extends TestCase
         $this->withHeader('Origin', 'http://localhost:3000')->postJson('/api/auth/login', [
             'email' => 'demo@example.com', 'password' => 'TicketDemo2026!',
         ])->assertOk()->assertJsonPath('user.role', 'user');
-        $this->getJson('/api/projects')->assertOk();
+        $this->getJson('/api/projects')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', '採用チームの業務改善');
+        $this->getJson('/api/tickets')->assertOk()->assertJsonCount(5, 'data');
+
+        $this->postJson('/api/auth/logout')->assertOk();
+        $this->postJson('/api/auth/login', [
+            'email' => 'demo-admin@example.com', 'password' => 'TicketAdmin2026!',
+        ])->assertOk()->assertJsonPath('user.role', 'admin');
+        $this->getJson('/api/projects')->assertOk()->assertJsonCount(2, 'data');
+        $this->getJson('/api/tickets')->assertOk()->assertJsonCount(8, 'data');
+
+        $this->assertDatabaseCount('users', 2);
         $this->assertDatabaseCount('projects', 2);
         $this->assertDatabaseCount('tickets', 8);
         $this->assertDatabaseHas('project_members', ['role' => 'leader', 'permission' => 'write']);
