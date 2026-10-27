@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>営業用 人材分布レポート自動作成ツール</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+
+  <style>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; max-width: 1040px; margin: 0 auto; padding: 32px 20px 56px; background-color: #f1f5f9; color: var(--ink);
+  background: #f5f7fb;
+}
+.container { background: #ffffff; border-radius: 20px; padding: clamp(20px, 4vw, 40px); box-shadow: 0 18px 50px #1e293b0d; border: 1px solid #edf0f5; }
+h2 {
+  color: #0f172a; font-size: clamp(1.25rem, 2.5vw, 1.65rem); border-bottom: 2px solid #e2e8f0; padding-bottom: 14px; margin-top: 0; display: flex; align-items: center; gap: 10px; justify-content: space-between;
+  border: 0; padding: 0 0 22px; margin-bottom: 24px;
+}
+.tag-preview { display: inline-block; background: #eef2ff; color: #4338ca; font-size: 0.75rem; padding: 6px 11px; border-radius: 999px; font-weight: bold; white-space: nowrap; }
+.drop-zone { border: 2px dashed #94a3b8; border-radius: 10px; padding: 32px 20px; text-align: center; background-color: #f8fafc; cursor: pointer; transition: all 0.2s ease; border-color: #c7d2fe; background: #f8f9ff; }
+.drop-zone:hover { background-color: #f1f5f9; border-color: var(--accent); background: #eef2ff; }
+.section-title { font-weight: 700; margin-top: 28px; margin-bottom: 10px; font-size: 0.95rem; color: #26334a; }
+textarea, select, input[type="text"], input[type="number"] { width: 100%; padding: 11px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 0.9rem; }
+.checkbox-container { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; max-height: 180px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 8px; }
+.checkbox-item { display: inline-flex; align-items: center; gap: 6px; background: #ffffff; padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.86rem; cursor: pointer; }
+.checkbox-item:hover { border-color: #2563eb; }
+.checkbox-item.custom-item { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; font-weight: bold; }
+.custom-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; margin-top: 12px; }
+#custom-charts-container { display: flex; flex-direction: column; gap: 12px; }
+.custom-card-title { font-size: 0.92rem; font-weight: bold; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.custom-card-title .btn-small { flex: 0 0 auto; width: auto; padding: 4px 8px; font-size: 0.72rem; }
+.grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 0.82rem; font-weight: bold; color: #475569; margin-bottom: 4px; }
+.default-toggle { display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 0.92rem; color: #0f172a; cursor: pointer; user-select: none; }
+.input-range-group, .color-picker-wrapper { display: flex; align-items: center; gap: 8px; }
+input[type="color"] { -webkit-appearance: none; border: none; width: 40px; height: 40px; border-radius: 8px; cursor: pointer; background: transparent; }
+input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type="color"]::-webkit-color-swatch { border: 1px solid #cbd5e1; border-radius: 8px; }
+.opt-grid { display: flex; gap: 16px; }
+.opt-grid > div { flex: 1; }
+.btn-group { display: flex; gap: 12px; margin-top: 28px; }
+button {
+  flex: 1; padding: 15px; border: none; border-radius: 9px; font-weight: 700; cursor: pointer; font-size: 1.05rem;
+  transition:
+          transform 0.15s ease,
+          box-shadow 0.15s ease,
+          background-color 0.15s ease;
+}
+.btn-small { padding: 4px 10px; font-size: 0.75rem; background: #e2e8f0; color: #334155; border-radius: 4px; cursor: pointer; border: none; font-weight: bold; }
+.btn-small:hover { background: #cbd5e1; }
+.output-order-list { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+.output-order-item { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #cbd5e1; border-radius: 7px; padding: 8px 10px; cursor: pointer; }
+.output-order-item:hover { border-color: #2563eb; }
+.output-order-item .order-number { width: 24px; font-weight: bold; color: #2563eb; text-align: center; }
+.output-order-item .order-name { flex: 1; font-size: 0.86rem; font-weight: 600; }
+.custom-extract-card { position: relative; }
+.btn-pptx { background-color: #2563eb; color: white; box-shadow: 0 8px 18px #4f46e52e; background: var(--accent); }
+.btn-pptx:hover { background-color: #1d4ed8; transform: translateY(-1px); background: #4338ca; box-shadow: 0 10px 22px #4f46e53b; }
+#status { margin-top: 12px; font-size: 0.88rem; color: #1e293b; font-weight: 600; }
+#chart-render-area { position: absolute; left: -9999px; top: -9999px; width: 1000px; height: 1000px; }
+/* 1ファイルで配布できる形を保ったまま、画面を整理する */
+:root { color-scheme: light; --ink: #172033; --muted: #64748b; --line: #e2e8f0; --accent: #4f46e5; }
+textarea,
+      select,
+      input[type="text"],
+      input[type="number"] { border-color: var(--line); background: #fff; }
+textarea:focus,
+      select:focus,
+      input:focus { outline: 3px solid #4f46e51f; border-color: var(--accent); }
+button:focus-visible,
+      input:focus-visible,
+      select:focus-visible,
+      textarea:focus-visible { outline: 3px solid #4f46e55c; outline-offset: 2px; }
+@media (max-width: 640px) {
+  body { padding: 12px; }
+  .container { padding: 20px 16px; border-radius: 16px; }
+  h2 { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .grid-2col,
+        .opt-grid { grid-template-columns: 1fr; display: grid; gap: 0; }
+  .btn-group { flex-direction: column; }
+  .checkbox-container { max-height: 240px; }
+}
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>
+      <span>📊 営業用 人材分布 レポート作成ツール</span>
+      <span class="tag-preview">v64 Click-Order Custom Sorting</span>
+    </h2>
+
+    <div class="section-title">1. Excel / CSV ファイル選択 または 貼り付け</div>
+    <div id="drop-zone" class="drop-zone" onclick="document.getElementById('file-input').click()">
+      <span id="drop-text">📄 Excel (.xlsx, .xls) / CSV ファイルをドラッグ＆ドロップ<br>または クリックしてファイル選択</span>
+      <input type="file" id="file-input" style="display:none;" accept=".xlsx, .xls, .csv" onchange="handleFile(this.files[0])">
+    </div>
+
+    <div style="margin-top: 10px;">
+      <textarea id="paste-input" rows="3" placeholder="スプレッドシートの表データをここに直接貼り付け (Ctrl+V)"></textarea>
+      <button onclick="handlePaste()" style="margin-top:6px; padding:9px; background:#475569; color:white; font-size:0.85rem; width:100%;">貼り付けデータを反映</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div class="section-title">2. 出力したい項目を選択 (複数選択可能)</div>
+    <div id="checkbox-list" class="checkbox-container">
+      <span style="font-size:0.85rem; color:#94a3b8;">-- データ読込後に項目一覧が表示されます --</span>
+    </div>
+
+    <div style="margin-top:10px;">
+      <button type="button" class="btn-small" onclick="addCustomChart()" style="width:100%; padding:9px;">➕ カスタム抽出グラフを追加</button>
+    </div>
+    <div id="custom-charts-container"></div>
+
+    <div id="output-order-section" style="display:none;">
+      <div class="section-title">詳細設定: グラフ出力順</div>
+      <div style="font-size:0.8rem; color:#64748b;">カスタムグラフ使用時のみ、通常グラフを含めてPPTXの出力順を変更できます。下のボタンを押してから、希望する順番に項目をクリックしてください。</div>
+      <div style="margin-top:8px;">
+        <button type="button" class="btn-small" onclick="resetOutputOrderSelection()">順番を選び直す</button>
+      </div>
+      <div id="output-order-list" class="output-order-list"></div>
+    </div>
+
+    <div class="opt-grid">
+      <div>
+        <div class="section-title">3. 1スライドの配置数</div>
+        <select id="items-per-page" onchange="updateScaleRanges()">
+          <option value="3" selected>3個配置 (標準・バランス重視)</option>
+          <option value="2">2個配置 (ゆったり・大きめ)</option>
+          <option value="1">1個配置 (特大・1項目強調)</option>
+        </select>
+      </div>
+
+      <div>
+        <div class="section-title">4. グラフデザイン形式を選択</div>
+        <select id="chart-type" onchange="updateScaleRanges()">
+          <option value="pie" selected>⭕ 単色グラデーション・円サイズ極大化ドーナツ</option>
+          <option value="bar">📊 スリム＆モダン横棒グラフ (おすすめ)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-title">5. デザイン詳細設定</div>
+    <div class="custom-card">
+      <label class="default-toggle">
+        <input type="checkbox" id="use-default-style" checked onchange="toggleCustomPanel()">
+        <span>✨ 標準ブルーグラデーションを使用 (チェック解除で好きなテーマ色を選択)</span>
+      </label>
+
+      <div id="custom-panel" class="grid-2col" style="display:none; margin-top:14px; padding-top:14px; border-top:1px dashed #cbd5e1;">
+        <div>
+          <label id="size-label" style="font-size: 0.82rem; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
+            ⭕ 円の直径・サイズ (150 ~ 400px)
+          </label>
+          <div class="input-range-group">
+            <input type="range" id="size-slider" min="150" max="400" value="360" oninput="document.getElementById('size-num').value = this.value">
+            <input type="number" id="size-num" min="150" max="400" value="360" style="width: 80px;" oninput="document.getElementById('size-slider').value = this.value">
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size: 0.82rem; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
+            🎨 メインテーマカラー選択 (最も濃い基準色)
+          </label>
+          <div class="color-picker-wrapper">
+            <input type="color" id="custom-color-picker" value="#0F3854" oninput="document.getElementById('color-code-display').innerText = this.value.toUpperCase()">
+            <span id="color-code-display" style="font-size: 0.85rem; font-weight: 600; color: #64748b;">#0F3854</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn-pptx" onclick="generatePPTX()">🚀 PPTX スライド出力</button>
+    </div>
+  </div>
+
+  <div id="chart-render-area">
+    <canvas id="exportCanvas" width="1000" height="1000"></canvas>
+  </div>
+
+  <script>
+    let rawData = [], headers = [], globalTotalMembers = 0;
+    let customCharts = [];
+    let outputOrder = [];
+    let outputOrderClickOrder = [];
+    let isOutputOrderReordering = false;
+    let customChartSequence = 0;
+    const naturalCollator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
+
+    const valClean = v => (v === undefined || v === null) ? "" : String(v).trim().replace(/^(undefined|null)$/, "");
+
+    const dropZone = document.getElementById('drop-zone');
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.background = '#e2e8f0'; });
+    dropZone.addEventListener('dragleave', () => { dropZone.style.background = '#f8fafc'; });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.background = '#f8fafc';
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+
+    function applyParsedData(parsed, nameInfo) {
+      rawData = parsed.filter(row => Object.values(row).some(v => valClean(v).length > 0));
+      globalTotalMembers = rawData.length;
+      if (rawData.length > 0) {
+        headers = Object.keys(rawData[0]);
+        customCharts = [];
+        outputOrder = [];
+        outputOrderClickOrder = [];
+        isOutputOrderReordering = false;
+        customChartSequence = 0;
+        document.getElementById('custom-charts-container').innerHTML = '';
+        renderCheckboxes();
+        syncOutputOrder();
+        document.getElementById('status').innerText = `✅ ${nameInfo} (総人員: ${globalTotalMembers}名基準)`;
+      }
+    }
+
+    function handleFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        applyParsedData(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" }), `読込完了: ${file.name}`);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function handlePaste() {
+      const text = document.getElementById('paste-input').value.trim();
+      if (!text) return;
+      const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+      if (lines.length < 2) return;
+
+      const isTab = lines[0].includes('\t');
+      headers = (isTab ? lines[0].split('\t') : lines[0].split(/\s{2,}/)).map(h => h.trim());
+
+      const parsed = lines.slice(1).map(line => {
+        const vals = isTab ? line.split('\t') : line.split(/\s{2,}/);
+        let obj = {};
+        headers.forEach((h, idx) => obj[h] = valClean(vals[idx]));
+        return obj;
+      });
+      applyParsedData(parsed, "貼り付けデータ適用完了");
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    }
+
+    function renderCheckboxes() {
+      const container = document.getElementById('checkbox-list');
+      container.innerHTML = headers.map(h =>
+        `<label class="checkbox-item"><input type="checkbox" class="normal-chart-chk" value="${escapeHtml(h)}" checked onchange="syncOutputOrder()"> ${escapeHtml(h)}</label>`
+      ).join('');
+    }
+
+    function getCustomChart(id) {
+      return customCharts.find(chart => chart.id === id);
+    }
+
+    function addCustomChart() {
+      if (!headers.length) {
+        alert("データを先に読み込んでください。");
+        return;
+      }
+      const id = `custom-${++customChartSequence}`;
+      customCharts.unshift({ id, column: headers[0], title: `${headers[0]} (抽出分布)`, selectedKeys: [], clickOrder: [] });
+      initializeCustomSelection(id);
+      renderAllCustomCharts();
+      syncOutputOrder();
+    }
+
+    function removeCustomChart(id) {
+      customCharts = customCharts.filter(chart => chart.id !== id);
+      outputOrder = outputOrder.filter(item => item.id !== id);
+
+      outputOrderClickOrder = outputOrderClickOrder.filter(itemId => itemId !== id);
+
+      if (!customCharts.length) {
+        customChartSequence = 0;
+        outputOrder = [];
+        outputOrderClickOrder = [];
+        isOutputOrderReordering = false;
+      }
+
+      renderAllCustomCharts();
+      syncOutputOrder();
+    }
+
+    function renderAllCustomCharts() {
+      const container = document.getElementById('custom-charts-container');
+      container.innerHTML = '';
+      customCharts.forEach(chart => renderCustomChart(chart.id));
+    }
+
+    function renderCustomChart(id, initializeSelection = false) {
+      const chart = getCustomChart(id);
+      if (!chart) return;
+      const container = document.getElementById('custom-charts-container');
+      let card = document.getElementById(id);
+      if (!card) {
+        card = document.createElement('div');
+        card.id = id;
+        card.className = 'custom-card custom-extract-card';
+        container.appendChild(card);
+      }
+
+      card.innerHTML = `
+        <div class="custom-card-title">
+          <span>⚙ カスタム抽出グラフ ${customCharts.length - customCharts.findIndex(item => item.id === id)}</span>
+          <button type="button" class="btn-small" onclick="removeCustomChart('${id}')">削除</button>
+        </div>
+        <div class="grid-2col">
+          <div class="form-group">
+            <label>対象カラム選択</label>
+            <select class="custom-target-col" onchange="changeCustomColumn('${id}', this.value)">
+              ${headers.map(h => `<option value="${escapeHtml(h)}" ${h === chart.column ? 'selected' : ''}>${escapeHtml(h)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>グラフタイトル</label>
+            <input type="text" class="custom-chart-title" value="${escapeHtml(chart.title)}" oninput="updateCustomTitle('${id}', this.value)">
+          </div>
+        </div>
+        <div style="font-size:0.8rem; color:#64748b; margin-bottom:10px;">選択した順番でPPTXに配置されます。</div>
+        <div style="display:flex; gap:6px; margin-bottom:8px;">
+          <button type="button" class="btn-small" onclick="selectAllCustomItems('${id}', true)">全選択</button>
+          <button type="button" class="btn-small" onclick="selectAllCustomItems('${id}', false)">全解除</button>
+        </div>
+        <div class="form-group">
+          <label>抽出したいデータ項目を選択 (表示順がPPTXの配置順です)</label>
+          <div class="checkbox-container custom-keywords-list" style="max-height:160px; background:#fff;"></div>
+        </div>`;
+
+      if (initializeSelection) initializeCustomSelection(id);
+      else refreshCustomChartUI(id);
+    }
+
+    function initializeCustomSelection(id) {
+      const chart = getCustomChart(id);
+      if (!chart) return;
+      const keys = Object.keys(getColumnCounts(chart.column)).sort(naturalCollator.compare);
+      chart.selectedKeys = [...keys];
+      chart.clickOrder = [...keys];
+      refreshCustomChartUI(id);
+    }
+
+    function changeCustomColumn(id, column) {
+      const chart = getCustomChart(id);
+      if (!chart) return;
+      chart.column = column;
+      chart.title = `${column} (抽出分布)`;
+      document.querySelector(`#${id} .custom-chart-title`).value = chart.title;
+      initializeCustomSelection(id);
+      renderOutputOrder();
+    }
+
+    function updateCustomTitle(id, title) {
+      const chart = getCustomChart(id);
+      if (!chart) return;
+      chart.title = title;
+      renderOutputOrder();
+    }
+
+    function getColumnCounts(col) {
+      const counts = {};
+      rawData.forEach(row => {
+        const val = formatValueLabel(row[col]);
+        if (val && val !== "未入力") counts[val] = (counts[val] || 0) + 1;
+      });
+      return counts;
+    }
+
+    function getOrderedCustomKeys(chart) {
+      return chart.clickOrder.filter(key => chart.selectedKeys.includes(key));
+    }
+
+    function handleCustomKeywordClick(id, checkbox) {
+      const chart = getCustomChart(id);
+      if (!chart) return;
+      const key = checkbox.value;
+      if (checkbox.checked) {
+        if (!chart.selectedKeys.includes(key)) chart.selectedKeys.push(key);
+        chart.clickOrder = chart.clickOrder.filter(item => item !== key);
+        chart.clickOrder.push(key);
+      } else {
+        chart.selectedKeys = chart.selectedKeys.filter(item => item !== key);
+        chart.clickOrder = chart.clickOrder.filter(item => item !== key);
+      }
+      refreshCustomChartUI(id);
+    }
+
+    function selectAllCustomItems(id, flag) {
+      const chart = getCustomChart(id);
+      if (!chart) return;
+      const keys = Object.keys(getColumnCounts(chart.column)).sort(naturalCollator.compare);
+      chart.selectedKeys = flag ? [...keys] : [];
+      chart.clickOrder = flag ? [...keys] : [];
+      refreshCustomChartUI(id);
+    }
+
+    function refreshCustomChartUI(id) {
+      const chart = getCustomChart(id);
+      const card = document.getElementById(id);
+      if (!chart || !card) return;
+      const counts = getColumnCounts(chart.column);
+      const allKeys = Object.keys(counts).sort(naturalCollator.compare);
+      const orderedSelected = getOrderedCustomKeys(chart);
+      const unselected = allKeys.filter(key => !chart.selectedKeys.includes(key));
+      const displayKeys = [...orderedSelected, ...unselected];
+      const selectedTotal = orderedSelected.reduce((sum, key) => sum + (counts[key] || 0), 0);
+      const list = card.querySelector('.custom-keywords-list');
+
+      list.innerHTML = displayKeys.map(key => {
+        const selected = chart.selectedKeys.includes(key);
+        const order = selected ? orderedSelected.indexOf(key) + 1 : null;
+        const count = counts[key] || 0;
+        const pct = selected && selectedTotal > 0 ? ((count / selectedTotal) * 100).toFixed(1) : null;
+        return `<label class="checkbox-item custom-kw-item">
+          <span class="order-badge" style="font-size:0.75rem; font-weight:bold; color:#2563eb; ${order ? '' : 'display:none;'}">${order ? order + '.' : ''}</span>
+          <input type="checkbox" value="${escapeHtml(key)}" ${selected ? 'checked' : ''} onchange="handleCustomKeywordClick('${id}', this)">
+          <span>${escapeHtml(key)}</span>
+          <span style="font-size:0.75rem; font-weight:bold; color:${selected ? '#2563eb' : '#94a3b8'};">(${count}名 / ${pct !== null ? pct + '%' : '除外'})</span>
+        </label>`;
+      }).join('');
+    }
+
+    function syncOutputOrder() {
+      const orderSection = document.getElementById('output-order-section');
+      if (orderSection) orderSection.style.display = customCharts.length ? 'block' : 'none';
+      const selectedColumns = Array.from(document.querySelectorAll('.normal-chart-chk:checked')).map(cb => cb.value);
+      const activeIds = new Set([...selectedColumns.map(col => `normal:${col}`), ...customCharts.map(chart => chart.id)]);
+      outputOrder = outputOrder.filter(item => activeIds.has(item.id));
+      outputOrderClickOrder = outputOrderClickOrder.filter(id => activeIds.has(id));
+
+      selectedColumns.forEach(column => {
+        const id = `normal:${column}`;
+        if (!outputOrder.some(item => item.id === id)) outputOrder.push({ id, type: 'normal', column });
+      });
+      customCharts.forEach(chart => {
+        if (!outputOrder.some(item => item.id === chart.id)) outputOrder.push({ id: chart.id, type: 'custom', customId: chart.id });
+      });
+
+      if (customCharts.length && !isOutputOrderReordering) {
+        outputOrderClickOrder = outputOrder.map(item => item.id);
+      }
+
+      renderOutputOrder();
+    }
+
+    function resetOutputOrderSelection() {
+      outputOrderClickOrder = [];
+      isOutputOrderReordering = true;
+      renderOutputOrder();
+    }
+
+    function handleOutputOrderClickByIndex(index) {
+      if (!isOutputOrderReordering) return;
+      const id = outputOrder[index]?.id;
+      if (!id || outputOrderClickOrder.includes(id)) return;
+
+      outputOrderClickOrder.push(id);
+
+      const byId = new Map(outputOrder.map(item => [item.id, item]));
+      const ordered = outputOrderClickOrder.map(itemId => byId.get(itemId)).filter(Boolean);
+      const remaining = outputOrder.filter(item => !outputOrderClickOrder.includes(item.id));
+      outputOrder = [...ordered, ...remaining];
+
+      if (outputOrderClickOrder.length === outputOrder.length) {
+        isOutputOrderReordering = false;
+      }
+      renderOutputOrder();
+    }
+
+    function renderOutputOrder() {
+      const container = document.getElementById('output-order-list');
+      if (!container) return;
+      if (!outputOrder.length) {
+        container.innerHTML = '<span style="font-size:0.8rem; color:#94a3b8;">出力するグラフを選択してください。</span>';
+        return;
+      }
+      container.innerHTML = outputOrder.map((item, index) => {
+        const chart = item.type === 'custom' ? getCustomChart(item.customId) : null;
+        const name = item.type === 'custom' ? `カスタム: ${chart?.title || '名称未設定'}` : item.column;
+        const selectedIndex = outputOrderClickOrder.indexOf(item.id);
+        const checked = selectedIndex >= 0;
+        const order = checked ? selectedIndex + 1 : null;
+        return `<div class="output-order-item" onclick="handleOutputOrderClickByIndex(${index})">
+          <span class="order-number">${order ? order + '.' : ''}</span>
+          <span class="order-name">${escapeHtml(name)}</span>
+        </div>`;
+      }).join('');
+    }
+
+    function updateScaleRanges() {
+      const itemsPerPage = parseInt(document.getElementById('items-per-page').value, 10);
+      const isPie = document.getElementById('chart-type').value === 'pie';
+
+      let minVal = isPie ? 150 : 100;
+      let maxVal = 400;
+      let defaultVal = 360;
+
+      if (itemsPerPage === 1) {
+        maxVal = 600; defaultVal = 500;
+      } else if (itemsPerPage === 2) {
+        maxVal = 480; defaultVal = isPie ? 420 : 350;
+      } else {
+        maxVal = 400; defaultVal = isPie ? 360 : 190;
+      }
+
+      const slider = document.getElementById('size-slider');
+      const numInput = document.getElementById('size-num');
+
+      document.getElementById('size-label').innerText = isPie ? `⭕ 円の直径・サイズ (${minVal} ~ ${maxVal}px)` : `📊 棒の最大幅・長さを調整 (${minVal} ~ ${maxVal}px)`;
+      slider.min = minVal; slider.max = maxVal; slider.value = defaultVal;
+      numInput.min = minVal; numInput.max = maxVal; numInput.value = slider.value;
+
+      toggleCustomPanel();
+    }
+
+    function toggleCustomPanel() {
+      document.getElementById('custom-panel').style.display = document.getElementById('use-default-style').checked ? 'none' : 'grid';
+    }
+
+    function formatValueLabel(val) {
+      let str = valClean(val);
+      if (!str) return "未入力";
+      if (!isNaN(str) && Number(str) > 40000 && Number(str) < 60000) {
+        let d = XLSX.SSF.parse_date_code(Number(str));
+        if (d) return `${d.y}年${d.m}月`;
+      }
+      return str;
+    }
+
+    function getAggregatedData(targetCol) {
+      const counts = getColumnCounts(targetCol);
+      const labels = Object.keys(counts).sort((a, b) => (counts[b] - counts[a]) || naturalCollator.compare(a, b));
+      const values = labels.map(key => counts[key]);
+      return { labels, values, total: values.reduce((sum, value) => sum + value, 0) };
+    }
+
+    function getCustomExtractedData(id) {
+      const chart = getCustomChart(id);
+      if (!chart) return { labels: [], values: [], total: 0 };
+      const counts = getColumnCounts(chart.column);
+      const labels = getOrderedCustomKeys(chart);
+      const values = labels.map(key => counts[key] || 0);
+      return { labels, values, total: values.reduce((sum, value) => sum + value, 0) };
+    }
+
+    function generateMonochromePalette(baseHex, totalSteps) {
+      let num = parseInt(baseHex.replace('#',''), 16);
+      let r = (num >> 16) & 0xFF;
+      let g = (num >> 8) & 0xFF;
+      let b = num & 0xFF;
+
+      let palette = [];
+      let steps = Math.max(totalSteps, 1);
+
+      for (let i = 0; i < steps; i++) {
+        let factor = i / (steps > 1 ? steps - 0.2 : 1);
+        let nr = Math.round(r + (255 - r) * (factor * 0.75));
+        let ng = Math.round(g + (255 - g) * (factor * 0.75));
+        let nb = Math.round(b + (255 - b) * (factor * 0.75));
+
+        let hex = '#' + ((1 << 24) + (nr << 16) + (ng << 8) + nb).toString(16).slice(1).toUpperCase();
+        palette.push(hex);
+      }
+      return palette;
+    }
+
+    function renderCustomDonutCanvas(colName, labels, values, total, isDefault, itemsPerPage) {
+      return new Promise((resolve) => {
+        const canvas = document.getElementById('exportCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const centerX = canvas.width / 2, centerY = canvas.height / 2;
+        const defaultRadius = itemsPerPage === 1 ? 480 : (itemsPerPage === 2 ? 420 : 360);
+        const outerRadius = isDefault ? defaultRadius : parseInt(document.getElementById('size-num').value, 10);
+        const innerRadius = Math.round(outerRadius * 0.22);
+
+        let baseColor = isDefault ? '#0F3854' : document.getElementById('custom-color-picker').value;
+        let palette = generateMonochromePalette(baseColor, labels.length);
+
+        let startAngle = -Math.PI / 2; // 12時方向から配置を開始
+
+        labels.forEach((label, i) => {
+          let sliceAngle = total > 0 ? (values[i] / total) * 2 * Math.PI : 0;
+          let endAngle = startAngle + sliceAngle;
+
+          let sliceColor = palette[i % palette.length];
+
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, outerRadius, startAngle, endAngle);
+          ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true);
+          ctx.closePath();
+          ctx.fillStyle = sliceColor;
+          ctx.fill();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 3.0;
+          ctx.stroke();
+
+          startAngle = endAngle; // 時計回りに次の項目へ進む
+        });
+
+        startAngle = -Math.PI / 2;
+        let leftCallouts = [], rightCallouts = [];
+
+        labels.forEach((label, i) => {
+          let val = values[i], pctNum = total > 0 ? (val / total) * 100 : 0, pct = pctNum.toFixed(1);
+          let sliceAngle = total > 0 ? (val / total) * 2 * Math.PI : 0, midAngle = startAngle + sliceAngle / 2;
+          let displayLabel = label.length > 10 ? label.slice(0, 9) + '..' : label;
+
+          if (pctNum >= 4.5) {
+            let midR = (innerRadius + outerRadius) * 0.58;
+            let textX = centerX + Math.cos(midAngle) * midR, textY = centerY + Math.sin(midAngle) * midR;
+            ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.font = 'bold 20px -apple-system, Meiryo, sans-serif'; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 4.5;
+            ctx.strokeText(displayLabel, textX, textY - 14); ctx.fillStyle = '#0F172A'; ctx.fillText(displayLabel, textX, textY - 14);
+            ctx.font = 'bold 18px Meiryo, sans-serif'; ctx.strokeText(`${val}名 (${pct}%)`, textX, textY + 14);
+            ctx.fillStyle = '#1E293B'; ctx.fillText(`${val}名 (${pct}%)`, textX, textY + 14);
+            ctx.restore();
+          } else {
+            let isRight = Math.cos(midAngle) >= 0;
+            let item = {
+              displayLabel, val, pct,
+              startX: centerX + Math.cos(midAngle) * outerRadius * 0.88, startY: centerY + Math.sin(midAngle) * outerRadius * 0.88,
+              breakX: centerX + Math.cos(midAngle) * (outerRadius + 22), breakY: centerY + Math.sin(midAngle) * (outerRadius + 22),
+              targetY: centerY + Math.sin(midAngle) * (outerRadius + 22)
+            };
+            (isRight ? rightCallouts : leftCallouts).push(item);
+          }
+          startAngle += sliceAngle;
+        });
+
+        const spreadY = items => {
+          items.sort((a, b) => a.targetY - b.targetY);
+          for (let i = 1; i < items.length; i++) {
+            if (items[i].targetY - items[i - 1].targetY < 32) items[i].targetY = items[i - 1].targetY + 32;
+          }
+        };
+        spreadY(leftCallouts); spreadY(rightCallouts);
+
+        const drawCallouts = (items, isRight) => {
+          items.forEach(item => {
+            let endX = item.breakX + (isRight ? 25 : -25), labelX = endX + (isRight ? 6 : -6);
+            ctx.save(); ctx.beginPath(); ctx.moveTo(item.startX, item.startY); ctx.lineTo(item.breakX, item.targetY); ctx.lineTo(endX, item.targetY);
+            ctx.strokeStyle = '#64748B'; ctx.lineWidth = 2.0; ctx.stroke();
+            ctx.beginPath(); ctx.arc(item.startX, item.startY, 3.0, 0, 2 * Math.PI); ctx.fillStyle = '#64748B'; ctx.fill();
+
+            ctx.textAlign = isRight ? 'left' : 'right'; ctx.textBaseline = 'middle';
+            let textStr = `${item.displayLabel} ${item.val}名 (${item.pct}%)`;
+            ctx.font = 'bold 15px Meiryo, sans-serif'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4.0;
+            ctx.strokeText(textStr, labelX, item.targetY); ctx.fillStyle = '#0F172A'; ctx.fillText(textStr, labelX, item.targetY);
+            ctx.restore();
+          });
+        };
+        drawCallouts(leftCallouts, false); drawCallouts(rightCallouts, true);
+
+        let titleText = colName;
+        ctx.fillStyle = '#0f172a'; ctx.font = 'bold 22px -apple-system, Meiryo, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(titleText.length > 6 ? titleText.slice(0, 5) + '..' : titleText, centerX, centerY);
+        resolve(canvas.toDataURL('image/png'));
+      });
+    }
+
+    async function generatePPTX() {
+      syncOutputOrder();
+      const selectedCharts = [...outputOrder];
+      if (!rawData.length || !selectedCharts.length) {
+        alert(!rawData.length ? "データを先に読み込んでください。" : "出力したいグラフを1つ以上選択してください。");
+        return;
+      }
+
+      const chartType = document.getElementById('chart-type').value;
+      const isDefault = document.getElementById('use-default-style').checked;
+      const itemsPerPage = parseInt(document.getElementById('items-per-page').value, 10);
+
+      let pptx = new PptxGenJS();
+      pptx.defineLayout({ name: 'WIDE_16_9', width: 13.333, height: 7.5 }); pptx.layout = 'WIDE_16_9';
+
+      for (let pageStart = 0; pageStart < selectedCharts.length; pageStart += itemsPerPage) {
+        let pageCharts = selectedCharts.slice(pageStart, pageStart + itemsPerPage), countInSlide = pageCharts.length, slide = pptx.addSlide();
+
+        slide.addShape(pptx.ShapeType.rect, { x: 0.8, y: 0.45, w: 1.5, h: 0.32, fill: { color: '3B82F6' } });
+        slide.addText("About Report", { x: 0.8, y: 0.45, w: 1.5, h: 0.32, fontSize: 10, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', fontFace: 'Meiryo' });
+        slide.addText("人材スキル・業界の分布分析", { x: 2.45, y: 0.45, w: 6.0, h: 0.32, fontSize: 11, color: '64748B', valign: 'middle', fontFace: 'Meiryo' });
+        slide.addText("豊富なデータで可能性を可視化する", { x: 0.8, y: 0.85, w: 11.5, h: 0.6, fontSize: 22, bold: true, color: '1E293B', fontFace: 'Meiryo' });
+        slide.addText("一人ひとりのスキルや適性を活かした最適なマッチングをサポートします。", { x: 0.8, y: 1.45, w: 11.5, h: 0.35, fontSize: 12, color: '64748B', fontFace: 'Meiryo' });
+        slide.addShape(pptx.ShapeType.line, { x: 0.8, y: 1.9, w: 11.733, h: 0, line: { color: 'E2E8F0', width: 1 } });
+
+        let colWidth = itemsPerPage === 1 ? 7.0 : (itemsPerPage === 2 ? 5.2 : 3.6);
+        let xPositions = itemsPerPage === 1 ? [(13.333 - colWidth) / 2] :
+                         (itemsPerPage === 2 ? [1.0, 1.0 + colWidth + (13.333 - 2.0 - colWidth * 2)] : [0.8, 0.8 + colWidth + (11.733 - colWidth * 3) / 2, 0.8 + (colWidth + (11.733 - colWidth * 3) / 2) * 2]);
+
+        for (let i = 0; i < countInSlide; i++) {
+          const chartItem = pageCharts[i];
+          const colX = xPositions[i];
+          const customChart = chartItem.type === 'custom' ? getCustomChart(chartItem.customId) : null;
+          const displayTitle = customChart ? customChart.title : chartItem.column;
+          const { labels, values, total } = customChart ? getCustomExtractedData(customChart.id) : getAggregatedData(chartItem.column);
+          if (!labels.length) continue;
+          slide.addText(`■ ${displayTitle}`, { x: colX, y: 2.1, w: colWidth, h: 0.35, fontSize: 13, bold: true, color: '0F172A', fontFace: 'Meiryo' });
+
+          if (chartType === 'pie') {
+            let imgDataUrl = await renderCustomDonutCanvas(displayTitle, labels, values, total, isDefault, itemsPerPage);
+            let imgSize = itemsPerPage === 1 ? 5.2 : (itemsPerPage === 2 ? 4.9 : 4.7);
+            slide.addImage({ data: imgDataUrl, x: colX + (colWidth - imgSize) / 2, y: 2.25, w: imgSize, h: imgSize });
+          } else {
+            let itemCount = labels.length, startY = 2.85, rowGap = 4.3 / Math.max(itemCount, 5), barHeight = Math.min(rowGap * 0.32, 0.15);
+            let defaultBarWidth = itemsPerPage === 1 ? 5.0 : (itemsPerPage === 2 ? 3.5 : 1.9);
+            let userLength = parseInt(document.getElementById('size-num').value, 10);
+            let maxBarWidth = isDefault ? defaultBarWidth : (userLength / 100);
+            let maxVal = Math.max(...values, 1);
+
+            let baseColor = isDefault ? '#0F3854' : document.getElementById('custom-color-picker').value;
+            let palette = generateMonochromePalette(baseColor, labels.length);
+
+            labels.forEach((label, j) => {
+              let count = values[j], pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0, currentY = startY + (j * rowGap);
+              let barColor = palette[j % palette.length].replace('#', '');
+
+              slide.addText(label.length > 20 ? label.slice(0, 19) + '…' : label, {
+                x: colX, y: currentY - (rowGap * 0.42), w: colWidth, h: rowGap * 0.4,
+                fontSize: itemCount > 10 ? 8.5 : 9.5, bold: true, color: '334155', fontFace: 'Meiryo'
+              });
+              slide.addShape(pptx.ShapeType.rect, { x: colX, y: currentY, w: maxBarWidth, h: barHeight, fill: { color: 'F1F5F9' } });
+              slide.addShape(pptx.ShapeType.rect, { x: colX, y: currentY, w: Math.max((count / maxVal) * maxBarWidth, 0.05), h: barHeight, fill: { color: barColor } });
+              slide.addText(`${count}名 (${pct}%)`, {
+                x: colX + maxBarWidth + 0.08, y: currentY - 0.03, w: 1.5, h: barHeight + 0.06,
+                fontSize: itemCount > 10 ? 8.5 : 9.5, bold: true, color: '0F172A', fontFace: 'Meiryo', align: 'left', valign: 'middle'
+              });
+            });
+          }
+        }
+      }
+
+      const fileNameType = chartType === 'pie' ? '円グラフ' : '棒グラフ';
+      await pptx.writeFile({ fileName: `人材分布レポート_${fileNameType}.pptx` });
+      document.getElementById('status').innerText = `🎉 出力完了: 人材分布レポート_${fileNameType}.pptx がダウンロードされました。`;
+    }
+  </script>
+</body>
+</html>

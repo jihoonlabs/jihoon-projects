@@ -68,7 +68,7 @@ describe('LoginForm ログイン処理', () => {
     await user.click(screen.getByRole('button', { name: 'ログイン' }));
 
     await waitFor(() => {
-      expect(replaceMock).toHaveBeenCalledWith('/tickets');
+      expect(replaceMock).toHaveBeenCalledWith('/attendance');
     });
 
     expect(useAuthStore.getState().user).toEqual(mockUser);
@@ -162,5 +162,5 @@ it('replaces a restored authenticated login route without showing the login form
   });
   render(<LoginForm />);
   expect(screen.queryByLabelText('メールアドレス')).not.toBeInTheDocument();
-  await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/tickets'));
+  await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/attendance'));
 });
