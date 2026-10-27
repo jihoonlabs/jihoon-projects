@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\User;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -16,6 +17,18 @@ class PublicDemoTest extends TestCase
     public function test_demo_seed_allows_real_login_and_board_access(): void
     {
         config(['demo.enabled' => true]);
+        // このシーダーは空の専用DBだけで動かすため、他Featureテストの残存データを除去する。
+        foreach ([
+            'ticket_comments',
+            'project_audit_events',
+            'attendance_records',
+            'tickets',
+            'project_members',
+            'projects',
+            'users',
+        ] as $table) {
+            DB::table($table)->delete();
+        }
         $this->seed(DemoSeeder::class);
         $this->withHeader('Origin', 'http://localhost:3000')->postJson('/api/auth/login', [
             'email' => 'demo@example.com', 'password' => 'TicketDemo2026!',
