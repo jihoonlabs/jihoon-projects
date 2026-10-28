@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
 use App\Models\User;
+use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 
 Artisan::command('inspire', function () {
@@ -9,7 +9,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Artisan::command('attendance:set-role {user_id} {role}', function (string $userId, string $role) {
-    if (! in_array($role, ['employee', 'admin'], true)) {
+    if (in_array($role, ['employee', 'admin'], true) === false) {
         $this->error('Role must be either employee or admin.');
 
         return 1;
@@ -19,7 +19,7 @@ Artisan::command('attendance:set-role {user_id} {role}', function (string $userI
     if ($user === null) {
         $this->error('User not found.');
 
-        return self::FAILURE;
+        return 1;
     }
 
     $user->attendance_role = $role;
@@ -27,5 +27,5 @@ Artisan::command('attendance:set-role {user_id} {role}', function (string $userI
 
     $this->info("Attendance role for user {$user->id} set to {$role}.");
 
-    return self::SUCCESS;
+    return 0;
 })->purpose('Assign an attendance role independently of the ticket role');
