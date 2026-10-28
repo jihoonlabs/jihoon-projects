@@ -29,6 +29,20 @@ class AttendanceScheduleController extends Controller
         ]);
     }
 
+    public function users(Request $request): JsonResponse
+    {
+        $this->authorizeAdmin($request);
+
+        return response()->json([
+            'data' => User::query()
+                ->where('role', 'user')
+                ->where('status', 'active')
+                ->orderBy('name')
+                ->orderBy('id')
+                ->get(['id', 'name']),
+        ]);
+    }
+
     public function show(Request $request): JsonResponse
     {
         $targetUser = $this->targetEmployee($request);
