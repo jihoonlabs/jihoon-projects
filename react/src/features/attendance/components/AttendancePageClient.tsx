@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Coffee, LogIn, LogOut, Play } from 'lucide-react';
-import { LogIn, LogOut } from 'lucide-react';
 
 import {
   ATTENDANCE_ERROR_MESSAGE,

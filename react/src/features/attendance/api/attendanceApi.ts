@@ -13,7 +13,7 @@ export const ATTENDANCE_ERROR_MESSAGE =
 
 const CONFLICT_MESSAGES: Record<string, string> = {
   already_clocked_in: '本日はすでに出勤しています。',
-  not_working: '出勤中の記録がありません。',
+  not_working: '退勤できる出勤記録がありません。',
   already_on_break: 'すでに休憩中です。',
   not_on_break: '終了できる休憩記録がありません。',
   break_in_progress: '休憩を終了してから退勤してください。',
