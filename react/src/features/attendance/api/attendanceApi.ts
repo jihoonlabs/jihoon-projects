@@ -7,6 +7,7 @@ import type {
   AttendanceSchedule,
   AttendanceScheduleInput,
   AttendanceScheduleState,
+  AttendanceScheduleUser,
   AttendanceToday,
 } from '../types/attendance';
 
@@ -211,9 +212,12 @@ function toScheduleState(
   };
 }
 
-export async function fetchAttendanceSchedule(): Promise<AttendanceScheduleState> {
+export async function fetchAttendanceSchedule(
+  userId?: number,
+): Promise<AttendanceScheduleState> {
+  const query = userId === undefined ? '' : `?user_id=${encodeURIComponent(userId)}`;
   const result = await json<{ data: ScheduleStateResponse }>(
-    await fetch(`${API_URL}/api/attendance/schedule`, {
+    await fetch(`${API_URL}/api/attendance/schedule${query}`, {
       credentials: 'include',
       headers: { Accept: 'application/json' },
     }),
@@ -222,13 +226,26 @@ export async function fetchAttendanceSchedule(): Promise<AttendanceScheduleState
   return toScheduleState(result.data);
 }
 
+export async function fetchAttendanceScheduleUsers(): Promise<AttendanceScheduleUser[]> {
+  const result = await json<{ data: AttendanceScheduleUser[] }>(
+    await fetch(`${API_URL}/api/attendance/schedule-users`, {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    }),
+  );
+
+  return result.data;
+}
+
 export async function saveAttendanceSchedule(
+  userId: number,
   schedule: AttendanceScheduleInput,
 ): Promise<AttendanceSchedule> {
   const result = await json<{ data: ScheduleResponse }>(
     await fetchWithCsrf('/api/attendance/schedule', {
       method: 'PUT',
       body: JSON.stringify({
+        user_id: userId,
         effective_from: schedule.effectiveFrom,
         weekdays: schedule.weekdays,
         start_time: schedule.startTime,
