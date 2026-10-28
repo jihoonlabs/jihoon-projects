@@ -4,19 +4,36 @@ namespace App\Http\Controllers\Attendance;
 
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceSchedule;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AttendanceScheduleController extends Controller
 {
     private const TIMEZONE = 'Asia/Tokyo';
 
+    public function users(Request $request): JsonResponse
+    {
+        $this->authorizeAdmin($request);
+
+        return response()->json([
+            'data' => User::query()
+                ->where('role', 'user')
+                ->where('status', 'active')
+                ->orderBy('name')
+                ->orderBy('id')
+                ->get(['id', 'name', 'email']),
+        ]);
+    }
+
     public function show(Request $request): JsonResponse
     {
+        $targetUser = $this->targetEmployee($request);
         $today = CarbonImmutable::now(self::TIMEZONE)->toDateString();
-        $schedules = $request->user()->attendanceSchedules();
+        $schedules = $targetUser->attendanceSchedules();
 
         $current = (clone $schedules)
             ->whereDate('effective_from', '<=', $today)
@@ -40,8 +57,17 @@ class AttendanceScheduleController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $this->authorizeAdmin($request);
+
         $today = CarbonImmutable::now(self::TIMEZONE)->toDateString();
         $validated = $request->validate([
+            'user_id' => [
+                'required',
+                'integer',
+                Rule::exists('users', 'id')
+                    ->where('role', 'user')
+                    ->where('status', 'active'),
+            ],
             'effective_from' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.$today],
             'weekdays' => ['required', 'array', 'min:1', 'max:7'],
             'weekdays.*' => ['required', 'integer', 'between:1,7', 'distinct'],
@@ -73,7 +99,7 @@ class AttendanceScheduleController extends Controller
 
         $schedule = AttendanceSchedule::query()->updateOrCreate(
             [
-                'user_id' => $request->user()->getKey(),
+                'user_id' => $validated['user_id'],
                 'effective_from' => $validated['effective_from'],
             ],
             [
@@ -87,6 +113,32 @@ class AttendanceScheduleController extends Controller
         return response()->json([
             'data' => $this->serialize($schedule),
         ]);
+    }
+
+    private function authorizeAdmin(Request $request): void
+    {
+        abort_unless($request->user()->role === 'admin', 403);
+    }
+
+    private function targetEmployee(Request $request): User
+    {
+        if ($request->user()->role !== 'admin') {
+            abort_if($request->query->has('user_id'), 403);
+
+            return $request->user();
+        }
+
+        $validated = $request->validate([
+            'user_id' => [
+                'required',
+                'integer',
+                Rule::exists('users', 'id')
+                    ->where('role', 'user')
+                    ->where('status', 'active'),
+            ],
+        ]);
+
+        return User::query()->findOrFail($validated['user_id']);
     }
 
     private function serialize(AttendanceSchedule $schedule): array
