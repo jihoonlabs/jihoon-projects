@@ -161,6 +161,79 @@ class AttendanceApiTest extends TestCase
         $this->assertDatabaseCount('attendance_breaks', 2);
     }
 
+    public function test_user_can_save_effective_work_schedule_and_planned_break_separately(): void
+    {
+        CarbonImmutable::setTestNow('2026-10-20T00:00:00Z');
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        $this->actingAs($user);
+
+        $this->getJson('/api/attendance/schedule')
+            ->assertOk()
+            ->assertJsonPath('data.date', '2026-10-20')
+            ->assertJsonPath('data.current', null)
+            ->assertJsonPath('data.upcoming', null);
+
+        $this->putJson('/api/attendance/schedule', [
+            'effective_from' => '2026-10-20',
+            'weekdays' => [1, 2, 3, 4, 5],
+            'start_time' => '09:00',
+            'end_time' => '18:00',
+            'planned_break_minutes' => 60,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.effective_from', '2026-10-20')
+            ->assertJsonPath('data.weekdays', [1, 2, 3, 4, 5])
+            ->assertJsonPath('data.start_time', '09:00')
+            ->assertJsonPath('data.end_time', '18:00')
+            ->assertJsonPath('data.planned_break_minutes', 60);
+
+        $this->putJson('/api/attendance/schedule', [
+            'effective_from' => '2026-11-01',
+            'weekdays' => [1, 2, 3, 4, 5],
+            'start_time' => '22:00',
+            'end_time' => '06:00',
+            'planned_break_minutes' => 30,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.effective_from', '2026-11-01');
+
+        $this->getJson('/api/attendance/schedule')
+            ->assertJsonPath('data.current.start_time', '09:00')
+            ->assertJsonPath('data.current.planned_break_minutes', 60)
+            ->assertJsonPath('data.upcoming.start_time', '22:00')
+            ->assertJsonPath('data.upcoming.end_time', '06:00');
+
+        $this->actingAs($other)
+            ->getJson('/api/attendance/schedule')
+            ->assertJsonPath('data.current', null)
+            ->assertJsonPath('data.upcoming', null);
+
+        $this->assertDatabaseCount('attendance_schedules', 2);
+    }
+
+    public function test_work_schedule_rejects_invalid_or_past_settings(): void
+    {
+        CarbonImmutable::setTestNow('2026-10-20T00:00:00Z');
+        $this->actingAs(User::factory()->create());
+
+        $this->putJson('/api/attendance/schedule', [
+            'effective_from' => '2026-10-19',
+            'weekdays' => [1, 1],
+            'start_time' => '09:00',
+            'end_time' => '09:00',
+            'planned_break_minutes' => 600,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['effective_from', 'weekdays.1', 'end_time']);
+    }
+
+    public function test_schedule_endpoint_requires_authentication_and_is_not_an_attendance_action(): void
+    {
+        $this->getJson('/api/attendance/schedule')->assertUnauthorized();
+        $this->putJson('/api/attendance/schedule', [])->assertUnauthorized();
+    }
+
     public function test_guest_and_suspended_user_cannot_access_attendance(): void
     {
         $this->getJson('/api/attendance/today')->assertUnauthorized();
