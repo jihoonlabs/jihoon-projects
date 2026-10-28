@@ -30,3 +30,27 @@ export interface AttendancePage {
   currentPage: number;
   lastPage: number;
 }
+
+export interface AttendanceSchedule {
+  id: number;
+  effectiveFrom: string;
+  weekdays: number[];
+  startTime: string;
+  endTime: string;
+  plannedBreakMinutes: number;
+}
+
+export interface AttendanceScheduleState {
+  date: string;
+  timezone: 'Asia/Tokyo';
+  current: AttendanceSchedule | null;
+  upcoming: AttendanceSchedule | null;
+}
+
+export interface AttendanceScheduleInput {
+  effectiveFrom: string;
+  weekdays: number[];
+  startTime: string;
+  endTime: string;
+  plannedBreakMinutes: number;
+}
