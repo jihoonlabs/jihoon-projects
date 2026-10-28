@@ -34,6 +34,7 @@ class LoginTest extends TestCase
             ->assertJsonPath('user.email', $user->email)
             ->assertJsonPath('user.status', 'active')
             ->assertJsonPath('user.role', 'user')
+            ->assertJsonPath('user.attendanceRole', 'employee')
             ->assertJsonStructure([
                 'message',
                 'user' => [
@@ -42,6 +43,7 @@ class LoginTest extends TestCase
                     'email',
                     'status',
                     'role',
+                    'attendanceRole',
                     'createdAt',
                 ],
             ]);
@@ -96,12 +98,14 @@ class LoginTest extends TestCase
             ->assertJsonPath('email', $user->email)
             ->assertJsonPath('status', 'active')
             ->assertJsonPath('role', 'user')
+            ->assertJsonPath('attendanceRole', 'employee')
             ->assertJsonStructure([
                 'id',
                 'name',
                 'email',
                 'status',
                 'role',
+                'attendanceRole',
                 'createdAt',
             ]);
     }
