@@ -222,11 +222,31 @@ class AttendanceApiTest extends TestCase
             'effective_from' => '2026-10-19',
             'weekdays' => [1, 1],
             'start_time' => '09:00',
+            'end_time' => '18:00',
+            'planned_break_minutes' => 60,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['effective_from', 'weekdays.0', 'weekdays.1']);
+
+        $this->putJson('/api/attendance/schedule', [
+            'effective_from' => '2026-10-20',
+            'weekdays' => [1, 2, 3, 4, 5],
+            'start_time' => '09:00',
             'end_time' => '09:00',
+            'planned_break_minutes' => 0,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['end_time']);
+
+        $this->putJson('/api/attendance/schedule', [
+            'effective_from' => '2026-10-20',
+            'weekdays' => [1, 2, 3, 4, 5],
+            'start_time' => '09:00',
+            'end_time' => '18:00',
             'planned_break_minutes' => 600,
         ])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['effective_from', 'weekdays.1', 'end_time']);
+            ->assertJsonValidationErrors(['planned_break_minutes']);
     }
 
     public function test_schedule_endpoint_requires_authentication_and_is_not_an_attendance_action(): void
