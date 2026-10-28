@@ -16,6 +16,8 @@ vi.mock('../../api/attendanceApi', async (importOriginal) => {
     fetchAttendancePage: vi.fn(),
     clockIn: vi.fn(),
     clockOut: vi.fn(),
+    startBreak: vi.fn(),
+    endBreak: vi.fn(),
   };
 });
 
@@ -24,6 +26,9 @@ const record: AttendanceRecord = {
   workDate: '2026-10-20',
   clockInAt: '2026-10-20T00:00:00+00:00',
   clockOutAt: null,
+  breaks: [],
+  breakDurationMinutes: 0,
+  durationSeconds: null,
   durationMinutes: null,
 };
 
@@ -113,6 +118,69 @@ it('keeps the original work date visible while an overnight shift is active', as
   ).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '出勤' })).toBeDisabled();
   expect(screen.getByRole('button', { name: '退勤' })).toBeEnabled();
+});
+
+it('records break start and end, changes available actions, and shows break duration', async () => {
+  vi.mocked(api.fetchAttendanceToday)
+    .mockResolvedValueOnce({
+      date: '2026-10-20',
+      timezone: 'Asia/Tokyo',
+      status: 'working',
+      record,
+    })
+    .mockResolvedValueOnce({
+      date: '2026-10-20',
+      timezone: 'Asia/Tokyo',
+      status: 'on_break',
+      record: {
+        ...record,
+        breaks: [{ id: 1, startedAt: '2026-10-20T12:00:00+00:00', endedAt: null }],
+      },
+    })
+    .mockResolvedValue({
+      date: '2026-10-20',
+      timezone: 'Asia/Tokyo',
+      status: 'working',
+      record: {
+        ...record,
+        breaks: [
+          {
+            id: 1,
+            startedAt: '2026-10-20T12:00:00+00:00',
+            endedAt: '2026-10-20T12:30:00+00:00',
+          },
+        ],
+        breakDurationMinutes: 30,
+      },
+    });
+  vi.mocked(api.fetchAttendancePage).mockResolvedValue({
+    records: [{ ...record, breakDurationMinutes: 30 }],
+    currentPage: 1,
+    lastPage: 1,
+  });
+
+  render(<AttendancePageClient />);
+  const start = await screen.findByRole('button', { name: '休憩開始' });
+  const end = screen.getByRole('button', { name: '休憩終了' });
+  const checkout = screen.getByRole('button', { name: '退勤' });
+
+  expect(start).toBeEnabled();
+  expect(end).toBeDisabled();
+  expect(checkout).toBeEnabled();
+
+  await userEvent.click(start);
+  await waitFor(() => expect(api.startBreak).toHaveBeenCalledOnce());
+  await waitFor(() => expect(end).toBeEnabled());
+  expect(start).toBeDisabled();
+  expect(checkout).toBeDisabled();
+  expect(screen.getByText(/休憩開始:/)).toBeInTheDocument();
+
+  await userEvent.click(end);
+  await waitFor(() => expect(api.endBreak).toHaveBeenCalledOnce());
+  await waitFor(() => expect(start).toBeEnabled());
+  expect(end).toBeDisabled();
+  expect(checkout).toBeEnabled();
+  expect(screen.getByText('30分')).toBeInTheDocument();
 });
 
 it('does not display internal error details from the attendance API', async () => {

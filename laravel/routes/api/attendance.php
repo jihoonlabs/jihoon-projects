@@ -8,4 +8,6 @@ Route::middleware(['auth:sanctum', 'active.user'])->group(function () {
     Route::get('/', [AttendanceController::class, 'index']);
     Route::post('/clock-in', [AttendanceController::class, 'clockIn']);
     Route::post('/clock-out', [AttendanceController::class, 'clockOut']);
+    Route::post('/break-start', [AttendanceController::class, 'startBreak']);
+    Route::post('/break-end', [AttendanceController::class, 'endBreak']);
 });
