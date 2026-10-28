@@ -1,0 +1,75 @@
+name: Attendance schedule settings
+
+on:
+  push:
+    branches:
+      - feature/attendance-schedule-settings-v1
+  pull_request:
+    branches:
+      - feature/attendance-break-tracking-v1
+    paths:
+      - "laravel/**"
+      - "react/**"
+      - ".github/workflows/attendance-schedule-settings.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: attendance-schedule-settings-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: React tests, lint, types, formatting, and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: react
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: react/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:run
+      - run: pnpm exec eslint .
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm exec prettier --check src/features/attendance
+      - run: pnpm build
+        env:
+          TICKET_STATIC_EXPORT: "true"
+          NEXT_PUBLIC_API_URL: ""
+          NEXT_PUBLIC_DEMO_MODE: "true"
+
+  backend:
+    name: Laravel tests and Pint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: laravel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          tools: composer:v2
+          extensions: mbstring, pdo_sqlite, sqlite3, intl
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: >-
+          vendor/bin/pint --test
+          app/Http/Controllers/Attendance/AttendanceScheduleController.php
+          app/Models/AttendanceSchedule.php
+          app/Models/User.php
+          database/migrations/2026_10_28_000002_create_attendance_schedules_table.php
+          routes/api/attendance.php
+          tests/Feature/Attendance/AttendanceApiTest.php
+      - run: php artisan test
+        env:
+          APP_KEY: "base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
