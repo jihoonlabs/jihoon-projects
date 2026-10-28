@@ -229,7 +229,7 @@ class AttendanceApiTest extends TestCase
         $this->actingAs($employee)
             ->getJson('/api/attendance/schedule')
             ->assertJsonPath('data.current.start_time', '09:00')
-            ->assertJsonPath('data.upcoming.start_time', '06:00');
+            ->assertJsonPath('data.upcoming.start_time', '22:00');
 
         $this->getJson('/api/attendance/schedule?user_id='.$ticketAdmin->id)
             ->assertForbidden();
