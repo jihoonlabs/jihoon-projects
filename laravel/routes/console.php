@@ -8,7 +8,10 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Artisan::command('attendance:set-role {user_id} {role}', function (string $userId, string $role) {
+Artisan::command('attendance:set-role {user_id} {role}', function () {
+    $userId = (string) $this->argument('user_id');
+    $role = (string) $this->argument('role');
+
     if (in_array($role, ['employee', 'admin'], true) === false) {
         $this->error('Role must be either employee or admin.');
 
