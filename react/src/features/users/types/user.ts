@@ -3,6 +3,7 @@ export interface User {
   email: string | null;
   name: string;
   role: 'user' | 'admin';
+  attendanceRole: 'employee' | 'admin';
   status: 'active' | 'suspended';
   createdAt: string;
 }

@@ -56,6 +56,7 @@ it('creates a ticket through the board and renders the server response', async (
       email: 'tester@example.com',
       status: 'active',
       role: 'user',
+      attendanceRole: 'employee',
       createdAt: '2026-09-24T00:00:00.000000Z',
     },
     isAuthenticated: true,

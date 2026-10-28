@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Coffee, LogIn, LogOut, Play } from 'lucide-react';
+import { CalendarClock, Coffee, LogIn, LogOut, Play } from 'lucide-react';
+
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
 import {
   ATTENDANCE_ERROR_MESSAGE,
@@ -11,9 +13,19 @@ import {
   endBreak,
   startBreak,
   fetchAttendancePage,
+  fetchAttendanceSchedule,
+  fetchAttendanceScheduleUsers,
   fetchAttendanceToday,
+  saveAttendanceSchedule,
 } from '../api/attendanceApi';
-import type { AttendancePage, AttendanceToday } from '../types/attendance';
+import type {
+  AttendancePage,
+  AttendanceSchedule,
+  AttendanceScheduleInput,
+  AttendanceScheduleState,
+  AttendanceScheduleUser,
+  AttendanceToday,
+} from '../types/attendance';
 
 import styles from './AttendancePageClient.module.css';
 
@@ -23,6 +35,30 @@ const STATUS_LABELS = {
   on_break: '休憩中',
   finished: '退勤済み',
 };
+
+const WEEKDAY_LABELS = ['月', '火', '水', '木', '金', '土', '日'];
+
+function scheduleInputFrom(
+  state: AttendanceScheduleState,
+): AttendanceScheduleInput {
+  const source = state.upcoming ?? state.current;
+
+  return {
+    effectiveFrom: state.upcoming?.effectiveFrom ?? state.date,
+    weekdays: source?.weekdays ?? [],
+    startTime: source?.startTime ?? '',
+    endTime: source?.endTime ?? '',
+    plannedBreakMinutes: source?.plannedBreakMinutes ?? 0,
+  };
+}
+
+function scheduleSummary(schedule: AttendanceSchedule): string {
+  const weekdays = schedule.weekdays
+    .map((day) => WEEKDAY_LABELS[day - 1])
+    .join('・');
+
+  return `${weekdays} ${schedule.startTime}〜${schedule.endTime}（予定休憩 ${schedule.plannedBreakMinutes}分）`;
+}
 
 function formatTime(value: string | null): string {
   if (!value) return '—';
@@ -49,8 +85,28 @@ function errorMessage(error: unknown): string {
 }
 
 export function AttendancePageClient() {
+  const currentUser = useAuthStore((state) => state.user);
+  const isAttendanceAdmin = currentUser?.attendanceRole === 'admin';
   const [today, setToday] = useState<AttendanceToday | null>(null);
   const [history, setHistory] = useState<AttendancePage | null>(null);
+  const [schedule, setSchedule] = useState<AttendanceScheduleState | null>(
+    null,
+  );
+  const [scheduleUsers, setScheduleUsers] = useState<AttendanceScheduleUser[]>(
+    [],
+  );
+  const [selectedScheduleUserId, setSelectedScheduleUserId] = useState<
+    number | null
+  >(null);
+  const [scheduleInput, setScheduleInput] = useState<AttendanceScheduleInput>({
+    effectiveFrom: '',
+    weekdays: [],
+    startTime: '',
+    endTime: '',
+    plannedBreakMinutes: 0,
+  });
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [isScheduleLoading, setIsScheduleLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,6 +119,12 @@ export function AttendancePageClient() {
     ]);
   }, []);
 
+  const applyScheduleResult = useCallback((result: AttendanceScheduleState) => {
+    setSchedule(result);
+    setScheduleInput(scheduleInputFrom(result));
+    setScheduleError(null);
+  }, []);
+
   useEffect(() => {
     load(page)
       .then(([latestToday, latestHistory]) => {
@@ -73,6 +135,63 @@ export function AttendancePageClient() {
       .catch((loadError) => setError(errorMessage(loadError)))
       .finally(() => setIsLoading(false));
   }, [page, load]);
+
+  useEffect(() => {
+    if (!isAttendanceAdmin) return;
+
+    let cancelled = false;
+    fetchAttendanceScheduleUsers()
+      .then((users) => {
+        if (cancelled) return;
+
+        setScheduleUsers(users);
+        if (users.length === 0) {
+          setScheduleError('予定を設定できる従業員がいません。');
+          setIsScheduleLoading(false);
+          return;
+        }
+
+        setSelectedScheduleUserId((currentId) =>
+          currentId !== null && users.some((user) => user.id === currentId)
+            ? currentId
+            : users[0].id,
+        );
+      })
+      .catch((loadError) => {
+        if (cancelled) return;
+        setScheduleError(errorMessage(loadError));
+        setIsScheduleLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAttendanceAdmin]);
+
+  useEffect(() => {
+    if (isAttendanceAdmin && selectedScheduleUserId === null) return;
+
+    let cancelled = false;
+    fetchAttendanceSchedule(
+      isAttendanceAdmin ? selectedScheduleUserId! : undefined,
+    )
+      .then((result) => {
+        if (!cancelled) applyScheduleResult(result);
+      })
+      .catch((loadError) => {
+        if (!cancelled) {
+          setSchedule(null);
+          setScheduleError(errorMessage(loadError));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsScheduleLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAttendanceAdmin, selectedScheduleUserId, applyScheduleResult]);
 
   const changePage = (nextPage: number) => {
     setIsLoading(true);
@@ -114,7 +233,48 @@ export function AttendancePageClient() {
     }
   };
 
+  const toggleWeekday = (day: number) => {
+    const weekdays = new Set(scheduleInput.weekdays);
+    if (weekdays.has(day)) weekdays.delete(day);
+    else weekdays.add(day);
+
+    setScheduleInput({
+      ...scheduleInput,
+      weekdays: Array.from(weekdays).sort((left, right) => left - right),
+    });
+  };
+
+  const saveSchedule = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (
+      isSubmitting ||
+      isLoading ||
+      !isAttendanceAdmin ||
+      selectedScheduleUserId === null
+    )
+      return;
+
+    setIsSubmitting(true);
+    setScheduleError(null);
+    try {
+      await saveAttendanceSchedule(selectedScheduleUserId, scheduleInput);
+      const latestSchedule = await fetchAttendanceSchedule(
+        selectedScheduleUserId,
+      );
+      applyScheduleResult(latestSchedule);
+    } catch (saveError) {
+      setScheduleError(errorMessage(saveError));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const disabled = isLoading || isSubmitting || today === null;
+  const scheduleDisabled =
+    isSubmitting ||
+    isScheduleLoading ||
+    !isAttendanceAdmin ||
+    selectedScheduleUserId === null;
 
   return (
     <main className={styles.page}>
@@ -191,6 +351,171 @@ export function AttendancePageClient() {
             退勤
           </button>
         </div>
+      </section>
+
+      <section className={styles.panel} aria-labelledby="schedule-heading">
+        <h2 id="schedule-heading">
+          <CalendarClock aria-hidden="true" size={18} />
+          予定勤務
+        </h2>
+        <p className={styles.scheduleNote}>
+          予定休憩は実際の休憩記録と分けて保管し、勤務時間から自動で差し引きません。終了時刻が開始時刻より早い場合は翌日の終了として扱います。
+        </p>
+        {scheduleError && (
+          <p className={styles.error} role="alert">
+            {scheduleError}
+          </p>
+        )}
+        {isAttendanceAdmin && (
+          <label className={styles.scheduleEmployee}>
+            従業員
+            <select
+              required
+              value={selectedScheduleUserId ?? ''}
+              disabled={
+                isScheduleLoading || isSubmitting || scheduleUsers.length === 0
+              }
+              onChange={(event) => {
+                const value = event.currentTarget.value;
+                setSchedule(null);
+                setScheduleInput({
+                  effectiveFrom: '',
+                  weekdays: [],
+                  startTime: '',
+                  endTime: '',
+                  plannedBreakMinutes: 0,
+                });
+                setScheduleError(null);
+                setIsScheduleLoading(true);
+                setSelectedScheduleUserId(value ? Number(value) : null);
+              }}
+            >
+              <option value="">従業員を選択してください</option>
+              {scheduleUsers.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.name}（ID: {employee.id}）
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {schedule?.current && (
+          <p>現在の予定: {scheduleSummary(schedule.current)}</p>
+        )}
+        {schedule?.upcoming && (
+          <p>
+            {schedule.upcoming.effectiveFrom} からの予定:{' '}
+            {scheduleSummary(schedule.upcoming)}
+          </p>
+        )}
+        {!isScheduleLoading &&
+          !scheduleError &&
+          !schedule?.current &&
+          !schedule?.upcoming && (
+            <p>
+              {isAttendanceAdmin
+                ? '選択した従業員の予定は未設定です。'
+                : '予定勤務は未設定です。管理者が設定するとここに表示されます。'}
+            </p>
+          )}
+        {isAttendanceAdmin ? (
+          <form className={styles.scheduleForm} onSubmit={saveSchedule}>
+            <label>
+              適用開始日
+              <input
+                type="date"
+                required
+                value={scheduleInput.effectiveFrom}
+                disabled={scheduleDisabled}
+                onChange={(event) =>
+                  setScheduleInput({
+                    ...scheduleInput,
+                    effectiveFrom: event.currentTarget.value,
+                  })
+                }
+              />
+            </label>
+            <fieldset className={styles.weekdays}>
+              <legend>勤務する曜日</legend>
+              {WEEKDAY_LABELS.map((label, index) => (
+                <label key={label}>
+                  <input
+                    type="checkbox"
+                    checked={scheduleInput.weekdays.includes(index + 1)}
+                    disabled={scheduleDisabled}
+                    onChange={() => toggleWeekday(index + 1)}
+                  />
+                  {label}
+                </label>
+              ))}
+            </fieldset>
+            <div className={styles.scheduleFields}>
+              <label>
+                開始時刻
+                <input
+                  type="time"
+                  required
+                  value={scheduleInput.startTime}
+                  disabled={scheduleDisabled}
+                  onChange={(event) =>
+                    setScheduleInput({
+                      ...scheduleInput,
+                      startTime: event.currentTarget.value,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                終了時刻
+                <input
+                  type="time"
+                  required
+                  value={scheduleInput.endTime}
+                  disabled={scheduleDisabled}
+                  onChange={(event) =>
+                    setScheduleInput({
+                      ...scheduleInput,
+                      endTime: event.currentTarget.value,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                予定休憩（分）
+                <input
+                  type="number"
+                  min="0"
+                  max="600"
+                  required
+                  value={scheduleInput.plannedBreakMinutes}
+                  disabled={scheduleDisabled}
+                  onChange={(event) =>
+                    setScheduleInput({
+                      ...scheduleInput,
+                      plannedBreakMinutes: Number(event.currentTarget.value),
+                    })
+                  }
+                />
+              </label>
+            </div>
+            <button
+              type="submit"
+              className={styles.saveSchedule}
+              disabled={
+                scheduleDisabled ||
+                scheduleInput.weekdays.length === 0 ||
+                !scheduleInput.startTime ||
+                !scheduleInput.endTime
+              }
+            >
+              従業員の予定を保存
+            </button>
+          </form>
+        ) : (
+          <p className={styles.scheduleNote}>
+            予定勤務の設定・変更は出勤管理者が行います。
+          </p>
+        )}
       </section>
 
       {error && (

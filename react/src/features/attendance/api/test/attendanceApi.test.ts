@@ -8,7 +8,10 @@ import {
   clockIn,
   clockOut,
   fetchAttendancePage,
+  fetchAttendanceSchedule,
+  fetchAttendanceScheduleUsers,
   fetchAttendanceToday,
+  saveAttendanceSchedule,
 } from '../attendanceApi';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
@@ -94,4 +97,63 @@ it('hides server debug details from internal errors', async () => {
     status: 500,
     message: '勤怠を処理できませんでした。時間をおいて再度お試しください。',
   });
+});
+
+it('loads and saves a recurring schedule without treating planned breaks as actual breaks', async () => {
+  const saved = {
+    id: 8,
+    effective_from: '2026-10-20',
+    weekdays: [1, 2, 3, 4, 5],
+    start_time: '09:00',
+    end_time: '18:00',
+    planned_break_minutes: 60,
+  };
+  server.use(
+    http.get(`${API_URL}/api/attendance/schedule?user_id=7`, () =>
+      HttpResponse.json({
+        data: {
+          date: '2026-10-20',
+          timezone: 'Asia/Tokyo',
+          current: saved,
+          upcoming: null,
+        },
+      }),
+    ),
+    http.get(`${API_URL}/api/attendance/schedule-users`, () =>
+      HttpResponse.json({ data: [{ id: 7, name: 'Employee' }] }),
+    ),
+    http.put(`${API_URL}/api/attendance/schedule`, async ({ request }) => {
+      expect(await request.json()).toEqual({
+        user_id: 7,
+        effective_from: '2026-10-20',
+        weekdays: [1, 2, 3, 4, 5],
+        start_time: '09:00',
+        end_time: '18:00',
+        planned_break_minutes: 60,
+      });
+      return HttpResponse.json({ data: saved });
+    }),
+  );
+
+  expect(await fetchAttendanceSchedule(7)).toMatchObject({
+    date: '2026-10-20',
+    current: {
+      effectiveFrom: '2026-10-20',
+      weekdays: [1, 2, 3, 4, 5],
+      plannedBreakMinutes: 60,
+    },
+    upcoming: null,
+  });
+  expect(
+    await saveAttendanceSchedule(7, {
+      effectiveFrom: '2026-10-20',
+      weekdays: [1, 2, 3, 4, 5],
+      startTime: '09:00',
+      endTime: '18:00',
+      plannedBreakMinutes: 60,
+    }),
+  ).toMatchObject({ startTime: '09:00', plannedBreakMinutes: 60 });
+  await expect(fetchAttendanceScheduleUsers()).resolves.toEqual([
+    { id: 7, name: 'Employee' },
+  ]);
 });

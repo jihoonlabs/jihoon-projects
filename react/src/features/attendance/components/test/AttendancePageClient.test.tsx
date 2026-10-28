@@ -1,9 +1,11 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import * as api from '../../api/attendanceApi';
 import type { AttendanceRecord } from '../../types/attendance';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
+
 import { AttendancePageClient } from '../AttendancePageClient';
 
 vi.mock('../../api/attendanceApi', async (importOriginal) => {
@@ -14,10 +16,13 @@ vi.mock('../../api/attendanceApi', async (importOriginal) => {
     ...actual,
     fetchAttendanceToday: vi.fn(),
     fetchAttendancePage: vi.fn(),
+    fetchAttendanceSchedule: vi.fn(),
+    fetchAttendanceScheduleUsers: vi.fn(),
     clockIn: vi.fn(),
     clockOut: vi.fn(),
     startBreak: vi.fn(),
     endBreak: vi.fn(),
+    saveAttendanceSchedule: vi.fn(),
   };
 });
 
@@ -34,10 +39,38 @@ const record: AttendanceRecord = {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  useAuthStore.setState({
+    user: {
+      id: 1,
+      name: 'Employee',
+      email: 'employee@example.com',
+      role: 'user',
+      attendanceRole: 'employee',
+      status: 'active',
+      createdAt: '2026-10-20T00:00:00Z',
+    },
+  });
+  vi.mocked(api.fetchAttendanceScheduleUsers).mockResolvedValue([
+    { id: 7, name: 'Employee' },
+  ]);
   vi.mocked(api.fetchAttendancePage).mockResolvedValue({
     records: [record],
     currentPage: 1,
     lastPage: 1,
+  });
+  vi.mocked(api.fetchAttendanceSchedule).mockResolvedValue({
+    date: '2026-10-20',
+    timezone: 'Asia/Tokyo',
+    current: null,
+    upcoming: null,
+  });
+  vi.mocked(api.saveAttendanceSchedule).mockResolvedValue({
+    id: 4,
+    effectiveFrom: '2026-10-20',
+    weekdays: [1, 2, 3, 4, 5],
+    startTime: '09:00',
+    endTime: '18:00',
+    plannedBreakMinutes: 60,
   });
 });
 
@@ -198,4 +231,109 @@ it('does not display internal error details from the attendance API', async () =
   );
   expect(alert).not.toHaveTextContent('SQLSTATE');
   expect(alert).not.toHaveTextContent('/Users/example');
+});
+
+it('lets attendance admins save an employee schedule without changing punch data', async () => {
+  useAuthStore.setState({
+    user: {
+      id: 2,
+      name: 'Attendance Admin',
+      email: 'admin@example.com',
+      role: 'user',
+      attendanceRole: 'admin',
+      status: 'active',
+      createdAt: '2026-10-20T00:00:00Z',
+    },
+  });
+  vi.mocked(api.fetchAttendanceToday).mockResolvedValue({
+    date: '2026-10-20',
+    timezone: 'Asia/Tokyo',
+    status: 'not_started',
+    record: null,
+  });
+
+  render(<AttendancePageClient />);
+  const save = await screen.findByRole('button', {
+    name: '従業員の予定を保存',
+  });
+  expect(screen.getByText(/実際の休憩記録と分けて保管/)).toBeInTheDocument();
+  expect(save).toBeDisabled();
+
+  fireEvent.change(screen.getByLabelText('適用開始日'), {
+    target: { value: '2026-10-20' },
+  });
+  await userEvent.click(screen.getByRole('checkbox', { name: '月' }));
+  fireEvent.change(screen.getByLabelText('開始時刻'), {
+    target: { value: '09:00' },
+  });
+  fireEvent.change(screen.getByLabelText('終了時刻'), {
+    target: { value: '18:00' },
+  });
+  fireEvent.change(screen.getByLabelText('予定休憩（分）'), {
+    target: { value: '60' },
+  });
+
+  expect(save).toBeEnabled();
+  await userEvent.click(save);
+
+  await waitFor(() =>
+    expect(api.saveAttendanceSchedule).toHaveBeenCalledWith(7, {
+      effectiveFrom: '2026-10-20',
+      weekdays: [1],
+      startTime: '09:00',
+      endTime: '18:00',
+      plannedBreakMinutes: 60,
+    }),
+  );
+});
+
+it('keeps employee schedule controls read-only', async () => {
+  vi.mocked(api.fetchAttendanceToday).mockResolvedValue({
+    date: '2026-10-20',
+    timezone: 'Asia/Tokyo',
+    status: 'not_started',
+    record: null,
+  });
+
+  render(<AttendancePageClient />);
+
+  expect(
+    await screen.findByText('予定勤務の設定・変更は出勤管理者が行います。'),
+  ).toBeInTheDocument();
+  expect(screen.queryByLabelText('適用開始日')).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: '従業員の予定を保存' }),
+  ).not.toBeInTheDocument();
+  expect(api.fetchAttendanceScheduleUsers).not.toHaveBeenCalled();
+});
+
+it('keeps clock actions available when schedule loading fails', async () => {
+  vi.mocked(api.fetchAttendanceToday)
+    .mockResolvedValueOnce({
+      date: '2026-10-20',
+      timezone: 'Asia/Tokyo',
+      status: 'not_started',
+      record: null,
+    })
+    .mockResolvedValue({
+      date: '2026-10-20',
+      timezone: 'Asia/Tokyo',
+      status: 'working',
+      record,
+    });
+  vi.mocked(api.fetchAttendanceSchedule).mockRejectedValue(
+    new Error('SQLSTATE[HY000]'),
+  );
+  vi.mocked(api.clockIn).mockResolvedValue(record);
+
+  render(<AttendancePageClient />);
+
+  const clockIn = await screen.findByRole('button', { name: '出勤' });
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    '勤怠を処理できませんでした。時間をおいて再度お試しください。',
+  );
+  expect(clockIn).toBeEnabled();
+
+  await userEvent.click(clockIn);
+  await waitFor(() => expect(api.clockIn).toHaveBeenCalledOnce());
 });

@@ -186,3 +186,82 @@
     min-height: 48px;
   }
 }
+
+.scheduleNote {
+  margin: 0 0 1rem;
+  color: #4b5563;
+  line-height: 1.55;
+}
+
+.scheduleForm {
+  display: grid;
+  gap: 1rem;
+}
+
+.scheduleForm > label,
+.scheduleFields label {
+  display: grid;
+  gap: 0.35rem;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.scheduleForm input:not([type='checkbox']) {
+  min-height: 42px;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.weekdays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.weekdays legend {
+  margin-bottom: 0.5rem;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.weekdays label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.scheduleFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.saveSchedule {
+  justify-self: start;
+  min-height: 42px;
+  padding: 0.55rem 1rem;
+  border: 1px solid #1d4ed8;
+  border-radius: 7px;
+  background: #1d4ed8;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.saveSchedule:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.saveSchedule:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

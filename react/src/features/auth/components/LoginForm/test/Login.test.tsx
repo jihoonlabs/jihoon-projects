@@ -27,6 +27,7 @@ const mockUser: User = {
   name: 'Test User',
   status: 'active',
   role: 'user',
+  attendanceRole: 'employee',
   createdAt: '2026-09-17T00:00:00.000Z',
 };
 

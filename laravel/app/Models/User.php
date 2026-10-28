@@ -26,6 +26,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $attributes = [
         'status' => 'active',
         'role' => 'user',
+        'attendance_role' => 'employee',
     ];
 
     /**
@@ -59,6 +60,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function ticketComments(): HasMany
     {
         return $this->hasMany(TicketComment::class);
+    }
+
+    public function attendanceSchedules(): HasMany
+    {
+        return $this->hasMany(AttendanceSchedule::class);
     }
 
     public function attendanceRecords(): HasMany

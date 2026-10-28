@@ -20,6 +20,7 @@ const user: User = {
   name: 'User',
   email: 'user@example.com',
   role: 'user',
+  attendanceRole: 'employee',
   status: 'active',
   createdAt: '',
 };
