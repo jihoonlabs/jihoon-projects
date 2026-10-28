@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CalendarClock, Coffee, LogIn, LogOut, Play } from 'lucide-react';
 
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
+
 import {
   ATTENDANCE_ERROR_MESSAGE,
   AttendanceApiError,
@@ -12,6 +14,7 @@ import {
   startBreak,
   fetchAttendancePage,
   fetchAttendanceSchedule,
+  fetchAttendanceScheduleUsers,
   fetchAttendanceToday,
   saveAttendanceSchedule,
 } from '../api/attendanceApi';
@@ -20,6 +23,7 @@ import type {
   AttendanceSchedule,
   AttendanceScheduleInput,
   AttendanceScheduleState,
+  AttendanceScheduleUser,
   AttendanceToday,
 } from '../types/attendance';
 
@@ -81,11 +85,19 @@ function errorMessage(error: unknown): string {
 }
 
 export function AttendancePageClient() {
+  const currentUser = useAuthStore((state) => state.user);
+  const isAttendanceAdmin = currentUser?.attendanceRole === 'admin';
   const [today, setToday] = useState<AttendanceToday | null>(null);
   const [history, setHistory] = useState<AttendancePage | null>(null);
   const [schedule, setSchedule] = useState<AttendanceScheduleState | null>(
     null,
   );
+  const [scheduleUsers, setScheduleUsers] = useState<AttendanceScheduleUser[]>(
+    [],
+  );
+  const [selectedScheduleUserId, setSelectedScheduleUserId] = useState<
+    number | null
+  >(null);
   const [scheduleInput, setScheduleInput] = useState<AttendanceScheduleInput>({
     effectiveFrom: '',
     weekdays: [],
@@ -125,14 +137,64 @@ export function AttendancePageClient() {
   }, [page, load]);
 
   useEffect(() => {
-    fetchAttendanceSchedule()
-      .then(applyScheduleResult)
-      .catch((loadError) => {
-        setSchedule(null);
-        setScheduleError(errorMessage(loadError));
+    if (!isAttendanceAdmin) return;
+
+    let cancelled = false;
+    setIsScheduleLoading(true);
+    fetchAttendanceScheduleUsers()
+      .then((users) => {
+        if (cancelled) return;
+
+        setScheduleUsers(users);
+        if (users.length === 0) {
+          setScheduleError('予定を設定できる従業員がいません。');
+          setIsScheduleLoading(false);
+          return;
+        }
+
+        setSelectedScheduleUserId((currentId) =>
+          currentId !== null && users.some((user) => user.id === currentId)
+            ? currentId
+            : users[0].id,
+        );
       })
-      .finally(() => setIsScheduleLoading(false));
-  }, [applyScheduleResult]);
+      .catch((loadError) => {
+        if (cancelled) return;
+        setScheduleError(errorMessage(loadError));
+        setIsScheduleLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAttendanceAdmin]);
+
+  useEffect(() => {
+    if (isAttendanceAdmin && selectedScheduleUserId === null) return;
+
+    let cancelled = false;
+    setIsScheduleLoading(true);
+    setSchedule(null);
+    fetchAttendanceSchedule(
+      isAttendanceAdmin ? selectedScheduleUserId! : undefined,
+    )
+      .then((result) => {
+        if (!cancelled) applyScheduleResult(result);
+      })
+      .catch((loadError) => {
+        if (!cancelled) {
+          setSchedule(null);
+          setScheduleError(errorMessage(loadError));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsScheduleLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAttendanceAdmin, selectedScheduleUserId, applyScheduleResult]);
 
   const changePage = (nextPage: number) => {
     setIsLoading(true);
@@ -187,13 +249,18 @@ export function AttendancePageClient() {
 
   const saveSchedule = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (isSubmitting || isLoading) return;
+    if (
+      isSubmitting ||
+      isLoading ||
+      !isAttendanceAdmin ||
+      selectedScheduleUserId === null
+    ) return;
 
     setIsSubmitting(true);
-    setError(null);
+    setScheduleError(null);
     try {
-      await saveAttendanceSchedule(scheduleInput);
-      const latestSchedule = await fetchAttendanceSchedule();
+      await saveAttendanceSchedule(selectedScheduleUserId, scheduleInput);
+      const latestSchedule = await fetchAttendanceSchedule(selectedScheduleUserId);
       applyScheduleResult(latestSchedule);
     } catch (saveError) {
       setScheduleError(errorMessage(saveError));
@@ -203,7 +270,10 @@ export function AttendancePageClient() {
   };
 
   const disabled = isLoading || isSubmitting || today === null;
-  const scheduleDisabled = disabled || isScheduleLoading;
+  const scheduleDisabled =
+    disabled ||
+    isScheduleLoading ||
+    (isAttendanceAdmin && selectedScheduleUserId === null);
 
   return (
     <main className={styles.page}>
