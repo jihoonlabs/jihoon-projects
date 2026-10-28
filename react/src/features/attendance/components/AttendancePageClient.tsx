@@ -34,6 +34,10 @@ const STATUS_LABELS = {
 
 const WEEKDAY_LABELS = ['月', '火', '水', '木', '金', '土', '日'];
 
+type ScheduleLoadResult =
+  | { schedule: AttendanceScheduleState }
+  | { error: unknown };
+
 function scheduleInputFrom(
   state: AttendanceScheduleState,
 ): AttendanceScheduleInput {
@@ -93,31 +97,57 @@ export function AttendancePageClient() {
     endTime: '',
     plannedBreakMinutes: 0,
   });
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (requestedPage: number) => {
-    return Promise.all([
+    const [latestToday, latestHistory, scheduleResult] = await Promise.all([
       fetchAttendanceToday(),
       fetchAttendancePage(requestedPage),
-      fetchAttendanceSchedule(),
+      fetchAttendanceSchedule()
+        .then((schedule) => ({ schedule }))
+        .catch((error: unknown) => ({ error })),
     ]);
+
+    return [latestToday, latestHistory, scheduleResult] as const;
   }, []);
 
   useEffect(() => {
     load(page)
-      .then(([latestToday, latestHistory, latestSchedule]) => {
+      .then(([latestToday, latestHistory, scheduleResult]) => {
         setToday(latestToday);
         setHistory(latestHistory);
-        setSchedule(latestSchedule);
-        setScheduleInput(scheduleInputFrom(latestSchedule));
+        applyScheduleResult(scheduleResult, latestToday.date);
         setError(null);
       })
       .catch((loadError) => setError(errorMessage(loadError)))
       .finally(() => setIsLoading(false));
   }, [page, load]);
+
+  const applyScheduleResult = (
+    result: ScheduleLoadResult,
+    workDate: string,
+  ) => {
+    if ('schedule' in result) {
+      setSchedule(result.schedule);
+      setScheduleInput(scheduleInputFrom(result.schedule));
+      setScheduleError(null);
+      return;
+    }
+
+    setSchedule(null);
+    setScheduleInput({
+      effectiveFrom: workDate,
+      weekdays: [],
+      startTime: '',
+      endTime: '',
+      plannedBreakMinutes: 0,
+    });
+    setScheduleError(errorMessage(result.error));
+  };
 
   const changePage = (nextPage: number) => {
     setIsLoading(true);
@@ -142,11 +172,10 @@ export function AttendancePageClient() {
       } else {
         await endBreak();
       }
-      const [latestToday, latestHistory, latestSchedule] = await load(page);
+      const [latestToday, latestHistory, scheduleResult] = await load(page);
       setToday(latestToday);
       setHistory(latestHistory);
-      setSchedule(latestSchedule);
-      setScheduleInput(scheduleInputFrom(latestSchedule));
+      applyScheduleResult(scheduleResult, latestToday.date);
     } catch (actionError) {
       setError(errorMessage(actionError));
       try {
@@ -181,10 +210,9 @@ export function AttendancePageClient() {
     try {
       await saveAttendanceSchedule(scheduleInput);
       const latestSchedule = await fetchAttendanceSchedule();
-      setSchedule(latestSchedule);
-      setScheduleInput(scheduleInputFrom(latestSchedule));
+      applyScheduleResult({ schedule: latestSchedule }, latestSchedule.date);
     } catch (saveError) {
-      setError(errorMessage(saveError));
+      setScheduleError(errorMessage(saveError));
     } finally {
       setIsSubmitting(false);
     }
@@ -277,6 +305,11 @@ export function AttendancePageClient() {
         <p className={styles.scheduleNote}>
           予定の目安として保存します。実際の打刻・休憩記録には影響せず、予定休憩も勤務時間から自動で差し引きません。終了時刻が開始時刻より早い場合は翌日の終了として扱います。
         </p>
+        {scheduleError && (
+          <p className={styles.error} role="alert">
+            {scheduleError}
+          </p>
+        )}
         {schedule?.current && (
           <p>現在の予定: {scheduleSummary(schedule.current)}</p>
         )}
