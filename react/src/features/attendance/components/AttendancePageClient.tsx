@@ -273,7 +273,7 @@ export function AttendancePageClient() {
           予定勤務の設定
         </h2>
         <p className={styles.scheduleNote}>
-          予定の目安として保存します。実際の打刻・休憩記録には影響せず、予定休憩も勤務時間から自動で差し引きません。
+          予定の目安として保存します。実際の打刻・休憩記録には影響せず、予定休憩も勤務時間から自動で差し引きません。終了時刻が開始時刻より早い場合は翌日の終了として扱います。
         </p>
         {schedule?.current && (
           <p>現在の予定: {scheduleSummary(schedule.current)}</p>
