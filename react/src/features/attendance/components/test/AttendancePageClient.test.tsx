@@ -258,3 +258,34 @@ it('saves recurring schedule settings and explains planned breaks stay separate'
     }),
   );
 });
+
+it('keeps clock actions available when schedule loading fails', async () => {
+  vi.mocked(api.fetchAttendanceToday)
+    .mockResolvedValueOnce({
+      date: '2026-10-20',
+      timezone: 'Asia/Tokyo',
+      status: 'not_started',
+      record: null,
+    })
+    .mockResolvedValue({
+      date: '2026-10-20',
+      timezone: 'Asia/Tokyo',
+      status: 'working',
+      record,
+    });
+  vi.mocked(api.fetchAttendanceSchedule).mockRejectedValue(
+    new Error('SQLSTATE[HY000]'),
+  );
+  vi.mocked(api.clockIn).mockResolvedValue(record);
+
+  render(<AttendancePageClient />);
+
+  const clockIn = await screen.findByRole('button', { name: '出勤' });
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    '勤怠を処理できませんでした。時間をおいて再度お試しください。',
+  );
+  expect(clockIn).toBeEnabled();
+
+  await userEvent.click(clockIn);
+  await waitFor(() => expect(api.clockIn).toHaveBeenCalledOnce());
+});
