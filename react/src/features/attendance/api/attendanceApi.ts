@@ -185,7 +185,9 @@ interface ScheduleStateResponse {
   upcoming: ScheduleResponse | null;
 }
 
-function toSchedule(schedule: ScheduleResponse | null): AttendanceSchedule | null {
+function toSchedule(
+  schedule: ScheduleResponse | null,
+): AttendanceSchedule | null {
   if (!schedule) return null;
 
   return {
@@ -198,7 +200,9 @@ function toSchedule(schedule: ScheduleResponse | null): AttendanceSchedule | nul
   };
 }
 
-function toScheduleState(value: ScheduleStateResponse): AttendanceScheduleState {
+function toScheduleState(
+  value: ScheduleStateResponse,
+): AttendanceScheduleState {
   return {
     date: value.date,
     timezone: value.timezone,

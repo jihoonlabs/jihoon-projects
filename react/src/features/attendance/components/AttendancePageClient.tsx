@@ -83,7 +83,9 @@ function errorMessage(error: unknown): string {
 export function AttendancePageClient() {
   const [today, setToday] = useState<AttendanceToday | null>(null);
   const [history, setHistory] = useState<AttendancePage | null>(null);
-  const [schedule, setSchedule] = useState<AttendanceScheduleState | null>(null);
+  const [schedule, setSchedule] = useState<AttendanceScheduleState | null>(
+    null,
+  );
   const [scheduleInput, setScheduleInput] = useState<AttendanceScheduleInput>({
     effectiveFrom: '',
     weekdays: [],

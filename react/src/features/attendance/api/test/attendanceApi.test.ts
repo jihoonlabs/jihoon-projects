@@ -149,4 +149,3 @@ it('loads and saves a recurring schedule without treating planned breaks as actu
     }),
   ).toMatchObject({ startTime: '09:00', plannedBreakMinutes: 60 });
 });
-

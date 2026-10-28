@@ -258,4 +258,3 @@ it('saves recurring schedule settings and explains planned breaks stay separate'
     }),
   );
 });
-
