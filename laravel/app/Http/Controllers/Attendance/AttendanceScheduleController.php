@@ -50,9 +50,11 @@ class AttendanceScheduleController extends Controller
             'planned_break_minutes' => ['required', 'integer', 'between:0,600'],
         ]);
 
-        $start = CarbonImmutable::createFromFormat('!H:i', $validated['start_time'], self::TIMEZONE);
-        $end = CarbonImmutable::createFromFormat('!H:i', $validated['end_time'], self::TIMEZONE);
-        $scheduledMinutes = ($end->diffInMinutes($start) + 1440) % 1440;
+        [$startHour, $startMinute] = array_map('intval', explode(':', $validated['start_time']));
+        [$endHour, $endMinute] = array_map('intval', explode(':', $validated['end_time']));
+        $startMinutes = ($startHour * 60) + $startMinute;
+        $endMinutes = ($endHour * 60) + $endMinute;
+        $scheduledMinutes = ($endMinutes - $startMinutes + 1440) % 1440;
 
         if ($scheduledMinutes === 0) {
             throw ValidationException::withMessages([
