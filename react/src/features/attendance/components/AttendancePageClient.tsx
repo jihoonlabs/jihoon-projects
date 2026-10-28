@@ -115,6 +115,28 @@ export function AttendancePageClient() {
     return [latestToday, latestHistory, scheduleResult] as const;
   }, []);
 
+  const applyScheduleResult = useCallback(
+    (result: ScheduleLoadResult, workDate: string) => {
+      if ('schedule' in result) {
+        setSchedule(result.schedule);
+        setScheduleInput(scheduleInputFrom(result.schedule));
+        setScheduleError(null);
+        return;
+      }
+
+      setSchedule(null);
+      setScheduleInput({
+        effectiveFrom: workDate,
+        weekdays: [],
+        startTime: '',
+        endTime: '',
+        plannedBreakMinutes: 0,
+      });
+      setScheduleError(errorMessage(result.error));
+    },
+    [],
+  );
+
   useEffect(() => {
     load(page)
       .then(([latestToday, latestHistory, scheduleResult]) => {
@@ -125,29 +147,7 @@ export function AttendancePageClient() {
       })
       .catch((loadError) => setError(errorMessage(loadError)))
       .finally(() => setIsLoading(false));
-  }, [page, load]);
-
-  const applyScheduleResult = (
-    result: ScheduleLoadResult,
-    workDate: string,
-  ) => {
-    if ('schedule' in result) {
-      setSchedule(result.schedule);
-      setScheduleInput(scheduleInputFrom(result.schedule));
-      setScheduleError(null);
-      return;
-    }
-
-    setSchedule(null);
-    setScheduleInput({
-      effectiveFrom: workDate,
-      weekdays: [],
-      startTime: '',
-      endTime: '',
-      plannedBreakMinutes: 0,
-    });
-    setScheduleError(errorMessage(result.error));
-  };
+  }, [page, load, applyScheduleResult]);
 
   const changePage = (nextPage: number) => {
     setIsLoading(true);
