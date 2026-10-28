@@ -175,6 +175,7 @@ class AttendanceApiTest extends TestCase
             ->assertJsonPath('data.upcoming', null);
 
         $this->putJson('/api/attendance/schedule', [
+            'user_id' => $other->id,
             'effective_from' => '2026-10-20',
             'weekdays' => [1, 2, 3, 4, 5],
             'start_time' => '09:00',
