@@ -25,20 +25,6 @@ class AttendanceScheduleController extends Controller
                 ->where('status', 'active')
                 ->orderBy('name')
                 ->orderBy('id')
-                ->get(['id', 'name', 'email']),
-        ]);
-    }
-
-    public function users(Request $request): JsonResponse
-    {
-        $this->authorizeAdmin($request);
-
-        return response()->json([
-            'data' => User::query()
-                ->where('role', 'user')
-                ->where('status', 'active')
-                ->orderBy('name')
-                ->orderBy('id')
                 ->get(['id', 'name']),
         ]);
     }
@@ -147,7 +133,7 @@ class AttendanceScheduleController extends Controller
                 'required',
                 'integer',
                 Rule::exists('users', 'id')
-                    ->where('role', 'user')
+                    ->where('attendance_role', 'employee')
                     ->where('status', 'active'),
             ],
         ]);
