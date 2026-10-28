@@ -15,7 +15,8 @@ export interface AttendanceRecord {
   durationMinutes: number | null;
 }
 
-export type AttendanceStatus = 'not_started' | 'working' | 'on_break' | 'finished';
+export type AttendanceStatus =
+  'not_started' | 'working' | 'on_break' | 'finished';
 
 export interface AttendanceToday {
   date: string;

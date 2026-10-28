@@ -134,7 +134,9 @@ it('records break start and end, changes available actions, and shows break dura
       status: 'on_break',
       record: {
         ...record,
-        breaks: [{ id: 1, startedAt: '2026-10-20T12:00:00+00:00', endedAt: null }],
+        breaks: [
+          { id: 1, startedAt: '2026-10-20T12:00:00+00:00', endedAt: null },
+        ],
       },
     })
     .mockResolvedValue({

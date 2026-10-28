@@ -80,7 +80,9 @@ export function AttendancePageClient() {
     setPage(nextPage);
   };
 
-  const recordAction = async (action: 'in' | 'out' | 'break-start' | 'break-end') => {
+  const recordAction = async (
+    action: 'in' | 'out' | 'break-start' | 'break-end',
+  ) => {
     if (isSubmitting || isLoading) return;
 
     setIsSubmitting(true);
@@ -143,8 +145,11 @@ export function AttendancePageClient() {
         </dl>
         {today?.status === 'on_break' && today.record && (
           <p>
-            休憩開始: {formatTime(
-              today.record.breaks.find((breakRecord) => breakRecord.endedAt === null)?.startedAt ?? null,
+            休憩開始:{' '}
+            {formatTime(
+              today.record.breaks.find(
+                (breakRecord) => breakRecord.endedAt === null,
+              )?.startedAt ?? null,
             )}
           </p>
         )}

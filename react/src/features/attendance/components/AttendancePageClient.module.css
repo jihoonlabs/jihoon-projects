@@ -68,7 +68,7 @@
   gap: 0.65rem;
 }
 
- .actions button {
+.actions button {
   display: inline-flex;
   flex: 1 1 42%;
   align-items: center;
@@ -95,7 +95,7 @@
   background: #1e40af;
 }
 
- .breakStart {
+.breakStart {
   border-color: #fed7aa;
   background: #fff7ed;
   color: #9a3412;
