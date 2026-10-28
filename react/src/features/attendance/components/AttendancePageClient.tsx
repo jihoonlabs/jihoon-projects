@@ -94,6 +94,7 @@ export function AttendancePageClient() {
     plannedBreakMinutes: 0,
   });
   const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [isScheduleLoading, setIsScheduleLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -124,10 +125,13 @@ export function AttendancePageClient() {
   }, [page, load]);
 
   useEffect(() => {
-    fetchAttendanceSchedule().then(applyScheduleResult).catch((loadError) => {
-      setSchedule(null);
-      setScheduleError(errorMessage(loadError));
-    });
+    fetchAttendanceSchedule()
+      .then(applyScheduleResult)
+      .catch((loadError) => {
+        setSchedule(null);
+        setScheduleError(errorMessage(loadError));
+      })
+      .finally(() => setIsScheduleLoading(false));
   }, [applyScheduleResult]);
 
   const changePage = (nextPage: number) => {
@@ -199,6 +203,7 @@ export function AttendancePageClient() {
   };
 
   const disabled = isLoading || isSubmitting || today === null;
+  const scheduleDisabled = disabled || isScheduleLoading;
 
   return (
     <main className={styles.page}>
@@ -306,7 +311,7 @@ export function AttendancePageClient() {
               type="date"
               required
               value={scheduleInput.effectiveFrom}
-              disabled={disabled}
+              disabled={scheduleDisabled}
               onChange={(event) =>
                 setScheduleInput({
                   ...scheduleInput,
@@ -322,7 +327,7 @@ export function AttendancePageClient() {
                 <input
                   type="checkbox"
                   checked={scheduleInput.weekdays.includes(index + 1)}
-                  disabled={disabled}
+                  disabled={scheduleDisabled}
                   onChange={() => toggleWeekday(index + 1)}
                 />
                 {label}
@@ -336,7 +341,7 @@ export function AttendancePageClient() {
                 type="time"
                 required
                 value={scheduleInput.startTime}
-                disabled={disabled}
+                disabled={scheduleDisabled}
                 onChange={(event) =>
                   setScheduleInput({
                     ...scheduleInput,
@@ -351,7 +356,7 @@ export function AttendancePageClient() {
                 type="time"
                 required
                 value={scheduleInput.endTime}
-                disabled={disabled}
+                disabled={scheduleDisabled}
                 onChange={(event) =>
                   setScheduleInput({
                     ...scheduleInput,
@@ -368,7 +373,7 @@ export function AttendancePageClient() {
                 max="600"
                 required
                 value={scheduleInput.plannedBreakMinutes}
-                disabled={disabled}
+                disabled={scheduleDisabled}
                 onChange={(event) =>
                   setScheduleInput({
                     ...scheduleInput,
@@ -382,7 +387,7 @@ export function AttendancePageClient() {
             type="submit"
             className={styles.saveSchedule}
             disabled={
-              disabled ||
+              scheduleDisabled ||
               scheduleInput.weekdays.length === 0 ||
               !scheduleInput.startTime ||
               !scheduleInput.endTime
