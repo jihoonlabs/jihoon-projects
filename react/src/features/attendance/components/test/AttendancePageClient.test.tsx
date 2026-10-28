@@ -14,6 +14,7 @@ vi.mock('../../api/attendanceApi', async (importOriginal) => {
     ...actual,
     fetchAttendanceToday: vi.fn(),
     fetchAttendancePage: vi.fn(),
+    fetchAttendanceSchedule: vi.fn(),
     clockIn: vi.fn(),
     clockOut: vi.fn(),
     startBreak: vi.fn(),
