@@ -355,15 +355,45 @@ export function AttendancePageClient() {
       <section className={styles.panel} aria-labelledby="schedule-heading">
         <h2 id="schedule-heading">
           <CalendarClock aria-hidden="true" size={18} />
-          予定勤務の設定
+          予定勤務
         </h2>
         <p className={styles.scheduleNote}>
-          予定の目安として保存します。実際の打刻・休憩記録には影響せず、予定休憩も勤務時間から自動で差し引きません。終了時刻が開始時刻より早い場合は翌日の終了として扱います。
+          予定休憩は実際の休憩記録と分けて保管し、勤務時間から自動で差し引きません。終了時刻が開始時刻より早い場合は翌日の終了として扱います。
         </p>
         {scheduleError && (
           <p className={styles.error} role="alert">
             {scheduleError}
           </p>
+        )}
+        {isAttendanceAdmin && (
+          <label className={styles.scheduleEmployee}>
+            従業員
+            <select
+              required
+              value={selectedScheduleUserId ?? ''}
+              disabled={isScheduleLoading || isSubmitting || scheduleUsers.length === 0}
+              onChange={(event) => {
+                const value = event.currentTarget.value;
+                setSchedule(null);
+                setScheduleInput({
+                  effectiveFrom: '',
+                  weekdays: [],
+                  startTime: '',
+                  endTime: '',
+                  plannedBreakMinutes: 0,
+                });
+                setScheduleError(null);
+                setSelectedScheduleUserId(value ? Number(value) : null);
+              }}
+            >
+              <option value="">従業員を選択してください</option>
+              {scheduleUsers.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.name}（ID: {employee.id}）
+                </option>
+              ))}
+            </select>
+          </label>
         )}
         {schedule?.current && (
           <p>現在の予定: {scheduleSummary(schedule.current)}</p>
@@ -374,98 +404,111 @@ export function AttendancePageClient() {
             {scheduleSummary(schedule.upcoming)}
           </p>
         )}
-        <form className={styles.scheduleForm} onSubmit={saveSchedule}>
-          <label>
-            適用開始日
-            <input
-              type="date"
-              required
-              value={scheduleInput.effectiveFrom}
-              disabled={scheduleDisabled}
-              onChange={(event) =>
-                setScheduleInput({
-                  ...scheduleInput,
-                  effectiveFrom: event.currentTarget.value,
-                })
-              }
-            />
-          </label>
-          <fieldset className={styles.weekdays}>
-            <legend>勤務する曜日</legend>
-            {WEEKDAY_LABELS.map((label, index) => (
-              <label key={label}>
+        {!isScheduleLoading && !scheduleError && !schedule?.current && !schedule?.upcoming && (
+          <p>
+            {isAttendanceAdmin
+              ? '選択した従業員の予定は未設定です。'
+              : '予定勤務は未設定です。管理者が設定するとここに表示されます。'}
+          </p>
+        )}
+        {isAttendanceAdmin ? (
+          <form className={styles.scheduleForm} onSubmit={saveSchedule}>
+            <label>
+              適用開始日
+              <input
+                type="date"
+                required
+                value={scheduleInput.effectiveFrom}
+                disabled={scheduleDisabled}
+                onChange={(event) =>
+                  setScheduleInput({
+                    ...scheduleInput,
+                    effectiveFrom: event.currentTarget.value,
+                  })
+                }
+              />
+            </label>
+            <fieldset className={styles.weekdays}>
+              <legend>勤務する曜日</legend>
+              {WEEKDAY_LABELS.map((label, index) => (
+                <label key={label}>
+                  <input
+                    type="checkbox"
+                    checked={scheduleInput.weekdays.includes(index + 1)}
+                    disabled={scheduleDisabled}
+                    onChange={() => toggleWeekday(index + 1)}
+                  />
+                  {label}
+                </label>
+              ))}
+            </fieldset>
+            <div className={styles.scheduleFields}>
+              <label>
+                開始時刻
                 <input
-                  type="checkbox"
-                  checked={scheduleInput.weekdays.includes(index + 1)}
+                  type="time"
+                  required
+                  value={scheduleInput.startTime}
                   disabled={scheduleDisabled}
-                  onChange={() => toggleWeekday(index + 1)}
+                  onChange={(event) =>
+                    setScheduleInput({
+                      ...scheduleInput,
+                      startTime: event.currentTarget.value,
+                    })
+                  }
                 />
-                {label}
               </label>
-            ))}
-          </fieldset>
-          <div className={styles.scheduleFields}>
-            <label>
-              開始時刻
-              <input
-                type="time"
-                required
-                value={scheduleInput.startTime}
-                disabled={scheduleDisabled}
-                onChange={(event) =>
-                  setScheduleInput({
-                    ...scheduleInput,
-                    startTime: event.currentTarget.value,
-                  })
-                }
-              />
-            </label>
-            <label>
-              終了時刻
-              <input
-                type="time"
-                required
-                value={scheduleInput.endTime}
-                disabled={scheduleDisabled}
-                onChange={(event) =>
-                  setScheduleInput({
-                    ...scheduleInput,
-                    endTime: event.currentTarget.value,
-                  })
-                }
-              />
-            </label>
-            <label>
-              予定休憩（分）
-              <input
-                type="number"
-                min="0"
-                max="600"
-                required
-                value={scheduleInput.plannedBreakMinutes}
-                disabled={scheduleDisabled}
-                onChange={(event) =>
-                  setScheduleInput({
-                    ...scheduleInput,
-                    plannedBreakMinutes: Number(event.currentTarget.value),
-                  })
-                }
-              />
-            </label>
-          </div>
-          <button
-            type="submit"
-            className={styles.saveSchedule}
-            disabled={
-              scheduleDisabled ||
-              scheduleInput.weekdays.length === 0 ||
-              !scheduleInput.startTime ||
-              !scheduleInput.endTime
-            }
-          >
-            予定を保存
-          </button>
-        </form>
+              <label>
+                終了時刻
+                <input
+                  type="time"
+                  required
+                  value={scheduleInput.endTime}
+                  disabled={scheduleDisabled}
+                  onChange={(event) =>
+                    setScheduleInput({
+                      ...scheduleInput,
+                      endTime: event.currentTarget.value,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                予定休憩（分）
+                <input
+                  type="number"
+                  min="0"
+                  max="600"
+                  required
+                  value={scheduleInput.plannedBreakMinutes}
+                  disabled={scheduleDisabled}
+                  onChange={(event) =>
+                    setScheduleInput({
+                      ...scheduleInput,
+                      plannedBreakMinutes: Number(event.currentTarget.value),
+                    })
+                  }
+                />
+              </label>
+            </div>
+            <button
+              type="submit"
+              className={styles.saveSchedule}
+              disabled={
+                scheduleDisabled ||
+                scheduleInput.weekdays.length === 0 ||
+                !scheduleInput.startTime ||
+                !scheduleInput.endTime
+              }
+            >
+              従業員の予定を保存
+            </button>
+          </form>
+        ) : (
+          <p className={styles.scheduleNote}>
+            予定勤務の設定・変更は出勤管理者が行います。
+          </p>
+        )}
       </section>
 
       {error && (
