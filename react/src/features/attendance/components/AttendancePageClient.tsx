@@ -271,9 +271,10 @@ export function AttendancePageClient() {
 
   const disabled = isLoading || isSubmitting || today === null;
   const scheduleDisabled =
-    disabled ||
+    isSubmitting ||
     isScheduleLoading ||
-    (isAttendanceAdmin && selectedScheduleUserId === null);
+    !isAttendanceAdmin ||
+    selectedScheduleUserId === null;
 
   return (
     <main className={styles.page}>
