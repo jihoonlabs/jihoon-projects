@@ -120,6 +120,47 @@ class AttendanceApiTest extends TestCase
             ->assertJsonPath('data.0.work_date', '2026-10-20');
     }
 
+    public function test_user_can_record_multiple_breaks_and_duration_excludes_completed_breaks(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        CarbonImmutable::setTestNow('2026-10-20T08:00:00Z');
+        $this->postJson('/api/attendance/clock-in')->assertCreated();
+
+        CarbonImmutable::setTestNow('2026-10-20T12:00:00Z');
+        $this->postJson('/api/attendance/break-start')
+            ->assertCreated()
+            ->assertJsonPath('data.started_at', '2026-10-20T12:00:00+00:00');
+
+        $this->getJson('/api/attendance/today')
+            ->assertJsonPath('data.status', 'on_break');
+        $this->postJson('/api/attendance/clock-out')
+            ->assertStatus(409)
+            ->assertJsonPath('code', 'break_in_progress');
+        $this->postJson('/api/attendance/break-start')
+            ->assertStatus(409)
+            ->assertJsonPath('code', 'already_on_break');
+
+        CarbonImmutable::setTestNow('2026-10-20T12:30:00Z');
+        $this->postJson('/api/attendance/break-end')->assertOk();
+
+        CarbonImmutable::setTestNow('2026-10-20T15:00:00Z');
+        $this->postJson('/api/attendance/break-start')->assertCreated();
+        CarbonImmutable::setTestNow('2026-10-20T15:15:00Z');
+        $this->postJson('/api/attendance/break-end')->assertOk();
+
+        CarbonImmutable::setTestNow('2026-10-20T17:00:00Z');
+        $this->postJson('/api/attendance/clock-out')
+            ->assertOk()
+            ->assertJsonPath('data.break_duration_seconds', 2700)
+            ->assertJsonPath('data.break_duration_minutes', 45)
+            ->assertJsonPath('data.duration_seconds', 29700)
+            ->assertJsonPath('data.duration_minutes', 495);
+
+        $this->assertDatabaseCount('attendance_breaks', 2);
+    }
+
     public function test_guest_and_suspended_user_cannot_access_attendance(): void
     {
         $this->getJson('/api/attendance/today')->assertUnauthorized();

@@ -1,13 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { LogIn, LogOut } from 'lucide-react';
+import { Coffee, LogIn, LogOut, Play } from 'lucide-react';
 
 import {
   ATTENDANCE_ERROR_MESSAGE,
   AttendanceApiError,
   clockIn,
   clockOut,
+  endBreak,
+  startBreak,
   fetchAttendancePage,
   fetchAttendanceToday,
 } from '../api/attendanceApi';
@@ -18,6 +20,7 @@ import styles from './AttendancePageClient.module.css';
 const STATUS_LABELS = {
   not_started: '出勤前',
   working: '勤務中',
+  on_break: '休憩中',
   finished: '退勤済み',
 };
 
@@ -77,7 +80,9 @@ export function AttendancePageClient() {
     setPage(nextPage);
   };
 
-  const recordAction = async (action: 'in' | 'out') => {
+  const recordAction = async (
+    action: 'in' | 'out' | 'break-start' | 'break-end',
+  ) => {
     if (isSubmitting || isLoading) return;
 
     setIsSubmitting(true);
@@ -85,8 +90,12 @@ export function AttendancePageClient() {
     try {
       if (action === 'in') {
         await clockIn();
-      } else {
+      } else if (action === 'out') {
         await clockOut();
+      } else if (action === 'break-start') {
+        await startBreak();
+      } else {
+        await endBreak();
       }
       const [latestToday, latestHistory] = await load(page);
       setToday(latestToday);
@@ -134,6 +143,16 @@ export function AttendancePageClient() {
             <dd>{formatTime(today?.record?.clockOutAt ?? null)}</dd>
           </div>
         </dl>
+        {today?.status === 'on_break' && today.record && (
+          <p>
+            休憩開始:{' '}
+            {formatTime(
+              today.record.breaks.find(
+                (breakRecord) => breakRecord.endedAt === null,
+              )?.startedAt ?? null,
+            )}
+          </p>
+        )}
         <div className={styles.actions}>
           <button
             type="button"
@@ -143,6 +162,24 @@ export function AttendancePageClient() {
           >
             <LogIn aria-hidden="true" size={20} strokeWidth={2} />
             出勤
+          </button>
+          <button
+            type="button"
+            className={styles.breakStart}
+            disabled={disabled || today?.status !== 'working'}
+            onClick={() => recordAction('break-start')}
+          >
+            <Coffee aria-hidden="true" size={20} strokeWidth={2} />
+            休憩開始
+          </button>
+          <button
+            type="button"
+            className={styles.breakEnd}
+            disabled={disabled || today?.status !== 'on_break'}
+            onClick={() => recordAction('break-end')}
+          >
+            <Play aria-hidden="true" size={20} strokeWidth={2} />
+            休憩終了
           </button>
           <button
             type="button"
@@ -171,6 +208,7 @@ export function AttendancePageClient() {
                 <th scope="col">勤務日</th>
                 <th scope="col">出勤時刻</th>
                 <th scope="col">退勤時刻</th>
+                <th scope="col">休憩時間</th>
                 <th scope="col">勤務時間</th>
               </tr>
             </thead>
@@ -180,6 +218,7 @@ export function AttendancePageClient() {
                   <td>{record.workDate}</td>
                   <td>{formatTime(record.clockInAt)}</td>
                   <td>{formatTime(record.clockOutAt)}</td>
+                  <td>{formatDuration(record.breakDurationMinutes)}</td>
                   <td>{formatDuration(record.durationMinutes)}</td>
                 </tr>
               ))}

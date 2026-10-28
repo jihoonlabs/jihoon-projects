@@ -70,7 +70,7 @@
 
 .actions button {
   display: inline-flex;
-  flex: 1;
+  flex: 1 1 42%;
   align-items: center;
   justify-content: center;
   gap: 0.55rem;
@@ -93,6 +93,26 @@
 
 .clockIn:hover:not(:disabled) {
   background: #1e40af;
+}
+
+.breakStart {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.breakStart:hover:not(:disabled) {
+  background: #ffedd5;
+}
+
+.breakEnd {
+  border-color: #d1d5db;
+  background: #f9fafb;
+  color: #374151;
+}
+
+.breakEnd:hover:not(:disabled) {
+  background: #f3f4f6;
 }
 
 .clockOut {
