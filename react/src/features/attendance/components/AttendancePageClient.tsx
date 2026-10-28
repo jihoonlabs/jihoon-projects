@@ -34,10 +34,6 @@ const STATUS_LABELS = {
 
 const WEEKDAY_LABELS = ['月', '火', '水', '木', '金', '土', '日'];
 
-type ScheduleLoadResult =
-  | { schedule: AttendanceScheduleState }
-  | { error: unknown };
-
 function scheduleInputFrom(
   state: AttendanceScheduleState,
 ): AttendanceScheduleInput {
@@ -104,50 +100,35 @@ export function AttendancePageClient() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (requestedPage: number) => {
-    const [latestToday, latestHistory, scheduleResult] = await Promise.all([
+    return Promise.all([
       fetchAttendanceToday(),
       fetchAttendancePage(requestedPage),
-      fetchAttendanceSchedule()
-        .then((schedule) => ({ schedule }))
-        .catch((error: unknown) => ({ error })),
     ]);
-
-    return [latestToday, latestHistory, scheduleResult] as const;
   }, []);
 
-  const applyScheduleResult = useCallback(
-    (result: ScheduleLoadResult, workDate: string) => {
-      if ('schedule' in result) {
-        setSchedule(result.schedule);
-        setScheduleInput(scheduleInputFrom(result.schedule));
-        setScheduleError(null);
-        return;
-      }
-
-      setSchedule(null);
-      setScheduleInput({
-        effectiveFrom: workDate,
-        weekdays: [],
-        startTime: '',
-        endTime: '',
-        plannedBreakMinutes: 0,
-      });
-      setScheduleError(errorMessage(result.error));
-    },
-    [],
-  );
+  const applyScheduleResult = useCallback((result: AttendanceScheduleState) => {
+    setSchedule(result);
+    setScheduleInput(scheduleInputFrom(result));
+    setScheduleError(null);
+  }, []);
 
   useEffect(() => {
     load(page)
-      .then(([latestToday, latestHistory, scheduleResult]) => {
+      .then(([latestToday, latestHistory]) => {
         setToday(latestToday);
         setHistory(latestHistory);
-        applyScheduleResult(scheduleResult, latestToday.date);
         setError(null);
       })
       .catch((loadError) => setError(errorMessage(loadError)))
       .finally(() => setIsLoading(false));
-  }, [page, load, applyScheduleResult]);
+  }, [page, load]);
+
+  useEffect(() => {
+    fetchAttendanceSchedule().then(applyScheduleResult).catch((loadError) => {
+      setSchedule(null);
+      setScheduleError(errorMessage(loadError));
+    });
+  }, [applyScheduleResult]);
 
   const changePage = (nextPage: number) => {
     setIsLoading(true);
@@ -172,10 +153,9 @@ export function AttendancePageClient() {
       } else {
         await endBreak();
       }
-      const [latestToday, latestHistory, scheduleResult] = await load(page);
+      const [latestToday, latestHistory] = await load(page);
       setToday(latestToday);
       setHistory(latestHistory);
-      applyScheduleResult(scheduleResult, latestToday.date);
     } catch (actionError) {
       setError(errorMessage(actionError));
       try {
@@ -210,7 +190,7 @@ export function AttendancePageClient() {
     try {
       await saveAttendanceSchedule(scheduleInput);
       const latestSchedule = await fetchAttendanceSchedule();
-      applyScheduleResult({ schedule: latestSchedule }, latestSchedule.date);
+      applyScheduleResult(latestSchedule);
     } catch (saveError) {
       setScheduleError(errorMessage(saveError));
     } finally {
