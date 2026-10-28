@@ -4,6 +4,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import * as api from '../../api/attendanceApi';
 import type { AttendanceRecord } from '../../types/attendance';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
+
 import { AttendancePageClient } from '../AttendancePageClient';
 
 vi.mock('../../api/attendanceApi', async (importOriginal) => {
@@ -15,6 +17,7 @@ vi.mock('../../api/attendanceApi', async (importOriginal) => {
     fetchAttendanceToday: vi.fn(),
     fetchAttendancePage: vi.fn(),
     fetchAttendanceSchedule: vi.fn(),
+    fetchAttendanceScheduleUsers: vi.fn(),
     clockIn: vi.fn(),
     clockOut: vi.fn(),
     startBreak: vi.fn(),
@@ -36,6 +39,20 @@ const record: AttendanceRecord = {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  useAuthStore.setState({
+    user: {
+      id: 1,
+      name: 'Employee',
+      email: 'employee@example.com',
+      role: 'user',
+      attendanceRole: 'employee',
+      status: 'active',
+      createdAt: '2026-10-20T00:00:00Z',
+    },
+  });
+  vi.mocked(api.fetchAttendanceScheduleUsers).mockResolvedValue([
+    { id: 7, name: 'Employee' },
+  ]);
   vi.mocked(api.fetchAttendancePage).mockResolvedValue({
     records: [record],
     currentPage: 1,
@@ -216,7 +233,18 @@ it('does not display internal error details from the attendance API', async () =
   expect(alert).not.toHaveTextContent('/Users/example');
 });
 
-it('saves recurring schedule settings and explains planned breaks stay separate', async () => {
+it('lets attendance admins save an employee schedule without changing punch data', async () => {
+  useAuthStore.setState({
+    user: {
+      id: 2,
+      name: 'Attendance Admin',
+      email: 'admin@example.com',
+      role: 'user',
+      attendanceRole: 'admin',
+      status: 'active',
+      createdAt: '2026-10-20T00:00:00Z',
+    },
+  });
   vi.mocked(api.fetchAttendanceToday).mockResolvedValue({
     date: '2026-10-20',
     timezone: 'Asia/Tokyo',
@@ -225,7 +253,7 @@ it('saves recurring schedule settings and explains planned breaks stay separate'
   });
 
   render(<AttendancePageClient />);
-  const save = await screen.findByRole('button', { name: '予定を保存' });
+  const save = await screen.findByRole('button', { name: '従業員の予定を保存' });
   expect(
     screen.getByText(/実際の打刻・休憩記録には影響せず/),
   ).toBeInTheDocument();
@@ -249,7 +277,7 @@ it('saves recurring schedule settings and explains planned breaks stay separate'
   await userEvent.click(save);
 
   await waitFor(() =>
-    expect(api.saveAttendanceSchedule).toHaveBeenCalledWith({
+    expect(api.saveAttendanceSchedule).toHaveBeenCalledWith(7, {
       effectiveFrom: '2026-10-20',
       weekdays: [1],
       startTime: '09:00',
