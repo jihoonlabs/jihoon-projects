@@ -4,12 +4,18 @@ import type {
   AttendanceBreak,
   AttendancePage,
   AttendanceRecord,
+  AttendanceSchedule,
+  AttendanceScheduleInput,
+  AttendanceScheduleState,
   AttendanceToday,
 } from '../types/attendance';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 export const ATTENDANCE_ERROR_MESSAGE =
   '勤怠を処理できませんでした。時間をおいて再度お試しください。';
+
+const SCHEDULE_ERROR_MESSAGE =
+  '予定勤務を保存できませんでした。入力内容を確認してください。';
 
 const CONFLICT_MESSAGES: Record<string, string> = {
   already_clocked_in: '本日はすでに出勤しています。',
@@ -94,7 +100,9 @@ async function json<T>(response: Response): Promise<T> {
     throw new AttendanceApiError(
       response.status === 409 && code && CONFLICT_MESSAGES[code]
         ? CONFLICT_MESSAGES[code]
-        : ATTENDANCE_ERROR_MESSAGE,
+        : response.status === 422
+          ? SCHEDULE_ERROR_MESSAGE
+          : ATTENDANCE_ERROR_MESSAGE,
       response.status,
       code,
     );
@@ -159,4 +167,72 @@ export async function endBreak(): Promise<void> {
   await json<{ data: BreakResponse }>(
     await fetchWithCsrf('/api/attendance/break-end', { method: 'POST' }),
   );
+}
+
+interface ScheduleResponse {
+  id: number;
+  effective_from: string;
+  weekdays: number[];
+  start_time: string;
+  end_time: string;
+  planned_break_minutes: number;
+}
+
+interface ScheduleStateResponse {
+  date: string;
+  timezone: 'Asia/Tokyo';
+  current: ScheduleResponse | null;
+  upcoming: ScheduleResponse | null;
+}
+
+function toSchedule(schedule: ScheduleResponse | null): AttendanceSchedule | null {
+  if (!schedule) return null;
+
+  return {
+    id: schedule.id,
+    effectiveFrom: schedule.effective_from,
+    weekdays: schedule.weekdays,
+    startTime: schedule.start_time,
+    endTime: schedule.end_time,
+    plannedBreakMinutes: schedule.planned_break_minutes,
+  };
+}
+
+function toScheduleState(value: ScheduleStateResponse): AttendanceScheduleState {
+  return {
+    date: value.date,
+    timezone: value.timezone,
+    current: toSchedule(value.current),
+    upcoming: toSchedule(value.upcoming),
+  };
+}
+
+export async function fetchAttendanceSchedule(): Promise<AttendanceScheduleState> {
+  const result = await json<{ data: ScheduleStateResponse }>(
+    await fetch(`${API_URL}/api/attendance/schedule`, {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    }),
+  );
+
+  return toScheduleState(result.data);
+}
+
+export async function saveAttendanceSchedule(
+  schedule: AttendanceScheduleInput,
+): Promise<AttendanceSchedule> {
+  const result = await json<{ data: ScheduleResponse }>(
+    await fetchWithCsrf('/api/attendance/schedule', {
+      method: 'PUT',
+      body: JSON.stringify({
+        effective_from: schedule.effectiveFrom,
+        weekdays: schedule.weekdays,
+        start_time: schedule.startTime,
+        end_time: schedule.endTime,
+        planned_break_minutes: schedule.plannedBreakMinutes,
+      }),
+    }),
+  );
+
+  return toSchedule(result.data)!;
 }
