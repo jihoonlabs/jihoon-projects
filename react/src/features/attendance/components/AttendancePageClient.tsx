@@ -346,7 +346,7 @@ export function AttendancePageClient() {
               />
             </label>
             <label>
-              예정 휴식 (분)
+              予定休憩（分）
               <input
                 type="number"
                 min="0"
@@ -373,7 +373,7 @@ export function AttendancePageClient() {
               !scheduleInput.endTime
             }
           >
-            일정 저장
+            予定を保存
           </button>
         </form>
       </section>
