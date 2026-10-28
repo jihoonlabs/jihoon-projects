@@ -54,3 +54,8 @@ export interface AttendanceScheduleInput {
   endTime: string;
   plannedBreakMinutes: number;
 }
+
+export interface AttendanceScheduleUser {
+  id: number;
+  name: string;
+}
