@@ -1,10 +1,10 @@
 <?php
 
-namespace Tests\\Feature\\Attendance;
+namespace Tests\Feature\Attendance;
 
-use App\\Models\\User;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Tests\\TestCase;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class AttendanceRoleCommandTest extends TestCase
 {
