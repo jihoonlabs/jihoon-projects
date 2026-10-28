@@ -10,7 +10,7 @@ Artisan::command('inspire', function () {
 
 
 Artisan::command('attendance:set-role {user_id} {role}', function (string $userId, string $role) {
-    if (! in_array($role, ['employee', 'admin'], true)) {
+    if (!in_array($role, ['employee', 'admin'], true)) {
         $this->error('Role must be either employee or admin.');
 
         return 1;
