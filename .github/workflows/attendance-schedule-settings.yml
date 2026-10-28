@@ -65,11 +65,17 @@ jobs:
       - run: >-
           vendor/bin/pint --test
           app/Http/Controllers/Attendance/AttendanceScheduleController.php
+          app/Http/Controllers/AuthController.php
           app/Models/AttendanceSchedule.php
           app/Models/User.php
           database/migrations/2026_10_28_000002_create_attendance_schedules_table.php
+          database/migrations/2026_10_28_000003_add_attendance_role_to_users_table.php
           routes/api/attendance.php
+          routes/console.php
           tests/Feature/Attendance/AttendanceApiTest.php
+          tests/Feature/Attendance/AttendanceRoleCommandTest.php
+          tests/Feature/Auth/LoginTest.php
+          tests/Feature/Auth/RegisterTest.php
       - run: php artisan test
         env:
           APP_KEY: "base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
