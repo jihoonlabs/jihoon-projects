@@ -255,7 +255,7 @@ it('lets attendance admins save an employee schedule without changing punch data
   render(<AttendancePageClient />);
   const save = await screen.findByRole('button', { name: '従業員の予定を保存' });
   expect(
-    screen.getByText(/実際の打刻・休憩記録には影響せず/),
+    screen.getByText(/実際の休憩記録と分けて保管/),
   ).toBeInTheDocument();
   expect(save).toBeDisabled();
 
@@ -285,6 +285,22 @@ it('lets attendance admins save an employee schedule without changing punch data
       plannedBreakMinutes: 60,
     }),
   );
+});
+
+it('keeps employee schedule controls read-only', async () => {
+  vi.mocked(api.fetchAttendanceToday).mockResolvedValue({
+    date: '2026-10-20',
+    timezone: 'Asia/Tokyo',
+    status: 'not_started',
+    record: null,
+  });
+
+  render(<AttendancePageClient />);
+
+  expect(await screen.findByText('予定勤務の設定・変更は出勤管理者が行います。')).toBeInTheDocument();
+  expect(screen.queryByLabelText('適用開始日')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '従業員の予定を保存' })).not.toBeInTheDocument();
+  expect(api.fetchAttendanceScheduleUsers).not.toHaveBeenCalled();
 });
 
 it('keeps clock actions available when schedule loading fails', async () => {
