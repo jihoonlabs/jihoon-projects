@@ -21,7 +21,7 @@ class AttendanceScheduleController extends Controller
 
         return response()->json([
             'data' => User::query()
-                ->where('role', 'user')
+                ->where('attendance_role', 'employee')
                 ->where('status', 'active')
                 ->orderBy('name')
                 ->orderBy('id')
@@ -79,7 +79,7 @@ class AttendanceScheduleController extends Controller
                 'required',
                 'integer',
                 Rule::exists('users', 'id')
-                    ->where('role', 'user')
+                    ->where('attendance_role', 'employee')
                     ->where('status', 'active'),
             ],
             'effective_from' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.$today],
@@ -131,12 +131,12 @@ class AttendanceScheduleController extends Controller
 
     private function authorizeAdmin(Request $request): void
     {
-        abort_unless($request->user()->role === 'admin', 403);
+        abort_unless($request->user()->attendance_role === 'admin', 403);
     }
 
     private function targetEmployee(Request $request): User
     {
-        if ($request->user()->role !== 'admin') {
+        if ($request->user()->attendance_role !== 'admin') {
             abort_if($request->query->has('user_id'), 403);
 
             return $request->user();
