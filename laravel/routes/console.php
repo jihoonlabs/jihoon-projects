@@ -13,7 +13,7 @@ Artisan::command('attendance:set-role {user_id} {role}', function (string $userI
     if (! in_array($role, ['employee', 'admin'], true)) {
         $this->error('Role must be either employee or admin.');
 
-        return self::INVALID;
+        return 1;
     }
 
     $user = User::query()->find($userId);
