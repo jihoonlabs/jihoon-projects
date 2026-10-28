@@ -180,7 +180,7 @@ it('records break start and end, changes available actions, and shows break dura
   await waitFor(() => expect(start).toBeEnabled());
   expect(end).toBeDisabled();
   expect(checkout).toBeEnabled();
-  expect(screen.getByText('30分')).toBeInTheDocument();
+  expect(screen.getByText('0時間30分')).toBeInTheDocument();
 });
 
 it('does not display internal error details from the attendance API', async () => {
