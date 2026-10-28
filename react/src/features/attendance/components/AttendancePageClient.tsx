@@ -140,7 +140,6 @@ export function AttendancePageClient() {
     if (!isAttendanceAdmin) return;
 
     let cancelled = false;
-    setIsScheduleLoading(true);
     fetchAttendanceScheduleUsers()
       .then((users) => {
         if (cancelled) return;
@@ -173,8 +172,6 @@ export function AttendancePageClient() {
     if (isAttendanceAdmin && selectedScheduleUserId === null) return;
 
     let cancelled = false;
-    setIsScheduleLoading(true);
-    setSchedule(null);
     fetchAttendanceSchedule(
       isAttendanceAdmin ? selectedScheduleUserId! : undefined,
     )
@@ -254,13 +251,16 @@ export function AttendancePageClient() {
       isLoading ||
       !isAttendanceAdmin ||
       selectedScheduleUserId === null
-    ) return;
+    )
+      return;
 
     setIsSubmitting(true);
     setScheduleError(null);
     try {
       await saveAttendanceSchedule(selectedScheduleUserId, scheduleInput);
-      const latestSchedule = await fetchAttendanceSchedule(selectedScheduleUserId);
+      const latestSchedule = await fetchAttendanceSchedule(
+        selectedScheduleUserId,
+      );
       applyScheduleResult(latestSchedule);
     } catch (saveError) {
       setScheduleError(errorMessage(saveError));
@@ -372,7 +372,9 @@ export function AttendancePageClient() {
             <select
               required
               value={selectedScheduleUserId ?? ''}
-              disabled={isScheduleLoading || isSubmitting || scheduleUsers.length === 0}
+              disabled={
+                isScheduleLoading || isSubmitting || scheduleUsers.length === 0
+              }
               onChange={(event) => {
                 const value = event.currentTarget.value;
                 setSchedule(null);
@@ -384,6 +386,7 @@ export function AttendancePageClient() {
                   plannedBreakMinutes: 0,
                 });
                 setScheduleError(null);
+                setIsScheduleLoading(true);
                 setSelectedScheduleUserId(value ? Number(value) : null);
               }}
             >
@@ -405,13 +408,16 @@ export function AttendancePageClient() {
             {scheduleSummary(schedule.upcoming)}
           </p>
         )}
-        {!isScheduleLoading && !scheduleError && !schedule?.current && !schedule?.upcoming && (
-          <p>
-            {isAttendanceAdmin
-              ? '選択した従業員の予定は未設定です。'
-              : '予定勤務は未設定です。管理者が設定するとここに表示されます。'}
-          </p>
-        )}
+        {!isScheduleLoading &&
+          !scheduleError &&
+          !schedule?.current &&
+          !schedule?.upcoming && (
+            <p>
+              {isAttendanceAdmin
+                ? '選択した従業員の予定は未設定です。'
+                : '予定勤務は未設定です。管理者が設定するとここに表示されます。'}
+            </p>
+          )}
         {isAttendanceAdmin ? (
           <form className={styles.scheduleForm} onSubmit={saveSchedule}>
             <label>

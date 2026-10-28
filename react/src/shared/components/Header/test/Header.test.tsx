@@ -18,6 +18,7 @@ beforeEach(() => {
       name: 'Tester',
       email: 'test@example.com',
       role: 'admin',
+      attendanceRole: 'employee',
       status: 'active',
       createdAt: '',
     },

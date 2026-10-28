@@ -253,10 +253,10 @@ it('lets attendance admins save an employee schedule without changing punch data
   });
 
   render(<AttendancePageClient />);
-  const save = await screen.findByRole('button', { name: '従業員の予定を保存' });
-  expect(
-    screen.getByText(/実際の休憩記録と分けて保管/),
-  ).toBeInTheDocument();
+  const save = await screen.findByRole('button', {
+    name: '従業員の予定を保存',
+  });
+  expect(screen.getByText(/実際の休憩記録と分けて保管/)).toBeInTheDocument();
   expect(save).toBeDisabled();
 
   fireEvent.change(screen.getByLabelText('適用開始日'), {
@@ -297,9 +297,13 @@ it('keeps employee schedule controls read-only', async () => {
 
   render(<AttendancePageClient />);
 
-  expect(await screen.findByText('予定勤務の設定・変更は出勤管理者が行います。')).toBeInTheDocument();
+  expect(
+    await screen.findByText('予定勤務の設定・変更は出勤管理者が行います。'),
+  ).toBeInTheDocument();
   expect(screen.queryByLabelText('適用開始日')).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: '従業員の予定を保存' })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: '従業員の予定を保存' }),
+  ).not.toBeInTheDocument();
   expect(api.fetchAttendanceScheduleUsers).not.toHaveBeenCalled();
 });
 

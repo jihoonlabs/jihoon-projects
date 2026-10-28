@@ -215,7 +215,8 @@ function toScheduleState(
 export async function fetchAttendanceSchedule(
   userId?: number,
 ): Promise<AttendanceScheduleState> {
-  const query = userId === undefined ? '' : `?user_id=${encodeURIComponent(userId)}`;
+  const query =
+    userId === undefined ? '' : `?user_id=${encodeURIComponent(userId)}`;
   const result = await json<{ data: ScheduleStateResponse }>(
     await fetch(`${API_URL}/api/attendance/schedule${query}`, {
       credentials: 'include',
@@ -226,7 +227,9 @@ export async function fetchAttendanceSchedule(
   return toScheduleState(result.data);
 }
 
-export async function fetchAttendanceScheduleUsers(): Promise<AttendanceScheduleUser[]> {
+export async function fetchAttendanceScheduleUsers(): Promise<
+  AttendanceScheduleUser[]
+> {
   const result = await json<{ data: AttendanceScheduleUser[] }>(
     await fetch(`${API_URL}/api/attendance/schedule-users`, {
       credentials: 'include',
