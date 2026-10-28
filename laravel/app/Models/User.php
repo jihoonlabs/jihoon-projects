@@ -26,6 +26,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $attributes = [
         'status' => 'active',
         'role' => 'user',
+        'attendance_role' => 'employee',
     ];
 
     /**
