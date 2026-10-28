@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -18,6 +18,7 @@ vi.mock('../../api/attendanceApi', async (importOriginal) => {
     clockOut: vi.fn(),
     startBreak: vi.fn(),
     endBreak: vi.fn(),
+    saveAttendanceSchedule: vi.fn(),
   };
 });
 
@@ -38,6 +39,20 @@ beforeEach(() => {
     records: [record],
     currentPage: 1,
     lastPage: 1,
+  });
+  vi.mocked(api.fetchAttendanceSchedule).mockResolvedValue({
+    date: '2026-10-20',
+    timezone: 'Asia/Tokyo',
+    current: null,
+    upcoming: null,
+  });
+  vi.mocked(api.saveAttendanceSchedule).mockResolvedValue({
+    id: 4,
+    effectiveFrom: '2026-10-20',
+    weekdays: [1, 2, 3, 4, 5],
+    startTime: '09:00',
+    endTime: '18:00',
+    plannedBreakMinutes: 60,
   });
 });
 
@@ -199,3 +214,47 @@ it('does not display internal error details from the attendance API', async () =
   expect(alert).not.toHaveTextContent('SQLSTATE');
   expect(alert).not.toHaveTextContent('/Users/example');
 });
+
+it('saves recurring schedule settings and explains planned breaks stay separate', async () => {
+  vi.mocked(api.fetchAttendanceToday).mockResolvedValue({
+    date: '2026-10-20',
+    timezone: 'Asia/Tokyo',
+    status: 'not_started',
+    record: null,
+  });
+
+  render(<AttendancePageClient />);
+  const save = await screen.findByRole('button', { name: '予定を保存' });
+  expect(
+    screen.getByText(/実際の打刻・休憩記録には影響せず/),
+  ).toBeInTheDocument();
+  expect(save).toBeDisabled();
+
+  fireEvent.change(screen.getByLabelText('適用開始日'), {
+    target: { value: '2026-10-20' },
+  });
+  await userEvent.click(screen.getByRole('checkbox', { name: '月' }));
+  fireEvent.change(screen.getByLabelText('開始時刻'), {
+    target: { value: '09:00' },
+  });
+  fireEvent.change(screen.getByLabelText('終了時刻'), {
+    target: { value: '18:00' },
+  });
+  fireEvent.change(screen.getByLabelText('予定休憩（分）'), {
+    target: { value: '60' },
+  });
+
+  expect(save).toBeEnabled();
+  await userEvent.click(save);
+
+  await waitFor(() =>
+    expect(api.saveAttendanceSchedule).toHaveBeenCalledWith({
+      effectiveFrom: '2026-10-20',
+      weekdays: [1],
+      startTime: '09:00',
+      endTime: '18:00',
+      plannedBreakMinutes: 60,
+    }),
+  );
+});
+
