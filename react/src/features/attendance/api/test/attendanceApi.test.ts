@@ -9,6 +9,7 @@ import {
   clockOut,
   fetchAttendancePage,
   fetchAttendanceSchedule,
+  fetchAttendanceScheduleUsers,
   fetchAttendanceToday,
   saveAttendanceSchedule,
 } from '../attendanceApi';
@@ -108,7 +109,7 @@ it('loads and saves a recurring schedule without treating planned breaks as actu
     planned_break_minutes: 60,
   };
   server.use(
-    http.get(`${API_URL}/api/attendance/schedule`, () =>
+    http.get(`${API_URL}/api/attendance/schedule?user_id=7`, () =>
       HttpResponse.json({
         data: {
           date: '2026-10-20',
@@ -118,8 +119,12 @@ it('loads and saves a recurring schedule without treating planned breaks as actu
         },
       }),
     ),
+    http.get(`${API_URL}/api/attendance/schedule-users`, () =>
+      HttpResponse.json({ data: [{ id: 7, name: 'Employee' }] }),
+    ),
     http.put(`${API_URL}/api/attendance/schedule`, async ({ request }) => {
       expect(await request.json()).toEqual({
+        user_id: 7,
         effective_from: '2026-10-20',
         weekdays: [1, 2, 3, 4, 5],
         start_time: '09:00',
@@ -130,7 +135,7 @@ it('loads and saves a recurring schedule without treating planned breaks as actu
     }),
   );
 
-  expect(await fetchAttendanceSchedule()).toMatchObject({
+  expect(await fetchAttendanceSchedule(7)).toMatchObject({
     date: '2026-10-20',
     current: {
       effectiveFrom: '2026-10-20',
@@ -140,7 +145,7 @@ it('loads and saves a recurring schedule without treating planned breaks as actu
     upcoming: null,
   });
   expect(
-    await saveAttendanceSchedule({
+    await saveAttendanceSchedule(7, {
       effectiveFrom: '2026-10-20',
       weekdays: [1, 2, 3, 4, 5],
       startTime: '09:00',
@@ -148,4 +153,7 @@ it('loads and saves a recurring schedule without treating planned breaks as actu
       plannedBreakMinutes: 60,
     }),
   ).toMatchObject({ startTime: '09:00', plannedBreakMinutes: 60 });
+  await expect(fetchAttendanceScheduleUsers()).resolves.toEqual([
+    { id: 7, name: 'Employee' },
+  ]);
 });
