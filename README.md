@@ -1,55 +1,42 @@
 # jihoon-projects
 
-Vue.jsを中心にフロントエンド開発に取り組んできた経験をもとに、React / Next.js と Laravel API を組み合わせた業務アプリケーションを個人開発しています。認証・権限確認、API境界でのデータ変換、Ticketボードの操作、テストまで、画面とAPIをつないだ実装をまとめています。
-
-## メインプロジェクト：Ticket
-
-Laravel API と React / Next.js で構成した、プロジェクト単位で利用するTicket管理アプリケーションです。
-
-### 実装している機能
-
-- Sanctumによるセッション認証（ログイン、登録、パスワード再設定）
-- 投稿・お知らせのAPIとReact画面
-- Ticketの一覧・作成・編集・削除、状態変更
-- Ticketの検索・担当者フィルター・ドラッグ＆ドロップ
-- Ticketコメントの作成・編集・削除
-- コメントの編集・削除権限をAPI側で検証
-- statefulなSPA APIに対するCSRFトークン検証
-
-### 実装上の工夫
-
-- **API境界の型とデータ変換:** Laravelのsnake_caseレスポンスとReactの画面モデルを分離し、API境界で変換しています。
-- **認証・認可:** Sanctumのセッションを利用し、コメントの投稿者や編集・削除権限をサーバー側でも確認します。
-- **ボード操作:** Ticketの状態変更や並び替えを画面から操作できます。カードの並び順は現在クライアント側で管理し、サーバーへの永続化は未実装です。
-- **CSRF対策:** statefulなSPA APIでも通常のCSRF検証を適用し、トークンなしの状態変更が拒否されることをテストで確認しています。
+Webアプリケーション開発を中心としたポートフォリオです。Laravel APIとReact/Next.jsを連携し、認証付きの業務アプリケーション機能を開発しています。
 
 ## 技術スタック
 
-- **フロントエンド:** Next.js 16、React 19、TypeScript、Zustand、dnd-kit
-- **バックエンド:** Laravel 13、PHP 8.3、Laravel Sanctum、Socialite
-- **テスト・品質確認:** Vitest、Testing Library、PHPUnit、ESLint、TypeScript、Pint
+- フロントエンド: Next.js 16、React 19、TypeScript、Zustand
+- バックエンド: Laravel 13、PHP 8.3、Laravel Sanctum、Socialite
+- テスト・品質確認: Vitest、Testing Library、PHPUnit、ESLint、TypeScript
+- Ticketボード: dnd-kit
 
-## テスト・検証記録
+## 実装済みの機能
 
-Ticket公開チェックポイントでは、次の検証を行いました。
+- Sanctumのセッション認証を使ったログイン、登録、パスワード再設定などの認証機能
+- 投稿・お知らせのAPIとReact画面
+- Ticketボードの一覧・作成・編集・削除、状態変更、検索、担当者フィルター、ドラッグ＆ドロップ
+- Ticketコメントの作成・編集・削除。投稿者と編集・削除権限はAPI側で検証
+- statefulなSPA APIに対するCSRFトークン検証
 
-- Laravel：85 tests、361 assertions
-- React：112 tests
-- TypeScript、ESLint、Pint、production build
-- Chrome Headlessでログイン後のTicketおよびコメントの主要なCRUDフロー
+TicketボードはLaravel APIとReactの型・データ変換を分離しています。カードの並び順は現在クライアント側で管理し、サーバーには保存しません。
 
-これは該当チェックポイントに対する検証記録です。現在のブランチやリポジトリ全体、すべての実行環境での動作を保証するものではありません。
+## 開発中・未実装
 
-## リポジトリ構成
+Ticket機能はEpicとして継続開発中です。カード順序のサーバー永続化、担当者候補の拡充、管理者機能は未実装です。今後の変更は機能単位で検証し、実装済みの範囲と区別して公開します。
+
+## テスト・検証
+
+Ticket公開チェックポイントでは、Laravel 85テスト（361 assertions）、React 112テスト、TypeScript、ESLint、Pint、production buildを確認しています。実ブラウザーでログイン後のTicketおよびコメントの主要なCRUDフローも確認済みです。これらは現在のTicketチェックポイントに対する結果であり、リポジトリ全体のすべての機能・環境を保証するものではありません。
+
+## ディレクトリ構成
 
 ```text
 laravel/       Laravel API、認証、DBマイグレーション、バックエンドテスト
 react/         Next.jsアプリ、認証・投稿・お知らせ・Ticket UI
-docs/ticket/   Ticketの仕様と検証記録
-vue/           Vue関連の作業領域
+docs/ticket/   Ticket Epicの現在の仕様・実装・検証状況
+vue/           Vue用の作業領域（現在は未実装）
 micropython/   Thumby向けゲームの試作コード
 ```
 
 ## 開発プロセス
 
-要件と作業範囲を整理し、生成AIを実装補助、レビュー、テスト観点の検討に活用しています。生成されたコードや設計案は人が確認し、テストと動作検証の結果をもとに変更を判断しています。
+要件と作業範囲を整理したうえで、生成AIを実装補助、レビュー、テスト観点の検討に活用しています。設計や生成されたコードを確認し、テストと動作検証の結果に基づいて変更を判断しています。
