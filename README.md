@@ -1,52 +1,64 @@
-# jihoon-projects
+# jihoon-projects | フロントエンドエンジニア ポートフォリオ
 
-フロントエンドの実務ではVue.jsを主軸としてきました。React / Next.jsによる実装は、これまでのVue.jsでの開発経験をもとに進めました。バックエンドには、現場で見てきた開発を参考に、学習しながら取り組んだLaravelを採用しました。あわせて、生成AIを活用した開発プロセスの設計・改善も紹介しています。
+**Vue.js / TypeScriptを主軸に、6年以上のフロントエンド実務経験。** Nuxt 2からNuxt 3への移行など、既存プロダクトの改善にも取り組んできました。ReactとLaravelの現場経験も活かし、本ポートフォリオではNext.jsとLaravel APIを連携した業務アプリケーションを紹介します。
 
-メインプロジェクトは、社内利用を想定したチケット管理アプリ **Ticket** です。公開V1では、プロジェクト・メンバーの権限管理からチケット操作、コメントまでを実装しています。
+## Ticket管理アプリ
 
-## メインプロジェクト：Ticket
-
-**個人開発 / React・Next.js + Laravel** — チケット管理の基本操作に加え、認証・認可、APIとの状態同期、更新競合への対応を含む業務アプリケーションです。
-
-- Sanctumセッション認証
-- プロジェクト作成、メンバー管理、閲覧・編集権限
-- チケットの作成・編集・削除、ステータスと優先度、担当者設定
-- 検索、担当者フィルター、ドラッグ＆ドロップ
-- コメント、プロジェクトの終了・復元
+プロジェクト、メンバー、チケットを管理するWebアプリケーションです。認証、権限管理、チケット操作、コメントまで、フロントエンドとAPIをつないだ機能を実装しています。
 
 ### 動作デモ
 
 ![Ticketの操作デモ：ログインからプロジェクト作成、チケット追加・ドラッグ移動・削除、ブラウザー再読み込み後の選択プロジェクト維持](docs/ticket/images/ticket-demo-clean.gif)
+
+### 主な機能
+
+- Sanctumによるセッション認証
+- プロジェクト作成・検索・選択、メンバー管理、閲覧・編集権限
+- チケットの作成・編集・削除、ステータス・優先度・担当者設定
+- 検索、担当者フィルター、ドラッグ＆ドロップ
+- コメントの作成・編集・削除
+- プロジェクトの終了・復元
 
 ### 画面イメージ
 
 | チケットボード | ログイン画面 |
 | --- | --- |
 | [<img src="docs/ticket/images/ticket-board-v1.png" alt="Ticket V1のプロジェクト選択、検索・担当者フィルターとカンバンボード" width="560">](docs/ticket/images/ticket-board-v1.png) | [<img src="docs/ticket/images/login-v1.png" alt="Ticket V1のメールログイン、パスワード表示切替、Google・LINEログインボタン" width="280">](docs/ticket/images/login-v1.png) |
-| プロジェクトごとにチケットの状態・優先度・担当者を確認できます。 | メールでのログインと、登録・パスワード再設定への入口です。 |
+| 状態・優先度・担当者を確認できるチケットボード | メールログインと登録・パスワード再設定画面 |
 
-ローカル環境で撮影した画面です。画像をクリックすると元のサイズで表示できます。
+### 設計・実装のポイント
 
-### 実装上の工夫
+- **サーバー側の権限確認:** プロジェクト所属、閲覧・編集権限、コメント所有権をAPI側でも検証。
+- **API境界でのデータ変換:** Laravelのsnake_case応答とReactの画面モデルを分離。
+- **更新競合への対応:** チケットの状態と列内の並び順をサーバーに保存し、ボードのバージョンを使って古い状態からの更新を検知。
+- **CSRF対策:** statefulなSPA APIでトークンなしの状態変更が拒否されることをテストで確認。
 
-- **権限管理:** プロジェクト所属・閲覧／編集権限・コメント所有権をAPI側でも確認。
-- **ボード操作:** チケットの状態と列内の表示順をサーバーに保存。更新時にはボードのバージョンを比較し、古い状態からの変更を競合として扱います。
-- **品質確認:** 2026年10月18日の記録ではReact 248 tests、Laravel 158 tests（1,624 assertions）を通過。TypeScript、ESLint、production buildも確認済みです。これは当時の検証記録であり、現ブランチの再実行結果ではありません。
+[機能別V1マニュアル](docs/ticket/README.md)に操作方法、[Ticket開発・検証記録](docs/ticket/TICKET.md)に公開範囲・設計上の前提・検証内容をまとめています。
 
-[機能別V1マニュアル](docs/ticket/README.md)では操作方法を説明し、[Ticket開発・検証記録](docs/ticket/TICKET.md)では公開範囲、実装上の前提、過去の検証記録を説明しています。
+## 経験・技術スタック
+
+| 領域 | 経験・技術 |
+| --- | --- |
+| フロントエンド実務 | Vue.js / TypeScript、6年以上。Nuxt 2からNuxt 3への移行など |
+| フロントエンド | React、Next.js、TypeScript、Zustand、dnd-kit |
+| API・バックエンド連携 | Laravel、PHP、Laravel Sanctum、Socialite |
+| テスト・品質確認 | Vitest、Testing Library、PHPUnit、ESLint、TypeScript |
 
 ## AIを活用した開発プロセス
 
-AIをコード生成だけに使わず、作業範囲、検証、レビュー、統合を整理しながら開発しています。公開されたエージェント資料は [AGENTS v2.1](docs/agent/AGENTS-v2.1.md)、[WORK v2.1](docs/agent/WORK-v2.1.md)、[MANUAL v2.1](docs/agent/MANUAL-v2.1.md) に保存しています。これらは開発プロセスの公開例です。
+生成AIを実装補助にとどめず、タスク分割、コンテキスト管理、レビュー、テスト、統合まで開発フローに組み込んでいます。作業を小さな単位で進め、検証結果を確認してから統合するためのワークフローを設計し、公開資料としてまとめています。
 
-実装内容や採用判断は人が確認し、テストと動作確認の結果をもとに変更しています。
+- [AGENTS v2.1](docs/agent/AGENTS-v2.1.md)
+- [WORK v2.1](docs/agent/WORK-v2.1.md)
+- [MANUAL v2.1](docs/agent/MANUAL-v2.1.md)
 
-## 技術スタック
+AIの生成結果や設計案は人が確認し、テストと動作確認をもとに採用を判断しています。
 
-- **フロントエンド:** Next.js、React、TypeScript、Zustand、dnd-kit
-- **バックエンド:** Laravel、PHP、Laravel Sanctum、Socialite
-- **品質確認:** Vitest、Testing Library、PHPUnit、ESLint、TypeScript
-- **開発プロセス:** Git、AI支援開発、作業範囲と検証記録の管理
+## テスト・検証実績
+
+2026年10月27日の公開デモでは、React 257 tests、TypeScript、ESLint、Next.js静的出力に加え、Laravel全テストとPintがGitHub Actionsで通過しました。Chrome HeadlessとローカルAPIを使った画面・操作確認の記録もあります。
+
+詳細な検証内容は[Ticket開発・検証記録](docs/ticket/TICKET.md)を参照してください。
 
 ## リポジトリ構成
 
@@ -58,5 +70,3 @@ docs/agent/    公開エージェント構成のポートフォリオ保存例
 micropython/   趣味のMicroPython・Thumby制作
 vue/           Vue関連の作業領域
 ```
-
-詳細な機能範囲と検証条件は [Ticket開発・検証記録](docs/ticket/TICKET.md) を参照してください。
