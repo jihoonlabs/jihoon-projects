@@ -1,6 +1,6 @@
 # jihoon-projects | フロントエンドエンジニア ポートフォリオ
 
-**Vue.js / TypeScriptを主軸に、6年以上のフロントエンド実務経験。** Nuxt 2からNuxt 3への移行など、既存プロダクトの改善にも取り組んできました。ReactとLaravelの現場経験も活かし、本ポートフォリオではNext.jsとLaravel APIを連携した業務アプリケーションを紹介します。
+**Vue.js / TypeScriptを主軸に、6年以上のフロントエンド実務経験。** Nuxt 2からNuxt 3への移行などを経験しました。ReactとLaravelも現場で使用しており、本ポートフォリオではNext.jsとLaravel APIを組み合わせたTicket管理アプリで、画面からAPIまでの設計・実装を紹介します。
 
 ## Ticket管理アプリ
 
@@ -40,8 +40,8 @@
 | 領域 | 経験・技術 |
 | --- | --- |
 | フロントエンド実務 | Vue.js / TypeScript、6年以上。Nuxt 2からNuxt 3への移行など |
-| フロントエンド | React、Next.js、TypeScript、Zustand、dnd-kit |
-| API・バックエンド連携 | Laravel、PHP、Laravel Sanctum、Socialite |
+| React・API連携 | React、Next.js、Laravel API、Laravel Sanctum |
+| UI・状態管理 | Zustand、dnd-kit |
 | テスト・品質確認 | Vitest、Testing Library、PHPUnit、ESLint、TypeScript |
 
 ## AIを活用した開発プロセス
