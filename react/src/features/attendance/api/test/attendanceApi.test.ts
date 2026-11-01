@@ -61,7 +61,10 @@ it('uses the existing CSRF flow for clock actions and surfaces conflicts', async
     }),
     http.post(`${API_URL}/api/attendance/clock-out`, () =>
       HttpResponse.json(
-        { message: '退勤できる出勤記録がありません。', code: 'not_working' },
+        {
+          message: 'SQLSTATE[HY000] private database details',
+          code: 'not_working',
+        },
         { status: 409 },
       ),
     ),
@@ -72,5 +75,43 @@ it('uses the existing CSRF flow for clock actions and surfaces conflicts', async
     name: 'AttendanceApiError',
     status: 409,
     code: 'not_working',
+    message: '退勤できる出勤記録がありません。',
   } satisfies Partial<AttendanceApiError>);
+});
+
+it('redacts server exception details from non-conflict responses', async () => {
+  server.use(
+    http.get(`${API_URL}/api/attendance/today`, () =>
+      HttpResponse.json(
+        { message: 'SQLSTATE[HY000] /var/www/app/database.sqlite' },
+        { status: 500 },
+      ),
+    ),
+  );
+
+  await expect(fetchAttendanceToday()).rejects.toMatchObject({
+    name: 'AttendanceApiError',
+    status: 500,
+    message: '勤怠情報を取得できませんでした。',
+  });
+});
+
+it('redacts unknown conflict codes', async () => {
+  server.use(
+    http.get(`${API_URL}/api/attendance/today`, () =>
+      HttpResponse.json(
+        {
+          message: 'SQLSTATE[HY000] internal detail',
+          code: 'unknown_conflict',
+        },
+        { status: 409 },
+      ),
+    ),
+  );
+
+  await expect(fetchAttendanceToday()).rejects.toMatchObject({
+    status: 409,
+    code: 'unknown_conflict',
+    message: '勤怠情報を取得できませんでした。',
+  });
 });

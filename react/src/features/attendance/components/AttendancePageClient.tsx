@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { LogIn, LogOut } from 'lucide-react';
 
 import {
+  AttendanceApiError,
   clockIn,
   clockOut,
   fetchAttendancePage,
@@ -38,7 +39,7 @@ function formatDuration(minutes: number | null): string {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error
+  return error instanceof AttendanceApiError
     ? error.message
     : '勤怠情報を取得できませんでした。';
 }

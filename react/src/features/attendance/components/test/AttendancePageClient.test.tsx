@@ -6,12 +6,18 @@ import * as api from '../../api/attendanceApi';
 import type { AttendanceRecord } from '../../types/attendance';
 import { AttendancePageClient } from '../AttendancePageClient';
 
-vi.mock('../../api/attendanceApi', () => ({
-  fetchAttendanceToday: vi.fn(),
-  fetchAttendancePage: vi.fn(),
-  clockIn: vi.fn(),
-  clockOut: vi.fn(),
-}));
+vi.mock('../../api/attendanceApi', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../../api/attendanceApi')>();
+
+  return {
+    ...actual,
+    fetchAttendanceToday: vi.fn(),
+    fetchAttendancePage: vi.fn(),
+    clockIn: vi.fn(),
+    clockOut: vi.fn(),
+  };
+});
 
 const record: AttendanceRecord = {
   id: 1,
@@ -107,4 +113,17 @@ it('keeps the original work date visible while an overnight shift is active', as
   ).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '出勤' })).toBeDisabled();
   expect(screen.getByRole('button', { name: '退勤' })).toBeEnabled();
+});
+
+it('does not render server exception details', async () => {
+  vi.mocked(api.fetchAttendanceToday).mockRejectedValue(
+    new Error('SQLSTATE[HY000] /var/www/app/database.sqlite'),
+  );
+
+  render(<AttendancePageClient />);
+
+  const alert = await screen.findByRole('alert');
+  expect(alert).toHaveTextContent('勤怠情報を取得できませんでした。');
+  expect(alert).not.toHaveTextContent('SQLSTATE');
+  expect(alert).not.toHaveTextContent('/var/www/app/database.sqlite');
 });
