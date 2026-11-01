@@ -102,7 +102,7 @@ it('redacts unknown conflict codes', async () => {
       HttpResponse.json(
         {
           message: 'SQLSTATE[HY000] internal detail',
-          code: 'unknown_conflict',
+          code: 'constructor',
         },
         { status: 409 },
       ),
@@ -111,7 +111,7 @@ it('redacts unknown conflict codes', async () => {
 
   await expect(fetchAttendanceToday()).rejects.toMatchObject({
     status: 409,
-    code: 'unknown_conflict',
+    code: 'constructor',
     message: '勤怠情報を取得できませんでした。',
   });
 });
