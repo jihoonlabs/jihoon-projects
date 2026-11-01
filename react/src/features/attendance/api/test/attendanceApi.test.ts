@@ -95,3 +95,21 @@ it('hides server debug details from internal errors', async () => {
     message: '勤怠を処理できませんでした。時間をおいて再度お試しください。',
   });
 });
+
+it('does not treat inherited object keys as known conflict codes', async () => {
+  server.use(
+    http.get(`${API_URL}/api/attendance/today`, () =>
+      HttpResponse.json(
+        { message: 'internal detail', code: 'constructor' },
+        { status: 409 },
+      ),
+    ),
+  );
+
+  await expect(fetchAttendanceToday()).rejects.toMatchObject({
+    name: 'AttendanceApiError',
+    status: 409,
+    code: 'constructor',
+    message: '勤怠を処理できませんでした。時間をおいて再度お試しください。',
+  });
+});
