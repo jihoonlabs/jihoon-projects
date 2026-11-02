@@ -10,10 +10,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 export const ATTENDANCE_ERROR_MESSAGE =
   '勤怠を処理できませんでした。時間をおいて再度お試しください。';
 
-const CONFLICT_MESSAGES: Record<string, string> = {
-  already_clocked_in: '本日はすでに出勤しています。',
-  not_working: '退勤できる出勤記録がありません。',
-};
+const CONFLICT_MESSAGES = new Map<string, string>([
+  ['already_clocked_in', '本日はすでに出勤しています。'],
+  ['not_working', '退勤できる出勤記録がありません。'],
+  ['clock_in_not_open', '出勤は日本時間06:00から記録できます。'],
+]);
 
 interface RecordResponse {
   id: number;
@@ -67,10 +68,11 @@ async function json<T>(response: Response): Promise<T> {
     const code =
       typeof errorBody.code === 'string' ? errorBody.code : undefined;
 
+    const safeConflictMessage =
+      response.status === 409 && code ? CONFLICT_MESSAGES.get(code) : undefined;
+
     throw new AttendanceApiError(
-      response.status === 409 && code && CONFLICT_MESSAGES[code]
-        ? CONFLICT_MESSAGES[code]
-        : ATTENDANCE_ERROR_MESSAGE,
+      safeConflictMessage ?? ATTENDANCE_ERROR_MESSAGE,
       response.status,
       code,
     );

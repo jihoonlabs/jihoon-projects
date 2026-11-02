@@ -90,6 +90,7 @@ class AttendanceApiTest extends TestCase
         $this->getJson('/api/attendance/today')
             ->assertJsonPath('data.status', 'not_started');
 
+        CarbonImmutable::setTestNow('2026-10-20T21:00:00Z');
         $this->postJson('/api/attendance/clock-in')
             ->assertCreated()
             ->assertJsonPath('data.work_date', '2026-10-21');
@@ -118,6 +119,24 @@ class AttendanceApiTest extends TestCase
         $this->getJson('/api/attendance')
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.work_date', '2026-10-20');
+    }
+
+    public function test_clock_in_opens_at_six_am_japan_time(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        CarbonImmutable::setTestNow('2026-10-20T20:59:59Z');
+        $this->postJson('/api/attendance/clock-in')
+            ->assertStatus(409)
+            ->assertJsonPath('code', 'clock_in_not_open');
+        $this->assertDatabaseCount('attendance_records', 0);
+
+        CarbonImmutable::setTestNow('2026-10-20T21:00:00Z');
+        $this->postJson('/api/attendance/clock-in')
+            ->assertCreated()
+            ->assertJsonPath('data.work_date', '2026-10-21')
+            ->assertJsonPath('data.clock_in_at', '2026-10-20T21:00:00+00:00');
     }
 
     public function test_guest_and_suspended_user_cannot_access_attendance(): void

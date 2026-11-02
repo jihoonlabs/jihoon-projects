@@ -1,10 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import * as api from '../../api/attendanceApi';
 import type { AttendanceRecord } from '../../types/attendance';
-import { AttendancePageClient } from '../AttendancePageClient';
+import {
+  AttendancePageClient,
+  isClockInAllowedAt,
+} from '../AttendancePageClient';
 
 vi.mock('../../api/attendanceApi', async (importOriginal) => {
   const actual =
@@ -29,11 +32,42 @@ const record: AttendanceRecord = {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.spyOn(Date, 'now').mockReturnValue(
+    new Date('2026-10-20T01:00:00Z').getTime(),
+  );
   vi.mocked(api.fetchAttendancePage).mockResolvedValue({
     records: [record],
     currentPage: 1,
     lastPage: 1,
   });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+it('allows clock-in from exactly 06:00 in Japan time', () => {
+  expect(isClockInAllowedAt(new Date('2026-10-20T20:59:59Z'))).toBe(false);
+  expect(isClockInAllowedAt(new Date('2026-10-20T21:00:00Z'))).toBe(true);
+});
+
+it('disables clock-in and explains the opening time before 06:00', async () => {
+  vi.spyOn(Date, 'now').mockReturnValue(
+    new Date('2026-10-20T20:59:59Z').getTime(),
+  );
+  vi.mocked(api.fetchAttendanceToday).mockResolvedValue({
+    date: '2026-10-21',
+    timezone: 'Asia/Tokyo',
+    status: 'not_started',
+    record: null,
+  });
+
+  render(<AttendancePageClient />);
+
+  expect(
+    await screen.findByText('出勤受付は日本時間06:00に開始します。'),
+  ).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '出勤' })).toBeDisabled();
 });
 
 it('enables only clock-in before work, then only clock-out after recording it', async () => {
@@ -57,6 +91,9 @@ it('enables only clock-in before work, then only clock-out after recording it', 
   const finish = screen.getByRole('button', { name: '退勤' });
   await waitFor(() => expect(start).toBeEnabled());
   expect(finish).toBeDisabled();
+  expect(
+    screen.getByText('出勤は日本時間06:00から記録できます。'),
+  ).toBeInTheDocument();
 
   await userEvent.click(start);
   await waitFor(() => expect(start).toBeDisabled());

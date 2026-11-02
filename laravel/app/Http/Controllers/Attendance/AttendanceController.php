@@ -15,6 +15,8 @@ class AttendanceController extends Controller
 {
     private const TIMEZONE = 'Asia/Tokyo';
 
+    private const CLOCK_IN_START_HOUR = 6;
+
     public function today(Request $request): JsonResponse
     {
         $date = CarbonImmutable::now(self::TIMEZONE)->toDateString();
@@ -54,7 +56,16 @@ class AttendanceController extends Controller
     public function clockIn(Request $request)
     {
         $now = CarbonImmutable::now('UTC');
-        $workDate = $now->setTimezone(self::TIMEZONE)->toDateString();
+        $nowInTokyo = $now->setTimezone(self::TIMEZONE);
+
+        if ($nowInTokyo->hour < self::CLOCK_IN_START_HOUR) {
+            return $this->conflict(
+                'clock_in_not_open',
+                '出勤は日本時間06:00から記録できます。',
+            );
+        }
+
+        $workDate = $nowInTokyo->toDateString();
 
         try {
             $record = DB::transaction(function () use ($request, $now, $workDate) {

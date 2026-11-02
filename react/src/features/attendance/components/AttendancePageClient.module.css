@@ -1,71 +1,195 @@
 .page {
-  max-width: 960px;
+  max-width: 880px;
   margin: 0 auto;
-  padding: 1.5rem 1rem 4rem;
-  color: #111827;
+  padding: 2rem 1.25rem 4rem;
+  color: #172033;
 }
 
-.page h1 {
-  margin-bottom: 1rem;
-  font-size: 1.5rem;
+.pageHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.pageIcon {
+  display: grid;
+  width: 3.25rem;
+  height: 3.25rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #dbeafe;
+  border-radius: 1rem;
+  background: linear-gradient(145deg, #eff6ff, #e0e7ff);
+  color: #3157b7;
+}
+
+.pageHeader h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 1.85rem);
+  letter-spacing: -0.025em;
+}
+
+.eyebrow {
+  margin: 0 0 0.25rem;
+  color: #68758b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+}
+
+.lead {
+  margin: 0.3rem 0 0;
+  color: #68758b;
+  font-size: 0.925rem;
 }
 
 .demoNote {
   margin: 0 0 1rem;
   padding: 0.85rem 1rem;
   border: 1px solid #bfdbfe;
-  border-radius: 0.75rem;
+  border-radius: 0.875rem;
   background: #eff6ff;
   color: #1e3a5f;
   line-height: 1.55;
 }
 
 .panel {
-  margin-bottom: 1rem;
-  padding: 1.25rem;
+  margin-bottom: 1.1rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid #e5eaf2;
+  border-radius: 1rem;
   background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  box-shadow: 0 8px 24px rgb(24 39 75 / 5%);
+}
+
+.panelHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .panel h2 {
-  margin-bottom: 0.75rem;
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #e6eaf0;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #536176;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .status {
   display: inline-flex;
-  margin: 0;
-  padding: 0.3rem 0.65rem;
+  margin: 0 0 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid transparent;
   border-radius: 999px;
-  background: #eef4ff;
-  color: #1d4ed8;
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.statusIdle,
+.statusLoading {
+  border-color: #dbe4f1;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.statusWorking {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.statusFinished {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.overnightNote {
+  margin: 0.5rem 0 0;
+  color: #536176;
   font-size: 0.875rem;
-  font-weight: 700;
 }
 
 .times {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 2.5rem;
-  margin: 1rem 0 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1.1rem 0 0.9rem;
+}
+
+.times > div {
+  min-width: 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid #edf0f5;
+  border-radius: 0.85rem;
+  background: #f8fafc;
 }
 
 .times dt {
-  font-size: 0.875rem;
-  color: #4b5563;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #68758b;
+  font-size: 0.82rem;
+}
+
+.times dt svg {
+  color: #536fbd;
 }
 
 .times dd {
-  margin: 0.25rem 0 0;
-  font-weight: 600;
+  margin: 0.45rem 0 0;
+  color: #172033;
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+}
+
+.clockInHint {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.9rem;
+  color: #536176;
+  font-size: 0.85rem;
+}
+
+.clockInHint svg {
+  flex: 0 0 auto;
+  color: #536fbd;
+}
+
+.clockInHintWaiting {
+  color: #8a5a12;
+}
+
+.clockInHintWaiting svg {
+  color: #b7791f;
 }
 
 .actions,
 .pagination {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.7rem;
 }
 
 .actions button {
@@ -75,48 +199,54 @@
   justify-content: center;
   gap: 0.55rem;
   min-height: 52px;
-  padding: 0.7rem 1rem;
+  padding: 0.75rem 1rem;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 0.8rem;
   font: inherit;
-  font-weight: 700;
+  font-weight: 750;
   cursor: pointer;
   transition:
-    background-color 120ms ease,
-    border-color 120ms ease;
+    background-color 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.actions button:not(:disabled):active {
+  transform: translateY(1px);
 }
 
 .clockIn {
-  background: #1d4ed8;
+  background: #3157b7;
   color: #fff;
 }
 
 .clockIn:hover:not(:disabled) {
-  background: #1e40af;
+  background: #27499d;
 }
 
 .clockOut {
-  border-color: #d1d5db;
+  border-color: #d8dee8;
   background: #fff;
-  color: #374151;
+  color: #344054;
 }
 
 .clockOut:hover:not(:disabled) {
-  background: #f9fafb;
+  border-color: #b8c3d3;
+  background: #f8fafc;
 }
 
 .actions button:focus-visible,
 .pagination button:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 3px solid #93b4ff;
   outline-offset: 2px;
 }
 
 .pagination button {
   padding: 0.55rem 0.9rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  border: 1px solid #d1d9e5;
+  border-radius: 0.6rem;
   background: #fff;
-  color: #374151;
+  color: #344054;
   cursor: pointer;
 }
 
@@ -128,7 +258,18 @@
 
 .error {
   margin: 1rem 0;
-  color: #b91c1c;
+  padding: 0.8rem 1rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.75rem;
+  background: #fef2f2;
+  color: #b42318;
+}
+
+.emptyState {
+  margin: 0;
+  padding: 1rem 0.75rem;
+  color: #68758b;
+  font-size: 0.9rem;
 }
 
 .tableScroll {
@@ -143,9 +284,25 @@
 
 .tableScroll th,
 .tableScroll td {
-  padding: 0.75rem;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 0.8rem 0.75rem;
+  border-bottom: 1px solid #edf0f5;
   white-space: nowrap;
+}
+
+.tableScroll th {
+  color: #68758b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.tableScroll td {
+  color: #344054;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tableScroll tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 .pagination {
@@ -153,16 +310,49 @@
   margin-top: 1rem;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 520px) {
   .page {
-    padding: 1rem 0.75rem 3rem;
+    padding: 1.25rem 0.75rem 3rem;
   }
 
-  .panel {
-    padding: 1rem;
+  .pageHeader {
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .pageIcon {
+    width: 2.8rem;
+    height: 2.8rem;
+    border-radius: 0.85rem;
+  }
+
+  .panelHeading {
+    align-items: flex-start;
+  }
+
+  .times {
+    gap: 0.55rem;
+  }
+
+  .times > div {
+    padding: 0.75rem;
+  }
+
+  .times dd {
+    font-size: 1rem;
+  }
+
+  .actions {
+    flex-direction: column;
   }
 
   .actions button {
-    min-height: 48px;
+    width: 100%;
+    flex: auto;
+  }
+
+  .tableScroll th,
+  .tableScroll td {
+    padding: 0.7rem 0.6rem;
   }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { LogIn, LogOut } from 'lucide-react';
+import { CalendarDays, Clock3, History, LogIn, LogOut } from 'lucide-react';
 
 import {
   ATTENDANCE_ERROR_MESSAGE,
@@ -21,6 +21,23 @@ const STATUS_LABELS = {
   finished: '退勤済み',
 };
 
+const STATUS_CLASSES = {
+  not_started: styles.statusIdle,
+  working: styles.statusWorking,
+  finished: styles.statusFinished,
+};
+
+function isClockInAllowedAt(date: Date): boolean {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Tokyo',
+    hour: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value);
+
+  return hour >= 6;
+}
+
 function formatTime(value: string | null): string {
   if (!value) return '—';
 
@@ -36,7 +53,12 @@ function formatTime(value: string | null): string {
 
 function formatDuration(minutes: number | null): string {
   if (minutes === null) return '—';
-  return `${Math.floor(minutes / 60)}時間${String(minutes % 60).padStart(2, '0')}分`;
+  return (
+    Math.floor(minutes / 60) +
+    '時間' +
+    String(minutes % 60).padStart(2, '0') +
+    '分'
+  );
 }
 
 function errorMessage(error: unknown): string {
@@ -51,6 +73,7 @@ export function AttendancePageClient() {
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isClockInAllowed, setIsClockInAllowed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (requestedPage: number) => {
@@ -58,6 +81,18 @@ export function AttendancePageClient() {
       fetchAttendanceToday(),
       fetchAttendancePage(requestedPage),
     ]);
+  }, []);
+
+  useEffect(() => {
+    const updateClockInAvailability = () => {
+      const next = isClockInAllowedAt(new Date(Date.now()));
+      setIsClockInAllowed((current) => (current === next ? current : next));
+    };
+
+    updateClockInAvailability();
+    const timer = window.setInterval(updateClockInAvailability, 15_000);
+
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -109,39 +144,86 @@ export function AttendancePageClient() {
 
   return (
     <main className={styles.page}>
-      <h1>勤怠管理</h1>
+      <header className={styles.pageHeader}>
+        <div className={styles.pageIcon} aria-hidden="true">
+          <CalendarDays size={24} strokeWidth={1.8} />
+        </div>
+        <div>
+          <p className={styles.eyebrow}>ATTENDANCE</p>
+          <h1>勤怠管理</h1>
+          <p className={styles.lead}>今日の出勤状況と記録を確認できます。</p>
+        </div>
+      </header>
+
       {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
         <p className={styles.demoNote}>
-          「出勤」を押してから「退勤」を押すだけで試せます。共通デモのため記録は他の閲覧者にも表示されます。
+          日本時間06:00以降に出勤を記録できます。共通デモのため記録は他の閲覧者にも表示されます。
         </p>
       )}
 
       <section className={styles.panel} aria-labelledby="today-heading">
-        <h2 id="today-heading">今日の勤怠</h2>
-        <p className={styles.status} role="status">
+        <div className={styles.panelHeading}>
+          <div>
+            <p className={styles.eyebrow}>TODAY</p>
+            <h2 id="today-heading">今日の勤怠</h2>
+          </div>
+          <span className={styles.date}>
+            <CalendarDays aria-hidden="true" size={16} />
+            {today?.date ?? '—'}
+          </span>
+        </div>
+        <p
+          className={
+            styles.status +
+            ' ' +
+            (today ? STATUS_CLASSES[today.status] : styles.statusLoading)
+          }
+          role="status"
+        >
           {today ? STATUS_LABELS[today.status] : '読み込み中...'}
         </p>
         {today?.record && today.record.workDate !== today.date && (
-          <p>勤務日: {today.record.workDate}（日付をまたいで勤務中）</p>
+          <p className={styles.overnightNote}>
+            勤務日: {today.record.workDate}（日付をまたいで勤務中）
+          </p>
         )}
         <dl className={styles.times}>
           <div>
-            <dt>出勤時刻</dt>
+            <dt>
+              <LogIn aria-hidden="true" size={16} />
+              出勤時刻
+            </dt>
             <dd>{formatTime(today?.record?.clockInAt ?? null)}</dd>
           </div>
           <div>
-            <dt>退勤時刻</dt>
+            <dt>
+              <LogOut aria-hidden="true" size={16} />
+              退勤時刻
+            </dt>
             <dd>{formatTime(today?.record?.clockOutAt ?? null)}</dd>
           </div>
         </dl>
+        <p
+          className={
+            styles.clockInHint +
+            (isClockInAllowed ? '' : ' ' + styles.clockInHintWaiting)
+          }
+        >
+          <Clock3 aria-hidden="true" size={16} />
+          {isClockInAllowed
+            ? '出勤は日本時間06:00から記録できます。'
+            : '出勤受付は日本時間06:00に開始します。'}
+        </p>
         <div className={styles.actions}>
           <button
             type="button"
             className={styles.clockIn}
-            disabled={disabled || today?.status !== 'not_started'}
+            disabled={
+              disabled || today?.status !== 'not_started' || !isClockInAllowed
+            }
             onClick={() => recordAction('in')}
           >
-            <LogIn aria-hidden="true" size={20} strokeWidth={2} />
+            <LogIn aria-hidden="true" size={19} strokeWidth={2} />
             出勤
           </button>
           <button
@@ -150,7 +232,7 @@ export function AttendancePageClient() {
             disabled={disabled || today?.status !== 'working'}
             onClick={() => recordAction('out')}
           >
-            <LogOut aria-hidden="true" size={20} strokeWidth={2} />
+            <LogOut aria-hidden="true" size={19} strokeWidth={2} />
             退勤
           </button>
         </div>
@@ -163,7 +245,15 @@ export function AttendancePageClient() {
       )}
 
       <section className={styles.panel} aria-labelledby="history-heading">
-        <h2 id="history-heading">自分の勤怠記録</h2>
+        <div className={styles.panelHeading}>
+          <div>
+            <p className={styles.eyebrow}>HISTORY</p>
+            <h2 id="history-heading">
+              <History aria-hidden="true" size={18} />
+              自分の勤怠記録
+            </h2>
+          </div>
+        </div>
         <div className={styles.tableScroll}>
           <table>
             <thead>
@@ -186,7 +276,9 @@ export function AttendancePageClient() {
             </tbody>
           </table>
         </div>
-        {history?.records.length === 0 && <p>勤怠記録はまだありません。</p>}
+        {history?.records.length === 0 && (
+          <p className={styles.emptyState}>勤怠記録はまだありません。</p>
+        )}
         {history && history.lastPage > 1 && (
           <div className={styles.pagination}>
             <button
@@ -212,3 +304,5 @@ export function AttendancePageClient() {
     </main>
   );
 }
+
+export { isClockInAllowedAt };

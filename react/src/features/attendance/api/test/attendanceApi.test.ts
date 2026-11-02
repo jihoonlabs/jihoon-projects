@@ -4,6 +4,7 @@ import { expect, it } from 'vitest';
 import { server } from '@/test/mocks/server';
 
 import {
+  ATTENDANCE_ERROR_MESSAGE,
   AttendanceApiError,
   clockIn,
   clockOut,
@@ -74,6 +75,33 @@ it('uses the existing CSRF flow for clock actions and surfaces conflicts', async
     code: 'not_working',
     message: '退勤できる出勤記録がありません。',
   } satisfies Partial<AttendanceApiError>);
+});
+
+it('shows safe clock-in conflicts and hides unknown conflict codes', async () => {
+  let code = 'clock_in_not_open';
+  server.use(
+    http.post(API_URL + '/api/attendance/clock-in', () =>
+      HttpResponse.json(
+        { message: 'untrusted server text', code },
+        { status: 409 },
+      ),
+    ),
+  );
+
+  await expect(clockIn()).rejects.toMatchObject({
+    name: 'AttendanceApiError',
+    status: 409,
+    code: 'clock_in_not_open',
+    message: '出勤は日本時間06:00から記録できます。',
+  });
+
+  code = 'constructor';
+  await expect(clockIn()).rejects.toMatchObject({
+    name: 'AttendanceApiError',
+    status: 409,
+    code: 'constructor',
+    message: ATTENDANCE_ERROR_MESSAGE,
+  });
 });
 
 it('hides server debug details from internal errors', async () => {
