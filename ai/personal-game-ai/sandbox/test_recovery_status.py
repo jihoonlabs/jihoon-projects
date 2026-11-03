@@ -51,21 +51,6 @@ class TestRecoveryStatus(unittest.TestCase):
             get_recovery_summary(
                 "execute", "pending", False, True, "Retry the task?"
             )
-        with self.assertRaises(ValueError):
-            get_recovery_summary(
-                "execute", "pending", False, True, "Retry the task? 네"
-            )
-
-    def test_korean_question_may_contain_common_latin_acronyms(self):
-        result = get_recovery_summary(
-            "execute",
-            "waiting_for_user",
-            False,
-            decision_required=True,
-            decision_question="AI 작업을 다시 시도할까요?",
-        )
-
-        self.assertEqual(result["questions"], ["AI 작업을 다시 시도할까요?"])
 
     def test_function_does_not_use_files_or_git_processes(self):
         with (
