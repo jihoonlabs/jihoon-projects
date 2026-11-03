@@ -27,8 +27,14 @@ def get_recovery_summary(
         if not isinstance(decision_question, str) or not decision_question.strip():
             raise ValueError("a Korean decision_question is required")
         question = decision_question.strip()
-        if not any("가" <= character <= "힣" for character in question):
-            raise ValueError("decision_question must be in Korean")
+        letters = [character for character in question if character.isalpha()]
+        hangul_letters = [
+            character
+            for character in letters
+            if "\uac00" <= character <= "\ud7a3"
+        ]
+        if not hangul_letters or len(hangul_letters) * 2 < len(letters):
+            raise ValueError("decision_question must be primarily in Korean")
         questions.append(question)
 
     recovery_text = "가능" if recovery_available else "불가"
