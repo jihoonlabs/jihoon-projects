@@ -27,7 +27,7 @@ payload = {
     "stream": False,
     "options": {
         "num_ctx": 8192,
-        "num_predict": 1024,
+        "num_predict": 4096,
         "temperature": 0,
     },
     # 응답이 끝나면 모델 메모리를 해제한다.
