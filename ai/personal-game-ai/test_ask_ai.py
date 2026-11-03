@@ -7,7 +7,7 @@ import ask_ai
 
 
 class AskAiTests(unittest.TestCase):
-    def test_default_request_uses_qwen_and_4096_output_tokens(self):
+    def test_default_request_uses_gemma_and_4096_output_tokens(self):
         response = io.BytesIO(json.dumps({
             "done_reason": "stop",
             "message": {"content": '{"ok": true}'},
@@ -18,7 +18,7 @@ class AskAiTests(unittest.TestCase):
 
         request = urlopen.call_args.args[0]
         data = json.loads(request.data.decode("utf-8"))
-        self.assertEqual(data["model"], "qwen3-coder:30b")
+        self.assertEqual(data["model"], "gemma4:26b")
         self.assertEqual(data["options"]["num_predict"], 4096)
         self.assertEqual(data["messages"][-1]["content"], "테스트 요청")
         self.assertEqual(answer, '{"ok": true}')
