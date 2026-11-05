@@ -74,6 +74,15 @@ class BoardOrderTest extends TestCase
                 ->pluck('id')
                 ->all()
         );
+        $this->assertSame(
+            [0, 1, 2],
+            Ticket::query()
+                ->where('project_id', $this->project->id)
+                ->where('status', 'TODO')
+                ->orderBy('position')
+                ->pluck('position')
+                ->all()
+        );
     }
 
     public function test_列の途中から別列へ移動すると両方の列順が詰め直される(): void
