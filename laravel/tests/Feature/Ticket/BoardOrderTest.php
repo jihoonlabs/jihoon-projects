@@ -176,6 +176,103 @@ class BoardOrderTest extends TestCase
         );
     }
 
+    public function test_負のpositionは422で拒否され順序とboard_versionを変更しない(): void
+    {
+        $first = Ticket::factory()->create([
+            'project_id' => $this->project->id,
+            'status' => 'TODO',
+            'position' => 0,
+        ]);
+        $second = Ticket::factory()->create([
+            'project_id' => $this->project->id,
+            'status' => 'TODO',
+            'position' => 1,
+        ]);
+
+        $this->patchJson("/api/tickets/{$second->id}/move", [
+            'status' => 'IN_PROGRESS',
+            'position' => -1,
+            'board_version' => 0,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['position']);
+
+        $this->assertSame(0, $this->project->refresh()->board_version);
+        $this->assertSame(
+            [$first->id, $second->id],
+            Ticket::query()
+                ->where('project_id', $this->project->id)
+                ->where('status', 'TODO')
+                ->orderBy('position')
+                ->pluck('id')
+                ->all()
+        );
+        $this->assertSame(0, Ticket::findOrFail($second->id)->position);
+    }
+
+    public function test_別プロジェクトの列順は移動によって変わらない(): void
+    {
+        $first = Ticket::factory()->create([
+            'project_id' => $this->project->id,
+            'status' => 'TODO',
+            'position' => 0,
+        ]);
+        $moving = Ticket::factory()->create([
+            'project_id' => $this->project->id,
+            'status' => 'TODO',
+            'position' => 1,
+        ]);
+        $last = Ticket::factory()->create([
+            'project_id' => $this->project->id,
+            'status' => 'TODO',
+            'position' => 2,
+        ]);
+        $otherProject = Project::factory()->create();
+        $otherFirst = Ticket::factory()->create([
+            'project_id' => $otherProject->id,
+            'status' => 'TODO',
+            'position' => 0,
+        ]);
+        $otherLast = Ticket::factory()->create([
+            'project_id' => $otherProject->id,
+            'status' => 'TODO',
+            'position' => 1,
+        ]);
+
+        $this->patchJson("/api/tickets/{$moving->id}/move", [
+            'status' => 'IN_PROGRESS',
+            'position' => 0,
+            'board_version' => 0,
+        ])->assertOk();
+
+        $this->assertSame(
+            [$first->id, $last->id],
+            Ticket::query()
+                ->where('project_id', $this->project->id)
+                ->where('status', 'TODO')
+                ->orderBy('position')
+                ->pluck('id')
+                ->all()
+        );
+        $this->assertSame(
+            [$otherFirst->id, $otherLast->id],
+            Ticket::query()
+                ->where('project_id', $otherProject->id)
+                ->where('status', 'TODO')
+                ->orderBy('position')
+                ->pluck('id')
+                ->all()
+        );
+        $this->assertDatabaseHas('tickets', [
+            'id' => $otherFirst->id,
+            'position' => 0,
+        ]);
+        $this->assertDatabaseHas('tickets', [
+            'id' => $otherLast->id,
+            'position' => 1,
+        ]);
+    }
+
     public function test_古いboard_versionの移動は両方の列を変更せず409で拒否される(): void
     {
         $first = Ticket::factory()->create([
