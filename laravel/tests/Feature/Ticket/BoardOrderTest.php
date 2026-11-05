@@ -67,11 +67,16 @@ class BoardOrderTest extends TestCase
 
         $this->assertSame(
             [$tickets[2]->id, $tickets[0]->id, $tickets[1]->id],
-            Ticket::query()->where('status', 'TODO')->orderBy('position')->pluck('id')->all()
+            Ticket::query()
+                ->where('project_id', $this->project->id)
+                ->where('status', 'TODO')
+                ->orderBy('position')
+                ->pluck('id')
+                ->all()
         );
     }
 
-    public function test_別列へ移動すると両方の列順が詰め直される(): void
+    public function test_列の途中から別列へ移動すると両方の列順が詰め直される(): void
     {
         $first = Ticket::factory()->create([
             'project_id' => $this->project->id,
@@ -83,6 +88,11 @@ class BoardOrderTest extends TestCase
             'status' => 'TODO',
             'position' => 1,
         ]);
+        $last = Ticket::factory()->create([
+            'project_id' => $this->project->id,
+            'status' => 'TODO',
+            'position' => 2,
+        ]);
         $target = Ticket::factory()->create([
             'project_id' => $this->project->id,
             'status' => 'IN_PROGRESS',
@@ -93,40 +103,128 @@ class BoardOrderTest extends TestCase
             'status' => 'IN_PROGRESS',
             'position' => 0,
             'board_version' => 0,
-        ])->assertOk();
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.position', 0)
+            ->assertJsonPath('board_version', 1);
 
+        $this->assertSame(
+            [$first->id, $last->id],
+            Ticket::query()
+                ->where('project_id', $this->project->id)
+                ->where('status', 'TODO')
+                ->orderBy('position')
+                ->pluck('id')
+                ->all()
+        );
         $this->assertDatabaseHas('tickets', [
             'id' => $first->id,
             'status' => 'TODO',
             'position' => 0,
         ]);
+        $this->assertDatabaseHas('tickets', [
+            'id' => $last->id,
+            'status' => 'TODO',
+            'position' => 1,
+        ]);
         $this->assertSame(
             [$moving->id, $target->id],
-            Ticket::query()->where('status', 'IN_PROGRESS')->orderBy('position')->pluck('id')->all()
+            Ticket::query()
+                ->where('project_id', $this->project->id)
+                ->where('status', 'IN_PROGRESS')
+                ->orderBy('position')
+                ->pluck('id')
+                ->all()
         );
     }
 
-    public function test_古いboard_versionの移動は409で拒否される(): void
+    public function test_列の件数を超えるpositionへの移動は末尾に配置される(): void
     {
-        $ticket = Ticket::factory()->create([
+        $first = Ticket::factory()->create([
             'project_id' => $this->project->id,
             'status' => 'TODO',
             'position' => 0,
         ]);
+        $moving = Ticket::factory()->create([
+            'project_id' => $this->project->id,
+            'status' => 'TODO',
+            'position' => 1,
+        ]);
+        $last = Ticket::factory()->create([
+            'project_id' => $this->project->id,
+            'status' => 'TODO',
+            'position' => 2,
+        ]);
+
+        $this->patchJson("/api/tickets/{$first->id}/move", [
+            'status' => 'TODO',
+            'position' => 99,
+            'board_version' => 0,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.position', 2)
+            ->assertJsonPath('board_version', 1);
+
+        $this->assertSame(
+            [$moving->id, $last->id, $first->id],
+            Ticket::query()
+                ->where('project_id', $this->project->id)
+                ->where('status', 'TODO')
+                ->orderBy('position')
+                ->pluck('id')
+                ->all()
+        );
+    }
+
+    public function test_古いboard_versionの移動は両方の列を変更せず409で拒否される(): void
+    {
+        $first = Ticket::factory()->create([
+            'project_id' => $this->project->id,
+            'status' => 'TODO',
+            'position' => 0,
+        ]);
+        $moving = Ticket::factory()->create([
+            'project_id' => $this->project->id,
+            'status' => 'TODO',
+            'position' => 1,
+        ]);
+        $last = Ticket::factory()->create([
+            'project_id' => $this->project->id,
+            'status' => 'TODO',
+            'position' => 2,
+        ]);
+        $target = Ticket::factory()->create([
+            'project_id' => $this->project->id,
+            'status' => 'IN_PROGRESS',
+            'position' => 0,
+        ]);
         $this->project->forceFill(['board_version' => 2])->save();
 
-        $this->patchJson("/api/tickets/{$ticket->id}/move", [
+        $this->patchJson("/api/tickets/{$moving->id}/move", [
             'status' => 'IN_PROGRESS',
             'position' => 0,
             'board_version' => 1,
         ])->assertStatus(409);
 
-        $this->assertDatabaseHas('tickets', [
-            'id' => $ticket->id,
-            'status' => 'TODO',
-            'position' => 0,
-        ]);
         $this->assertSame(2, $this->project->refresh()->board_version);
+        $this->assertSame(
+            [$first->id, $moving->id, $last->id],
+            Ticket::query()
+                ->where('project_id', $this->project->id)
+                ->where('status', 'TODO')
+                ->orderBy('position')
+                ->pluck('id')
+                ->all()
+        );
+        $this->assertSame(
+            [$target->id],
+            Ticket::query()
+                ->where('project_id', $this->project->id)
+                ->where('status', 'IN_PROGRESS')
+                ->orderBy('position')
+                ->pluck('id')
+                ->all()
+        );
     }
 
     public function test_手動ステータス変更は移動先の末尾に追加される(): void
