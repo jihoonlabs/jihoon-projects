@@ -6,7 +6,7 @@ from urllib.request import Request, urlopen
 
 # 외부 API 대신 맥 안의 Ollama에 요청한다.
 payload = {
-    "model": "qwen3-coder:30b",
+    "model": "gemma4:26b",
     "messages": [
         {
             "role": "system",
@@ -27,7 +27,7 @@ payload = {
     "stream": False,
     "options": {
         "num_ctx": 8192,
-        "num_predict": 1024,
+        "num_predict": 4096,
         "temperature": 0,
     },
     # 응답이 끝나면 모델 메모리를 해제한다.
