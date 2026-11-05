@@ -32,10 +32,6 @@ class ContextTests(unittest.TestCase):
         real_run = __import__("subprocess").run
 
         def run_with_child(command, *args, **kwargs):
-            if command[:3] == ["git", "branch", "--show-current"]:
-                return __import__("subprocess").CompletedProcess(
-                    command, 0, stdout="feature/personal-game-ai-child\n", stderr=""
-                )
             if command[:3] == ["git", "merge-base", "--is-ancestor"]:
                 return __import__("subprocess").CompletedProcess(
                     command, 0, stdout="", stderr=""
@@ -43,7 +39,7 @@ class ContextTests(unittest.TestCase):
             return real_run(command, *args, **kwargs)
 
         with patch("read_context.subprocess.run", side_effect=run_with_child):
-            self.assertIn("--- AGENTS.md ---", self.run_config())
+            self.assertIn("--- AGENTS.md ---", self.run_config(expected_branch="test/parent-for-ancestry"))
 
     def test_unrelated_branch_is_rejected_by_ancestry(self):
         real_run = __import__("subprocess").run
