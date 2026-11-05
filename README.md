@@ -46,12 +46,12 @@
 
 ## AIを活用した開発プロセス
 
-公開版AGENTS v2.1は、実際の作業で使い、課題とレビューを受けて更新したルールです。v2.1の作業記録と、その後の適用履歴・公開PRをまとめたv2.2の記録を確認できます。
+公開版AGENTS v2.1は、実作業で使い、課題とレビューを受けて更新したルールです。WORKとMANUALは、それぞれ作業指示・引き継ぎと利用者向け完了報告に使うテンプレートです。v2.2のページでは、実際の適用履歴を公開PRと検証記録に結びつけています。
 
 - [AGENTS v2.1](docs/agent/AGENTS-v2.1.md) — 実作業で使用した公開ルール
-- [WORK v2.1](docs/agent/WORK-v2.1.md) — v2.1更新時の目的・範囲・判断
-- [MANUAL v2.1](docs/agent/MANUAL-v2.1.md) — v2.1で変更した内容と根拠
-- [AI Workflow v2.2](docs/agent/AI-WORKFLOW-v2.2.md) — 実作業の時系列、公開PR、検証記録
+- [WORKテンプレート v2.1](docs/agent/WORK-v2.1.md) — 個別作業の目的・範囲・完了条件・検証を記入
+- [MANUALテンプレート v2.1](docs/agent/MANUAL-v2.1.md) — 作業結果・検証・制約を利用者へ報告
+- [AI Workflow v2.2](docs/agent/AI-WORKFLOW-v2.2.md) — ルールの更新経緯と後続作業の公開根拠
 
 v2.2はポートフォリオ上の証拠整理の版であり、AGENTSのルール版はv2.1です。内部のpromptや運用設定は公開していません。
 
@@ -67,7 +67,7 @@ v2.2はポートフォリオ上の証拠整理の版であり、AGENTSのルー�
 laravel/       Laravel API、認証、DBマイグレーション、バックエンドテスト
 react/         Next.jsアプリ、認証・投稿・お知らせ・Ticket UI
 docs/ticket/   Ticket V1の機能別マニュアルと開発・検証記録
-docs/agent/    公開AI作業ルールと適用履歴
+docs/agent/    公開AI作業ルール、WORK・MANUALテンプレート、適用根拠
 micropython/   趣味のMicroPython・Thumby制作
 vue/           Vue関連の作業領域
 ```
