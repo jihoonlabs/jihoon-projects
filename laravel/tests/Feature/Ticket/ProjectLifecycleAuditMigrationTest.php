@@ -48,17 +48,17 @@ class ProjectLifecycleAuditMigrationTest extends TestCase
 
     public function test_lifecycle_audit_and_creator_migrations_preserve_legacy_projects_in_order(): void
     {
-        $migrations = [
-            '2026_10_08_000001_add_archived_at_to_projects_table.php',
-            '2026_10_08_000003_create_project_audit_events_table.php',
-            '2026_10_08_000004_add_created_by_to_projects_table.php',
-        ];
+        /** @var Migration $archiveMigration */
+        $archiveMigration = require database_path('migrations/2026_10_08_000001_add_archived_at_to_projects_table.php');
+        $archiveMigration->up();
 
-        foreach ($migrations as $file) {
-            /** @var Migration $migration */
-            $migration = require database_path("migrations/{$file}");
-            $migration->up();
-        }
+        /** @var Migration $auditMigration */
+        $auditMigration = require database_path('migrations/2026_10_08_000003_create_project_audit_events_table.php');
+        $auditMigration->up();
+
+        /** @var Migration $creatorMigration */
+        $creatorMigration = require database_path('migrations/2026_10_08_000004_add_created_by_to_projects_table.php');
+        $creatorMigration->up();
 
         $legacy = DB::table('projects')->where('project_key', 'OLD')->first();
         $this->assertNotNull($legacy);

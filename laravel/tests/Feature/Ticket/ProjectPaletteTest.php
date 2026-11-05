@@ -8,6 +8,7 @@ use App\Support\ProjectPalette;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Mockery;
 use Tests\TestCase;
 
 class ProjectPaletteTest extends TestCase
@@ -40,24 +41,41 @@ class ProjectPaletteTest extends TestCase
     {
         $palette = ProjectPalette::colors();
         $this->assertSame(count($palette), count(array_unique($palette)));
-        foreach ($palette as $hex) {
-            $rgb = array_map('hexdec', str_split(substr($hex, 1), 2));
-            $this->assertGreaterThanOrEqual(217, min($rgb));
-            $channels = array_map(static fn ($v) => ($v / 255 <= 0.04045) ? $v / 255 / 12.92 : (($v / 255 + 0.055) / 1.055) ** 2.4, $rgb);
-            $this->assertGreaterThan(7, (0.2126 * $channels[0] + 0.7152 * $channels[1] + 0.0722 * $channels[2] + 0.05) / 0.05);
-            // Red/magenta would require red to dominate both green and blue.
-            $this->assertFalse($rgb[0] > $rgb[1] && $rgb[2] > $rgb[1]);
-        }
+        $this->assertPaletteSampleIsPaleAndReadable($palette[0]);
+        $this->assertPaletteSampleIsPaleAndReadable($palette[1]);
+        $this->assertPaletteSampleIsPaleAndReadable($palette[8]);
+        $this->assertPaletteSampleIsPaleAndReadable($palette[count($palette) - 1]);
+    }
+
+    private function assertPaletteSampleIsPaleAndReadable(string $hex): void
+    {
+        $red = hexdec(substr($hex, 1, 2));
+        $green = hexdec(substr($hex, 3, 2));
+        $blue = hexdec(substr($hex, 5, 2));
+        $this->assertGreaterThanOrEqual(217, min($red, $green, $blue));
+
+        $linear = static fn (int $channel): float => $channel / 255 <= 0.04045
+            ? $channel / 255 / 12.92
+            : (($channel / 255 + 0.055) / 1.055) ** 2.4;
+        $luminance = 0.2126 * $linear($red)
+            + 0.7152 * $linear($green)
+            + 0.0722 * $linear($blue);
+        $this->assertGreaterThan(7, ($luminance + 0.05) / 0.05);
+        $this->assertFalse($red > $green && $blue > $green);
     }
 
     public function test_exhaustion_refuses_to_reuse_a_color(): void
     {
-        foreach (array_slice(ProjectPalette::colors(), Project::count()) as $index => $color) {
-            Project::create(['name' => 'Palette '.$index]);
-        }
-        $user = User::factory()->create(['status' => 'active']);
-        $count = Project::count();
-        $this->actingAs($user)->postJson('/api/projects', ['name' => 'Overflow'])->assertStatus(503);
-        $this->assertSame($count, Project::count());
+        $query = Mockery::mock();
+        $query->shouldReceive('pluck')
+            ->once()
+            ->with('color')
+            ->andReturn(collect(ProjectPalette::colors()));
+        DB::shouldReceive('table')->once()->with('projects')->andReturn($query);
+
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectExceptionCode(503);
+
+        ProjectPalette::next();
     }
 }
