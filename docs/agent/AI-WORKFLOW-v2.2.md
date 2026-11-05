@@ -15,7 +15,7 @@
 | 2026-09-28 | AI作業ルールをリポジトリに導入 | [e4af694](https://github.com/jihoonlabs/jihoon-projects/commit/e4af694426e1b693952d37ec1d048fb7a3a69f85) |
 | 2026-10-07 | 実作業と独立レビューで確認された改善を反映し、v2.1として公開 | [fcf99a3](https://github.com/jihoonlabs/jihoon-projects/commit/fcf99a39a7d518abbe690eb2723563323a883eeb) |
 
-v2.1では、安全に判断できる小さな事項の自律化、ChildからParentへの引き継ぎ、影響に応じた検証、無関係なGit変更の保護、根拠のある規則改善を反映しました。変更内容は [MANUALテンプレート v2.1](MANUAL-v2.1.md) の記入例ではなく、公開された [v2.1更新コミット](https://github.com/jihoonlabs/jihoon-projects/commit/fcf99a39a7d518abbe690eb2723563323a883eeb) と照らして確認できます。
+v2.1では、安全に判断できる小さな事項の自律化、ChildからParentへの引き継ぎ、影響に応じた検証、無関係なGit変更の保護、根拠のある規則改善を反映しました。実際の変更は [v2.1更新コミット](https://github.com/jihoonlabs/jihoon-projects/commit/fcf99a39a7d518abbe690eb2723563323a883eeb) と [MANUALテンプレート v2.1](MANUAL-v2.1.md) に定義した報告項目を照らして確認できます。
 
 ## 実際の適用を確認できる公開作業
 
