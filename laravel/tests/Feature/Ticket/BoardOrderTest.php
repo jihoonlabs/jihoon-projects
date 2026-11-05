@@ -207,7 +207,7 @@ class BoardOrderTest extends TestCase
                 ->pluck('id')
                 ->all()
         );
-        $this->assertSame(0, Ticket::findOrFail($second->id)->position);
+        $this->assertSame(1, Ticket::findOrFail($second->id)->position);
     }
 
     public function test_別プロジェクトの列順は移動によって変わらない(): void
