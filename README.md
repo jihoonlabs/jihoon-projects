@@ -46,13 +46,14 @@
 
 ## AIを活用した開発プロセス
 
-生成AIをタスク分割、コンテキスト管理、レビュー、検証、統合に活用しています。公開資料では、ルール例とTicketの更新競合を題材にした作業・報告例を紹介します。
+公開版AGENTS v2.1は、実際の作業で使い、課題とレビューを受けて更新したルールです。v2.1の作業記録と、その後の適用履歴・公開PRをまとめたv2.2の記録を確認できます。
 
-- [AGENTS v2.1](docs/agent/AGENTS-v2.1.md) — 作業ルールの公開例
-- [WORK v2.1](docs/agent/WORK-v2.1.md) — Ticket更新競合の目標・範囲・完了条件
-- [MANUAL v2.1](docs/agent/MANUAL-v2.1.md) — 同じ例の実装概要・検証根拠・制約
+- [AGENTS v2.1](docs/agent/AGENTS-v2.1.md) — 実作業で使用した公開ルール
+- [WORK v2.1](docs/agent/WORK-v2.1.md) — v2.1更新時の目的・範囲・判断
+- [MANUAL v2.1](docs/agent/MANUAL-v2.1.md) — v2.1で変更した内容と根拠
+- [AI Workflow v2.2](docs/agent/AI-WORKFLOW-v2.2.md) — 実作業の時系列、公開PR、検証記録
 
-例は公開コードとテストから構成し、詳細な内部手順や実装ノウハウまでは掲載していません。
+v2.2はポートフォリオ上の証拠整理の版であり、AGENTSのルール版はv2.1です。内部のpromptや運用設定は公開していません。
 
 ## テスト・検証実績
 
@@ -66,7 +67,7 @@
 laravel/       Laravel API、認証、DBマイグレーション、バックエンドテスト
 react/         Next.jsアプリ、認証・投稿・お知らせ・Ticket UI
 docs/ticket/   Ticket V1の機能別マニュアルと開発・検証記録
-docs/agent/    公開エージェント構成のポートフォリオ保存例
+docs/agent/    公開AI作業ルールと適用履歴
 micropython/   趣味のMicroPython・Thumby制作
 vue/           Vue関連の作業領域
 ```
