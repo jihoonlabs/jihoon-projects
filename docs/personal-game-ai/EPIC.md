@@ -92,7 +92,7 @@
 - 장시간 무인 실행·강제 종료 복구·게임 전체 제작은 미검증이다.
 - 테스트 통과는 지정 범위만 보장한다. diff 검사는 별도다.
 - 문맥이 바뀐 기존 승인 기록은 당시 검토 이력으로 보존한다.
-- 모델: qwen3-coder:30b. Docker: python:3.11-slim.
+- 모델: gemma4:26b. Docker: python:3.11-slim.
 
 ## 테스트 후보 준비
 - Child 669d023을 통합했다.
@@ -158,6 +158,21 @@
 - 실제 모델은 질문 없이 완료했으므로 실제 질문·답변 재개는 아직 미검증이다.
 - 다음 우선 작업은 일반 Thumby의 작은 게임 생성·실행과 플레이 의견에 따른 수정이다.
 - 일반 Thumby 제작을 먼저 검증하고 Thumby Color까지 확장한다. StarCraft 유즈맵은 이후 범위다.
+
+## 실행 상태·중단 복구
+- 실행 상태·중단 복구 Child ae7e57a를 Epic에 통합했다.
+- --recover는 계획·Git 상태·작업 상태·잠금을 검사한 뒤 running 작업을 pending으로 되돌리고 실행을 이어간다.
+- 검사 조건을 만족하지 않으면 복구를 거부한다. 중단된 작업을 그대로 재실행하지 않는다.
+- --recover는 다른 옵션과 함께 사용할 수 없다. 기존 --retry 동작은 바꾸지 않았다.
+- 실행 요약에 상태별 작업 수·recovery_available·다음 행동을 표시한다.
+- 전체 회귀 243개와 별도 AI의 독립 검토를 통과했다.
+- 실제 gemma4:26b로 sandbox 모듈 하나를 강제 종료→복구해 고정 테스트 3개 통과를 확인했다.
+- SIGKILL 후 빈 실행 잠금 파일(.workflow.lock·.run_tasks.lock·.edit_loop.lock)이 남아 --recover도 거부한다. 실행 중인 프로세스가 없음을 확인한 뒤 수동으로 삭제해야 한다.
+- 복구 거부 시 --retry와 같이 traceback을 출력한다.
+- create 대상이 일부 기록된 채 남으면 정리 전까지 복구를 거부한다.
+- 단위 테스트에서 파일 작업 준비 단계의 Git 검사는 모의로 처리했다.
+- 실제 모델의 강제 종료 복구는 작은 sandbox 작업 하나만 확인했다.
+- 계획 계약 변경 검사 하나는 RuntimeError 발생만 확인하고 메시지는 확인하지 않는다.
 
 ## 제품 방향·썸비 Epic 연결
 - 제품 목표: [GOAL_V1](https://github.com/jihoonlabs/jihoon-projects/blob/4652b866e0163db14fb8ef54778417be19f9e075/docs/personal-game-ai/GOAL_V1.md).
