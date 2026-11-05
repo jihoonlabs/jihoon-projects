@@ -462,6 +462,185 @@ class WorkflowTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "잠금"):
                 workflow.recover_interrupted_plan(state)
 
+    def running_plan(self, *tasks):
+        path = self.root / "tasks.json"
+        path.write_text(json.dumps(list(tasks)))
+        with patch.object(
+            workflow.execute_plan, "resolve_plan", return_value=path
+        ):
+            contract = workflow.plan_contract(path)
+        state = {
+            "stage": "execute",
+            "plan": "tasks.json",
+            "plan_contract": contract,
+        }
+        return path, state
+
+    def task(self, task_id, kind="edit", status="running", **extra):
+        task = {
+            "id": task_id, "kind": kind,
+            "target": "sandbox/t" + task_id + ".py",
+            "test_module": "test_t" + task_id, "prompt": "p",
+            "depends_on": [], "status": status,
+        }
+        task.update(extra)
+        return task
+
+    def test_recovery_rejected_outside_execute_stage(self):
+        for stage in ("review_design", "review_tests", "completed"):
+            with self.subTest(stage=stage):
+                with self.assertRaisesRegex(ValueError, "구현 실행 단계"):
+                    workflow.recover_interrupted_plan({"stage": stage})
+
+    def test_recovery_rejected_without_running_task(self):
+        path, state = self.running_plan(
+            self.task("001", status="failed"),
+            self.task("002", status="pending"),
+        )
+        with patch.object(
+            workflow, "installed_tests", return_value=[]
+        ), patch.object(
+            workflow.execute_plan, "resolve_plan", return_value=path
+        ):
+            with self.assertRaisesRegex(ValueError, "중단 작업이 없습니다"):
+                workflow.recover_interrupted_plan(state)
+        self.assertEqual(json.loads(path.read_text())[0]["status"], "failed")
+
+    def test_recovery_rejected_when_installed_tests_changed(self):
+        path, state = self.running_plan(self.task("001"))
+        with patch.object(
+            workflow, "installed_tests",
+            return_value=["sandbox/test_t001.py"],
+        ), patch.object(
+            workflow.run_tasks, "prepare_file_task"
+        ) as prepare:
+            with self.assertRaisesRegex(RuntimeError, "Git 변경"):
+                workflow.recover_interrupted_plan(state)
+        prepare.assert_not_called()
+        self.assertEqual(json.loads(path.read_text())[0]["status"], "running")
+
+    def test_recovery_rejected_when_plan_contract_changed(self):
+        path, state = self.running_plan(self.task("001"))
+        changed = self.task("001", target="sandbox/other.py")
+        path.write_text(json.dumps([changed]))
+        with patch.object(
+            workflow, "installed_tests", return_value=[]
+        ), patch.object(
+            workflow.execute_plan, "resolve_plan", return_value=path
+        ), patch.object(
+            workflow.run_tasks, "prepare_file_task"
+        ) as prepare:
+            with self.assertRaises(RuntimeError):
+                workflow.recover_interrupted_plan(state)
+        prepare.assert_not_called()
+        self.assertEqual(json.loads(path.read_text())[0]["status"], "running")
+
+    def test_recovery_rejects_edit_loop_and_symlink_locks(self):
+        _, state = self.running_plan(self.task("001"))
+        lock = self.root / ".edit_loop.lock"
+        for make in (
+            lambda: lock.write_text("stale"),
+            lambda: lock.symlink_to(self.root / "missing"),
+        ):
+            make()
+            with self.subTest(symlink=lock.is_symlink()):
+                with patch.object(
+                    workflow, "installed_tests", return_value=[]
+                ):
+                    with self.assertRaisesRegex(RuntimeError, "잠금"):
+                        workflow.recover_interrupted_plan(state)
+            lock.unlink()
+
+    def test_recovery_resets_every_running_task_and_clears_attempt_data(self):
+        path, state = self.running_plan(
+            self.task("001", kind="create", error="killed", attempts=2),
+            self.task("002", status="tests_passed", output="kept"),
+            self.task("003", question="Q?", output="o", artifact="a"),
+        )
+        state["details"] = [{"id": "001", "status": "running"}]
+        with patch.object(
+            workflow, "installed_tests", return_value=[]
+        ), patch.object(
+            workflow.execute_plan, "resolve_plan", return_value=path
+        ), patch.object(
+            workflow.run_tasks, "prepare_file_task"
+        ) as prepare:
+            recovered = workflow.recover_interrupted_plan(state)
+        self.assertEqual(recovered, ["001", "003"])
+        self.assertEqual(prepare.call_count, 2)
+        tasks = json.loads(path.read_text())
+        self.assertEqual(
+            [task["status"] for task in tasks],
+            ["pending", "tests_passed", "pending"],
+        )
+        for task in (tasks[0], tasks[2]):
+            for key in ("error", "question", "output", "attempts", "artifact"):
+                self.assertNotIn(key, task)
+        self.assertEqual(tasks[1]["output"], "kept")
+        self.assertEqual(state["details"], [])
+
+    def test_recover_cannot_be_combined_with_other_actions(self):
+        for option in (
+            {"retry": True}, {"approve": "sha"}, {"confirm": "sha"},
+            {"answer_id": "001"}, {"feedback": "f"},
+            {"review_design": "r.json"},
+        ):
+            with self.subTest(option=option):
+                with self.assertRaisesRegex(ValueError, "--recover"):
+                    self.run_flow(recover=True, **option)
+        self.generator.assert_not_called()
+        self.assertFalse((self.root / ".workflow.lock").exists())
+
+    def test_run_workflow_recover_resets_then_continues_execution(self):
+        path, data, request = workflow.load_request(self.request)
+        folder = (
+            self.root / "outputs"
+            / ("workflow_" + workflow.digest(str(path).encode("utf-8")))
+        )
+        folder.mkdir(parents=True)
+        plan, state = self.running_plan(self.task("001"))
+        state.update({
+            "request_path": str(path),
+            "request_sha256": workflow.digest(data),
+            "request": request,
+            "context": "CONTEXT",
+            "protected": {},
+        })
+        workflow.write_state(folder / "state.json", state)
+        seen = []
+
+        def finish(state, *args, **kwargs):
+            seen.append(json.loads(plan.read_text())[0]["status"])
+            task = json.loads(plan.read_text())[0]
+            task["status"] = "tests_passed"
+            plan.write_text(json.dumps([task]))
+            state["stage"] = "completed"
+
+        with patch.object(
+            workflow, "installed_tests", return_value=[]
+        ), patch.object(
+            workflow.execute_plan, "resolve_plan", return_value=plan
+        ), patch.object(
+            workflow.run_tasks, "prepare_file_task"
+        ), patch.object(workflow, "advance", side_effect=finish) as advance:
+            result = self.run_flow(recover=True)
+        advance.assert_called_once()
+        self.assertEqual(seen, ["pending"])
+        self.assertEqual(result["recovered"], ["001"])
+        self.assertEqual(result["stage"], "completed")
+        self.assertFalse((self.root / ".workflow.lock").exists())
+
+    def test_cli_passes_recover_flag(self):
+        with patch.object(
+            workflow, "run_workflow", return_value={"stage": "execute"}
+        ) as run, patch(
+            "sys.argv",
+            ["workflow.py", "--request", str(self.request), "--recover"],
+        ), patch("builtins.print"):
+            workflow.main()
+        self.assertTrue(run.call_args.kwargs["recover"])
+        self.assertFalse(run.call_args.kwargs["retry"])
+
 
 if __name__ == "__main__":
     unittest.main()
