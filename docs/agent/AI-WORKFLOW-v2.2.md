@@ -10,7 +10,9 @@
 
 ## AI活用の進め方
 
-開発の初期は自分でコードを書いて実装することを中心に進め、その後、作業の中でAIを活用する範囲を少しずつ広げてきました。AIの出力は自分で確認・修正し、設計や実装の判断、最終検証を行いながら、進め方を改善して生産性を高めています。現在も、コーディングとAIエージェントの両方を活用する方法を磨いています。
+2026年9月にTicketアプリの開発を開始し、[認証の土台を自ら実装](https://github.com/jihoonlabs/jihoon-projects/commit/56058f3497c4bbd82b76be45d7b947de7f0b467e)。9月末に[AI作業ルールを導入](https://github.com/jihoonlabs/jihoon-projects/commit/e4af694426e1b693952d37ec1d048fb7a3a69f85)し、以降約1か月で、[ボード順序の永続化](https://github.com/jihoonlabs/jihoon-projects/pull/9)、[権限境界の強化](https://github.com/jihoonlabs/jihoon-projects/pull/17)、[テスト拡充](https://github.com/jihoonlabs/jihoon-projects/pull/49)、[勤怠機能](https://github.com/jihoonlabs/jihoon-projects/pull/69)の実装・検証まで進めました。
+
+この間、AIの活用範囲を段階的に広げました。AIの出力は自分で確認・修正し、設計や実装の判断、最終検証を行いながら、開発の生産性向上に取り組んでいます。
 
 ## ルールが更新された経緯
 
