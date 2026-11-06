@@ -46,7 +46,7 @@
 
 ## AIを活用した開発プロセス
 
-Ticketアプリは、自分でコードを書いて実装するところから始め、開発の中でAIに任せる作業を少しずつ増やしてきました。AIの出力を自分で確認・修正し、設計判断や最終検証も行いながら、進め方を改善して生産性を高めています。現在も、コーディングとAIエージェントの両方を活用する開発に取り組んでいます。
+2026年9月にTicketアプリの開発を開始し、[認証の土台を自ら実装](https://github.com/jihoonlabs/jihoon-projects/commit/56058f3497c4bbd82b76be45d7b947de7f0b467e)。9月末に[AI作業ルールを導入](https://github.com/jihoonlabs/jihoon-projects/commit/e4af694426e1b693952d37ec1d048fb7a3a69f85)し、以降約1か月で、[ボード順序の永続化](https://github.com/jihoonlabs/jihoon-projects/pull/9)、[権限境界の強化](https://github.com/jihoonlabs/jihoon-projects/pull/17)、[テスト拡充](https://github.com/jihoonlabs/jihoon-projects/pull/49)、[勤怠機能](https://github.com/jihoonlabs/jihoon-projects/pull/69)の実装・検証まで進めました。AIの活用範囲を段階的に広げ、出力の確認・修正、設計判断、最終検証は自分で行っています。
 
 公開版AGENTS v2.1は、実作業で使い、課題とレビューを受けて更新したルールです。WORKとMANUALは、それぞれ作業指示・引き継ぎと利用者向け完了報告に使うテンプレートです。v2.2のページでは、実際の適用履歴を公開PRと検証記録に結びつけています。
 
