@@ -2,13 +2,14 @@
 
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\AuthController;
+use App\Http\Middleware\RestrictPublicDemo;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-Route::prefix('api/auth')->group(function () {
+Route::prefix('api/auth')->middleware(RestrictPublicDemo::class)->group(function () {
     Route::get(
         'email/verify/{id}/{hash}',
         EmailVerificationController::class,

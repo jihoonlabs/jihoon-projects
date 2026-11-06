@@ -18,6 +18,10 @@ import { validateLoginForm } from '@/features/auth/validation/auth';
 import styles from './LoginForm.module.css';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+const DEMO_ACCOUNTS = {
+  user: { email: 'demo@example.com', password: 'TicketDemo2026!' },
+  admin: { email: 'demo-admin@example.com', password: 'TicketAdmin2026!' },
+};
 
 export function LoginForm({
   error,
@@ -26,6 +30,7 @@ export function LoginForm({
   registered,
 }: LoginRedirectParams) {
   const router = useRouter();
+  const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
   const login = useAuthStore((state) => state.login);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -33,11 +38,16 @@ export function LoginForm({
 
   useEffect(() => {
     // 履歴移動やセッション復元でも、認証済みのログイン画面を残さない。
-    if (isInitialized && isAuthenticated) router.replace('/tickets');
-  }, [isInitialized, isAuthenticated, router]);
+    if (isInitialized && isAuthenticated)
+      router.replace(DEMO_MODE ? '/tickets' : '/attendance');
+  }, [isInitialized, isAuthenticated, router, DEMO_MODE]);
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(() =>
+    DEMO_MODE ? 'demo@example.com' : '',
+  );
+  const [password, setPassword] = useState(() =>
+    DEMO_MODE ? 'TicketDemo2026!' : '',
+  );
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<LoginValidationErrors>({});
   const [serverError, setServerError] = useState(() => {
@@ -81,6 +91,17 @@ export function LoginForm({
     verificationRequest.current?.abort();
     verificationRequest.current = null;
     setResendingVerificationEmail(false);
+  };
+
+  const selectDemoAccount = (account: keyof typeof DEMO_ACCOUNTS) => {
+    cancelVerificationRequest();
+    verificationRevision.current += 1;
+    setEmail(DEMO_ACCOUNTS[account].email);
+    setPassword(DEMO_ACCOUNTS[account].password);
+    setErrors({});
+    setServerError('');
+    setSuccessMessage('');
+    setVerificationEmailRequired(false);
   };
 
   useEffect(() => () => verificationRequest.current?.abort(), []);
@@ -223,6 +244,35 @@ export function LoginForm({
         )}
 
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
+          {DEMO_MODE && (
+            <div
+              className={styles.demoAccountChoices}
+              role="group"
+              aria-label="デモ用アカウント"
+            >
+              <button
+                type="button"
+                className={styles.demoAccountButton}
+                aria-pressed={email === DEMO_ACCOUNTS.user.email}
+                disabled={loading}
+                onClick={() => selectDemoAccount('user')}
+              >
+                一般ユーザー
+                <span>1プロジェクト</span>
+              </button>
+              <button
+                type="button"
+                className={styles.demoAccountButton}
+                aria-pressed={email === DEMO_ACCOUNTS.admin.email}
+                disabled={loading}
+                onClick={() => selectDemoAccount('admin')}
+              >
+                管理者
+                <span>2プロジェクト</span>
+              </button>
+            </div>
+          )}
+
           <div className={styles.inputGroup}>
             <label htmlFor="email">メールアドレス</label>
 
@@ -311,59 +361,72 @@ export function LoginForm({
             )}
           </div>
 
-          <div className={styles.forgotPasswordGuide}>
-            <Link href="/forgot-password" className={styles.forgotPasswordLink}>
-              パスワードをお忘れですか？
-            </Link>
-          </div>
+          {!DEMO_MODE && (
+            <div className={styles.forgotPasswordGuide}>
+              <Link
+                href="/forgot-password"
+                className={styles.forgotPasswordLink}
+              >
+                パスワードをお忘れですか？
+              </Link>
+            </div>
+          )}
 
           <button type="submit" className={styles.submitBtn} disabled={loading}>
             {loading ? 'ログイン中...' : 'ログイン'}
           </button>
 
-          <div className={styles.alternativeLabel}>その他のログイン方法</div>
-          <div className={styles.socialGroup}>
-            <button
-              type="button"
-              className={`${styles.socialButton} ${styles.googleButton}`}
-              onClick={() => handleSocialLogin('google')}
-              disabled={loading}
-            >
-              <Image
-                src="/auth/google-g.svg"
-                width={20}
-                height={20}
-                alt=""
-                aria-hidden="true"
-              />
-              <span>Googleでログイン</span>
-            </button>
+          {!DEMO_MODE && (
+            <>
+              <div className={styles.alternativeLabel}>
+                その他のログイン方法
+              </div>
+              <div className={styles.socialGroup}>
+                <button
+                  type="button"
+                  className={`${styles.socialButton} ${styles.googleButton}`}
+                  onClick={() => handleSocialLogin('google')}
+                  disabled={loading}
+                >
+                  <Image
+                    src="/auth/google-g.svg"
+                    width={20}
+                    height={20}
+                    alt=""
+                    aria-hidden="true"
+                  />
+                  <span>Googleでログイン</span>
+                </button>
 
-            <button
-              type="button"
-              className={`${styles.socialButton} ${styles.lineButton}`}
-              onClick={() => handleSocialLogin('line')}
-              disabled={loading}
-            >
-              <Image
-                src="/auth/line-login.png"
-                width={28}
-                height={28}
-                alt=""
-                aria-hidden="true"
-                unoptimized
-              />
-              <span>LINEでログイン</span>
-            </button>
-          </div>
+                <button
+                  type="button"
+                  className={`${styles.socialButton} ${styles.lineButton}`}
+                  onClick={() => handleSocialLogin('line')}
+                  disabled={loading}
+                >
+                  <Image
+                    src="/auth/line-login.png"
+                    width={28}
+                    height={28}
+                    alt=""
+                    aria-hidden="true"
+                    unoptimized
+                  />
+                  <span>LINEでログイン</span>
+                </button>
+              </div>
+            </>
+          )}
         </form>
 
-        <div className={styles.registerGuide}>
-          <span>アカウントをお持ちでない方は</span>
-          <Link href="/register" className={styles.registerLink}>
-            新規会員登録へ
-          </Link>
-        </div>
+        {!DEMO_MODE && (
+          <div className={styles.registerGuide}>
+            <span>アカウントをお持ちでない方は</span>
+            <Link href="/register" className={styles.registerLink}>
+              新規会員登録へ
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

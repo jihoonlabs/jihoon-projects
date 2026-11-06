@@ -1,0 +1,58 @@
+name: Attendance API
+
+on:
+  push:
+    branches:
+      - feature/attendance-api-v1
+      - epic/attendance-v1
+  pull_request:
+    branches:
+      - epic/attendance-v1
+    paths:
+      - 'laravel/**'
+      - '.github/workflows/attendance-api.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: attendance-api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  laravel:
+    name: Laravel tests and Pint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: laravel
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP and Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          extensions: mbstring, pdo_sqlite, sqlite3, intl
+          coverage: none
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Check attendance code formatting
+        run: >-
+          vendor/bin/pint --test
+          app/Http/Controllers/Attendance/AttendanceController.php
+          app/Http/Resources/Attendance/AttendanceRecordResource.php
+          app/Models/AttendanceRecord.php
+          database/migrations/2026_10_20_000001_create_attendance_records_table.php
+          routes/api.php
+          routes/api/attendance.php
+          tests/Feature/Attendance/AttendanceApiTest.php
+
+      - name: Run Laravel test suite
+        run: php artisan test
+        env:
+          APP_KEY: "base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="

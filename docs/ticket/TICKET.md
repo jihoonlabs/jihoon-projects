@@ -45,6 +45,8 @@ Chrome HeadlessとローカルAPIで、ログイン、一覧の開閉、Escape�
 
 上の過去チェックポイントの数値は当時の履歴です。現在のコード全体やすべての環境での動作保証として扱わず、対象ブランチのCIとテスト結果を確認してください。
 
+2026-10-27の公開デモでは、React 257 tests、ESLint、TypeScript、Next.js静的出力に加え、Laravel全テストとPintがGitHub Actionsで通過しました。MySQL/MariaDBを使った本番相当のDB migration、実ホスティングでのAPIとブラウザーの結合動作は、公開前に確認が必要です。
+
 ## 関連資料
 
 - [機能別利用マニュアル](README.md)

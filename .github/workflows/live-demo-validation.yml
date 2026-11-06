@@ -1,0 +1,99 @@
+name: Live demo validation
+
+on:
+  push:
+    branches:
+      - deploy/ticket-demo-v1
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "react/**"
+      - "laravel/**"
+      - "deploy/**"
+      - "docs/ticket/manual/deployment-alwaysdata.md"
+      - ".github/workflows/live-demo-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-demo-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: React tests, static build, lint, and types
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: react
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: react/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run React tests
+        run: pnpm test:run
+
+      - name: Check lint
+        run: pnpm exec eslint .
+
+      - name: Check TypeScript
+        run: pnpm exec tsc --noEmit
+
+      - name: Build static demo
+        run: pnpm build
+        env:
+          TICKET_STATIC_EXPORT: "true"
+          NEXT_PUBLIC_API_URL: ""
+          NEXT_PUBLIC_DEMO_MODE: "true"
+
+  backend:
+    name: Laravel tests and formatting
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: laravel
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP and Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          tools: composer:v2
+          extensions: mbstring, pdo_sqlite, sqlite3, intl
+          coverage: none
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Check changed PHP files with Pint
+        run: >-
+          vendor/bin/pint --test
+          bootstrap/app.php
+          app/Http/Middleware/RestrictPublicDemo.php
+          config/demo.php
+          database/seeders/DemoSeeder.php
+          tests/Feature/Auth/PublicDemoTest.php
+
+      - name: Run Laravel test suite
+        run: php artisan test
+        env:
+          APP_KEY: "base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="

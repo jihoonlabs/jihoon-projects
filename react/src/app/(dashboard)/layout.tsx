@@ -6,8 +6,11 @@ import { useRouter } from 'next/navigation';
 import { LoginForm } from '@/features/auth/components/LoginForm/LoginForm';
 
 import { Header } from '@/shared/components/Header';
+import { AppSidebar } from '@/shared/components/AppSidebar';
 
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
+
+import styles from './layout.module.css';
 
 export default function DashboardLayout({
   children,
@@ -48,9 +51,17 @@ export default function DashboardLayout({
           <LoginForm />
         </section>
       )}
-      <div key={userId} hidden={sessionExpired} inert={sessionExpired}>
+      <div
+        key={userId}
+        className={styles.application}
+        hidden={sessionExpired}
+        inert={sessionExpired}
+      >
         {!sessionExpired && <Header />}
-        {children}
+        <div className={styles.workspace}>
+          {!sessionExpired && <AppSidebar />}
+          <main className={styles.main}>{children}</main>
+        </div>
       </div>
     </>
   );

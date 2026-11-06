@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
+
 import { logoutApi } from '@/features/auth/api/logout';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
+
 import { Header } from '..';
 
 const { replace } = vi.hoisted(() => ({ replace: vi.fn() }));
@@ -24,6 +26,12 @@ beforeEach(() => {
   });
 });
 
+it('shows workspace identity and user role', () => {
+  render(<Header />);
+  expect(screen.getByText('WORKSPACE')).toBeInTheDocument();
+  expect(screen.getByText(/管理者/)).toBeInTheDocument();
+});
+
 it('waits for server logout before clearing the session and blocks duplicate requests', async () => {
   let complete!: () => void;
   vi.mocked(logoutApi).mockImplementation(
@@ -33,7 +41,6 @@ it('waits for server logout before clearing the session and blocks duplicate req
       }),
   );
   render(<Header />);
-  expect(screen.getByText(/管理者/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'ログアウト' }));
   const pending = screen.getByRole('button', { name: 'ログアウト中...' });
   expect(pending).toBeDisabled();
