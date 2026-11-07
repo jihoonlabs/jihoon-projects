@@ -359,7 +359,11 @@ def run_edit(target_file, request, test_module, model=None):
                 restore_original()
             except Exception as cleanup_error:
                 details["cleanup_error"] = str(cleanup_error)
-            finish("failed", **details)
+            try:
+                finish("failed", **details)
+            except Exception:
+                # 記録に失敗しても元の例外を優先して伝える。
+                pass
             raise
     finally:
         lock.unlink()

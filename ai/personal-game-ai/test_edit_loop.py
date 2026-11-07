@@ -210,6 +210,20 @@ class EditLoopTests(unittest.TestCase):
         self.runner.return_value = (True, "passed")
         self.assertEqual(self.run_edit()["status"], "tests_passed")
 
+    def test_record_failure_keeps_original_exception(self):
+        self.model.return_value = self.proposal("value = 1\n")
+
+        def runner(log_path, *args, **kwargs):
+            # 結果記録先を壊し、記録失敗を起こす。
+            (log_path.parent / "result.json").mkdir()
+            raise RuntimeError("테스트가 30초를 초과해 중단됐습니다.")
+
+        self.runner.side_effect = runner
+        with self.assertRaisesRegex(RuntimeError, "30초"):
+            self.run_edit()
+        self.assertEqual(self.target.read_text(), self.original)
+        self.assertFalse((self.root / ".edit_loop.lock").exists())
+
     def test_model_error_on_later_attempt_restores_original(self):
         self.model.side_effect = [
             self.proposal("value = 1\n"),
