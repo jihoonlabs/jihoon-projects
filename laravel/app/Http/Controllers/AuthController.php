@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SocialAccount;
 use App\Models\User;
+use App\Support\FrontendUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +15,8 @@ use Throwable;
 
 class AuthController extends Controller
 {
+    private const SOCIAL_LOGIN_CLIENT_KEY = 'social_login_client';
+
     /**
      * ログイン
      * SanctumのSPAセッション認証を使用します。
@@ -122,9 +125,18 @@ class AuthController extends Controller
     /**
      * ソーシャルログインの認証画面へリダイレクト
      */
-    public function socialRedirect(string $provider)
+    public function socialRedirect(string $provider, Request $request)
     {
         $this->ensureSupportedProvider($provider);
+
+        // ログイン完了後の戻り先を許可リストのキーで保持する
+        $client = FrontendUrl::clientKey($request->query('client'));
+
+        if ($client === null) {
+            $request->session()->forget(self::SOCIAL_LOGIN_CLIENT_KEY);
+        } else {
+            $request->session()->put(self::SOCIAL_LOGIN_CLIENT_KEY, $client);
+        }
 
         return Socialite::driver($provider)->redirect();
     }
@@ -136,13 +148,18 @@ class AuthController extends Controller
     {
         $this->ensureSupportedProvider($provider);
 
+        // セッション再生成の前に戻り先を取り出し、一度だけ使う
+        $frontendUrl = FrontendUrl::forClient(
+            $request->session()->pull(self::SOCIAL_LOGIN_CLIENT_KEY)
+        );
+
         try {
             $providerUser = Socialite::driver($provider)->user();
         } catch (Throwable $exception) {
             report($exception);
 
             return redirect(
-                config('services.frontend.url')
+                $frontendUrl
                     ."/login?error=social_login_failed&provider={$provider}"
             );
         }
@@ -154,7 +171,7 @@ class AuthController extends Controller
         if ($socialAccount) {
             if ($socialAccount->user->status !== 'active') {
                 return redirect(
-                    config('services.frontend.url')
+                    $frontendUrl
                         ."/login?error=account_unavailable&provider={$provider}"
                 );
             }
@@ -163,7 +180,7 @@ class AuthController extends Controller
             $request->session()->regenerate();
 
             return redirect(
-                config('services.frontend.url').'/tickets'
+                $frontendUrl.'/tickets'
             );
         }
 
@@ -196,7 +213,7 @@ class AuthController extends Controller
         $request->session()->regenerate();
 
         return redirect(
-            config('services.frontend.url').'/tickets'
+            $frontendUrl.'/tickets'
         );
     }
 

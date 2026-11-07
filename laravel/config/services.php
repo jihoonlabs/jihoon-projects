@@ -48,7 +48,14 @@ return [
     ],
 
     'frontend' => [
+        // 判別できない要求の戻り先（既定はNext.js）
         'url' => env('FRONTEND_URL', 'http://localhost:3000'),
+
+        // 同じAPIを共有するフロントエンド。リダイレクト先はこの一覧からのみ選ぶ。
+        'clients' => [
+            'react' => env('FRONTEND_URL', 'http://localhost:3000'),
+            'vue' => env('FRONTEND_VUE_URL'),
+        ],
     ],
 
 ];
