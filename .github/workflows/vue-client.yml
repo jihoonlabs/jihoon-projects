@@ -137,3 +137,5 @@ jobs:
         run: php artisan test
         env:
           APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+          # 警告の原因が省略されないようにログの出力幅を広げる
+          COLUMNS: '400'
