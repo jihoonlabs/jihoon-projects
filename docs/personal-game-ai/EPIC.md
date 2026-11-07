@@ -1,10 +1,10 @@
 # 개인 게임 AI — Epic
 
-갱신일: 2026-10-08
+갱신일: 2026-11-07
 브랜치: feature/personal-game-ai
 
 ## Router
-- Thumby 대상 검사 — feature/personal-game-ai-thumby-platform — Epic 통합 후보(최종 검증 대기). 상세: personal-game-ai-thumby-platform.md
+- Thumby 대상 검사 — feature/personal-game-ai-thumby-platform — Epic 통합 완료(2026-11-07). 상세: personal-game-ai-thumby-platform.md
 
 ## 목표·규칙
 - 로컬 Ollama로 게임 개발을 진행하고 사용자는 목표와 중요한 분기를 결정한다.
@@ -191,16 +191,17 @@
 - 제작 후보는 턴제 전술·육성, 대전 격투, 횡스크롤 격투 액션 RPG, 탐험형 액션 RPG, 리듬 액션이다. 작품 이름은 기록하지 않으며 세부 방향은 위 GOAL에 둔다. 우선순위와 구현 완료를 뜻하지 않는다.
 
 ## Thumby 대상 검사
-- Child 8d389ff를 --no-ff로 통합 후보에 조립했다.
+- 브랜치 결과 8d389ff를 Epic 브랜치에 merge했다.
 - 검사용 가짜 thumby 모듈(72×40 화면·VLSB 스프라이트·버튼·소리·저장·링크, 테스트용 thumby.sim)을 추가했다.
 - 게임 파일의 MicroPython 호환 정적 검사(문법·허용 import·같은 폴더 모듈·미지원 문법)를 추가했다. 생성 코드는 실행하지 않는다.
 - target.json의 선택 설정 platform: "thumby"는 edit_directory가 있을 때만 유효하다.
 - 설정 시 run_test는 정적 검사 실패를 Docker 없이 피드백으로 돌려주고, 통과하면 가짜 모듈을 읽기 전용으로 붙여 검사한다.
 - 설정 시에만 수정·생성 요청에 Thumby 제약 안내를 덧붙인다. 미설정 시 Docker 명령과 요청은 기존과 같다.
-- 전체 회귀 277개(기존 243개 + 신규 33개 + 분리 1개)가 통과했고, 독립 검증에서 아래 한계와 함께 통과했다.
-- 실제 gemma4:26b·Docker로 작은 커서 과제 하나에서 가짜 모듈 피드백과 테스트 통과를 확인했다(측정용 설정 사용, 아래 참고).
+- 전체 회귀 277개(기존 243개 + 신규 33개 + 분리 1개)가 통과했고, 별도 모델의 검토에서 아래 한계와 함께 통과했다.
+- 실제 gemma4:26b·Docker로 작은 커서 과제 하나에서 가짜 모듈의 AttributeError 피드백을 확인했다.
+- 이 과제의 테스트 통과는 think:false와 ```json 울타리 제거를 적용한 측정용 스크립트에서만 확인했다. 기본 설정의 현재 도구 경로는 통과하지 못했다(아래 참고).
 - 가짜 모듈은 글자 모양·속도·메모리를 재현하지 않는다.
-- 정적 검사는 MicroPython 컴파일이 아닌 휴리스틱이다. collections·__future__ 등 허용 목록 밖 import와 조건부 import는 거부하고, 하위 폴더는 검사하지 않는다.
+- 정적 검사는 MicroPython 컴파일이 아닌 휴리스틱이다. 허용 목록 밖 모듈(collections·__future__ 등)은 try·if 안에 있어도 거부하고 허용 모듈은 감싸져 있어도 통과시킨다. 하위 폴더는 검사하지 않는다.
 - 게임 폴더의 thumby.py는 Docker에서 가짜 모듈을 가릴 수 있다.
 - 실기·에뮬레이터 실행은 미검증이다.
-- 기본 설정의 gemma4:26b는 현재 실패한다. 생각(thinking)이 출력 한도(num_predict)를 모두 써서 응답이 중단되고, think:false 응답은 ```json 울타리로 감싸져 형식 오류가 난다. 공용 ask_ai·edit_loop 수정은 후속 Child에서 진행한다.
+- 기본 설정의 gemma4:26b는 현재 실패한다. 생각(thinking)이 출력 한도(num_predict)를 모두 써서 응답이 중단되고, think:false 응답은 ```json 울타리로 감싸져 형식 오류가 난다. 공용 ask_ai·edit_loop 수정은 후속 작업에서 진행한다.
