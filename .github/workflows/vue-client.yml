@@ -89,6 +89,11 @@ jobs:
         if: steps.project.outputs.exists == 'true'
         run: pnpm format:check
 
+      - name: Show formatting diff
+        # 整形違反があったとき、必要な修正内容をログに残す
+        if: failure() && steps.project.outputs.exists == 'true'
+        run: pnpm exec prettier --write . && git diff --stat && git diff
+
       - name: Build static client
         if: steps.project.outputs.exists == 'true'
         run: pnpm generate
