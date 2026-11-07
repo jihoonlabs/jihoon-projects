@@ -117,6 +117,10 @@ jobs:
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      - name: Prepare environment file
+        # .env がないとテストごとに読み込み警告が出るため、例示ファイルを置く（APP_KEY は環境変数が優先）
+        run: cp .env.example .env
+
       - name: Check shared frontend files with Pint
         run: |
           files=""
