@@ -184,6 +184,106 @@ class EditLoopTests(unittest.TestCase):
         self.assertEqual(self.target.read_text(), self.original)
         self.assertFalse((self.root / ".edit_loop.lock").exists())
 
+    def results(self):
+        return [
+            json.loads(path.read_text(encoding="utf-8"))
+            for path in sorted((self.root / "outputs").glob("edit_*/result.json"))
+        ]
+
+    def test_exception_after_candidate_restores_and_allows_rerun(self):
+        self.model.return_value = self.proposal("value = 1\n")
+        self.runner.side_effect = RuntimeError("테스트가 30초를 초과해 중단됐습니다.")
+
+        with self.assertRaisesRegex(RuntimeError, "30초"):
+            self.run_edit()
+
+        self.assertEqual(self.target.read_text(), self.original)
+        self.assertFalse((self.root / ".edit_loop.lock").exists())
+        [result] = self.results()
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["attempts"], 1)
+        self.assertIn("30초", result["error"])
+        self.assertNotIn("cleanup_error", result)
+
+        # 対象が元に戻るため、同じ対象をそのまま再実行できる。
+        self.runner.side_effect = None
+        self.runner.return_value = (True, "passed")
+        self.assertEqual(self.run_edit()["status"], "tests_passed")
+
+    def test_record_failure_keeps_original_exception(self):
+        self.model.return_value = self.proposal("value = 1\n")
+
+        def runner(log_path, *args, **kwargs):
+            # 結果記録先を壊し、記録失敗を起こす。
+            (log_path.parent / "result.json").mkdir()
+            raise RuntimeError("테스트가 30초를 초과해 중단됐습니다.")
+
+        self.runner.side_effect = runner
+        with self.assertRaisesRegex(RuntimeError, "30초"):
+            self.run_edit()
+        self.assertEqual(self.target.read_text(), self.original)
+        self.assertFalse((self.root / ".edit_loop.lock").exists())
+
+    def test_model_error_on_later_attempt_restores_original(self):
+        self.model.side_effect = [
+            self.proposal("value = 1\n"),
+            RuntimeError("AI 응답이 길이 제한으로 중단됐습니다."),
+        ]
+        self.runner.return_value = (False, "failed")
+
+        with self.assertRaisesRegex(RuntimeError, "길이 제한"):
+            self.run_edit()
+
+        self.assertEqual(self.target.read_text(), self.original)
+        [result] = self.results()
+        self.assertEqual(result["attempts"], 2)
+        self.assertIn("길이 제한", result["error"])
+
+    def test_model_error_before_candidate_is_recorded(self):
+        self.model.side_effect = RuntimeError("model unavailable")
+        with self.assertRaises(RuntimeError):
+            self.run_edit()
+        [result] = self.results()
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["attempts"], 1)
+        self.assertNotIn("cleanup_error", result)
+        self.assertEqual(self.target.read_text(), self.original)
+
+    def test_external_edit_after_candidate_is_not_restored(self):
+        self.model.return_value = self.proposal("value = 1\n")
+
+        def runner(*args, **kwargs):
+            self.target.write_text("# user edit\n", encoding="utf-8")
+            return True, "passed"
+
+        self.runner.side_effect = runner
+        with self.assertRaisesRegex(RuntimeError, "외부에서 변경"):
+            self.run_edit()
+
+        self.assertEqual(self.target.read_text(), "# user edit\n")
+        [result] = self.results()
+        self.assertIn("cleanup_error", result)
+        self.assertFalse((self.root / ".edit_loop.lock").exists())
+
+    def test_replaced_target_is_not_restored(self):
+        self.model.return_value = self.proposal("value = 1\n")
+        other = self.root / "other.py"
+        other.write_text("value = 1\n", encoding="utf-8")
+
+        def runner(*args, **kwargs):
+            self.target.unlink()
+            self.target.symlink_to(other)
+            return True, "passed"
+
+        self.runner.side_effect = runner
+        with self.assertRaisesRegex(ValueError, "심볼릭 링크"):
+            self.run_edit()
+
+        self.assertTrue(self.target.is_symlink())
+        self.assertEqual(other.read_text(), "value = 1\n")
+        [result] = self.results()
+        self.assertIn("cleanup_error", result)
+
     def test_dirty_target_blocks_model(self):
         self.target.write_text("# existing edit\n", encoding="utf-8")
         with self.assertRaises(RuntimeError):
