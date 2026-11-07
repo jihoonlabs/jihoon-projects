@@ -59,6 +59,13 @@ class PlanTests(unittest.TestCase):
             before, (self.target.read_bytes(), self.test.read_bytes())
         )
 
+    def test_fenced_json_is_accepted(self):
+        fenced = "```json\n" + self.proposal() + "\n```"
+        model = Mock(return_value=fenced)
+        path = plan_tasks.generate_plan("Goal", self.allowed, model)
+        self.assertTrue(path.is_file())
+        self.assertEqual(model.call_count, 1)
+
     def test_invalid_json_retries_then_succeeds(self):
         model = Mock(side_effect=["invalid", self.proposal()])
         path = plan_tasks.generate_plan("Goal", self.allowed, model)

@@ -43,6 +43,15 @@ class CreateLoopTests(unittest.TestCase):
         )
         self.assertFalse((self.root / ".edit_loop.lock").exists())
 
+    def test_fenced_json_is_accepted(self):
+        self.model.return_value = "```json\n" + self.proposal() + "\n```"
+        self.runner.return_value = (True, "passed")
+
+        result = self.run_create()
+
+        self.assertEqual(result["status"], "tests_passed")
+        self.assertEqual(self.created.read_text(), "value = 1\n")
+
     def test_failed_test_feedback_reaches_next_attempt(self):
         self.model.side_effect = [
             self.proposal("value = 0\n"),
