@@ -23,7 +23,7 @@
 - 게임 그래픽 작업은 중단하고 자동화 도구 개발을 우선한다.
 - 사용자는 핵심 디자인·시나리오·규칙을 선택하고 명세를 승인한다.
 - 원본 복사는 절대 금지한다. 독자적인 코드·캐릭터·어셋·시나리오·데이터를 제작한다.
-- 제품 목표: [GOAL_V1](https://github.com/jihoonlabs/jihoon-projects/blob/4652b866e0163db14fb8ef54778417be19f9e075/docs/personal-game-ai/GOAL_V1.md). 플랫폼 작업: [썸비 Epic](https://github.com/jihoonlabs/jihoon-projects/blob/4652b866e0163db14fb8ef54778417be19f9e075/docs/thumby/EPIC.md).
+- 제품 목표: [GOAL_V1](https://github.com/jihoonlabs/jihoon-projects/blob/4652b866e0163db14fb8ef54778417be19f9e075/docs/personal-game-ai/GOAL_V1.md). 플랫폼 작업: [썸비 Epic](https://github.com/jihoonlabs/jihoon-projects/blob/4652b866e0163db14fb8ef54778417be19f9e075/docs/thumby/EPIC.md). owner 브랜치의 문서만 참조한다.
 
 ## 파일 실행
 - edit: 기존 Python 파일 수정. create: 없는 Python 파일 하나 생성.
@@ -73,10 +73,10 @@
 - 복구 거부 시 traceback을 출력한다.
 - create 대상이 일부 기록된 채 남으면 정리 전까지 복구를 거부한다.
 - 생각을 끄면 추론 품질이 떨어질 수 있다. 실측 설계의 기대값 두 개가 스스로 정한 정렬 규칙과 맞지 않았으므로 설계 승인 단계에서 걸러야 한다.
-- 가짜 thumby 모듈은 글자 모양·속도·메모리를 재현하지 않는다. 정적 검사는 MicroPython 컴파일이 아닌 휴리스틱이다.
+- 가짜 thumby 모듈은 글자 모양·속도·메모리를 재현하지 않는다. 정적 검사는 MicroPython 컴파일이 아닌 휴리스틱이다. 하위 폴더는 검사하지 않는다.
 - 수정 중 예외 복원은 SIGKILL·전원 차단·Ctrl+C를 다루지 않는다. 예외 없이 3회 실패하면 마지막 후보가 남는다.
 - 실행 단계 실패 작업의 재실행 명령은 없다(--retry는 설계·테스트 생성 전용).
-- 미검증: 실제 질문·답변 재개, 장시간 무인 실행, 실기·에뮬레이터 실행, 생성·계획 흐름의 실제 모델 실행.
+- 미검증: 실제 질문·답변 재개, 장시간 무인 실행, 여러 작업의 강제 종료 복구, 실기·에뮬레이터 실행.
 
 ## 다음 작업
 - 실제 모델의 질문·답변 후 재개를 검증한다.
