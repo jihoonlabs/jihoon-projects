@@ -4,7 +4,6 @@ import { cleanup } from '@testing-library/vue';
 import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
 
 import { apiHandlers } from './msw/apiHandlers';
-import { apiUrl } from './msw/apiUrl';
 import { server } from './msw/server';
 
 const clearCookies = () => {
@@ -18,11 +17,14 @@ const clearCookies = () => {
 };
 
 beforeAll(() => {
+  // Nuxt 自身がテスト用の同一オリジンへ送る内部要求だけを許可する。
+  // 判定はテスト環境の起動時に一度だけ行い、Nuxt の文脈に依存しないようにする。
+  const appOrigin = window.location.origin;
+
   server.listen({
-    // Laravel API への未定義の要求はテストを失敗させる。
-    // Nuxt 自身の内部要求など API 以外は対象外にする。
+    // 応答を定義していない外部への要求（Laravel API を含む）はテストを失敗させる
     onUnhandledRequest(request, print) {
-      if (request.url.startsWith(apiUrl('/'))) {
+      if (new URL(request.url).origin !== appOrigin) {
         print.error();
       }
     },
