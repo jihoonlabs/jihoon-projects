@@ -66,12 +66,18 @@ jobs:
             pnpm install --no-frozen-lockfile
           fi
 
-      - name: Upload generated lockfile
+      - name: Show installed versions
+        if: steps.project.outputs.exists == 'true'
+        run: pnpm list --depth 0
+
+      - name: Print generated lockfile
+        # 実行環境によっては artifact を取得できないため、初回の lockfile をログに出力する
         if: steps.project.outputs.exists == 'true' && steps.project.outputs.lockfile == 'false'
-        uses: actions/upload-artifact@v4
-        with:
-          name: vue-pnpm-lock
-          path: vue/pnpm-lock.yaml
+        run: |
+          echo "LOCKFILE-BEGIN"
+          gzip -9c pnpm-lock.yaml | base64 -w 0
+          echo
+          echo "LOCKFILE-END"
 
       - name: Run tests
         if: steps.project.outputs.exists == 'true'
