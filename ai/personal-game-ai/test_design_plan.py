@@ -139,6 +139,12 @@ class DesignPlanTests(unittest.TestCase):
             [item["id"] for item in result["files"]], ["001", "002"]
         )
 
+    def test_fenced_json_is_accepted(self):
+        fenced = "```json\n" + json.dumps(self.proposal) + "\n```"
+        path = self.generate(lambda prompt: fenced)
+        envelope = json.loads(path.read_text())
+        self.assertEqual(envelope["design"], self.proposal)
+
     def test_invalid_json_retries(self):
         model = Mock(side_effect=["invalid", json.dumps(self.proposal)])
         self.assertTrue(self.generate(model).is_file())

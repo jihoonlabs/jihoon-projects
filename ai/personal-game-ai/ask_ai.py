@@ -25,6 +25,8 @@ payload = {
         },
     ],
     "stream": False,
+    # gemma4는 생각에 출력 한도를 모두 쓸 수 있어 생각을 끈다.
+    "think": False,
     "options": {
         "num_ctx": 8192,
         "num_predict": 4096,
@@ -33,6 +35,23 @@ payload = {
     # 응답이 끝나면 모델 메모리를 해제한다.
     "keep_alive": 0,
 }
+
+# 응답 전체를 감싼 ``` 또는 ```json 울타리 하나만 허용한다.
+_JSON_FENCE = re.compile(
+    r"\A```(?:json)?[ \t]*\r?\n(.*)\r?\n```\Z", re.DOTALL | re.IGNORECASE
+)
+
+
+def parse_json_answer(answer):
+    """모델 응답을 JSON으로 읽는다. 앞뒤 설명문이 섞인 응답은 거부한다."""
+    if not isinstance(answer, str):
+        raise ValueError("AI 응답은 문자열이어야 합니다.")
+    text = answer.strip()
+    match = _JSON_FENCE.match(text)
+    if match:
+        text = match.group(1)
+    return json.loads(text)
+
 
 def ask_model(prompt):
     # 호출할 때마다 독립된 요청 데이터를 만든다.

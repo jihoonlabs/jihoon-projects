@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 import edit_loop
+from ask_ai import parse_json_answer
 import platform_check
 
 
@@ -226,7 +227,7 @@ def run_create(target_file, request, test_module, model=None):
                 check_unchanged()
 
                 try:
-                    proposal = json.loads(answer)
+                    proposal = parse_json_answer(answer)
                     if not isinstance(proposal, dict):
                         raise ValueError("JSON 객체가 필요합니다.")
                     if proposal.get("action") == "question":

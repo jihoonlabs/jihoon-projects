@@ -95,6 +95,19 @@ class EditLoopTests(unittest.TestCase):
         )
         self.assertFalse((self.root / ".edit_loop.lock").exists())
 
+    def test_fenced_json_is_accepted_and_raw_answer_saved(self):
+        code = "def clamp(value, minimum, maximum):\n    return value\n"
+        answer = "```json\n" + self.proposal(code) + "\n```"
+        self.model.return_value = answer
+        self.runner.return_value = (True, "passed")
+
+        result = self.run_edit()
+
+        self.assertEqual(result["status"], "tests_passed")
+        self.assertEqual(self.target.read_text(), code)
+        output = self.root / result["output"]
+        self.assertEqual((output / "answer_1.txt").read_text(), answer)
+
     def test_failed_test_is_sent_back(self):
         self.model.side_effect = [
             self.proposal("def clamp(v, lo, hi):\n    return v\n"),

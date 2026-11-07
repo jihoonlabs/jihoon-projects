@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from ask_ai import ask_model
+from ask_ai import ask_model, parse_json_answer
 from create_loop import prepare_create
 from edit_loop import prepare_edit
 from read_context import read_context
@@ -170,7 +170,7 @@ def generate_plan(goal, allowed, model=None):
             answer, encoding="utf-8"
         )
         try:
-            tasks = validate_plan(json.loads(answer), allowed, goal)
+            tasks = validate_plan(parse_json_answer(answer), allowed, goal)
         except ValueError as error:
             feedback = str(error)
             print("계획 검사 실패:", feedback)

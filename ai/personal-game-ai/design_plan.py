@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 import edit_loop
-from ask_ai import ask_model
+from ask_ai import ask_model, parse_json_answer
 from read_context import read_context
 from task_dependencies import order_tasks
 
@@ -312,7 +312,7 @@ def generate_design(
         try:
             if len(answer) > 30000:
                 raise ValueError("설계 응답이 30000자를 넘습니다.")
-            design = validate_design(json.loads(answer), requirements, area)
+            design = validate_design(parse_json_answer(answer), requirements, area)
         except ValueError as error:
             validation_feedback = str(error)
             print("설계 검사 실패:", validation_feedback)
