@@ -256,86 +256,111 @@ def run_edit(target_file, request, test_module, model=None):
             if read_context() != context:
                 raise RuntimeError("브랜치 또는 작업 문맥이 변경됐습니다.")
 
-        feedback = "아직 검사하지 않았습니다."
-        for attempt in range(1, MAX_ATTEMPTS + 1):
-            check_unchanged()
-            prompt = (
-                context
-                + "\n\n# 수정 요청\n" + request
-                + "\n\n파일·네트워크·프로세스 접근은 필요하지 않습니다.\n"
-                "실제로 수정하거나 테스트했다고 주장하지 마세요.\n"
-                "고정 테스트를 변경하는 대신 지정된 함수를 구현하세요.\n"
-                "응답은 Markdown 없이 JSON 객체 하나만 출력하세요.\n"
-                '구현할 수 있으면 {"action":"edit","code":"전체 Python 코드"}\n'
-                '사용자 결정이 필요하면 {"action":"question",'
-                '"question":"한국어 질문"}\n'
-                + platform_note
-                + "\n현재 코드:\n" + current.decode("utf-8")
-                + "\n이전 검사 결과:\n" + feedback
-            )
-            print(f"AI 수정 시도 {attempt}/{MAX_ATTEMPTS}", flush=True)
-            answer = model(prompt)
-            if not isinstance(answer, str) or not answer.strip():
-                raise ValueError("AI 응답이 비어 있습니다.")
-            (output / f"answer_{attempt}.txt").write_text(
-                answer, encoding="utf-8"
-            )
-            check_unchanged()
+        def restore_original():
+            # ツールが書いた候補のままの場合だけ戻し、外部変更は上書きしない。
+            if current == original:
+                return
+            if target.is_symlink() or not target.is_file():
+                raise RuntimeError(
+                    "수정 대상의 종류가 바뀌어 되돌리지 않았습니다."
+                )
+            if target.read_bytes() != current:
+                raise RuntimeError(
+                    "수정 대상이 외부에서 변경되어 되돌리지 않았습니다."
+                )
+            target.write_bytes(original)
 
-            try:
-                proposal = parse_json_answer(answer)
-                if not isinstance(proposal, dict):
-                    raise ValueError("JSON 객체가 필요합니다.")
-                if proposal.get("action") == "question":
-                    question = proposal.get("question")
-                    if not isinstance(question, str) or not question.strip():
-                        raise ValueError("질문이 비어 있습니다.")
-                    check_unchanged()
-                    if current != original:
-                        target.write_bytes(original)
-                        current = original
-                    check_unchanged()
-                    check_git_files(target, test)
-                    return finish(
-                        "waiting_for_user",
-                        question=question, attempts=attempt,
+        attempt = 0
+        try:
+            feedback = "아직 검사하지 않았습니다."
+            for attempt in range(1, MAX_ATTEMPTS + 1):
+                check_unchanged()
+                prompt = (
+                    context
+                    + "\n\n# 수정 요청\n" + request
+                    + "\n\n파일·네트워크·프로세스 접근은 필요하지 않습니다.\n"
+                    "실제로 수정하거나 테스트했다고 주장하지 마세요.\n"
+                    "고정 테스트를 변경하는 대신 지정된 함수를 구현하세요.\n"
+                    "응답은 Markdown 없이 JSON 객체 하나만 출력하세요.\n"
+                    '구현할 수 있으면 {"action":"edit","code":"전체 Python 코드"}\n'
+                    '사용자 결정이 필요하면 {"action":"question",'
+                    '"question":"한국어 질문"}\n'
+                    + platform_note
+                    + "\n현재 코드:\n" + current.decode("utf-8")
+                    + "\n이전 검사 결과:\n" + feedback
+                )
+                print(f"AI 수정 시도 {attempt}/{MAX_ATTEMPTS}", flush=True)
+                answer = model(prompt)
+                if not isinstance(answer, str) or not answer.strip():
+                    raise ValueError("AI 응답이 비어 있습니다.")
+                (output / f"answer_{attempt}.txt").write_text(
+                    answer, encoding="utf-8"
+                )
+                check_unchanged()
+
+                try:
+                    proposal = parse_json_answer(answer)
+                    if not isinstance(proposal, dict):
+                        raise ValueError("JSON 객체가 필요합니다.")
+                    if proposal.get("action") == "question":
+                        question = proposal.get("question")
+                        if not isinstance(question, str) or not question.strip():
+                            raise ValueError("질문이 비어 있습니다.")
+                        check_unchanged()
+                        if current != original:
+                            target.write_bytes(original)
+                            current = original
+                        check_unchanged()
+                        check_git_files(target, test)
+                        return finish(
+                            "waiting_for_user",
+                            question=question, attempts=attempt,
+                        )
+                    if proposal.get("action") != "edit":
+                        raise ValueError("action은 edit 또는 question이어야 합니다.")
+                    code = proposal.get("code")
+                    if not isinstance(code, str) or not code.strip():
+                        raise ValueError("코드가 비어 있습니다.")
+                    compile(code, str(target), "exec")
+                except (ValueError, SyntaxError) as error:
+                    feedback = f"응답 형식 또는 문법 오류: {error}"
+                    print(feedback)
+                    continue
+
+                candidate = (code.rstrip() + "\n").encode("utf-8")
+                (output / f"candidate_{attempt}.py").write_bytes(candidate)
+                check_unchanged()
+                target.write_bytes(candidate)
+                current = candidate
+
+                if Path(target_file).parts[0] == "sandbox":
+                    passed, feedback = run_test(
+                        output / f"test_{attempt}.txt", test_module
                     )
-                if proposal.get("action") != "edit":
-                    raise ValueError("action은 edit 또는 question이어야 합니다.")
-                code = proposal.get("code")
-                if not isinstance(code, str) or not code.strip():
-                    raise ValueError("코드가 비어 있습니다.")
-                compile(code, str(target), "exec")
-            except (ValueError, SyntaxError) as error:
-                feedback = f"응답 형식 또는 문법 오류: {error}"
+                else:
+                    passed, feedback = run_test(
+                        output / f"test_{attempt}.txt",
+                        test_module, work_dir=target.parent,
+                    )
+                check_unchanged()
                 print(feedback)
-                continue
+                if passed:
+                    return finish("tests_passed", attempts=attempt)
 
-            candidate = (code.rstrip() + "\n").encode("utf-8")
-            (output / f"candidate_{attempt}.py").write_bytes(candidate)
-            check_unchanged()
-            target.write_bytes(candidate)
-            current = candidate
-
-            if Path(target_file).parts[0] == "sandbox":
-                passed, feedback = run_test(
-                    output / f"test_{attempt}.txt", test_module
-                )
-            else:
-                passed, feedback = run_test(
-                    output / f"test_{attempt}.txt",
-                    test_module, work_dir=target.parent,
-                )
-            check_unchanged()
-            print(feedback)
-            if passed:
-                return finish("tests_passed", attempts=attempt)
-
-        return finish(
-            "failed",
-            error="3회 시도 안에 지정 테스트를 통과하지 못했습니다.",
-            attempts=MAX_ATTEMPTS,
-        )
+            return finish(
+                "failed",
+                error="3회 시도 안에 지정 테스트를 통과하지 못했습니다.",
+                attempts=MAX_ATTEMPTS,
+            )
+        except Exception as error:
+            # 例外時も記録を残し、再実行を妨げないよう候補を戻す。
+            details = {"error": str(error), "attempts": attempt}
+            try:
+                restore_original()
+            except Exception as cleanup_error:
+                details["cleanup_error"] = str(cleanup_error)
+            finish("failed", **details)
+            raise
     finally:
         lock.unlink()
 
