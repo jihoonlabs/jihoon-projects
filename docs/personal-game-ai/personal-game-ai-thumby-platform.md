@@ -23,9 +23,12 @@
 - 실제 모델·Docker 확인은 Mac에서 별도로 기록한다.
 
 ## 현재 상태
-- 구현 완료, 독립 검증 대기. 아직 commit하지 않았다.
+- 구현 완료(8b41730), Mac 실측 완료, 독립 검증 대기.
 - 구현: platforms/thumby/thumby.py, platform_check.py, edit_loop.py·create_loop.py 연결, test_platform_check.py.
-- 확인: 전체 회귀 276개(기존 243 + 신규 33) 통과, git diff --check 통과.
-- 확인: 가짜 모듈을 PYTHONPATH로 붙인 CPython에서 버튼·화면 기록 예제 테스트 통과(Docker 명령과 같은 방식, Docker 자체는 아님).
-- 미검증: 실제 Docker 실행(이 작업 공간에 Docker 데몬 없음), 실제 모델 생성, MicroPython 실기·에뮬레이터.
+- 확인: 전체 회귀 277개 통과(Mac 호스트 Python 3.9). 3.9는 match를 해석하지 못해 문법 오류로 거부하므로, match 거부 테스트를 상대 import 테스트와 나누고 호스트 버전에 맞춰 확인한다.
+- Mac 실측(2026-11-07, gemma4:26b, Docker python:3.11-slim): 로컬 복제본의 9x5 커서 과제에서 가짜 모듈을 붙인 Docker 테스트 4개 통과.
+  - 1회차 실행에서 모델이 없는 API draw_rectangle을 써서 가짜 모듈이 AttributeError로 돌려줬다.
+  - 허용 밖 import가 있으면 Docker를 실행하지 않고 호환 검사 실패를 돌려준다.
+- 실측 조건: 기본 설정의 gemma4:26b는 생각(thinking)에 출력 한도 4096을 모두 써서 응답이 길이 제한으로 중단됐다. 통과 실행은 측정용 스크립트에서 think:false와 ```json 울타리 제거를 적용했다. 공용 코드(ask_ai·edit_loop) 수정은 후속 작업으로 분리한다.
+- 미검증: MicroPython 실기·에뮬레이터, 큰 게임 과제.
 - 한계: 가짜 모듈은 글자 모양·속도·메모리를 재현하지 않는다. 정적 검사는 MicroPython 컴파일이 아니다.

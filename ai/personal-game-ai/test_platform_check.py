@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -177,15 +178,22 @@ class StaticCheckTests(unittest.TestCase):
         self.assertIn("os", errors[0])
         self.assertIn("dataclasses", errors[1])
 
-    def test_relative_import_and_match_are_rejected(self):
+    def test_relative_import_is_rejected(self):
+        self.write("game.py", "from . import units\n")
+        errors = self.check()
+        self.assertTrue(any("상대 import" in e for e in errors))
+
+    def test_match_is_rejected(self):
+        # Python < 3.10 hosts cannot parse match and report a syntax error;
+        # newer hosts parse it and report the unsupported node.
         self.write(
             "game.py",
-            "from . import units\n"
             "def f(v):\n    match v:\n        case 1:\n            return 1\n",
         )
         errors = self.check()
-        self.assertTrue(any("상대 import" in e for e in errors))
-        self.assertTrue(any("Match" in e for e in errors))
+        expected = "Match" if sys.version_info >= (3, 10) else "문법 오류"
+        self.assertTrue(errors)
+        self.assertTrue(any(expected in e for e in errors), errors)
 
     def test_syntax_error_is_reported_without_execution(self):
         marker = self.dir / "executed.txt"
