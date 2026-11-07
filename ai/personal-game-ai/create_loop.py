@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 import edit_loop
+import platform_check
 
 
 def resolve_create_files(target_file, test_module):
@@ -90,6 +91,9 @@ def run_create(target_file, request, test_module, model=None):
     context = edit_loop.read_context()
     target, test = prepare_create(target_file, request, test_module)
     model = edit_loop.ask_model if model is None else model
+    platform_note = platform_check.prompt_note(
+        platform_check.target_platform(target_file)
+    )
 
     # editとcreateは同じロックを使う。
     lock = edit_loop.BASE_DIR / ".edit_loop.lock"
@@ -204,7 +208,8 @@ def run_create(target_file, request, test_module, model=None):
                     "응답은 Markdown 없이 JSON 객체 하나로 출력하세요.\n"
                     '구현: {"action":"create","code":"전체 Python 코드"}\n'
                     '결정 필요: {"action":"question","question":"한국어 질문"}\n'
-                    "\n현재 후보 코드:\n"
+                    + platform_note
+                    + "\n현재 후보 코드:\n"
                     + (current.decode("utf-8") if current is not None else "(없음)")
                     + "\n이전 검사 결과:\n" + feedback
                 )

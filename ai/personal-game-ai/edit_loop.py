@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
+import platform_check
 from ask_ai import ask_model
 from read_context import CONFIG_PATH, git_output, read_context
 
@@ -158,6 +159,18 @@ def prepare_edit(target_file, request, test_module):
 def run_test(log_path, test_module="test_clamp", work_dir=None):
     directory = SANDBOX if work_dir is None else Path(work_dir)
     check_directory(directory)
+    platform = (
+        None if directory == SANDBOX
+        else platform_check.configured_platform()
+    )
+    # 機種の静的検査で落ちた候補はDockerを起動せずモデルへ戻す。
+    errors = platform_check.check_directory_source(platform, directory)
+    if errors:
+        feedback = (
+            f"{platform} 호환 검사 실패:\n" + "\n".join(errors) + "\n"
+        )
+        log_path.write_text(feedback, encoding="utf-8")
+        return False, feedback[-6000:]
     name = "game-ai-test-" + uuid.uuid4().hex
     command = [
         "docker", "run", "--rm",
@@ -173,6 +186,7 @@ def run_test(log_path, test_module="test_clamp", work_dir=None):
         "--mount",
         f"type=bind,source={directory.resolve()},target=/work,readonly",
         "--workdir", "/work",
+        *platform_check.docker_options(platform),
         "python:3.11-slim",
         "python", "-B", "-m", "unittest", "-v", test_module,
     ]
@@ -195,6 +209,9 @@ def run_edit(target_file, request, test_module, model=None):
     context = read_context()
     target, test = prepare_edit(target_file, request, test_module)
     model = ask_model if model is None else model
+    platform_note = platform_check.prompt_note(
+        platform_check.target_platform(target_file)
+    )
     lock = BASE_DIR / ".edit_loop.lock"
     try:
         lock.open("x").close()
@@ -252,7 +269,8 @@ def run_edit(target_file, request, test_module, model=None):
                 '구현할 수 있으면 {"action":"edit","code":"전체 Python 코드"}\n'
                 '사용자 결정이 필요하면 {"action":"question",'
                 '"question":"한국어 질문"}\n'
-                "\n현재 코드:\n" + current.decode("utf-8")
+                + platform_note
+                + "\n현재 코드:\n" + current.decode("utf-8")
                 + "\n이전 검사 결과:\n" + feedback
             )
             print(f"AI 수정 시도 {attempt}/{MAX_ATTEMPTS}", flush=True)
