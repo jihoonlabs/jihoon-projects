@@ -1,8 +1,9 @@
 import '@testing-library/jest-dom/vitest';
 
 import { cleanup } from '@testing-library/vue';
-import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 
+import { resetAppState } from './appState';
 import { apiHandlers } from './msw/apiHandlers';
 import { server } from './msw/server';
 
@@ -34,10 +35,12 @@ beforeAll(() => {
 beforeEach(() => {
   // 前のテストの上書きを残さず、既定の応答から始める
   server.resetHandlers(...apiHandlers());
+  resetAppState();
 });
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   server.resetHandlers();
   clearCookies();
 });
