@@ -21,7 +21,7 @@ const userKey = computed(() => auth.user?.id ?? 'guest');
       <p role="alert">
         セッションの有効期限が切れました。再ログインしてください。未保存の入力はこのタブ内で同じアカウントに再ログインした場合のみ保持されます。再読み込み・画面移動で失われます。
       </p>
-      <LoginForm :allow-social-login="false" />
+      <LoginForm relogin />
     </section>
 
     <!-- 期限切れの間は操作できないよう隠し、入力中の内容は同じアカウントの再ログインまで保持する -->

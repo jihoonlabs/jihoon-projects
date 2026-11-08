@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { userFixture } from '~/features/auth/test/userFixture';
+import { accountApi } from '~/test/auth/accountApiHandlers';
 import { authApi } from '~/test/auth/authApiHandlers';
 import { signInAs, signedOut } from '~/test/auth/signInAs';
 import { enableDemoMode } from '~/test/demoMode';
@@ -297,6 +298,128 @@ describe('ログイン画面', () => {
       await user.click(submitButton());
 
       await expectPath('/tickets');
+    });
+  });
+
+  describe('メール未認証', () => {
+    const loginWithUnverifiedEmail = async () => {
+      overrideApi(
+        authApi.loginFails(403, {
+          message: 'メール認証が完了していません。',
+          code: 'email_not_verified',
+        }),
+      );
+      const view = await renderRoute('/login');
+      await view.user.type(emailInput(), 'user@example.com');
+      await view.user.type(passwordInput(), 'password123');
+      await view.user.click(submitButton());
+      await screen.findByRole('button', { name: '認証メールを再送する' });
+
+      return view;
+    };
+
+    it('再送ボタンで入力中のメールアドレスに認証メールを再送し、結果を表示すること', async () => {
+      signedOut();
+      const { user } = await loginWithUnverifiedEmail();
+      const received: { body?: unknown } = {};
+      overrideApi(
+        accountApi.records(
+          '/api/auth/email/verification-notification',
+          received,
+        ),
+      );
+
+      await user.click(
+        screen.getByRole('button', { name: '認証メールを再送する' }),
+      );
+
+      expect(await screen.findByRole('status')).toHaveTextContent(
+        '送信しました。',
+      );
+      expect(received.body).toEqual({ email: 'user@example.com' });
+      expect(
+        screen.queryByRole('button', { name: '認証メールを再送する' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('再送に失敗したらエラーを表示し、再送ボタンを残すこと', async () => {
+      signedOut();
+      const { user } = await loginWithUnverifiedEmail();
+      overrideApi(
+        accountApi.fails('/api/auth/email/verification-notification', 429),
+      );
+
+      await user.click(
+        screen.getByRole('button', { name: '認証メールを再送する' }),
+      );
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        '認証メールの再送回数が多すぎます。しばらくしてから再度お試しください。',
+      );
+      expect(
+        screen.getByRole('button', { name: '認証メールを再送する' }),
+      ).toBeEnabled();
+    });
+
+    it('再送中にメールアドレスを変えたら、遅れて届いた再送結果を表示しないこと', async () => {
+      signedOut();
+      const { user } = await loginWithUnverifiedEmail();
+      // 中断された要求は応答を待つ処理まで届かないことがあるため、未到達でも呼べるようにしておく
+      let release: () => void = () => undefined;
+      overrideApi(
+        http.post(
+          apiUrl('/api/auth/email/verification-notification'),
+          async () => {
+            await new Promise<void>((resolve) => {
+              release = resolve;
+            });
+            return HttpResponse.json({ message: '古い宛先に送信しました。' });
+          },
+        ),
+      );
+      await user.click(
+        screen.getByRole('button', { name: '認証メールを再送する' }),
+      );
+      await screen.findByRole('button', { name: '認証メールを再送中...' });
+
+      await user.type(emailInput(), 'x');
+      release();
+
+      await waitFor(() => {
+        expect(
+          screen.queryByRole('button', { name: /認証メールを再送/ }),
+        ).not.toBeInTheDocument();
+      });
+      expect(
+        screen.queryByText('古い宛先に送信しました。'),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe('アカウント関連の導線', () => {
+    it('パスワード再設定と会員登録の画面へのリンクを表示すること', async () => {
+      signedOut();
+      await renderRoute('/login');
+
+      expect(
+        screen.getByRole('link', { name: 'パスワードをお忘れですか？' }),
+      ).toHaveAttribute('href', '/forgot-password');
+      expect(
+        screen.getByRole('link', { name: '新規会員登録へ' }),
+      ).toHaveAttribute('href', '/register');
+    });
+
+    it('公開デモではパスワード再設定と会員登録のリンクを出さないこと', async () => {
+      enableDemoMode();
+      signedOut();
+      await renderRoute('/login');
+
+      expect(
+        screen.queryByRole('link', { name: 'パスワードをお忘れですか？' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: '新規会員登録へ' }),
+      ).not.toBeInTheDocument();
     });
   });
 

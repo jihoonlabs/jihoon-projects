@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 
 import { useRuntimeConfig } from '#imports';
 
+import { AccountError, useAccountApi } from '../api/accountApi';
 import { LoginError, useAuthApi } from '../api/authApi';
 import { socialLoginUrl } from '../navigation';
 import { useAuthStore } from '../stores/authStore';
@@ -18,10 +19,13 @@ import PasswordVisibilityIcon from './PasswordVisibilityIcon.vue';
 const props = withDefaults(
   defineProps<{
     notice?: LoginNotice;
-    /** セッション期限切れ後の再ログインでは、ソーシャルログインを出さない */
-    allowSocialLogin?: boolean;
+    /**
+     * セッション期限切れ後の同じタブでの再ログイン。
+     * 画面を離れると未保存の入力が失われるため、外部へ移る導線（ソーシャルログイン・会員登録など）を出さない。
+     */
+    relogin?: boolean;
   }>(),
-  { notice: () => ({}), allowSocialLogin: true },
+  { notice: () => ({}), relogin: false },
 );
 
 const emit = defineEmits<{ 'signed-in': [user: User] }>();
@@ -36,6 +40,7 @@ type DemoAccount = keyof typeof DEMO_ACCOUNTS;
 const config = useRuntimeConfig();
 const demoMode = config.public.demoMode === true;
 const authApi = useAuthApi();
+const accountApi = useAccountApi();
 const auth = useAuthStore();
 
 const email = ref(demoMode ? DEMO_ACCOUNTS.user.email : '');
@@ -83,7 +88,23 @@ const initialSuccessMessage = () => {
 const serverError = ref(initialServerError());
 const successMessage = ref(initialSuccessMessage());
 
-const showSocialLogin = computed(() => props.allowSocialLogin && !demoMode);
+// 公開デモでは新規登録・メール送信・ソーシャルログインを使えないため導線を出さない
+const showExternalLinks = computed(() => !props.relogin && !demoMode);
+
+const verificationRequired = ref(false);
+const resendingVerification = ref(false);
+let verificationController: AbortController | null = null;
+// 入力変更や新しいログインのたびに進め、古い再送結果を表示に反映しない
+let verificationRevision = 0;
+
+const cancelVerificationRequest = () => {
+  verificationController?.abort();
+  verificationController = null;
+  resendingVerification.value = false;
+  verificationRevision += 1;
+};
+
+onBeforeUnmount(() => verificationController?.abort());
 
 const socialHref = (provider: SocialProvider) =>
   socialLoginUrl(config.public.apiUrl, provider);
@@ -94,6 +115,8 @@ const clearMessages = () => {
 };
 
 const selectDemoAccount = (account: DemoAccount) => {
+  cancelVerificationRequest();
+  verificationRequired.value = false;
   email.value = DEMO_ACCOUNTS[account].email;
   password.value = DEMO_ACCOUNTS[account].password;
   errors.value = {};
@@ -101,6 +124,10 @@ const selectDemoAccount = (account: DemoAccount) => {
 };
 
 const onEmailInput = () => {
+  // 別のメールアドレスに対する再送を続けない
+  cancelVerificationRequest();
+  verificationRequired.value = false;
+
   if (errors.value.email) {
     errors.value = { ...errors.value, email: undefined };
   }
@@ -119,6 +146,8 @@ const preventWhileLoading = (event: MouseEvent) => {
 };
 
 const submit = async () => {
+  cancelVerificationRequest();
+  verificationRequired.value = false;
   clearMessages();
 
   const validationErrors = validateLogin(email.value, password.value);
@@ -144,8 +173,41 @@ const submit = async () => {
       error instanceof LoginError
         ? error.message
         : 'ログイン中にエラーが発生しました。';
+    verificationRequired.value =
+      error instanceof LoginError && error.reason === 'email_not_verified';
   } finally {
     loading.value = false;
+  }
+};
+
+const resendVerificationEmail = async () => {
+  cancelVerificationRequest();
+  const controller = new AbortController();
+  const revision = verificationRevision;
+  verificationController = controller;
+  clearMessages();
+  resendingVerification.value = true;
+
+  try {
+    const response = await accountApi.resendVerificationEmail(
+      email.value,
+      controller.signal,
+    );
+
+    if (revision !== verificationRevision) return;
+    successMessage.value = response.message;
+    verificationRequired.value = false;
+  } catch (error) {
+    if (revision !== verificationRevision) return;
+    serverError.value =
+      error instanceof AccountError
+        ? error.message
+        : '認証メールの再送中にエラーが発生しました。';
+  } finally {
+    if (verificationController === controller) {
+      verificationController = null;
+      resendingVerification.value = false;
+    }
   }
 };
 </script>
@@ -168,6 +230,18 @@ const submit = async () => {
     <div v-if="serverError" :class="$style.error" role="alert">
       {{ serverError }}
     </div>
+
+    <button
+      v-if="verificationRequired"
+      type="button"
+      :class="$style.resend"
+      :disabled="resendingVerification"
+      @click="resendVerificationEmail"
+    >
+      {{
+        resendingVerification ? '認証メールを再送中...' : '認証メールを再送する'
+      }}
+    </button>
 
     <form :class="$style.form" novalidate @submit.prevent="submit">
       <div
@@ -258,11 +332,15 @@ const submit = async () => {
         </span>
       </div>
 
+      <div v-if="showExternalLinks" :class="$style.forgot">
+        <NuxtLink to="/forgot-password">パスワードをお忘れですか？</NuxtLink>
+      </div>
+
       <button type="submit" :class="$style.submit" :disabled="loading">
         {{ loading ? 'ログイン中...' : 'ログイン' }}
       </button>
 
-      <template v-if="showSocialLogin">
+      <template v-if="showExternalLinks">
         <div :class="$style.alternative">その他のログイン方法</div>
         <div :class="$style.socialGroup">
           <a
@@ -286,6 +364,11 @@ const submit = async () => {
         </div>
       </template>
     </form>
+
+    <div v-if="showExternalLinks" :class="$style.register">
+      <span>アカウントをお持ちでない方は</span>
+      <NuxtLink to="/register">新規会員登録へ</NuxtLink>
+    </div>
   </div>
 </template>
 
@@ -462,6 +545,49 @@ $accent: #295dcc;
 
   &:hover {
     background: #e9eef5;
+  }
+}
+
+.resend {
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 1rem;
+  border: 1px solid $accent;
+  border-radius: 8px;
+  background: #fff;
+  color: $accent;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: wait;
+  }
+}
+
+.forgot {
+  text-align: right;
+  font-size: 0.8rem;
+
+  a {
+    color: $accent;
+  }
+}
+
+.register {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-top: 1.25rem;
+  color: $muted;
+  font-size: 0.8rem;
+
+  a {
+    color: $accent;
+    font-weight: 600;
   }
 }
 

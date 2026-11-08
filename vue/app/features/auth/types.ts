@@ -31,3 +31,21 @@ export interface LoginNotice {
   verified?: string;
   registered?: string;
 }
+
+export interface MessageResponse {
+  message: string;
+}
+
+export interface Registration {
+  name: string;
+  email: string;
+  password: string;
+  passwordConfirmation: string;
+}
+
+export interface PasswordReset {
+  email: string;
+  token: string;
+  password: string;
+  passwordConfirmation: string;
+}

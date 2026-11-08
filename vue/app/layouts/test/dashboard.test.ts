@@ -95,6 +95,9 @@ describe('ログインが必要な画面', () => {
       expect(
         screen.queryByRole('link', { name: 'Googleでログイン' }),
       ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: '新規会員登録へ' }),
+      ).not.toBeInTheDocument();
       expect(document.querySelector('[inert]')).not.toBeNull();
       await expectPath('/tickets');
     });
