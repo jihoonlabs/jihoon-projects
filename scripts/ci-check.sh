@@ -59,11 +59,38 @@ require_base() {
     stop "比較元 $BASE と HEAD の共通祖先が見つかりません（浅い clone の可能性があります）。"
 }
 
-# 比較元からのコミット済み変更と、作業ツリー・ステージ・未追跡の変更をリポジトリ相対パスで返す
-changed_files() {
-  git -C "$ROOT" diff --name-only "$BASE"...HEAD &&
-    git -C "$ROOT" diff --name-only HEAD &&
-    git -C "$ROOT" ls-files --others --exclude-standard
+# 比較元からのコミット済み変更と、作業ツリー・ステージ・未追跡の変更を、リポジトリ相対パスで CHANGED に集める（重複なし）。
+# Git は日本語や空白を含むパスを引用符とエスケープ付きで出力するため、-z（NUL 区切り）で受け取って生のパスのまま扱う。
+CHANGED=()
+collect_changed_files() {
+  local list file known seen
+
+  require_base
+  list="$(mktemp)" || stop '一時ファイルを作成できませんでした。'
+  if ! {
+    git -C "$ROOT" diff -z --name-only "$BASE"...HEAD &&
+      git -C "$ROOT" diff -z --name-only HEAD &&
+      git -C "$ROOT" ls-files -z --others --exclude-standard
+  } > "$list"; then
+    rm -f "$list"
+    stop '変更ファイルを取得できませんでした。'
+  fi
+
+  CHANGED=()
+  while IFS= read -r -d '' file; do
+    seen=0
+    # 空配列の展開は Bash 3.2 の set -u でエラーになるため、要素があるときだけ比べる
+    if [ "${#CHANGED[@]}" -gt 0 ]; then
+      for known in "${CHANGED[@]}"; do
+        if [ "$known" = "$file" ]; then
+          seen=1
+          break
+        fi
+      done
+    fi
+    [ "$seen" -eq 1 ] || CHANGED+=("$file")
+  done < "$list"
+  rm -f "$list"
 }
 
 check_react() {
@@ -89,22 +116,22 @@ check_vue() {
 }
 
 check_laravel() {
-  local files php_files=() file
+  local php_files=() file
 
   # Pint の --diff はリポジトリ相対パスに laravel/ を重ねて対象を見失うため、対象ファイルをここで決めて渡す
-  require_base
-  files="$(changed_files)" || stop '変更ファイルを取得できませんでした。'
-
-  while IFS= read -r file; do
-    case "$file" in
-      laravel/*.php)
-        # 削除されたファイルは整形の対象外
-        if [ -f "$ROOT/$file" ]; then
-          php_files+=("${file#laravel/}")
-        fi
-        ;;
-    esac
-  done <<< "$(printf '%s\n' "$files" | sort -u)"
+  collect_changed_files
+  if [ "${#CHANGED[@]}" -gt 0 ]; then
+    for file in "${CHANGED[@]}"; do
+      case "$file" in
+        laravel/*.php)
+          # 削除されたファイルは整形の対象外
+          if [ -f "$ROOT/$file" ]; then
+            php_files+=("${file#laravel/}")
+          fi
+          ;;
+      esac
+    done
+  fi
 
   if [ "${#php_files[@]}" -eq 0 ]; then
     skip 'Laravel: 整形（変更ファイル）' "比較元 $BASE から変更された PHP ファイルがありません"
@@ -119,13 +146,24 @@ check_laravel() {
   fi
 }
 
-# 変更のある領域（react・vue・laravel）を返す。判定できなければ止める
+# 変更のある領域（react・vue・laravel）を 1 行ずつ返す。判定できなければ止める
 changed_areas() {
-  local files
+  local file react=0 vue=0 laravel=0
 
-  require_base
-  files="$(changed_files)" || stop '変更ファイルを取得できませんでした。'
-  printf '%s\n' "$files" | cut -d/ -f1 | sort -u | grep -E '^(react|vue|laravel)$' || true
+  collect_changed_files
+  if [ "${#CHANGED[@]}" -gt 0 ]; then
+    for file in "${CHANGED[@]}"; do
+      case "$file" in
+        react/*) react=1 ;;
+        vue/*) vue=1 ;;
+        laravel/*) laravel=1 ;;
+      esac
+    done
+  fi
+
+  [ "$react" -eq 0 ] || echo react
+  [ "$vue" -eq 0 ] || echo vue
+  [ "$laravel" -eq 0 ] || echo laravel
 }
 
 target="${1:-changed}"
