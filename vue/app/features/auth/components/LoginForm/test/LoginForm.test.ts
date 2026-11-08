@@ -437,12 +437,15 @@ describe('ログイン画面', () => {
       {
         const fs = await import('node:fs');
         const path = await import('node:path');
-        const linkFile = path.resolve(process.cwd(), 'node_modules/nuxt/dist/app/components/nuxt-link.js');
-        const src = fs.readFileSync(linkFile, 'utf8');
-        const lines = src.split('\n');
-        lines.forEach((l, i) => {
-          if (/navigate|preventDefault|onClick|isExternal|useRouter|custom/.test(l)) console.log('DIAG SRC', i + 1, l.slice(0, 200));
-        });
+        const root = path.resolve(process.cwd(), 'node_modules/@nuxt/test-utils/dist');
+        const walk = (dir: string): string[] => fs.readdirSync(dir, { withFileTypes: true }).flatMap((d) => d.isDirectory() ? walk(path.join(dir, d.name)) : [path.join(dir, d.name)]);
+        for (const file of walk(root)) {
+          if (!/\.m?js$/.test(file)) continue;
+          const lines = fs.readFileSync(file, 'utf8').split('\n');
+          lines.forEach((l, n) => {
+            if (/RouterLink|navigate/.test(l)) console.log('DIAG TU', path.relative(root, file), n + 1, l.slice(0, 220));
+          });
+        }
       }
       console.log('DIAG link', link.outerHTML);
 
