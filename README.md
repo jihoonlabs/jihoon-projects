@@ -50,12 +50,13 @@
 
 公開版AGENTS v2.1は、実作業で使い、課題とレビューを受けて更新したルールです。WORKとMANUALは、それぞれ作業指示・引き継ぎと利用者向け完了報告に使うテンプレートです。v2.2のページでは、実際の適用履歴を公開PRと検証記録に結びつけています。
 
+- [AGENTS v2.2](docs/agent/AGENTS-v2.2.md) — 検証根拠の記録を加えた現行の公開ルール（[WORK](docs/agent/WORK-v2.2.md)・[MANUAL](docs/agent/MANUAL-v2.2.md)）
 - [AGENTS v2.1](docs/agent/AGENTS-v2.1.md) — 実作業で使用した公開ルール
 - [WORKテンプレート v2.1](docs/agent/WORK-v2.1.md) — 個別作業の目的・範囲・完了条件・検証を記入
 - [MANUALテンプレート v2.1](docs/agent/MANUAL-v2.1.md) — 作業結果・検証・制約を利用者へ報告
 - [AI Workflow v2.2](docs/agent/AI-WORKFLOW-v2.2.md) — ルールの更新経緯と後続作業の公開根拠
 
-v2.2はポートフォリオ上の証拠整理の版であり、AGENTSのルール版はv2.1です。内部のpromptや運用設定は公開していません。
+v2.2はポートフォリオ上の証拠整理の版です。AGENTSのルールもv2.2を現行版とし、v2.1は以前の版として保存しています。内部のpromptや運用設定は公開していません。
 
 ## テスト・検証実績
 
