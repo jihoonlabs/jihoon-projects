@@ -8,7 +8,8 @@ thumby = fake_thumby.make_module()
 sys.modules['thumby'] = thumby
 import ThumbyBeat as game_mod  # noqa: E402
 import rules  # noqa: E402
-from charts import SONGS  # noqa: E402
+from charts import META  # noqa: E402
+SONGS = META
 
 FRAME = 33
 NAMES = ('U', 'D', 'L', 'R', 'A', 'B')
@@ -63,10 +64,22 @@ class TestInputs(unittest.TestCase):
 
 
 class TestMenus(unittest.TestCase):
-    def test_title_start(self):
+    def test_title_start_and_mode(self):
         game = fresh()
         game_mod.step(game, inputs(['A', 'B']), 10)
+        self.assertEqual(game['screen'], 'mode')
+        game_mod.step(game, inputs(['A']), 20)
         self.assertEqual(game['screen'], 'select')
+        self.assertFalse(game['auto'])
+        game_mod.step(game, inputs(['B']), 30)
+        self.assertEqual(game['screen'], 'mode')
+        game_mod.step(game, inputs(['D']), 40)
+        game_mod.step(game, inputs(['A', 'B']), 50)
+        self.assertTrue(game['auto'])
+        self.assertEqual(game['screen'], 'select')
+        game['screen'] = 'mode'
+        game_mod.step(game, inputs(['B']), 60)
+        self.assertEqual(game['screen'], 'title')
 
     def test_select_song_and_speed(self):
         game = fresh('select')
@@ -82,7 +95,7 @@ class TestMenus(unittest.TestCase):
         self.assertEqual(game['speed'], 0)
         self.assertTrue(game['save_dirty'])
         game_mod.step(game, inputs(['B']), 0)
-        self.assertEqual(game['screen'], 'title')
+        self.assertEqual(game['screen'], 'mode')
 
     def test_select_starts_song(self):
         game = fresh('select')
@@ -137,7 +150,7 @@ class TestPlay(unittest.TestCase):
         self.assertEqual(game['screen'], 'select')
         self.assertTrue(game_mod.save_game(game))
         saved = json.loads(thumby.saveData.saved['data'])
-        self.assertEqual(saved['best']['chop'], [0, rules.LAMP_FAILED])
+        self.assertEqual(saved['best'][META[0][1]], [0, rules.LAMP_FAILED])
 
     def test_short_ab_overlap_does_not_pause(self):
         game = self.start()
@@ -172,7 +185,7 @@ class TestPlay(unittest.TestCase):
 
     def test_perfect_play_full_combo_and_new_best(self):
         for index, song in enumerate(SONGS):
-            with self.subTest(song=song['id']):
+            with self.subTest(song=song[1]):
                 game = self.start(index)
                 play = game['play']
                 now = 0
@@ -185,6 +198,41 @@ class TestPlay(unittest.TestCase):
                 self.assertEqual(game['result']['lamp'], rules.LAMP_FULL_COMBO)
                 self.assertEqual(game['result']['grade'], 'AAA')
                 self.assertTrue(game['result']['new_best'])
+                self.assertEqual(game['best'][song[1]][0], song[6] * 2)
+
+
+class TestAutoPlay(unittest.TestCase):
+    def test_auto_play_full_combo_is_not_saved(self):
+        game = fresh('select')
+        game['auto'] = True
+        game['song'] = 3
+        game_mod.step(game, inputs(['A']), 0)
+        now = 0
+        while game['screen'] == 'play':
+            # Buttons other than A+B do not stop auto play.
+            game_mod.step(game, inputs(['L'] if now % 990 == 0 else []), now)
+            now += FRAME
+        self.assertEqual(game['screen'], 'result')
+        self.assertTrue(game['result']['auto'])
+        self.assertEqual(game['result']['lamp'], rules.LAMP_FULL_COMBO)
+        self.assertFalse(game['result']['new_best'])
+        self.assertEqual(game['best'], {})
+        self.assertFalse(game['save_dirty'])
+
+    def test_auto_play_can_pause(self):
+        game = fresh('select')
+        game['auto'] = True
+        game_mod.step(game, inputs(['A']), 0)
+        game_mod.step(game, inputs(['A', 'B']), 2000)
+        game_mod.step(game, inputs(held=['A', 'B']), 2400)
+        self.assertEqual(game['screen'], 'pause')
+
+    def test_song_memory_is_released(self):
+        game = fresh('select')
+        game['song'] = 19
+        game_mod.step(game, inputs(['A']), 0)
+        self.assertNotIn(META[19][0], sys.modules)
+        self.assertEqual(game['song_bpm'], META[19][5])
 
 
 class TestDemo(unittest.TestCase):
@@ -250,12 +298,18 @@ class TestDraw(unittest.TestCase):
 
     def test_every_screen_stays_on_screen(self):
         game = fresh()
-        game['best'] = {'chop': [318, rules.LAMP_FULL_COMBO]}
+        game['best'] = {m[1]: [m[6] * 2, rules.LAMP_FULL_COMBO] for m in META}
         for now in range(0, 3000, 97):
             self.check_screen(game, now)
         game['screen'] = 'select'
-        for index in range(len(SONGS)):
-            game['song'] = index
+        for auto in (False, True):
+            game['auto'] = auto
+            for index in range(len(SONGS)):
+                game['song'] = index
+                self.check_screen(game, 0)
+        game['screen'] = 'mode'
+        for sel in range(2):
+            game['mode_sel'] = sel
             self.check_screen(game, 0)
         game['screen'] = 'pause'
         for sel in range(3):
@@ -265,7 +319,8 @@ class TestDraw(unittest.TestCase):
         for lamp in range(1, 4):
             game['result'] = {'ex': 9999, 'max_ex': 9999, 'grade': 'AAA',
                               'lamp': lamp, 'counts': [999, 999, 999, 999],
-                              'max_combo': 999, 'new_best': True}
+                              'max_combo': 999, 'new_best': True,
+                              'auto': lamp == 2}
             for now in (0, 300):
                 self.check_screen(game, now)
 

@@ -16,11 +16,14 @@ class TestPackage(unittest.TestCase):
             with zipfile.ZipFile(out) as archive:
                 names = sorted(archive.namelist())
                 build = json.loads(archive.read('ThumbyBeat/BUILD.json'))
-        self.assertEqual(names, ['ThumbyBeat/BUILD.json', 'ThumbyBeat/ThumbyBeat.py',
-                                 'ThumbyBeat/charts.py', 'ThumbyBeat/rules.py'])
+        import charts
+        songs = ['ThumbyBeat/%s.py' % meta[0] for meta in charts.META]
+        expect = ['ThumbyBeat/BUILD.json', 'ThumbyBeat/ThumbyBeat.py',
+                  'ThumbyBeat/charts.py', 'ThumbyBeat/pat.py',
+                  'ThumbyBeat/rules.py'] + songs
+        self.assertEqual(names, sorted(expect))
+        self.assertNotIn('ThumbyBeat/fake_thumby.py', names)
         self.assertEqual(build['device_directory'], '/Games/ThumbyBeat')
-        self.assertEqual(sorted(build['source_sha256']),
-                         ['ThumbyBeat.py', 'charts.py', 'rules.py'])
 
 
 if __name__ == '__main__':

@@ -6,15 +6,22 @@ from pathlib import Path
 import zipfile
 
 
-GAME_FILES = ('ThumbyBeat.py', 'rules.py', 'charts.py')
+BASE_FILES = ('ThumbyBeat.py', 'rules.py', 'charts.py', 'pat.py')
 GAME_NAME = 'ThumbyBeat'
+
+
+def game_files(game):
+    # One module per song (s_*.py) is loaded on demand on the device.
+    songs = sorted(path.name for path in game.glob('s_*.py'))
+    return BASE_FILES + tuple(songs)
 
 
 def build(output):
     game = Path(__file__).resolve().parents[1]
     output = Path(output).resolve()
-    files = {name: (game / name).read_bytes() for name in GAME_FILES}
-    for name in GAME_FILES:
+    names = game_files(game)
+    files = {name: (game / name).read_bytes() for name in names}
+    for name in names:
         compile(files[name], name, 'exec')
     files['BUILD.json'] = (json.dumps({
         'game': GAME_NAME,

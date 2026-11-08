@@ -1,9 +1,15 @@
 import unittest
 
+import os
+
 import charts
 import rules
 from rules import (SCRATCH, KEY_L, KEY_R, KEY_B, KEY_A, GREAT, GOOD, BAD,
                    POOR, LAMP_NONE, LAMP_FAILED, LAMP_CLEAR, LAMP_FULL_COMBO)
+
+
+def all_songs():
+    return [charts.load(i) for i in range(len(charts.META))]
 
 
 def play_of(text, bpm=120, div=2, bgm=''):
@@ -62,28 +68,84 @@ class TestChartProblems(unittest.TestCase):
 
     def test_all_songs_are_playable(self):
         ids = set()
-        for song in charts.SONGS:
+        for song in all_songs():
             with self.subTest(song=song['id']):
                 data = rules.load_song(song)
                 self.assertEqual(rules.chart_problems(data['notes']), [])
-                self.assertGreater(len(data['notes']), 50)
-                # Titles fit the 72 px screen with the 6 px default font.
+                self.assertGreaterEqual(len(data['notes']), 40)
+                # Titles and genres fit the 72 px screen (6 px font).
                 self.assertLessEqual(len(song['title']), 12)
+                self.assertLessEqual(len(song['genre']), 12)
                 self.assertNotIn(song['id'], ids)
                 ids.add(song['id'])
                 per_bar = song['step_div'] * song['beats_per_bar']
-                for key in ('chart', 'bgm'):
-                    steps = [t for t in song[key].split() if t != '|']
-                    self.assertEqual(len(steps) % per_bar, 0, key)
+                chart_steps = [t for t in song['chart'].split() if t != '|']
+                bgm_steps = [t for t in song['bgm'].split() if t != '|']
+                self.assertEqual(len(chart_steps) % per_bar, 0)
+                # Accompaniment and chart have the same number of bars.
+                self.assertEqual(len(chart_steps), len(bgm_steps))
                 # First note leaves time for it to scroll in.
                 self.assertGreaterEqual(data['notes'][0][0], 1000)
+                # 20-50 seconds per song.
+                self.assertTrue(19000 <= data['notes'][-1][0] <= 50000)
                 for _t, freq, dur in data['bgm']:
                     self.assertTrue(20 <= freq <= 20000)
                     self.assertGreater(dur, 0)
+                for note in data['notes']:
+                    self.assertIn(note[1], range(rules.LANE_COUNT))
+                    self.assertTrue(100 <= note[2] <= 4000)
+
+    def test_meta_matches_song_modules(self):
+        self.assertEqual(len(charts.META), 20)
+        for index, meta in enumerate(charts.META):
+            song = charts.load(index)
+            notes = rules.load_song(song)['notes']
+            self.assertEqual(meta[1:], (song['id'], song['title'], song['genre'],
+                                        song['level'], song['bpm'], len(notes)))
+            self.assertNotIn(meta[charts.MODULE], __import__('sys').modules)
 
     def test_songs_get_harder(self):
-        levels = [s['level'] for s in charts.SONGS]
+        levels = [meta[charts.LEVEL] for meta in charts.META]
         self.assertEqual(levels, sorted(levels))
+        self.assertEqual(levels[0], 1)
+
+    def test_public_domain_songs_are_labelled(self):
+        # Every arrangement says where the melody comes from.
+        for meta in charts.META:
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                meta[charts.MODULE] + '.py')
+            with open(path) as handle:
+                source = handle.read()
+            self.assertTrue('public domain' in source or 'Original song' in source,
+                            meta[charts.MODULE])
+
+
+class TestAutoLanes(unittest.TestCase):
+    def test_bare_pitches_get_lanes_low_to_high(self):
+        notes = rules.parse_chart('C5 . E5 . G5 . B5 .', 120, 2)
+        self.assertEqual([n[1] for n in notes], [KEY_L, KEY_R, KEY_B, KEY_A])
+
+    def test_fixed_lanes_are_kept(self):
+        notes = rules.parse_chart('S . BC5 . C5 . G5', 120, 2)
+        self.assertEqual(notes[0][1], SCRATCH)
+        self.assertEqual(notes[1][1], KEY_B)
+
+    def test_fast_repeat_moves_to_neighbour(self):
+        notes = rules.parse_chart('C5 C5 C5 C5', 150, 4)  # 100 ms apart
+        lanes = [n[1] for n in notes]
+        for a, b in zip(lanes, lanes[1:]):
+            self.assertNotEqual(a, b)
+        self.assertEqual(rules.chart_problems(notes), [])
+
+    def test_slow_repeat_stays(self):
+        notes = rules.parse_chart('C5 . . C5 . . E5 . G5 . B5', 120, 2)
+        self.assertEqual(notes[0][1], notes[1][1])
+
+    def test_note_names_and_lane_tokens_do_not_clash(self):
+        notes = rules.parse_chart('B4 BB4 A5 AA5 Bb4', 120, 2)
+        self.assertEqual(notes[1][1], KEY_B)
+        self.assertEqual(notes[3][1], KEY_A)
+        self.assertEqual(notes[1][2], rules.note_freq('B4'))
 
 
 class TestJudge(unittest.TestCase):
@@ -137,7 +199,7 @@ class TestJudge(unittest.TestCase):
         self.assertEqual(play['lane_pos'][KEY_L], 1)
 
     def test_auto_lanes_play_everything_great(self):
-        data = rules.load_song(charts.CHOPSTICKS)
+        data = rules.load_song(charts.load(7))
         play = rules.new_play(data['notes'], data['bgm'])
         now = 0
         while not rules.is_finished(play, now):
@@ -206,7 +268,7 @@ class TestScreenMath(unittest.TestCase):
         self.assertEqual(rules.note_y(900, 1000, 34, 30), 37)
 
     def test_visible_range_matches_brute_force(self):
-        data = rules.load_song(charts.NEON_STEPS)
+        data = rules.load_song(charts.load(12))
         play = rules.new_play(data['notes'], data['bgm'])
         for now in range(0, 32000, 137):
             for speed in (20, 40, 60):

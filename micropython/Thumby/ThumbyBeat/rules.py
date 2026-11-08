@@ -8,6 +8,10 @@ All times are integer milliseconds from the start of the song.
 SCRATCH, KEY_L, KEY_R, KEY_B, KEY_A = 0, 1, 2, 3, 4
 LANE_COUNT = 5
 LANE_CHARS = 'SLRBA'
+KEY_LANES = (KEY_L, KEY_R, KEY_B, KEY_A)
+AUTO_LANE = -1
+# Melody notes closer than this in one lane are spread to a neighbour lane.
+JACK_MS = 250
 
 GREAT, GOOD, BAD, POOR = 0, 1, 2, 3
 JUDGE_NAMES = ('GREAT', 'GOOD', 'BAD', 'POOR')
@@ -64,16 +68,23 @@ def parse_chart(text, bpm, step_div):
 
     '.' is a rest, '|' is an ignored measure bar. A note is a lane letter
     (S L R B A) plus an optional pitch, e.g. 'LC5'; '+' joins a chord.
-    A scratch without a pitch uses SCRATCH_FREQ.
+    A scratch without a pitch uses SCRATCH_FREQ. A bare pitch such as
+    'E5' is a key note whose lane is chosen by assign_lanes.
     """
     notes = []
     step = 0
+    auto = False
     for token in text.split():
         if token == '|':
             continue
         if token != '.':
             t = step_ms(bpm, step_div, step)
             for part in token.split('+'):
+                freq = _bare_pitch(part)
+                if freq is not None:
+                    notes.append([t, AUTO_LANE, freq])
+                    auto = True
+                    continue
                 if not part or part[0] not in LANE_CHARS:
                     raise ValueError('bad chart token: ' + token)
                 lane = LANE_CHARS.index(part[0])
@@ -86,7 +97,60 @@ def parse_chart(text, bpm, step_div):
                 notes.append([t, lane, freq])
         step += 1
     notes.sort(key=lambda n: (n[0], n[1]))
+    if auto:
+        assign_lanes(notes)
+        notes.sort(key=lambda n: (n[0], n[1]))
     return notes
+
+
+def _bare_pitch(token):
+    # Lane-prefixed tokens like 'BC5' are never valid note names.
+    try:
+        return note_freq(token)
+    except (ValueError, IndexError):
+        return None
+
+
+def assign_lanes(notes):
+    """Choose key lanes for melody notes (lane AUTO_LANE), in place.
+
+    Higher pitches go to lanes further right, like a keyboard. A note that
+    would repeat the previous note's lane within JACK_MS moves to the
+    neighbouring lane in the direction the melody moves.
+    """
+    counts = {}
+    for n in notes:
+        if n[1] == AUTO_LANE:
+            counts[n[2]] = counts.get(n[2], 0) + 1
+    total = 0
+    for freq in counts:
+        total += counts[freq]
+    # Split pitches into lanes by how often they are played, so each lane
+    # gets a similar share of notes while keeping low-to-high order.
+    rank = {}
+    done = 0
+    for freq in sorted(counts):
+        middle = done * 2 + counts[freq]
+        rank[freq] = (middle * len(KEY_LANES)) // (total * 2)
+        done += counts[freq]
+    prev = None
+    for note in notes:
+        if note[1] != AUTO_LANE:
+            continue
+        slot = rank[note[2]]
+        if prev is not None and KEY_LANES[slot] == prev[1] \
+                and note[0] - prev[0] < JACK_MS:
+            if note[2] > prev[2]:
+                step = 1
+            elif note[2] < prev[2]:
+                step = -1
+            else:
+                step = 1 if slot < len(KEY_LANES) - 1 else -1
+            slot += step
+            if slot < 0 or slot >= len(KEY_LANES):
+                slot -= 2 * step
+        note[1] = KEY_LANES[slot]
+        prev = note
 
 
 def parse_bgm(text, bpm, step_div):

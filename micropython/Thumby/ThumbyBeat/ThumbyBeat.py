@@ -1,3 +1,4 @@
+import gc
 import sys
 import time
 try:
@@ -9,7 +10,8 @@ import thumby
 if sys.implementation.name == 'micropython':
     sys.path.append('/Games/ThumbyBeat')
 import rules
-from charts import SONGS
+import charts
+from charts import META, ID, TITLE, GENRE, LEVEL, BPM, NOTES
 
 GAME_NAME = 'ThumbyBeat'
 FPS = 30
@@ -30,6 +32,7 @@ PAUSE_HOLD_MS = 300   # A+B must be held this long to pause during play
 DEMO_IDLE_MS = 8000   # title idle time before the demo starts
 LAMP_SHORT = ('--', 'FAIL', 'CLR', 'FC')
 PAUSE_ITEMS = ('CONTINUE', 'RETRY', 'QUIT')
+MODE_ITEMS = ('GAME', 'AUTO PLAY')
 
 
 def sprite(rows):
@@ -127,6 +130,9 @@ def new_game(best=None, speed=DEFAULT_SPEED, now=0):
         'play': None,
         'start': 0,
         'demo': False,
+        'auto': False,
+        'mode_sel': 0,
+        'song_bpm': 120,
         'demo_song': 0,
         'menu_song': 0,
         'idle_since': now,
@@ -179,8 +185,7 @@ def song_time(game, now):
 
 
 def beat_of(game, t):
-    song = SONGS[game['song']]
-    return (t * song['bpm']) // 60000 if t >= 0 else -1
+    return (t * game['song_bpm']) // 60000 if t >= 0 else -1
 
 
 # --- audio ------------------------------------------------------------------
@@ -246,8 +251,12 @@ def step_jingle(game, now):
 # --- screens ----------------------------------------------------------------
 
 def start_song(game, now, demo=False):
-    song = SONGS[game['song']]
+    game['play'] = None
+    song = charts.load(game['song'])
     data = rules.load_song(song)
+    game['song_bpm'] = song['bpm']
+    song = None
+    gc.collect()
     game['play'] = rules.new_play(data['notes'], data['bgm'])
     game['start'] = now
     game['demo'] = demo
@@ -272,17 +281,20 @@ def finish_song(game, now):
     play = game['play']
     stop_audio(game)
     if game['demo']:
-        game['demo_song'] = (game['demo_song'] + 1) % len(SONGS)
+        game['demo_song'] = (game['demo_song'] + 1) % len(META)
         to_title(game, now)
         return
-    song = SONGS[game['song']]
+    song_id = META[game['song']][ID]
     note_count = len(play['notes'])
     ex = rules.ex_score(play['counts'])
     lamp = rules.lamp(play)
-    old = game['best'].get(song['id'], [0, rules.LAMP_NONE])
-    improved = rules.update_best(game['best'], song['id'], ex, lamp)
-    if game['best'][song['id']] != old:
-        game['save_dirty'] = True
+    improved = False
+    # Auto play results are shown but never recorded.
+    if not game['auto']:
+        old = game['best'].get(song_id, [0, rules.LAMP_NONE])
+        improved = rules.update_best(game['best'], song_id, ex, lamp)
+        if game['best'][song_id] != old:
+            game['save_dirty'] = True
     game['result'] = {
         'ex': ex,
         'max_ex': note_count * 2,
@@ -291,6 +303,7 @@ def finish_song(game, now):
         'counts': list(play['counts']),
         'max_combo': play['max_combo'],
         'new_best': improved,
+        'auto': game['auto'],
     }
     game['screen'] = 'result'
     start_jingle(game, lamp, now)
@@ -298,7 +311,7 @@ def finish_song(game, now):
 
 def step_title(game, inputs, now):
     if inputs['start'] or inputs['tap']['A']:
-        game['screen'] = 'select'
+        game['screen'] = 'mode'
         return
     if inputs['any']:
         game['idle_since'] = now
@@ -308,15 +321,26 @@ def step_title(game, inputs, now):
         start_song(game, now, demo=True)
 
 
+def step_mode(game, inputs, now):
+    tap = inputs['tap']
+    if tap['U'] or tap['D']:
+        game['mode_sel'] = 1 - game['mode_sel']
+    if inputs['start'] or (tap['A'] and not inputs['held']['B']):
+        game['auto'] = game['mode_sel'] == 1
+        game['screen'] = 'select'
+    elif tap['B'] and not inputs['held']['A']:
+        game['screen'] = 'title'
+        game['idle_since'] = now
+
+
 def step_select(game, inputs, now):
     tap = inputs['tap']
-    count = len(SONGS)
+    count = len(META)
     if inputs['start'] or (tap['A'] and not inputs['held']['B']):
         start_song(game, now)
         return
     if tap['B'] and not inputs['held']['A']:
-        game['screen'] = 'title'
-        game['idle_since'] = now
+        game['screen'] = 'mode'
         return
     if tap['U']:
         game['song'] = (game['song'] - 1) % count
@@ -353,9 +377,13 @@ def step_play(game, inputs, now):
                 return
         else:
             game['ab_hold_since'] = None
-        lanes = [lane for lane in range(rules.LANE_COUNT)
-                 if inputs['lane_taps'][lane]]
-        game['held'] = list(inputs['lane_held'])
+        if game['auto']:
+            lanes = rules.auto_lanes(play, t)
+            game['held'] = [lane in lanes for lane in range(rules.LANE_COUNT)]
+        else:
+            lanes = [lane for lane in range(rules.LANE_COUNT)
+                     if inputs['lane_taps'][lane]]
+            game['held'] = list(inputs['lane_held'])
     for lane in lanes:
         judge, freq = rules.press(play, lane, t)
         key_sound(game, freq, t)
@@ -400,6 +428,7 @@ def step_result(game, inputs, now):
 
 STEPS = {
     'title': step_title,
+    'mode': step_mode,
     'select': step_select,
     'play': step_play,
     'pause': step_pause,
@@ -441,8 +470,7 @@ def draw_dancer(display, game, x, y, t, beat):
 
 
 def beat_phase(game, t):
-    song = SONGS[game['song']]
-    beat_len = 60000 // song['bpm']
+    beat_len = 60000 // game['song_bpm']
     return t % beat_len if t >= 0 else 0
 
 
@@ -546,43 +574,51 @@ def draw_title(display, game, now):
         display.drawText('A+B START', 9, 31, 1)
 
 
-_NOTE_COUNTS = {}
-
-
-def song_note_count(index):
-    # Parse once; drawing every frame must not re-parse the chart.
-    if index not in _NOTE_COUNTS:
-        _NOTE_COUNTS[index] = len(rules.load_song(SONGS[index])['notes'])
-    return _NOTE_COUNTS[index]
-
-
 def draw_select(display, game, now):
-    song = SONGS[game['song']]
+    meta = META[game['song']]
     display.fill(0)
-    display.drawText(song['title'], 0, 0, 1)
-    display.drawText('LV%d BPM%d' % (song['level'], song['bpm']), 0, 8, 1)
-    best = game['best'].get(song['id'])
+    display.drawText(meta[GENRE], 0, 0, 1)
+    display.drawText(meta[TITLE], 0, 8, 1)
+    display.drawText('LV%d' % meta[LEVEL], 0, 16, 1)
+    text_right(display, 'BPM%d' % meta[BPM], 66, 16)
+    best = game['best'].get(meta[ID])
     if best:
-        note_count = song_note_count(game['song'])
-        display.drawText('HI%d %s' % (best[0], rules.grade(best[0], note_count)),
-                         0, 16, 1)
-        text_right(display, LAMP_SHORT[best[1]], 66, 24)
+        display.drawText('HI%d %s' % (best[0], rules.grade(best[0], meta[NOTES])),
+                         0, 24, 1)
     else:
-        display.drawText('HI --', 0, 16, 1)
-    display.drawText('SPD%d' % (game['speed'] + 1), 0, 24, 1)
+        display.drawText('HI --', 0, 24, 1)
+    display.drawText('SPD%d' % (game['speed'] + 1), 0, 32, 1)
+    if game['auto']:
+        text_right(display, 'AUTO', 66, 32)
+    elif best:
+        text_right(display, LAMP_SHORT[best[1]], 66, 32)
     # Up/down arrows hint at song switching.
-    display.drawLine(68, 25, 70, 25, 1)
-    display.drawLine(69, 24, 69, 24, 1)
-    display.drawLine(68, 29, 70, 29, 1)
-    display.drawLine(69, 30, 69, 30, 1)
-    display.drawText('A:GO  B:BACK', 0, 33, 1)
+    display.drawLine(68, 1, 70, 1, 1)
+    display.drawLine(69, 0, 69, 0, 1)
+    display.drawLine(68, 38, 70, 38, 1)
+    display.drawLine(69, 39, 69, 39, 1)
+
+
+def draw_mode(display, game, now):
+    display.fill(0)
+    display.drawText('MODE', 24, 0, 1)
+    for index, item in enumerate(MODE_ITEMS):
+        y = 14 + index * 10
+        if index == game['mode_sel']:
+            display.drawFilledRectangle(4, y - 1, 64, 9, 1)
+            display.drawText(item, 9, y, 0)
+        else:
+            display.drawText(item, 9, y, 1)
 
 
 def draw_result(display, game, now):
     result = game['result']
     counts = result['counts']
     display.fill(0)
-    display.drawText(rules.LAMP_NAMES[result['lamp']], 0, 0, 1)
+    if result['auto']:
+        display.drawText('AUTO PLAY', 0, 0, 1)
+    else:
+        display.drawText(rules.LAMP_NAMES[result['lamp']], 0, 0, 1)
     display.drawText(result['grade'], 0, 8, 1)
     if result['new_best'] and (now // 300) % 2 == 0:
         text_right(display, 'NEW!', 72, 8)
@@ -593,6 +629,7 @@ def draw_result(display, game, now):
 
 DRAWS = {
     'title': draw_title,
+    'mode': draw_mode,
     'select': draw_select,
     'play': draw_play,
     'pause': draw_pause,
@@ -611,7 +648,7 @@ def load_save():
         thumby.saveData.setName(GAME_NAME)
         if thumby.saveData.hasItem('data'):
             payload = json.loads(thumby.saveData.getItem('data'))
-            return rules.decode_save(payload, [s['id'] for s in SONGS],
+            return rules.decode_save(payload, [m[ID] for m in META],
                                      len(SPEEDS))
     except Exception:
         pass
