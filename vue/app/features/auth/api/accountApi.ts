@@ -1,4 +1,5 @@
 import { ApiError, useApiClient, type ApiClient } from '~/shared/api/apiClient';
+import { isAbortError } from '~/shared/api/isAbortError';
 
 import type { MessageResponse, PasswordReset, Registration } from '../types';
 
@@ -21,9 +22,6 @@ interface FailureMessages {
   /** 422 で項目別メッセージがないとき、サーバーの文言を使うか */
   useServerMessage?: boolean;
 }
-
-const isAbortError = (error: unknown) =>
-  error instanceof Error && error.name === 'AbortError';
 
 // Next.js 版と同じ文言で、Laravel の失敗応答を利用者向けのメッセージに変換する
 const toAccountError = (

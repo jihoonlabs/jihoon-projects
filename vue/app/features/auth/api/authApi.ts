@@ -1,4 +1,5 @@
 import { ApiError, useApiClient, type ApiClient } from '~/shared/api/apiClient';
+import { isAbortError } from '~/shared/api/isAbortError';
 
 import type { LoginCredentials, LoginResponse, User } from '../types';
 
@@ -16,9 +17,6 @@ export class LoginError extends Error {
     this.name = 'LoginError';
   }
 }
-
-const isAbortError = (error: unknown) =>
-  error instanceof Error && error.name === 'AbortError';
 
 // Next.js 版と同じ文言で、Laravel の失敗応答を利用者向けのメッセージに変換する
 const toLoginError = (error: unknown): LoginError => {

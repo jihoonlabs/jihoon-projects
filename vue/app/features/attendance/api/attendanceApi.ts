@@ -1,5 +1,6 @@
 import { useProtectedApi } from '~/features/auth/api/protectedRequest';
 import { ApiError } from '~/shared/api/apiClient';
+import { isAbortError } from '~/shared/api/isAbortError';
 
 import type {
   AttendanceHistory,
@@ -45,9 +46,6 @@ export function toAttendanceRecord(
     durationMinutes: record.duration_minutes,
   };
 }
-
-const isAbortError = (error: unknown) =>
-  error instanceof Error && error.name === 'AbortError';
 
 const toAttendanceError = (error: unknown): AttendanceError => {
   if (!(error instanceof ApiError)) {

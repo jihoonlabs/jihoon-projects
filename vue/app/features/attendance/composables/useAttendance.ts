@@ -1,6 +1,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
 import { useAuthStore } from '~/features/auth/stores/authStore';
+import { isAbortError } from '~/shared/api/isAbortError';
 
 import {
   ATTENDANCE_ERROR_MESSAGE,
@@ -8,9 +9,6 @@ import {
   useAttendanceApi,
 } from '../api/attendanceApi';
 import type { AttendanceHistory, AttendanceToday, ClockAction } from '../types';
-
-const isAbortError = (error: unknown) =>
-  error instanceof Error && error.name === 'AbortError';
 
 /**
  * 今日の勤怠と自分の勤怠記録を読み込み、出勤・退勤を記録する。
