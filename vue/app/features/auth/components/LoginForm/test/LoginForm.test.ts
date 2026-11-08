@@ -11,6 +11,7 @@ import { enableDemoMode } from '~/test/demoMode';
 import { apiUrl } from '~/test/mocks/apiUrl';
 import { overrideApi } from '~/test/mocks/overrideApi';
 import { expectPath, renderRoute } from '~/test/renderRoute';
+import { useNuxtApp } from '#imports';
 
 const emailInput = () => screen.getByLabelText('メールアドレス');
 const passwordInput = () => screen.getByLabelText('パスワード');
@@ -431,6 +432,8 @@ describe('ログイン画面', () => {
       );
       let prevented: boolean | undefined;
       document.addEventListener('click', (e) => { prevented = e.defaultPrevented; }, { once: true });
+      const nuxtApp = useNuxtApp() as unknown as Record<string, unknown>;
+      console.log('DIAG processingMiddleware before', String(nuxtApp._processingMiddleware), 'router same', nuxtApp.$router === router);
       console.log('DIAG link', link.outerHTML);
 
       await user.click(link);
