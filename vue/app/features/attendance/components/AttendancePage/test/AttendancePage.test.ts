@@ -297,7 +297,7 @@ describe('勤怠画面', () => {
     });
 
     it('ページ移動中に前の読み込みが遅れて届いても、新しいページの表示を上書きしないこと', async () => {
-      signInAs();
+      const signedInUser = signInAs();
       const responses: Record<number, AttendanceHistoryResponse> = {
         1: attendanceHistoryFixture(
           [attendanceRecordFixture({ id: 1, work_date: '2026-11-08' })],
@@ -333,7 +333,6 @@ describe('勤怠画面', () => {
       // 遅い「前へ」の読み込み中に、もう一度読み込みを始める（再ログイン後の再読み込みと同じ経路）
       await user.click(within(pages).getByRole('button', { name: '前へ' }));
       const auth = useAuthStore();
-      const signedInUser = auth.user!;
       // 期限切れと再ログインが同じ tick に起きても読み直すこと
       auth.expireSession();
       auth.signIn(signedInUser);
