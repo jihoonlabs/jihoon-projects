@@ -273,9 +273,134 @@ class SharedFrontendTest extends TestCase
             ->get('/api/auth/google/callback')
             ->assertRedirect(
                 self::VUE_URL.'/login?error=social_login_failed&provider=google'
-            );
+            )
+            ->assertSessionMissing('social_login_client');
 
         $this->assertGuest();
+    }
+
+    /**
+     * 戻り先キーを持たないソーシャルログインは既定のフロントエンドへ戻ること
+     */
+    public function test_social_callback_without_client_returns_to_default(): void
+    {
+        $this->mockSocialiteUser('google-default-123', 'google-default@example.com');
+
+        $this->get('/api/auth/google/callback')
+            ->assertRedirect(self::REACT_URL.'/tickets');
+
+        $this->assertAuthenticated();
+    }
+
+    /**
+     * セッションの戻り先キーが許可リストにない場合は既定のフロントエンドへ戻ること
+     */
+    public function test_social_callback_with_unknown_client_returns_to_default(): void
+    {
+        $this->mockSocialiteUser('google-unknown-123', 'google-unknown@example.com');
+
+        $this->withSession(['social_login_client' => 'https://evil.example'])
+            ->get('/api/auth/google/callback')
+            ->assertRedirect(self::REACT_URL.'/tickets')
+            ->assertSessionMissing('social_login_client');
+
+        $this->assertAuthenticated();
+    }
+
+    /**
+     * VueのURLが未設定なら、VueのOriginからの再設定メールも既定のフロントエンドを指すこと
+     */
+    public function test_password_reset_link_uses_default_when_vue_url_is_not_configured(): void
+    {
+        config(['services.frontend.clients.vue' => null]);
+        Notification::fake();
+
+        $user = $this->createPasswordUser('reset-vue-unset@example.com');
+
+        $this->withHeader('Origin', self::VUE_URL)
+            ->postJson('/api/auth/forgot-password', [
+                'email' => $user->email,
+            ])
+            ->assertOk();
+
+        Notification::assertSentTo(
+            $user,
+            ResetPassword::class,
+            function (ResetPassword $notification) use ($user): bool {
+                $this->assertStringStartsWith(
+                    self::REACT_URL.'/reset-password?',
+                    $notification->toMail($user)->actionUrl,
+                );
+
+                return true;
+            },
+        );
+    }
+
+    /**
+     * VueのURLが未設定なら、CORSの許可先はNext.jsだけになること
+     */
+    public function test_cors_allows_only_react_when_vue_url_is_not_configured(): void
+    {
+        $this->withoutEnvironmentValue('FRONTEND_VUE_URL');
+
+        $this->assertSame(
+            [self::REACT_URL],
+            (require config_path('cors.php'))['allowed_origins'],
+        );
+    }
+
+    /**
+     * VueのURLが設定されていれば、CORSの許可先にNext.jsとVueの両方が入ること
+     */
+    public function test_cors_allows_react_and_vue_when_vue_url_is_configured(): void
+    {
+        $this->assertSame(
+            [self::REACT_URL, self::VUE_URL],
+            (require config_path('cors.php'))['allowed_origins'],
+        );
+    }
+
+    private function mockSocialiteUser(string $id, string $email): void
+    {
+        $socialUser = new SocialiteUser;
+
+        $socialUser->id = $id;
+        $socialUser->name = 'Google User';
+        $socialUser->email = $email;
+
+        Socialite::shouldReceive('driver->user')
+            ->once()
+            ->andReturn($socialUser);
+    }
+
+    /**
+     * テストの間だけ環境変数を未設定にし、終了時に元へ戻す
+     */
+    private function withoutEnvironmentValue(string $name): void
+    {
+        $original = [
+            'env' => $_ENV[$name] ?? null,
+            'server' => $_SERVER[$name] ?? null,
+            'getenv' => getenv($name),
+        ];
+
+        unset($_ENV[$name], $_SERVER[$name]);
+        putenv($name);
+
+        $this->beforeApplicationDestroyed(function () use ($name, $original): void {
+            if ($original['env'] !== null) {
+                $_ENV[$name] = $original['env'];
+            }
+
+            if ($original['server'] !== null) {
+                $_SERVER[$name] = $original['server'];
+            }
+
+            if ($original['getenv'] !== false) {
+                putenv($name.'='.$original['getenv']);
+            }
+        });
     }
 
     private function createPasswordUser(string $email): User
