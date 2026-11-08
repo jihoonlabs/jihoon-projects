@@ -1,6 +1,7 @@
 import { screen } from '@testing-library/vue';
 import { describe, expect, it } from 'vitest';
 
+import { attendanceApi } from '~/test/attendance/attendanceApiHandlers';
 import { accountApi } from '~/test/auth/accountApiHandlers';
 import { signInAs, signedOut } from '~/test/auth/signInAs';
 import { overrideApi } from '~/test/msw/overrideApi';
@@ -86,6 +87,7 @@ describe('パスワード再設定メールの送信画面', () => {
 
     it('ログイン済みなら勤怠画面へ移すこと', async () => {
       signInAs();
+      overrideApi(...attendanceApi.emptyHome());
 
       await renderRoute('/forgot-password');
 

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { useProtectedApi } from '~/features/auth/api/protectedRequest';
 import { useAuthStore } from '~/features/auth/stores/authStore';
 import { userFixture } from '~/features/auth/test/userFixture';
+import { attendanceApi } from '~/test/attendance/attendanceApiHandlers';
 import { authApi } from '~/test/auth/authApiHandlers';
 import { signInAs, signedOut } from '~/test/auth/signInAs';
 import { apiUrl } from '~/test/msw/apiUrl';
@@ -65,6 +66,7 @@ describe('ログインが必要な画面', () => {
 
     it('ログイン済みなら勤怠画面へ移すこと', async () => {
       signInAs();
+      overrideApi(...attendanceApi.emptyHome());
 
       await renderRoute('/');
 

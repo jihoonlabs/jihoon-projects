@@ -1,5 +1,9 @@
 import { http, HttpResponse } from 'msw';
 
+import {
+  attendanceHistoryFixture,
+  notStartedToday,
+} from '~/features/attendance/test/attendanceFixture';
 import type {
   AttendanceHistoryResponse,
   AttendanceRecordResponse,
@@ -43,6 +47,16 @@ export const attendanceApi = {
     return http.post(apiUrl(path), () =>
       HttpResponse.json({ data: record }, { status: 201 }),
     );
+  },
+
+  /**
+   * ログイン後の最初の画面（勤怠）へ移るだけのテスト用。出勤前・記録なしを返す。
+   */
+  emptyHome() {
+    return [
+      attendanceApi.today(notStartedToday()),
+      attendanceApi.history(attendanceHistoryFixture([])),
+    ];
   },
 
   clockConflict(path: ClockPath, code: string, message: string) {

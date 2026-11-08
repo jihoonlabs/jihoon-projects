@@ -2,6 +2,7 @@ import { screen } from '@testing-library/vue';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
+import { attendanceApi } from '~/test/attendance/attendanceApiHandlers';
 import { accountApi } from '~/test/auth/accountApiHandlers';
 import { signInAs, signedOut } from '~/test/auth/signInAs';
 import { apiUrl } from '~/test/msw/apiUrl';
@@ -139,6 +140,7 @@ describe('会員登録画面', () => {
 
     it('ログイン済みなら勤怠画面へ移すこと', async () => {
       signInAs();
+      overrideApi(...attendanceApi.emptyHome());
 
       await renderRoute('/register');
 

@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { userFixture } from '~/features/auth/test/userFixture';
+import { attendanceApi } from '~/test/attendance/attendanceApiHandlers';
 import { accountApi } from '~/test/auth/accountApiHandlers';
 import { authApi } from '~/test/auth/authApiHandlers';
 import { signInAs, signedOut } from '~/test/auth/signInAs';
@@ -62,6 +63,7 @@ describe('ログイン画面', () => {
   describe('ログイン成功', () => {
     it('入力内容を送り、勤怠画面に移ってヘッダーに利用者名を表示すること', async () => {
       signedOut();
+      overrideApi(...attendanceApi.emptyHome());
       let payload: unknown;
       overrideApi(
         http.post(apiUrl('/api/auth/login'), async ({ request }) => {
@@ -93,6 +95,7 @@ describe('ログイン画面', () => {
 
     it('送信中はボタンを無効にし、送信中であることを表示すること', async () => {
       signedOut();
+      overrideApi(...attendanceApi.emptyHome());
       let release!: () => void;
       overrideApi(
         http.post(apiUrl('/api/auth/login'), async () => {
@@ -163,6 +166,7 @@ describe('ログイン画面', () => {
 
     it('再送信すると前回のエラー表示を消してから結果を表示すること', async () => {
       signedOut();
+      overrideApi(...attendanceApi.emptyHome());
       overrideApi(authApi.loginFails(429, { message: 'Too Many Attempts.' }));
       const { user } = await renderRoute('/login');
       await user.type(emailInput(), 'user@example.com');
@@ -426,6 +430,7 @@ describe('ログイン画面', () => {
   describe('ログイン済みの利用者', () => {
     it('ログイン画面を開くと勤怠画面へ移すこと', async () => {
       signInAs();
+      overrideApi(...attendanceApi.emptyHome());
 
       await renderRoute('/login');
 

@@ -30,6 +30,9 @@ beforeAll(() => {
       }
     },
   });
+
+  // テスト開始前に Nuxt が最初の画面遷移でセッションを確認するため、待ち受けと同時に既定の応答を入れる
+  server.resetHandlers(...apiHandlers());
 });
 
 beforeEach(() => {

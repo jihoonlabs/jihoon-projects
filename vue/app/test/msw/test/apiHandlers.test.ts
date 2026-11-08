@@ -14,6 +14,14 @@ describe('テスト用 API 応答', () => {
     });
   });
 
+  describe('既定のセッション', () => {
+    it('セッション確認には未ログイン（401）を返すこと', async () => {
+      const response = await fetch(apiUrl('/api/auth/me'));
+
+      expect(response.status).toBe(401);
+    });
+  });
+
   describe('未定義の要求', () => {
     it('応答を定義していない API 要求は失敗させること', async () => {
       await expect(fetch(apiUrl('/api/undefined-endpoint'))).rejects.toThrow();
