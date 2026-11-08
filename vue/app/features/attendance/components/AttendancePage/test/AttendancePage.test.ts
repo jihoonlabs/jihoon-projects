@@ -1,7 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/vue';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
-import { nextTick } from 'vue';
 
 import {
   attendanceHistoryFixture,
@@ -335,9 +334,8 @@ describe('勤怠画面', () => {
       await user.click(within(pages).getByRole('button', { name: '前へ' }));
       const auth = useAuthStore();
       const signedInUser = auth.user!;
+      // 期限切れと再ログインが同じ tick に起きても読み直すこと
       auth.expireSession();
-      // 期限切れを画面に反映させてから再ログインする（同じ tick だと変化として扱われない）
-      await nextTick();
       auth.signIn(signedInUser);
       await waitFor(() => expect(firstPageRequests).toBe(3));
       releaseSlowFirstPage();

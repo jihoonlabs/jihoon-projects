@@ -413,6 +413,20 @@ describe('ログイン画面', () => {
       ).toHaveAttribute('href', '/register');
     });
 
+    it('パスワード再設定のリンクを押すと、再設定の画面へ移ること', async () => {
+      signedOut();
+      const { user } = await renderRoute('/login');
+
+      await user.click(
+        screen.getByRole('link', { name: 'パスワードをお忘れですか？' }),
+      );
+
+      await expectPath('/forgot-password');
+      expect(
+        await screen.findByRole('heading', { name: 'パスワードをお忘れの方' }),
+      ).toBeInTheDocument();
+    });
+
     it('公開デモではパスワード再設定と会員登録のリンクを出さないこと', async () => {
       enableDemoMode();
       signedOut();

@@ -106,11 +106,12 @@ export function useAttendance() {
     }
   };
 
-  // 期限切れの後に再ログインしたら、その間に変わったかもしれない勤怠を読み直す
+  // 期限切れの後に再ログインしたら、その間に変わったかもしれない勤怠を読み直す。
+  // ログイン状態の真偽ではなくセッションの世代で見るため、期限切れと再ログインが同じ tick に起きても取りこぼさない
   watch(
-    () => auth.isAuthenticated,
-    (authenticated, wasAuthenticated) => {
-      if (authenticated && !wasAuthenticated) {
+    () => auth.sessionRevision,
+    () => {
+      if (auth.isAuthenticated) {
         error.value = null;
         void loadAndShowErrors(page.value);
       }
