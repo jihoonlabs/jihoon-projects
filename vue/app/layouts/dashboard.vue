@@ -3,7 +3,7 @@ import { computed } from 'vue';
 
 import LoginForm from '~/features/auth/components/LoginForm/LoginForm.vue';
 import { useAuthStore } from '~/features/auth/store/useAuthStore';
-import AppHeader from '~/shared/components/Header/Header.vue';
+import AppHeader from '~/shared/components/AppHeader/AppHeader.vue';
 
 const auth = useAuthStore();
 
