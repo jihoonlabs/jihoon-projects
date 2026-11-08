@@ -6,7 +6,7 @@
 #   scripts/ci-check.sh react      react/ を検査
 #   scripts/ci-check.sh vue        vue/ を検査（vue/package.json があるコミットのみ）
 #   scripts/ci-check.sh laravel    laravel/ を検査
-#   scripts/ci-check.sh all        すべて検査（Vue アプリがなければ SKIP と表示）
+#   scripts/ci-check.sh all        すべて検査（Vue アプリがなければ SKIP と表示し、未実行として判定に残す）
 #
 # 環境変数:
 #   CI_CHECK_BASE   変更を判定する比較元（既定: origin/main）
@@ -161,8 +161,19 @@ case "$target" in
 esac
 
 printf '\n== 結果\n'
+skipped=0
 if [ "${#results[@]}" -gt 0 ]; then
   printf '%s\n' "${results[@]}"
+  skipped="$(printf '%s\n' "${results[@]}" | grep -c '^SKIP' || true)"
+fi
+
+# SKIP は合格ではない。未実行の検査がある場合は、すべて検証済みとは表示しない
+if [ "$failed" -ne 0 ]; then
+  echo '判定: NG（失敗した検査があります）'
+elif [ "$skipped" -gt 0 ]; then
+  echo "判定: 実行した検査は OK。ただし ${skipped} 件は未実行（SKIP）のため、すべてを検証済みとは扱わないでください。"
+else
+  echo '判定: 実行したすべての検査が OK'
 fi
 
 exit "$failed"
