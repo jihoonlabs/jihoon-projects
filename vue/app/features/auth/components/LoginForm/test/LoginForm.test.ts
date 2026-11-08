@@ -434,6 +434,16 @@ describe('ログイン画面', () => {
       document.addEventListener('click', (e) => { prevented = e.defaultPrevented; }, { once: true });
       const nuxtApp = useNuxtApp() as unknown as Record<string, unknown>;
       console.log('DIAG processingMiddleware before', String(nuxtApp._processingMiddleware), 'router same', nuxtApp.$router === router);
+      {
+        const fs = await import('node:fs');
+        const path = await import('node:path');
+        const linkFile = path.resolve(process.cwd(), 'node_modules/nuxt/dist/app/components/nuxt-link.js');
+        const src = fs.readFileSync(linkFile, 'utf8');
+        const lines = src.split('\n');
+        lines.forEach((l, i) => {
+          if (/navigate|preventDefault|onClick|isExternal|useRouter|custom/.test(l)) console.log('DIAG SRC', i + 1, l.slice(0, 200));
+        });
+      }
       console.log('DIAG link', link.outerHTML);
 
       await user.click(link);
