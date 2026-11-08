@@ -2,11 +2,11 @@
 # CI（GitHub Actions）と同じ検査をローカルで実行する。
 #
 # 使い方:
-#   scripts/ci-check.sh            変更のある領域だけを検査（比較元は origin/main）
-#   scripts/ci-check.sh react      react/ を検査
-#   scripts/ci-check.sh vue        vue/ を検査（vue/package.json があるコミットのみ）
-#   scripts/ci-check.sh laravel    laravel/ を検査
-#   scripts/ci-check.sh all        すべて検査（Vue アプリがなければ SKIP と表示し、未実行として判定に残す）
+#   scripts/verify-local.sh            変更のある領域だけを検査（比較元は origin/main）
+#   scripts/verify-local.sh react      react/ を検査
+#   scripts/verify-local.sh vue        vue/ を検査（vue/package.json があるコミットのみ）
+#   scripts/verify-local.sh laravel    laravel/ を検査
+#   scripts/verify-local.sh all        すべて検査（Vue アプリがなければ SKIP と表示し、未実行として判定に残す）
 #
 # 環境変数:
 #   CI_CHECK_BASE   変更を判定する比較元（既定: origin/main）
@@ -27,7 +27,7 @@ results=()
 failed=0
 
 stop() {
-  echo "ci-check: $1" >&2
+  echo "verify-local: $1" >&2
   exit 2
 }
 
