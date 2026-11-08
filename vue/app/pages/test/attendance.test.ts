@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/vue';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
+import { nextTick } from 'vue';
 
 import {
   attendanceHistoryFixture,
@@ -21,8 +22,7 @@ import { renderRoute } from '~/test/renderRoute';
 
 const clockInButton = () => screen.getByRole('button', { name: '出勤' });
 const clockOutButton = () => screen.getByRole('button', { name: '退勤' });
-const todayPanel = () =>
-  screen.getByRole('region', { name: '今日の勤怠' });
+const todayPanel = () => screen.getByRole('region', { name: '今日の勤怠' });
 const historyPanel = () =>
   screen.getByRole('region', { name: '自分の勤怠記録' });
 
@@ -58,8 +58,9 @@ describe('勤怠画面', () => {
       await expectStatus('出勤前');
       expect(clockInButton()).toBeEnabled();
       expect(clockOutButton()).toBeDisabled();
-      expect(within(todayPanel()).getByText('出勤時刻').nextElementSibling)
-        .toHaveTextContent('—');
+      expect(
+        within(todayPanel()).getByText('出勤時刻').nextElementSibling,
+      ).toHaveTextContent('—');
     });
 
     it('勤務中は出勤時刻を日本時間で表示し、退勤だけを押せること', async () => {
@@ -72,8 +73,9 @@ describe('勤怠画面', () => {
       await renderRoute('/attendance');
 
       await expectStatus('勤務中');
-      expect(within(todayPanel()).getByText('出勤時刻').nextElementSibling)
-        .toHaveTextContent('11/08 09:00');
+      expect(
+        within(todayPanel()).getByText('出勤時刻').nextElementSibling,
+      ).toHaveTextContent('11/08 09:00');
       expect(clockInButton()).toBeDisabled();
       expect(clockOutButton()).toBeEnabled();
     });
@@ -274,7 +276,9 @@ describe('勤怠画面', () => {
         name: '勤怠記録のページ',
       });
       expect(pages).toHaveTextContent('1 / 2');
-      expect(within(pages).getByRole('button', { name: '前へ' })).toBeDisabled();
+      expect(
+        within(pages).getByRole('button', { name: '前へ' }),
+      ).toBeDisabled();
 
       await user.click(within(pages).getByRole('button', { name: '次へ' }));
 
@@ -283,7 +287,9 @@ describe('勤怠画面', () => {
       });
       expect(historyRows()[0]?.[0]).toBe('2026-10-08');
       expect(within(pages).getByRole('button', { name: '前へ' })).toBeEnabled();
-      expect(within(pages).getByRole('button', { name: '次へ' })).toBeDisabled();
+      expect(
+        within(pages).getByRole('button', { name: '次へ' }),
+      ).toBeDisabled();
     });
 
     it('ページ移動中に前の読み込みが遅れて届いても、新しいページの表示を上書きしないこと', async () => {
@@ -322,8 +328,12 @@ describe('勤怠画面', () => {
 
       // 遅い「前へ」の読み込み中に、もう一度読み込みを始める（再ログイン後の再読み込みと同じ経路）
       await user.click(within(pages).getByRole('button', { name: '前へ' }));
-      useAuthStore().expireSession();
-      useAuthStore().signIn(useAuthStore().user!);
+      const auth = useAuthStore();
+      const signedInUser = auth.user!;
+      auth.expireSession();
+      // 期限切れを画面に反映させてから再ログインする（同じ tick だと変化として扱われない）
+      await nextTick();
+      auth.signIn(signedInUser);
       await waitFor(() => expect(firstPageRequests).toBe(3));
       releaseSlowFirstPage();
 

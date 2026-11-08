@@ -7,11 +7,7 @@ import {
   AttendanceError,
   useAttendanceApi,
 } from '../api/attendanceApi';
-import type {
-  AttendanceHistory,
-  AttendanceToday,
-  ClockAction,
-} from '../types';
+import type { AttendanceHistory, AttendanceToday, ClockAction } from '../types';
 
 const isAbortError = (error: unknown) =>
   error instanceof Error && error.name === 'AbortError';

@@ -132,8 +132,8 @@ describe('ログインが必要な画面', () => {
     it('ログアウトするとログイン画面へ移り、ログイン状態を消すこと', async () => {
       signInAs();
       overrideApi(authApi.logoutSucceeds());
-      const { user } = await renderRoute('/attendance');
-      await screen.findByRole('heading', { name: '勤怠管理' });
+      const { user } = await renderRoute('/tickets');
+      await screen.findByRole('heading', { name: 'チケット管理' });
 
       await user.click(screen.getByRole('button', { name: 'ログアウト' }));
 
@@ -144,8 +144,8 @@ describe('ログインが必要な画面', () => {
     it('ログアウトに失敗したらエラーを表示し、画面とログイン状態を保つこと', async () => {
       signInAs();
       overrideApi(authApi.logoutFails());
-      const { user } = await renderRoute('/attendance');
-      await screen.findByRole('heading', { name: '勤怠管理' });
+      const { user } = await renderRoute('/tickets');
+      await screen.findByRole('heading', { name: 'チケット管理' });
 
       await user.click(screen.getByRole('button', { name: 'ログアウト' }));
 
@@ -158,7 +158,7 @@ describe('ログインが必要な画面', () => {
         ).toBeEnabled();
       });
       expect(useAuthStore().isAuthenticated).toBe(true);
-      await expectPath('/attendance');
+      await expectPath('/tickets');
     });
   });
 });

@@ -102,10 +102,9 @@ export function useAttendanceApi() {
       signal?: AbortSignal,
     ): Promise<AttendanceHistory> {
       const response = await translate(
-        api.getJson<AttendanceHistoryResponse>(
-          `/api/attendance?page=${page}`,
-          { signal },
-        ),
+        api.getJson<AttendanceHistoryResponse>(`/api/attendance?page=${page}`, {
+          signal,
+        }),
       );
 
       return {

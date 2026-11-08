@@ -49,7 +49,8 @@ export function attendanceHistoryFixture(
 }
 
 /** 出勤前の今日の状態 */
-export const notStartedToday = () => attendanceTodayFixture('not_started', null);
+export const notStartedToday = () =>
+  attendanceTodayFixture('not_started', null);
 
 /** 勤務中（日本時間 9:00 出勤）の今日の状態 */
 export const workingToday = () =>
