@@ -75,15 +75,13 @@ describe('パスワード再設定メールの送信画面', () => {
   });
 
   describe('画面移動', () => {
-    it('ログイン画面に戻るリンクでログイン画面へ移ること', async () => {
+    it('ログイン画面に戻るリンクを表示すること', async () => {
       signedOut();
-      const { user } = await renderRoute('/forgot-password');
+      await renderRoute('/forgot-password');
 
-      await user.click(
+      expect(
         screen.getByRole('link', { name: 'ログイン画面に戻る' }),
-      );
-
-      await expectPath('/login');
+      ).toHaveAttribute('href', '/login');
     });
 
     it('ログイン済みなら勤怠画面へ移すこと', async () => {

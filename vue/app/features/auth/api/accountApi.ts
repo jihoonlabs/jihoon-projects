@@ -1,10 +1,6 @@
 import { ApiError, useApiClient, type ApiClient } from '~/shared/api/apiClient';
 
-import type {
-  MessageResponse,
-  PasswordReset,
-  Registration,
-} from '../types';
+import type { MessageResponse, PasswordReset, Registration } from '../types';
 
 /**
  * 画面にそのまま表示できる、アカウント操作の失敗

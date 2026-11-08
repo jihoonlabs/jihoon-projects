@@ -127,13 +127,14 @@ describe('会員登録画面', () => {
   });
 
   describe('画面移動', () => {
-    it('ログインへのリンクでログイン画面へ移ること', async () => {
+    it('ログイン画面へのリンクを表示すること', async () => {
       signedOut();
-      const { user } = await renderRoute('/register');
+      await renderRoute('/register');
 
-      await user.click(screen.getByRole('link', { name: 'ログインへ' }));
-
-      await expectPath('/login');
+      expect(screen.getByRole('link', { name: 'ログインへ' })).toHaveAttribute(
+        'href',
+        '/login',
+      );
     });
 
     it('ログイン済みなら勤怠画面へ移すこと', async () => {

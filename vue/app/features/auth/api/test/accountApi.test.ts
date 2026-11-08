@@ -94,9 +94,8 @@ describe('アカウント API', () => {
       const received: { body?: unknown } = {};
       overrideApi(accountApi.records('/api/auth/forgot-password', received));
 
-      const response = await useAccountApi().requestPasswordReset(
-        ' user@example.com ',
-      );
+      const response =
+        await useAccountApi().requestPasswordReset(' user@example.com ');
 
       expect(received.body).toEqual({ email: 'user@example.com' });
       expect(response).toEqual({ message: '送信しました。' });

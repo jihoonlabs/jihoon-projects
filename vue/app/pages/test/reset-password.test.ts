@@ -23,7 +23,9 @@ describe('パスワード再設定画面', () => {
       expect(screen.getByRole('alert')).toHaveTextContent(
         '再設定リンクが正しくありません。もう一度メールを送信してください。',
       );
-      expect(screen.queryByLabelText('新しいパスワード')).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText('新しいパスワード'),
+      ).not.toBeInTheDocument();
       expect(
         screen.getByRole('link', { name: '再設定メールをもう一度送信する' }),
       ).toHaveAttribute('href', '/forgot-password');
@@ -45,7 +47,10 @@ describe('パスワード再設定画面', () => {
 
       await renderRoute(VALID_LINK);
 
-      await expectPath(VALID_LINK);
+      // ルーターは「@」をエンコードせずに保持する
+      await expectPath(
+        '/reset-password?email=user@example.com&token=reset-token',
+      );
       expect(passwordInput()).toBeInTheDocument();
     });
   });
@@ -100,7 +105,9 @@ describe('パスワード再設定画面', () => {
         password: 'newpass123',
         password_confirmation: 'newpass123',
       });
-      expect(screen.queryByLabelText('新しいパスワード')).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText('新しいパスワード'),
+      ).not.toBeInTheDocument();
       expect(
         screen.getByRole('link', { name: 'ログイン画面に戻る' }),
       ).toBeInTheDocument();
@@ -133,7 +140,9 @@ describe('パスワード再設定画面', () => {
       signedOut();
       const { user } = await renderRoute(VALID_LINK);
 
-      await user.click(screen.getByRole('button', { name: 'パスワードを表示' }));
+      await user.click(
+        screen.getByRole('button', { name: 'パスワードを表示' }),
+      );
 
       expect(passwordInput()).toHaveAttribute('type', 'text');
       expect(confirmationInput()).toHaveAttribute('type', 'text');
