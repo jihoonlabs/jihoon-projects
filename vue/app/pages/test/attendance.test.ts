@@ -175,7 +175,12 @@ describe('勤怠画面', () => {
         expect(clockInButton()).toBeDisabled();
       });
       expect(clockOutButton()).toBeDisabled();
+
+      // 記録と再読み込みが終わるまで待ち、次のテストへ処理を持ち越さない
       release();
+      await waitFor(() => {
+        expect(clockInButton()).toBeEnabled();
+      });
     });
 
     it('すでに出勤済み（409）ならその旨を表示し、最新の状態に合わせること', async () => {
