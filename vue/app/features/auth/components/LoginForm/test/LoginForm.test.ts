@@ -415,11 +415,27 @@ describe('ログイン画面', () => {
 
     it('パスワード再設定のリンクを押すと、再設定の画面へ移ること', async () => {
       signedOut();
-      const { user } = await renderRoute('/login');
-
-      await user.click(
-        screen.getByRole('link', { name: 'パスワードをお忘れですか？' }),
+      const { user, router } = await renderRoute('/login');
+      const link = screen.getByRole('link', { name: 'パスワードをお忘れですか？' });
+      const pushes: unknown[] = [];
+      const originalPush = router.push.bind(router);
+      router.push = ((to: never) => {
+        pushes.push(to);
+        return originalPush(to).then((r: unknown) => {
+          console.log('DIAG push result', String(r));
+          return r;
+        });
+      }) as typeof router.push;
+      router.afterEach((to, from, failure) =>
+        console.log('DIAG afterEach', from.fullPath, '->', to.fullPath, String(failure)),
       );
+      let prevented: boolean | undefined;
+      document.addEventListener('click', (e) => { prevented = e.defaultPrevented; }, { once: true });
+      console.log('DIAG link', link.outerHTML);
+
+      await user.click(link);
+      await new Promise((r) => setTimeout(r, 300));
+      console.log('DIAG pushes', JSON.stringify(pushes), 'prevented', prevented, 'path', router.currentRoute.value.fullPath, 'location', window.location.href);
 
       await expectPath('/forgot-password');
       expect(
