@@ -442,8 +442,9 @@ describe('ログイン画面', () => {
         for (const file of walk(root)) {
           if (!/\.m?js$/.test(file)) continue;
           const lines = fs.readFileSync(file, 'utf8').split('\n');
+          if (!file.includes('suspended-')) continue;
           lines.forEach((l, n) => {
-            if (/RouterLink|navigate/.test(l)) console.log('DIAG TU', path.relative(root, file), n + 1, l.slice(0, 220));
+            if (n < 75 || (n >= 90 && n <= 110) || (n >= 185 && n <= 215) || /stubRouterLink|wrapperSuspended\(/.test(l)) console.log('DIAG TU', path.relative(root, file), n + 1, l.slice(0, 220));
           });
         }
       }
