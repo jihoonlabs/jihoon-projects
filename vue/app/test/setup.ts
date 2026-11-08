@@ -4,8 +4,8 @@ import { cleanup } from '@testing-library/vue';
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 
 import { resetAppState } from './appState';
-import { apiHandlers } from './msw/apiHandlers';
-import { server } from './msw/server';
+import { apiHandlers } from './mocks/handlers';
+import { server } from './mocks/server';
 
 const clearCookies = () => {
   for (const cookie of document.cookie.split('; ')) {

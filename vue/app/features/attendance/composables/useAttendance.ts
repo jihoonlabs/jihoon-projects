@@ -1,6 +1,6 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
-import { useAuthStore } from '~/features/auth/stores/authStore';
+import { useAuthStore } from '~/features/auth/store/useAuthStore';
 import { isAbortError } from '~/shared/api/isAbortError';
 
 import {
@@ -8,7 +8,7 @@ import {
   AttendanceError,
   useAttendanceApi,
 } from '../api/attendanceApi';
-import type { AttendanceHistory, AttendanceToday, ClockAction } from '../types';
+import type { AttendanceHistory, AttendanceToday, ClockAction } from '../types/attendance';
 
 /**
  * 今日の勤怠と自分の勤怠記録を読み込み、出勤・退勤を記録する。

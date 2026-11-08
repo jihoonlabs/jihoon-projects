@@ -1,5 +1,5 @@
-import { LOGIN_PATH } from '~/features/auth/navigation';
-import { useAuthStore } from '~/features/auth/stores/authStore';
+import { LOGIN_PATH } from '~/features/auth/utils/navigation';
+import { useAuthStore } from '~/features/auth/store/useAuthStore';
 
 /**
  * ログインが必要な画面。未ログインならログイン画面へ移す。

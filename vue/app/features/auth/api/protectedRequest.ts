@@ -8,7 +8,7 @@ import {
   type MutationMethod,
 } from '~/shared/api/apiClient';
 
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../store/useAuthStore';
 
 type AuthStore = ReturnType<typeof useAuthStore>;
 

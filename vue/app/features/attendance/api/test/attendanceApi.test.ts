@@ -1,17 +1,17 @@
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { useAuthStore } from '~/features/auth/stores/authStore';
-import { attendanceApi } from '~/test/attendance/attendanceApiHandlers';
+import { useAuthStore } from '~/features/auth/store/useAuthStore';
+import { attendanceApi } from '~/test/mocks/attendance/attendanceApiHandlers';
 import { signInAs } from '~/test/auth/signInAs';
-import { apiUrl } from '~/test/msw/apiUrl';
-import { overrideApi } from '~/test/msw/overrideApi';
+import { apiUrl } from '~/test/mocks/apiUrl';
+import { overrideApi } from '~/test/mocks/overrideApi';
 
 import {
   attendanceHistoryFixture,
   attendanceRecordFixture,
   workingToday,
-} from '../../test/attendanceFixture';
+} from './attendanceFixture';
 import { AttendanceError, useAttendanceApi } from '../attendanceApi';
 
 describe('勤怠 API', () => {

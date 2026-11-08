@@ -2,12 +2,12 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { signInAs, signedOut } from '~/test/auth/signInAs';
-import { apiUrl } from '~/test/msw/apiUrl';
-import { overrideApi } from '~/test/msw/overrideApi';
+import { apiUrl } from '~/test/mocks/apiUrl';
+import { overrideApi } from '~/test/mocks/overrideApi';
 import { ApiError } from '~/shared/api/apiClient';
 
-import { useAuthStore } from '../../stores/authStore';
-import { userFixture } from '../../test/userFixture';
+import { useAuthStore } from '../../store/useAuthStore';
+import { userFixture } from '../../../users/test/userFixture';
 import { protectedRequest, useProtectedApi } from '../protectedRequest';
 
 describe('ログインが必要な API 要求', () => {

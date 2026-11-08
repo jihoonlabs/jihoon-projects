@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-import LoginForm from '~/features/auth/components/LoginForm.vue';
-import { useAuthStore } from '~/features/auth/stores/authStore';
-import AppHeader from '~/shared/components/AppHeader.vue';
+import LoginForm from '~/features/auth/components/LoginForm/LoginForm.vue';
+import { useAuthStore } from '~/features/auth/store/useAuthStore';
+import AppHeader from '~/shared/components/Header/Header.vue';
 
 const auth = useAuthStore();
 

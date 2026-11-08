@@ -5,7 +5,7 @@ import {
   validateNewPassword,
   validatePasswordResetRequest,
   validateRegistration,
-} from '../accountValidation';
+} from '../auth';
 
 describe('アカウント入力の検証', () => {
   describe('会員登録', () => {

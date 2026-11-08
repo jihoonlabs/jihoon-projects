@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { hasValidationErrors, validateLogin } from '../loginValidation';
+import { hasErrors, validateLogin } from '../auth';
 
 describe('ログイン入力の検証', () => {
   describe('メールアドレス', () => {
@@ -40,12 +40,12 @@ describe('ログイン入力の検証', () => {
   describe('全体', () => {
     it('正しい入力ならエラーなしとして扱うこと', () => {
       expect(
-        hasValidationErrors(validateLogin('user@example.com', 'password123')),
+        hasErrors(validateLogin('user@example.com', 'password123')),
       ).toBe(false);
     });
 
     it('どちらかの項目にエラーがあればエラーありとして扱うこと', () => {
-      expect(hasValidationErrors(validateLogin('', 'password123'))).toBe(true);
+      expect(hasErrors(validateLogin('', 'password123'))).toBe(true);
     });
   });
 });

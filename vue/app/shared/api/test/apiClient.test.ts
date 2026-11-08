@@ -1,8 +1,8 @@
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { apiUrl } from '~/test/msw/apiUrl';
-import { overrideApi } from '~/test/msw/overrideApi';
+import { apiUrl } from '~/test/mocks/apiUrl';
+import { overrideApi } from '~/test/mocks/overrideApi';
 
 import { ApiError, createApiClient, useApiClient } from '../apiClient';
 

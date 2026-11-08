@@ -1,6 +1,6 @@
-import { useAuthStore } from '~/features/auth/stores/authStore';
-import { userFixture } from '~/features/auth/test/userFixture';
-import type { User } from '~/features/auth/types';
+import { useAuthStore } from '~/features/auth/store/useAuthStore';
+import { userFixture } from '~/features/users/test/userFixture';
+import type { User } from '~/features/users/types/user';
 
 /**
  * セッション復元が済んだログイン状態から始める。

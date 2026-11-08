@@ -1,5 +1,6 @@
-import { useAuthApi } from '~/features/auth/api/authApi';
-import { useAuthStore } from '~/features/auth/stores/authStore';
+import { fetchCurrentUser } from '~/features/auth/api/me';
+import { useApiClient } from '~/shared/api/apiClient';
+import { useAuthStore } from '~/features/auth/store/useAuthStore';
 
 /**
  * 最初の画面遷移で Laravel のセッションから利用者を復元する。
@@ -12,5 +13,7 @@ export default defineNuxtRouteMiddleware(async () => {
     return;
   }
 
-  await auth.restoreSession(useAuthApi().fetchCurrentUser);
+  const client = useApiClient();
+
+  await auth.restoreSession((signal) => fetchCurrentUser(client, signal));
 });

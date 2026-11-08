@@ -10,7 +10,7 @@ import type {
   AttendanceToday,
   AttendanceTodayResponse,
   ClockAction,
-} from '../types';
+} from '../types/attendance';
 
 export const ATTENDANCE_ERROR_MESSAGE =
   '勤怠を処理できませんでした。時間をおいて再度お試しください。';

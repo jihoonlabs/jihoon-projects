@@ -1,4 +1,4 @@
-import { useAuthStore } from '~/features/auth/stores/authStore';
+import { useAuthStore } from '~/features/auth/store/useAuthStore';
 
 /**
  * テストごとにアプリの状態（Pinia ストア）を初期状態へ戻す。
