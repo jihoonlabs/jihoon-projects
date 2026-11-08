@@ -1,8 +1,4 @@
-import {
-  ApiError,
-  useApiClient,
-  type ApiClient,
-} from '~/shared/api/apiClient';
+import { ApiError, useApiClient, type ApiClient } from '~/shared/api/apiClient';
 
 import type { LoginCredentials, LoginResponse, User } from '../types';
 

@@ -107,7 +107,10 @@ describe('ログインが必要な画面', () => {
       await screen.findByRole('region', { name: '再ログイン' });
       overrideApi(authApi.loginSucceeds(original));
 
-      await user.type(screen.getByLabelText('メールアドレス'), 'same@example.com');
+      await user.type(
+        screen.getByLabelText('メールアドレス'),
+        'same@example.com',
+      );
       await user.type(screen.getByLabelText('パスワード'), 'password123');
       await user.click(screen.getByRole('button', { name: 'ログイン' }));
 

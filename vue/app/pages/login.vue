@@ -39,8 +39,12 @@ const goHome = () => navigateTo(homePath, { replace: true });
   <div :class="$style.page">
     <aside v-if="demoMode" :class="$style.demo">
       <strong>公開デモ</strong>
-      <p>一般ユーザーと管理者を選んで、プロジェクトの表示範囲を比べられます。</p>
-      <p>データは全員で共有する架空データです。個人情報は入力しないでください。</p>
+      <p>
+        一般ユーザーと管理者を選んで、プロジェクトの表示範囲を比べられます。
+      </p>
+      <p>
+        データは全員で共有する架空データです。個人情報は入力しないでください。
+      </p>
       <p>新規登録・メール送信・Google/LINE認証はデモでは利用できません。</p>
     </aside>
     <LoginForm :notice="notice" @signed-in="goHome" />

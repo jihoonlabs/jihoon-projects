@@ -88,8 +88,7 @@ export function createProtectedApi(client: ApiClient, store: AuthStore) {
     getJson<T>(path: string, { signal }: ApiRequestOptions = {}) {
       return protectedRequest(
         store,
-        (requestSignal) =>
-          client.getJson<T>(path, { signal: requestSignal }),
+        (requestSignal) => client.getJson<T>(path, { signal: requestSignal }),
         signal,
       );
     },

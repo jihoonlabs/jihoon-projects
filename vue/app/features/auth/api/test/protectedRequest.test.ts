@@ -20,9 +20,9 @@ describe('ログインが必要な API 要求', () => {
         ),
       );
 
-      await expect(useProtectedApi().getJson('/api/tickets')).resolves.toEqual(
-        { data: [{ id: 1 }] },
-      );
+      await expect(useProtectedApi().getJson('/api/tickets')).resolves.toEqual({
+        data: [{ id: 1 }],
+      });
     });
   });
 

@@ -242,7 +242,9 @@ describe('ログイン画面', () => {
       const { user } = await renderRoute('/login');
       await user.type(passwordInput(), 'password123');
 
-      await user.click(screen.getByRole('button', { name: 'パスワードを表示' }));
+      await user.click(
+        screen.getByRole('button', { name: 'パスワードを表示' }),
+      );
 
       expect(passwordInput()).toHaveAttribute('type', 'text');
       const hideButton = screen.getByRole('button', {
