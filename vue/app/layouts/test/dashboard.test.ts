@@ -63,7 +63,7 @@ describe('ログインが必要な画面', () => {
       await expectPath('/login');
     });
 
-    it('ログイン済みならログイン画面を経て勤怠画面へ移すこと', async () => {
+    it('ログイン済みなら勤怠画面へ移すこと', async () => {
       signInAs();
 
       await renderRoute('/');
@@ -89,7 +89,9 @@ describe('ログインが必要な画面', () => {
       expect(
         screen.queryByRole('heading', { name: 'チケット管理' }),
       ).not.toBeInTheDocument();
-      expect(screen.queryByRole('banner')).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'ログアウト' }),
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('link', { name: 'Googleでログイン' }),
       ).not.toBeInTheDocument();

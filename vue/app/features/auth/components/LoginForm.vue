@@ -152,14 +152,14 @@ const submit = async () => {
 
 <template>
   <div :class="$style.card">
-    <header :class="$style.heading">
+    <div :class="$style.heading">
       <div :class="$style.identity">
         <span :class="$style.mark" aria-hidden="true">T</span>
         <span :class="$style.eyebrow">TICKET WORKSPACE</span>
       </div>
       <h1>タスク管理</h1>
       <p>チケット管理</p>
-    </header>
+    </div>
 
     <div v-if="successMessage" :class="$style.success" role="status">
       {{ successMessage }}

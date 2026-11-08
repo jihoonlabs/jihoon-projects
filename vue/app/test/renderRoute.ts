@@ -7,11 +7,20 @@ import App from '~/app.vue';
 import { renderScreen } from './renderScreen';
 
 /**
- * アプリ全体（レイアウト・ルートミドルウェアを含む）を指定した URL で描画する
+ * アプリ全体（レイアウト・ルートミドルウェアを含む）を指定した URL で描画する。
+ * ルーターはテストファイル内で共有されるため、前のテストと同じ URL でも遷移とミドルウェアを必ず実行する。
  */
 export async function renderRoute(path: string) {
-  const view = await renderScreen(App, { route: path });
   const router = useRouter();
+  const target = router.resolve(path);
+  const view = await renderScreen(App, {
+    route: {
+      path: target.path,
+      query: target.query,
+      hash: target.hash,
+      force: true,
+    },
+  });
 
   return {
     ...view,
