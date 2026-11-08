@@ -55,7 +55,7 @@
 - [MANUALテンプレート v2.1](docs/agent/MANUAL-v2.1.md) — 作業結果・検証・制約を利用者へ報告
 - [AI Workflow v2.2](docs/agent/AI-WORKFLOW-v2.2.md) — ルールの更新経緯と後続作業の公開根拠
 
-v2.2はポートフォリオ上の証拠整理の版であり、AGENTSのルール版はv2.1です。内部のpromptや運用設定は公開していません。
+v2.2はポートフォリオ上の証拠整理の版です。現在適用しているAGENTSのルール版はv2.1で、[AGENTS v2.2](docs/agent/AGENTS-v2.2.md)はレビュー中の候補です。内部のpromptや運用設定は公開していません。
 
 ## テスト・検証実績
 
