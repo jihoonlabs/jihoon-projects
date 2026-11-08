@@ -10,10 +10,7 @@ describe('認証メールの再送 API', () => {
   it('前後の空白を除いたメールアドレスを送ること', async () => {
     const received: { body?: unknown } = {};
     overrideApi(
-      accountApi.records(
-        '/api/auth/email/verification-notification',
-        received,
-      ),
+      accountApi.records('/api/auth/email/verification-notification', received),
     );
 
     await resendVerificationEmail(useApiClient(), ' user@example.com ');
@@ -32,7 +29,8 @@ describe('認証メールの再送 API', () => {
     controller.abort();
 
     await expect(
-      resendVerificationEmail(useApiClient(), 
+      resendVerificationEmail(
+        useApiClient(),
         'user@example.com',
         controller.signal,
       ),

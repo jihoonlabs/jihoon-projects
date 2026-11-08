@@ -29,7 +29,6 @@ export function validateLogin(
   return errors;
 }
 
-
 export interface RegistrationErrors {
   name?: string;
   email?: string;

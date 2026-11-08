@@ -8,7 +8,11 @@ import {
   AttendanceError,
   useAttendanceApi,
 } from '../api/attendanceApi';
-import type { AttendanceHistory, AttendanceToday, ClockAction } from '../types/attendance';
+import type {
+  AttendanceHistory,
+  AttendanceToday,
+  ClockAction,
+} from '../types/attendance';
 
 /**
  * 今日の勤怠と自分の勤怠記録を読み込み、出勤・退勤を記録する。

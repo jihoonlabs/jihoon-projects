@@ -5,7 +5,6 @@ import HistoryTable from '~/features/attendance/components/HistoryTable/HistoryT
 import TodayPanel from '~/features/attendance/components/TodayPanel/TodayPanel.vue';
 import { useAttendance } from '~/features/attendance/composables/useAttendance';
 
-
 const demoMode = useRuntimeConfig().public.demoMode === true;
 const attendance = useAttendance();
 const {

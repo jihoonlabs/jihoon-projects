@@ -182,7 +182,7 @@ const submit = async () => {
   }
 };
 
-const resendVerificationEmail = async () => {
+const resendVerification = async () => {
   cancelVerificationRequest();
   const controller = new AbortController();
   const revision = verificationRevision;
@@ -239,7 +239,7 @@ const resendVerificationEmail = async () => {
       type="button"
       :class="$style.resend"
       :disabled="resendingVerification"
-      @click="resendVerificationEmail"
+      @click="resendVerification"
     >
       {{
         resendingVerification ? '認証メールを再送中...' : '認証メールを再送する'

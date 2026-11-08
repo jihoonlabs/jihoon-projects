@@ -39,9 +39,9 @@ describe('ログイン入力の検証', () => {
 
   describe('全体', () => {
     it('正しい入力ならエラーなしとして扱うこと', () => {
-      expect(
-        hasErrors(validateLogin('user@example.com', 'password123')),
-      ).toBe(false);
+      expect(hasErrors(validateLogin('user@example.com', 'password123'))).toBe(
+        false,
+      );
     });
 
     it('どちらかの項目にエラーがあればエラーありとして扱うこと', () => {
