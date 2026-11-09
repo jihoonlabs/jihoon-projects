@@ -24,3 +24,6 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Composer本体はリポジトリに含めず、各環境のcomposerを使う
+composer.phar
