@@ -9,6 +9,11 @@ export default defineNuxtConfig({
 
   css: ['~/assets/styles/global.scss'],
 
+  // 機能ごとの composables も Nuxt の自動インポートに含める（components は名前の衝突を避けるため明示的に import する）
+  imports: {
+    dirs: ['features/*/composables'],
+  },
+
   app: {
     head: {
       htmlAttrs: { lang: 'ja' },

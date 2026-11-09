@@ -1,3 +1,5 @@
+import type { Ref } from 'vue';
+
 import type { User } from '~/features/users/types/user';
 
 export interface LoginCredentials {
@@ -20,6 +22,19 @@ export interface LoginNotice {
   provider?: string;
   verified?: string;
   registered?: string;
+}
+
+/** 通知クエリから決めた、ログイン画面に最初に出す文言（なければ空文字） */
+export interface LoginNoticeMessages {
+  error: string;
+  success: string;
+}
+
+/** フォームの結果表示。再送など別の処理からも同じ表示欄を更新する */
+export interface FormMessages {
+  error: Ref<string>;
+  success: Ref<string>;
+  clear: () => void;
 }
 
 export interface MessageResponse {

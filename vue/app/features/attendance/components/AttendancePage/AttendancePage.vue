@@ -3,7 +3,6 @@ import { onMounted } from 'vue';
 
 import HistoryTable from '~/features/attendance/components/HistoryTable/HistoryTable.vue';
 import TodayPanel from '~/features/attendance/components/TodayPanel/TodayPanel.vue';
-import { useAttendance } from '~/features/attendance/composables/useAttendance';
 
 const demoMode = useRuntimeConfig().public.demoMode === true;
 const attendance = useAttendance();
