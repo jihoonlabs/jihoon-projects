@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\FrontendUrl;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class EmailVerificationController extends Controller
 {
@@ -15,6 +17,7 @@ class EmailVerificationController extends Controller
     public function __invoke(
         string $id,
         string $hash,
+        Request $request,
     ): RedirectResponse {
         $user = User::findOrFail($id);
 
@@ -32,8 +35,9 @@ class EmailVerificationController extends Controller
             event(new Verified($user));
         }
 
+        // clientは署名対象のため改ざんできない。未知の値は既定へ戻す。
         return redirect(
-            config('services.frontend.url').'/login?verified=1'
+            FrontendUrl::forClient($request->query('client')).'/login?verified=1'
         );
     }
 }
