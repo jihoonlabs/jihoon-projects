@@ -1,81 +1,30 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-
-import { AccountError } from '~/features/auth/api/accountRequest';
 import AuthCard from '~/features/auth/components/AuthCard/AuthCard.vue';
-import { register } from '~/features/auth/api/register';
 import type { SocialProvider } from '~/features/auth/types/auth';
 import { socialLoginUrl } from '~/features/auth/utils/navigation';
-import {
-  hasErrors,
-  validateRegistration,
-  type RegistrationErrors,
-} from '~/features/auth/validation/auth';
 import FormMessage from '~/shared/components/FormMessage/FormMessage.vue';
 import TextInput from '~/shared/components/TextInput/TextInput.vue';
-import { useApiClient } from '~/shared/api/apiClient';
 
-const config = useRuntimeConfig();
-const client = useApiClient();
+const {
+  name,
+  email,
+  password,
+  passwordConfirmation,
+  errors,
+  serverError,
+  loading,
+  clearError,
+  submit,
+} = useRegisterForm();
 
-const name = ref('');
-const email = ref('');
-const password = ref('');
-const passwordConfirmation = ref('');
-const errors = ref<RegistrationErrors>({});
-const serverError = ref('');
-const loading = ref(false);
-
-// 入力し直した項目のエラーだけを消す
-const clearError = (field: keyof RegistrationErrors) => {
-  if (errors.value[field]) {
-    errors.value = { ...errors.value, [field]: undefined };
-  }
-};
-
+const apiUrl = useRuntimeConfig().public.apiUrl;
 const socialHref = (provider: SocialProvider) =>
-  socialLoginUrl(config.public.apiUrl, provider);
+  socialLoginUrl(apiUrl, provider);
 
+// 登録の送信中は画面を離れないよう、ソーシャルログインへのリンクを押せなくする
 const preventWhileLoading = (event: MouseEvent) => {
   if (loading.value) {
     event.preventDefault();
-  }
-};
-
-const submit = async () => {
-  serverError.value = '';
-
-  const validationErrors = validateRegistration(
-    name.value,
-    email.value,
-    password.value,
-    passwordConfirmation.value,
-  );
-
-  if (hasErrors(validationErrors)) {
-    errors.value = validationErrors;
-    return;
-  }
-
-  errors.value = {};
-  loading.value = true;
-
-  try {
-    await register(client, {
-      name: name.value,
-      email: email.value,
-      password: password.value,
-      passwordConfirmation: passwordConfirmation.value,
-    });
-    // 認証メールを送ったことをログイン画面で伝える
-    await navigateTo({ path: '/login', query: { registered: '1' } });
-  } catch (error) {
-    serverError.value =
-      error instanceof AccountError
-        ? error.message
-        : '会員登録中にエラーが発生しました。';
-  } finally {
-    loading.value = false;
   }
 };
 </script>

@@ -1,59 +1,17 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-
-import { AccountError } from '~/features/auth/api/accountRequest';
-import { requestPasswordReset } from '~/features/auth/api/requestPasswordReset';
 import AuthCard from '~/features/auth/components/AuthCard/AuthCard.vue';
-import {
-  hasErrors,
-  validatePasswordResetRequest,
-  type PasswordResetRequestErrors,
-} from '~/features/auth/validation/auth';
 import FormMessage from '~/shared/components/FormMessage/FormMessage.vue';
 import TextInput from '~/shared/components/TextInput/TextInput.vue';
-import { useApiClient } from '~/shared/api/apiClient';
 
-const client = useApiClient();
-
-const email = ref('');
-const errors = ref<PasswordResetRequestErrors>({});
-const serverError = ref('');
-const successMessage = ref('');
-const loading = ref(false);
-
-// 入力を変えたら、前回の送信結果と入力エラーを消す
-const onEmailChange = () => {
-  serverError.value = '';
-  successMessage.value = '';
-  errors.value = {};
-};
-
-const submit = async () => {
-  serverError.value = '';
-  successMessage.value = '';
-
-  const validationErrors = validatePasswordResetRequest(email.value);
-
-  if (hasErrors(validationErrors)) {
-    errors.value = validationErrors;
-    return;
-  }
-
-  errors.value = {};
-  loading.value = true;
-
-  try {
-    const response = await requestPasswordReset(client, email.value);
-    successMessage.value = response.message;
-  } catch (error) {
-    serverError.value =
-      error instanceof AccountError
-        ? error.message
-        : 'パスワード再設定メールの送信中にエラーが発生しました。';
-  } finally {
-    loading.value = false;
-  }
-};
+const {
+  email,
+  errors,
+  serverError,
+  successMessage,
+  loading,
+  onEmailChange,
+  submit,
+} = usePasswordResetRequest();
 </script>
 
 <template>
