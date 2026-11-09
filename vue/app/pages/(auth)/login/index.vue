@@ -6,8 +6,8 @@ definePageMeta({ layout: 'auth', middleware: 'guest' });
 </script>
 
 <template>
-  <!-- ページの根は 1 要素にし、中身はレイアウトの並びにそのまま加える -->
   <div :class="$style.contents">
+    <!-- ページの根は 1 要素にし、中身はレイアウトの並びにそのまま加える -->
     <DemoNotice />
     <LoginForm />
   </div>
