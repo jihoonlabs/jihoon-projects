@@ -8,7 +8,12 @@ on:
       - 'ci/vue-**'
   pull_request:
     branches:
+      - main
       - epic/vue-client-v1
+    paths:
+      - "vue/**"
+      - "laravel/**"
+      - ".github/workflows/vue-client.yml"
 
 permissions:
   contents: read
