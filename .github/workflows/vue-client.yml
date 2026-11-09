@@ -1,0 +1,156 @@
+name: Vue client
+
+on:
+  push:
+    branches:
+      - epic/vue-client-v1
+      - 'feature/vue-**'
+      - 'ci/vue-**'
+  pull_request:
+    branches:
+      - epic/vue-client-v1
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vue-client-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vue:
+    name: Vue tests, lint, types, and static build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vue
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Detect Vue project
+        id: project
+        working-directory: .
+        run: |
+          if [ -f vue/package.json ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "vue/package.json がないため Vue のチェックを省略します。"
+          fi
+          if [ -f vue/pnpm-lock.yaml ]; then
+            echo "lockfile=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "lockfile=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up pnpm
+        if: steps.project.outputs.exists == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+
+      - name: Set up Node.js
+        if: steps.project.outputs.exists == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        if: steps.project.outputs.exists == 'true'
+        run: |
+          if [ "${{ steps.project.outputs.lockfile }}" = "true" ]; then
+            pnpm install --frozen-lockfile
+          else
+            # 初回のみ lockfile を生成し、artifact として取り出してコミットする
+            pnpm install --no-frozen-lockfile
+          fi
+
+      - name: Show installed versions
+        if: steps.project.outputs.exists == 'true'
+        run: pnpm list --depth 0
+
+      - name: Print generated lockfile
+        # 実行環境によっては artifact を取得できないため、初回の lockfile をログに出力する
+        if: steps.project.outputs.exists == 'true' && steps.project.outputs.lockfile == 'false'
+        run: |
+          echo "LOCKFILE-BEGIN"
+          gzip -9c pnpm-lock.yaml | base64 -w 0
+          echo
+          echo "LOCKFILE-END"
+
+      - name: Run tests
+        if: steps.project.outputs.exists == 'true'
+        run: pnpm test:run
+
+      - name: Check lint
+        if: steps.project.outputs.exists == 'true'
+        run: pnpm lint
+
+      - name: Check types
+        if: steps.project.outputs.exists == 'true'
+        run: pnpm typecheck
+
+      - name: Check formatting
+        if: steps.project.outputs.exists == 'true'
+        run: pnpm format:check
+
+      - name: Show formatting diff
+        # 整形違反があったとき、必要な修正内容をログに残す
+        if: failure() && steps.project.outputs.exists == 'true'
+        run: pnpm exec prettier --write . && git diff --stat && git diff
+
+      - name: Build static client
+        if: steps.project.outputs.exists == 'true'
+        run: pnpm generate
+        env:
+          NUXT_PUBLIC_API_URL: ''
+          NUXT_PUBLIC_DEMO_MODE: 'true'
+
+  laravel:
+    name: Laravel tests and formatting
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: laravel
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP and Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          extensions: mbstring, pdo_sqlite, sqlite3, intl
+          coverage: none
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare environment file
+        # .env がないとテストごとに読み込み警告が出るため、例示ファイルを置く（APP_KEY は環境変数が優先）
+        run: cp .env.example .env
+
+      - name: Check shared frontend files with Pint
+        run: |
+          files=""
+          for file in \
+            app/Support/FrontendUrl.php \
+            app/Providers/AppServiceProvider.php \
+            app/Http/Controllers/AuthController.php \
+            app/Http/Controllers/Auth/EmailVerificationController.php \
+            config/cors.php \
+            config/sanctum.php \
+            config/services.php \
+            tests/Feature/Auth/SharedFrontendTest.php; do
+            if [ -f "$file" ]; then files="$files $file"; fi
+          done
+          vendor/bin/pint --test $files
+
+      - name: Run Laravel test suite
+        run: php artisan test
+        env:
+          APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+          # 警告の原因が省略されないようにログの出力幅を広げる
+          COLUMNS: '400'
