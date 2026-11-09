@@ -60,15 +60,15 @@ Next.js版と同じLaravel APIに接続するNuxt 4版です。React版と同じ
 
 2026年9月にTicketアプリの開発を開始し、[認証の土台を自ら実装](https://github.com/jihoonlabs/jihoon-projects/commit/56058f3497c4bbd82b76be45d7b947de7f0b467e)。9月末に[AI作業ルールを導入](https://github.com/jihoonlabs/jihoon-projects/commit/e4af694426e1b693952d37ec1d048fb7a3a69f85)し、以降約1か月で、[ボード順序の永続化](https://github.com/jihoonlabs/jihoon-projects/pull/9)、[権限境界の強化](https://github.com/jihoonlabs/jihoon-projects/pull/17)、[テスト拡充](https://github.com/jihoonlabs/jihoon-projects/pull/49)、[勤怠機能](https://github.com/jihoonlabs/jihoon-projects/pull/69)の実装・検証まで進めました。AIの活用範囲を段階的に広げ、出力の確認・修正、設計判断、最終検証は自分で行っています。
 
-公開版AGENTS v2.1は、実作業で使い、課題とレビューを受けて更新したルールです。WORKとMANUALは、それぞれ作業指示・引き継ぎと利用者向け完了報告に使うテンプレートです。v2.2のページでは、実際の適用履歴を公開PRと検証記録に結びつけています。
+公開版AGENTS v2.1は、実作業で使い、課題とレビューを受けて更新したルールです。WORKとMANUALは、それぞれ作業指示・引き継ぎと利用者向け完了報告に使うテンプレートです。[AI Workflow v2.1](docs/agent/AI-WORKFLOW-v2.1.md)では、v2.1の実際の適用履歴を公開PRと検証記録に結びつけています。
 
 - [AGENTS v2.2](docs/agent/AGENTS-v2.2.md) — 検証根拠の記録を加えた現行の公開ルール（[WORK](docs/agent/WORK-v2.2.md)・[MANUAL](docs/agent/MANUAL-v2.2.md)）
 - [AGENTS v2.1](docs/agent/AGENTS-v2.1.md) — 実作業で使用した公開ルール
 - [WORKテンプレート v2.1](docs/agent/WORK-v2.1.md) — 個別作業の目的・範囲・完了条件・検証を記入
 - [MANUALテンプレート v2.1](docs/agent/MANUAL-v2.1.md) — 作業結果・検証・制約を利用者へ報告
-- [AI Workflow v2.2](docs/agent/AI-WORKFLOW-v2.2.md) — ルールの更新経緯と後続作業の公開根拠
+- [AI Workflow v2.1](docs/agent/AI-WORKFLOW-v2.1.md) — AGENTS v2.1の適用実績と公開根拠
 
-v2.2はポートフォリオ上の証拠整理の版です。AGENTSのルールもv2.2を現行版とし、v2.1は以前の版として保存しています。内部のpromptや運用設定は公開していません。
+AGENTSはv2.2を現行版とし、v2.1は以前の版として保存しています。内部のpromptや運用設定は公開していません。
 
 ## テスト・検証実績
 
