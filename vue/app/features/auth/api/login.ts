@@ -1,0 +1,69 @@
+import { ApiError, type ApiClient } from '~/shared/api/apiClient';
+import { isAbortError } from '~/shared/api/isAbortError';
+import type { User } from '~/features/users/types/user';
+
+import type { LoginCredentials, LoginResponse } from '../types/auth';
+
+export type LoginFailureReason = 'email_not_verified';
+
+/**
+ * 画面にそのまま表示できるログイン失敗。メール未認証のときは reason で区別する。
+ */
+export class LoginError extends Error {
+  constructor(
+    message: string,
+    readonly reason?: LoginFailureReason,
+  ) {
+    super(message);
+    this.name = 'LoginError';
+  }
+}
+
+// Next.js 版と同じ文言で、Laravel の失敗応答を利用者向けのメッセージに変換する
+const toLoginError = (error: unknown): LoginError => {
+  if (!(error instanceof ApiError)) {
+    return new LoginError('ログイン処理に失敗しました。');
+  }
+
+  if (error.status === 422) {
+    return new LoginError(
+      error.fieldErrors.email?.[0] ?? 'ログイン情報が正しくありません。',
+    );
+  }
+
+  if (error.status === 403 && error.code === 'email_not_verified') {
+    return new LoginError(
+      error.serverMessage ?? 'メール認証が完了していません。',
+      'email_not_verified',
+    );
+  }
+
+  if (error.status === 429) {
+    return new LoginError(
+      'ログイン試行回数が多すぎます。しばらくしてから再度お試しください。',
+    );
+  }
+
+  return new LoginError('ログイン処理に失敗しました。');
+};
+
+export async function login(
+  client: ApiClient,
+  credentials: LoginCredentials,
+): Promise<User> {
+  try {
+    const response = await client.sendJson<LoginResponse>(
+      'POST',
+      '/api/auth/login',
+      credentials,
+    );
+
+    return response.user;
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw error;
+    }
+
+    throw toLoginError(error);
+  }
+}

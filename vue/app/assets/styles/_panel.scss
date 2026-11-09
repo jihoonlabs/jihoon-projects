@@ -1,0 +1,13 @@
+// 業務画面の区切り（今日の勤怠・一覧など）で共通のパネル
+@mixin panel {
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+
+  h2 {
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+  }
+}

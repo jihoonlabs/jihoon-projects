@@ -1,6 +1,6 @@
 # jihoon-projects | フロントエンドエンジニア ポートフォリオ
 
-**Vue.js / TypeScriptを主軸に、6年以上のフロントエンド実務経験。** Nuxt 2からNuxt 3への移行などを経験しました。ReactとLaravelも現場で使用しており、本ポートフォリオではNext.jsとLaravel APIを組み合わせたTicket管理アプリで、画面からAPIまでの設計・実装を紹介します。
+**Vue.js / TypeScriptを主軸に、6年以上のフロントエンド実務経験。** Nuxt 2からNuxt 3への移行などを経験しました。ReactとLaravelも現場で使用しており、本ポートフォリオではNext.jsとLaravel APIを組み合わせたTicket管理アプリで、画面からAPIまでの設計・実装を紹介します。あわせて、同じLaravel APIを使うNuxt 4版フロントエンドを開発しています。
 
 ## Ticket管理アプリ
 
@@ -35,12 +35,24 @@
 
 [機能別V1マニュアル](docs/ticket/README.md)に操作方法、[Ticket開発・検証記録](docs/ticket/TICKET.md)に公開範囲・設計上の前提・検証内容をまとめています。
 
+## Vue（Nuxt 4）版フロントエンド
+
+Next.js版と同じLaravel APIに接続するNuxt 4版です。React版と同じ機能を、Vueの構成・作法に合わせて実装しています。
+
+- **実装済み:** 認証（ログイン・登録・パスワード再設定・メール認証）、勤怠（出勤・退勤、履歴）
+- **開発中:** Ticket画面
+- **構成:** Nuxt 4（クライアント専用SPA、静的生成）、Pinia、TypeScript strict、Vitest・Testing Library・MSW
+- **API共有:** Laravel側でCORS・Sanctum・リダイレクト先をReact版とVue版の両方に対応
+
+セットアップは[vue/README.md](vue/README.md)を参照してください。
+
 ## 経験・技術スタック
 
 | 領域 | 経験・技術 |
 | --- | --- |
 | フロントエンド実務 | Vue.js / TypeScript、6年以上。Nuxt 2からNuxt 3への移行など |
 | React・API連携 | React、Next.js、Laravel API、Laravel Sanctum |
+| Vue・API連携 | Nuxt 4、Pinia（Next.js版と同じLaravel APIを共有） |
 | UI・状態管理 | Zustand、dnd-kit |
 | テスト・品質確認 | Vitest、Testing Library、PHPUnit、ESLint、TypeScript |
 
@@ -62,6 +74,8 @@ v2.2はポートフォリオ上の証拠整理の版です。AGENTSのルール�
 
 2026年10月27日の公開デモでは、React 257 tests、TypeScript、ESLint、Next.js静的出力に加え、Laravel全テストとPintがGitHub Actionsで通過しました。Chrome HeadlessとローカルAPIを使った画面・操作確認の記録もあります。
 
+Vue版はPRごとに、Vitestによるテスト、ESLint、vue-tscによる型チェック、Prettier、Nuxtの静的生成をGitHub Actionsで検証しています。
+
 詳細な検証内容は[Ticket開発・検証記録](docs/ticket/TICKET.md)を参照してください。
 
 ## リポジトリ構成
@@ -72,5 +86,5 @@ react/         Next.jsアプリ、認証・投稿・お知らせ・Ticket UI
 docs/ticket/   Ticket V1の機能別マニュアルと開発・検証記録
 docs/agent/    公開AI作業ルール、WORK・MANUALテンプレート、適用根拠
 micropython/   趣味のMicroPython・Thumby制作
-vue/           Vue関連の作業領域
+vue/           Nuxt 4版フロントエンド（認証・勤怠を実装済み、Ticketは開発中）
 ```
