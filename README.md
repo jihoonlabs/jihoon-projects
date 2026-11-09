@@ -41,6 +41,7 @@
 | --- | --- |
 | フロントエンド実務 | Vue.js / TypeScript、6年以上。Nuxt 2からNuxt 3への移行など |
 | React・API連携 | React、Next.js、Laravel API、Laravel Sanctum |
+| Vue・API連携 | Nuxt 4、Pinia（Next.js版と同じLaravel APIを共有） |
 | UI・状態管理 | Zustand、dnd-kit |
 | テスト・品質確認 | Vitest、Testing Library、PHPUnit、ESLint、TypeScript |
 
@@ -72,5 +73,5 @@ react/         Next.jsアプリ、認証・投稿・お知らせ・Ticket UI
 docs/ticket/   Ticket V1の機能別マニュアルと開発・検証記録
 docs/agent/    公開AI作業ルール、WORK・MANUALテンプレート、適用根拠
 micropython/   趣味のMicroPython・Thumby制作
-vue/           Vue関連の作業領域
+vue/           Nuxt 4版フロントエンド（認証・勤怠を実装済み、Ticketは開発中）
 ```

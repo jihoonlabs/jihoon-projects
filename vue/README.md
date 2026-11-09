@@ -1,6 +1,6 @@
 # Nuxt Frontend
 
-Next.js 版（`react/`）と同じ Laravel API を使う Vue（Nuxt）フロントエンドです。現在は初期構成の段階です。
+Next.js 版（`react/`）と同じ Laravel API を使う Vue（Nuxt）フロントエンドです。認証（ログイン・登録・パスワード再設定）と勤怠を実装済みで、Ticket画面は開発中です。
 
 ## 使用技術
 
