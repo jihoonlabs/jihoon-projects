@@ -1,7 +1,15 @@
 """Playable first-pass tactical SRPG for the standard monochrome Thumby."""
 
 import gc
+import sys
+import time
+
 import thumby
+
+# The device launcher need not put the game folder on the module path;
+# add it before importing sibling modules (same pattern as ThumbyBrawlBase).
+if sys.implementation.name == "micropython":
+    sys.path.append("/Games/SRPG-v1")
 
 from assets import (ENEMY_BATTLE, ENEMY_ICON, REAL_BATTLE, REAL_CUTIN,
                     REAL_ICON, SHIP_BATTLE, SHIP_CUTIN, SHIP_ICON,
@@ -28,6 +36,12 @@ STATE_VICTORY = 6
 STATE_DEFEAT = 7
 STATE_WEAPONS = 8
 STATE_STATUS = 9
+STATE_BENCH = 10
+
+FPS = 20
+# Built-in Thumby fonts: (path, width, height, spacing). 5x7 is the default.
+FONT_BIG = ("/lib/font5x7.bin", 5, 7, 1)
+FONT_SMALL = ("/lib/font3x5.bin", 3, 5, 1)
 
 COMMANDS = ("MOVE", "ATTACK", "STATUS", "END")
 COMMAND_LABELS = ("MOVE", "ATK", "STAT", "END")
@@ -51,12 +65,40 @@ attack_phase = 0
 message = "SELECT UNIT"
 base_hp = BASE_MAX_HP
 state = STATE_TITLE
+current_font = None
+move_tiles = None
+status_page = 0
+bench_results = None
+# Static screens are drawn once on entry; the buffer keeps them afterwards.
+STATIC_STATES = (STATE_TITLE, STATE_VICTORY, STATE_DEFEAT, STATE_BENCH)
+last_static = None
 
-thumby.display.setFPS(20)
+thumby.display.setFPS(FPS)
+
+
+def use_font(font):
+    """Switch fonts only when needed; setFont reloads the font file."""
+    global current_font
+    if font is not current_font:
+        thumby.display.setFont(*font)
+        current_font = font
+
+
+def text_width(text, font=None):
+    font = font or current_font or FONT_BIG
+    return len(text) * (font[1] + font[3])
 
 
 def draw_text(text, x, y, color=1):
     thumby.display.drawText(text, x, y, color)
+
+
+def draw_text_right(text, right, y, color=1):
+    draw_text(text, right - text_width(text) + 1, y, color)
+
+
+def draw_text_center(text, y, color=1):
+    draw_text(text, (SCREEN_W - text_width(text) + 1) // 2, y, color)
 
 
 def move_cursor(dx, dy):
@@ -93,40 +135,76 @@ def draw_hangar_background():
         display.setPixel(x, 30 + ((x // 8) % 3), 1)
 
 
+def draw_weapon_rows(weapons, highlight=None, top=7):
+    """One 6 px row per weapon: full name, power and range."""
+    display = thumby.display
+    for index, weapon in enumerate(weapons):
+        y = top + index * 6
+        color = 1
+        if index == highlight:
+            display.drawFilledRectangle(0, y - 1, SCREEN_W, 7, 1)
+            color = 0
+        draw_text(weapon["name"], 2, y, color)
+        draw_text_right(str(weapon["power"]), 57, y, color)
+        draw_text_right("R" + str(weapon["range"]), 70, y, color)
+
+
 def draw_weapon_menu():
     display = thumby.display
     display.fill(0)
-    draw_text(selected_unit["id"] + " WEAPON", 1, 0)
-    weapons = selected_unit["weapons"]
-    for index, weapon in enumerate(weapons):
-        y = 6 + index * 5
-        line = weapon["short"] + " " + str(weapon["power"]) + " R" + str(weapon["range"])
-        if index == weapon_index:
-            display.drawFilledRectangle(0, y - 1, 72, 6, 1)
-            draw_text(line, 2, y, 0)
-        else:
-            draw_text(line, 2, y, 1)
-    draw_text("A:OK B:BACK", 1, 34)
+    use_font(FONT_SMALL)
+    draw_text(selected_unit["id"] + " WEAPON", 2, 0)
+    draw_text_right("POW RNG", 70, 0)
+    display.drawLine(0, 5, SCREEN_W - 1, 5, 1)
+    draw_weapon_rows(selected_unit["weapons"], weapon_index)
 
 
 def draw_status_screen(unit):
+    """Compact STATUS: page 0 core stats, page 1 weapons (LEFT/RIGHT)."""
     display = thumby.display
     display.fill(0)
-    draw_text(unit["id"] + " " + unit["kind"], 1, 0)
-    draw_text("HP " + str(unit["hp"]) + "/" + str(unit["max_hp"]), 1, 7)
-    draw_text("EN " + str(unit["en"]) + "/" + str(unit["max_en"]), 1, 13)
-    draw_text("ARM " + str(unit["armor"]), 1, 19)
-    draw_text("MOB " + str(unit["mobility"]), 1, 25)
-    draw_text("MOVE " + str(unit["move"]), 1, 31)
-    draw_text("B:BK", 48, 31)
+    use_font(FONT_SMALL)
+    draw_text(unit["id"] + " " + unit["kind"], 2, 0)
+    draw_text_right(str(status_page + 1) + "/2", 70, 0)
+    display.drawLine(0, 5, SCREEN_W - 1, 5, 1)
+    if status_page == 1:
+        draw_weapon_rows(unit["weapons"])
+        return
+    rows = (("HP", str(unit["hp"]) + "/" + str(unit["max_hp"])),
+            ("EN", str(unit["en"]) + "/" + str(unit["max_en"])),
+            ("MOB", str(unit["mobility"])),
+            ("ARM", str(unit["armor"])))
+    for index, (label, value) in enumerate(rows):
+        y = 8 + index * 7
+        draw_text(label, 2, y)
+        draw_text_right(value, 46, y)
+    # HP and EN bars beside their numbers.
+    for index, (now, top) in enumerate(((unit["hp"], unit["max_hp"]),
+                                        (unit["en"], unit["max_en"]))):
+        y = 9 + index * 7
+        display.drawRectangle(50, y, 20, 3, 1)
+        width = max(0, min(18, now * 18 // max(1, top)))
+        if width:
+            display.drawLine(51, y + 1, 50 + width, y + 1, 1)
+    draw_text("<> WEAPONS", 2, 35)
 
 
 def draw_map():
     display = thumby.display
+    if state == STATE_WEAPONS:
+        draw_weapon_menu()
+        return
+    if state == STATE_STATUS:
+        draw_status_screen(selected_unit)
+        return
     display.fill(0)
     update_camera()
-    movement_tiles = (reachable_tiles(selected_unit, units)
-                      if selected_unit is not None and state == STATE_MOVE else ())
+    movement_tiles = move_tiles if state == STATE_MOVE and move_tiles else ()
+    # One lookup table per frame instead of scanning every unit per tile.
+    occupied = {}
+    for unit in units:
+        if unit["hp"] > 0:
+            occupied[unit["y"] * MAP_WIDTH + unit["x"]] = unit
     # Keep the map full-screen while idle; details appear only after selection.
     for vy in range(VIEW_TILES_H):
         for vx in range(VIEW_TILES_W):
@@ -156,7 +234,7 @@ def draw_map():
                 if (abs(wx - selected_unit["x"]) + abs(wy - selected_unit["y"])
                         <= weapon_range):
                     display.setPixel(x + 1, y + 6, 1)
-            unit = unit_at(units, wx, wy)
+            unit = occupied.get(wy * MAP_WIDTH + wx)
             if unit is not None:
                 if unit["team"] == "enemy":
                     icon = ENEMY_ICON
@@ -172,48 +250,67 @@ def draw_map():
     cx = (cursor_x - camera_x) * TILE
     cy = (cursor_y - camera_y) * TILE
     display.drawRectangle(cx + 1, cy + 1, TILE - 2, TILE - 2, 1)
-    if state == STATE_WEAPONS:
-        draw_weapon_menu()
-        return
-    if state == STATE_STATUS:
-        draw_status_screen(selected_unit)
-        return
     if state == STATE_COMMAND:
-        # The command/status overlay is contextual and appears only after A.
-        overlay_x = 42
-        display.drawFilledRectangle(overlay_x, 0, SCREEN_W - overlay_x, SCREEN_H, 0)
-        display.drawRectangle(overlay_x, 0, SCREEN_W - overlay_x, SCREEN_H, 1)
-        draw_text(selected_unit["id"], overlay_x + 3, 1)
-        draw_text("H" + str(selected_unit["hp"]), overlay_x + 14, 1)
-        hp_width = max(0, min(25, selected_unit["hp"] * 25 // selected_unit["max_hp"]))
-        display.drawRectangle(overlay_x + 2, 7, 25, 4, 1)
-        if hp_width:
-            display.drawFilledRectangle(overlay_x + 3, 8, hp_width, 2, 1)
-        for index, command in enumerate(COMMANDS):
-            y = 9 + index * 7
-            label = COMMAND_LABELS[index]
-            if command == "MOVE" and (selected_unit["moved"] or selected_unit["move"] == 0):
-                label = "MOV-"
-            if command == "ATTACK" and selected_unit["acted"]:
-                label = "ATK-"
-            if index == menu_index:
-                display.drawFilledRectangle(overlay_x + 1, y - 1, 28, 7, 1)
-                draw_text(label, overlay_x + 3, y, 0)
-            else:
-                draw_text(label, overlay_x + 2, y, 1)
+        draw_command_overlay(display)
     elif state in (STATE_MOVE, STATE_TARGET):
-        draw_text("MOVE" if state == STATE_MOVE else "TARGET", 1, 1)
-        draw_text(message[:4], 1, 8)
-        draw_text("A:OK B:BK", 1, 34)
+        draw_mode_strip(display, cy)
+
+
+def draw_command_overlay(display):
+    # The command overlay is contextual and appears only after A.
+    use_font(FONT_BIG)
+    overlay_x = 41
+    display.drawFilledRectangle(overlay_x, 0, SCREEN_W - overlay_x, SCREEN_H, 0)
+    display.drawRectangle(overlay_x, 0, SCREEN_W - overlay_x, SCREEN_H, 1)
+    draw_text(selected_unit["id"], overlay_x + 3, 1)
+    hp_width = max(0, min(10, selected_unit["hp"] * 10 // selected_unit["max_hp"]))
+    display.drawRectangle(overlay_x + 17, 3, 12, 4, 1)
+    if hp_width:
+        display.drawFilledRectangle(overlay_x + 18, 4, hp_width, 2, 1)
+    # 8 px rows leave a 1 px gap between the 7 px tall labels.
+    for index, command in enumerate(COMMANDS):
+        y = 9 + index * 8
+        label = COMMAND_LABELS[index]
+        if command == "MOVE" and (selected_unit["moved"] or selected_unit["move"] == 0):
+            label = "MOV-"
+        if command == "ATTACK" and selected_unit["acted"]:
+            label = "ATK-"
+        if index == menu_index:
+            display.drawFilledRectangle(overlay_x + 1, y - 1, 29, 8, 1)
+            draw_text(label, overlay_x + 3, y, 0)
+        else:
+            draw_text(label, overlay_x + 3, y, 1)
+
+
+def draw_mode_strip(display, cursor_screen_y):
+    """MOVE/TARGET label on a black strip, kept away from the cursor row."""
+    use_font(FONT_SMALL)
+    y = 33 if cursor_screen_y < 16 else 0
+    display.drawFilledRectangle(0, y, SCREEN_W, 7, 0)
+    display.drawLine(0, y + 6 if y == 0 else y, SCREEN_W - 1,
+                     y + 6 if y == 0 else y, 1)
+    if state == STATE_MOVE:
+        label = "MOVE " + str(selected_unit["move"])
+    else:
+        weapon = selected_weapon or {"short": "ATK", "range": selected_unit["range"]}
+        label = weapon["short"] + " R" + str(weapon["range"])
+    text_y = y + 1 if y == 0 else y + 2
+    draw_text(label, 2, text_y)
+    # Short hints only, so they never run into the label.
+    hint = {"NO TARGET": "NO TGT", "OUT RANGE": "OUT RNG"}.get(message, "A:OK")
+    draw_text_right(hint, 70, text_y)
 
 
 def draw_title():
     display = thumby.display
     draw_hangar_background()
+    display.drawFilledRectangle(4, 5, 64, 29, 0)
     display.drawRectangle(3, 4, 66, 31, 1)
-    draw_text("SRPG-V1", 16, 9)
-    draw_text("MONO TACTICS", 8, 18)
-    draw_text("A:START", 20, 29)
+    use_font(FONT_BIG)
+    draw_text_center("SRPG-V1", 8)
+    use_font(FONT_SMALL)
+    draw_text_center("MONO TACTICS", 19)
+    draw_text_center("A:START", 27)
 
 
 def draw_battle_units(attacker, defender, impact=False):
@@ -278,38 +375,45 @@ def draw_battle_units(attacker, defender, impact=False):
             display.drawLine(max(20, shot_x - 5), 15, shot_x, 15, 0)
             display.drawFilledRectangle(shot_x, 14, 2, 2, 0)
 
+    use_font(FONT_SMALL)
     if impact:
         for x, y in ((47, 12), (50, 9), (53, 15), (48, 19), (56, 11), (58, 18)):
             display.setPixel(x, y, 0)
-        draw_text("-" + str(attack_damage), 52, 24, 0)
-    draw_text(attack_name(attacker), 3, 34, 0)
+        draw_text_right("-" + str(attack_damage), 70, 25, 0)
+    draw_text(attack_name(attacker), 2, 34, 0)
 
 
-def draw_battle_gauges(display, unit, label_x, bar_x, bar_width, energy_x):
-    """Show an HP bar and a compact numeric EN value for each fighter."""
+def draw_battle_gauges(display, unit, left, width):
+    """HP bar with its number, and a numeric EN value, for one fighter."""
     hp = max(0, min(unit["max_hp"], unit["hp"]))
     en = max(0, min(unit.get("max_en", 0), unit.get("en", 0)))
     max_hp = max(1, unit["max_hp"])
-    draw_text("HP", label_x, 4, 0)
-    display.drawRectangle(bar_x, 4, bar_width, 3, 0)
-    display.drawFilledRectangle(bar_x + 1, 5,
-                                hp * (bar_width - 2) // max_hp, 1, 0)
-    draw_text("EN" + str(en), energy_x, 8, 0)
+    draw_text("HP", left, 9, 0)
+    draw_text_right(str(hp), left + width - 1, 9, 0)
+    display.drawRectangle(left, 15, width, 4, 0)
+    fill = hp * (width - 2) // max_hp
+    if fill:
+        display.drawFilledRectangle(left + 1, 16, fill, 2, 0)
+    draw_text("EN", left, 22, 0)
+    draw_text_right(str(en), left + width - 1, 22, 0)
 
 
 def draw_combat_status(attacker, defender, result=False):
     """Show status before combat and updated HP/EN after the attack."""
     display = thumby.display
     display.fill(1)
-    display.drawLine(0, 12, 71, 12, 0)
+    use_font(FONT_SMALL)
+    draw_text(attacker["id"], 2, 1, 0)
+    draw_text_right(defender["id"], 70, 1, 0)
+    draw_text_center("VS", 1, 0)
+    display.drawLine(0, 7, 71, 7, 0)
+    display.drawLine(35, 8, 35, 31, 0)
+    draw_battle_gauges(display, attacker, 2, 31)
+    draw_battle_gauges(display, defender, 39, 31)
     display.drawLine(0, 32, 71, 32, 0)
-    draw_text(attacker["id"], 1, 0, 0)
-    draw_text(defender["id"], 60, 0, 0)
-    draw_battle_gauges(display, attacker, 1, 10, 25, 1)
-    draw_battle_gauges(display, defender, 36, 45, 26, 52)
-    draw_text(attack_name(attacker), 3, 34, 0)
+    draw_text(attack_name(attacker), 2, 34, 0)
     if result:
-        draw_text("-" + str(attack_damage), 52, 34, 0)
+        draw_text_right("-" + str(attack_damage), 70, 34, 0)
 
 
 def draw_combat_mech(display, unit, x, y, facing=1, pose="idle", weapon=None):
@@ -395,8 +499,9 @@ def draw_cut_in(attacker):
     display.blit(frame, 0, 0, 72, 40, -1, 0, 0)
     display.drawFilledRectangle(0, 32, 72, 8, 0)
     display.drawLine(0, 32, 71, 32, 1)
-    draw_text(name, 3, 34)
-    draw_text("B", 67, 34)
+    use_font(FONT_SMALL)
+    draw_text(name, 2, 34)
+    draw_text_right("B:SKIP", 70, 34)
 
 
 def start_attack(weapon):
@@ -534,6 +639,7 @@ def handle_map_input():
 
 def handle_command_input():
     global menu_index, state, message, cursor_x, cursor_y, selected_unit, weapon_index
+    global move_tiles, status_page
     if thumby.buttonU.justPressed():
         menu_index = (menu_index - 1) % len(COMMANDS)
     elif thumby.buttonD.justPressed():
@@ -545,12 +651,15 @@ def handle_command_input():
         command = COMMANDS[menu_index]
         if command == "MOVE" and selected_unit["move"] > 0 and not selected_unit["moved"]:
             cursor_x, cursor_y = selected_unit["x"], selected_unit["y"]
+            # Computed once; nothing else moves while the player picks a tile.
+            move_tiles = reachable_tiles(selected_unit, units)
             state = STATE_MOVE
-            message = "RANGE " + str(selected_unit["move"])
+            message = "A:OK"
         elif command == "ATTACK" and not selected_unit["acted"]:
             weapon_index = 0
             state = STATE_WEAPONS
         elif command == "STATUS":
+            status_page = 0
             state = STATE_STATUS
         elif command == "END":
             selected_unit["acted"] = True
@@ -563,19 +672,21 @@ def handle_command_input():
 
 
 def handle_move_input():
-    global state, message
+    global state, message, move_tiles
     if thumby.buttonU.justPressed(): move_cursor(0, -1)
     elif thumby.buttonD.justPressed(): move_cursor(0, 1)
     elif thumby.buttonL.justPressed(): move_cursor(-1, 0)
     elif thumby.buttonR.justPressed(): move_cursor(1, 0)
     if thumby.buttonB.justPressed():
+        move_tiles = None
         state = STATE_COMMAND
         return
     if thumby.buttonA.justPressed():
-        reached = reachable_tiles(selected_unit, units)
+        reached = move_tiles or reachable_tiles(selected_unit, units)
         if (cursor_x, cursor_y) in reached and (cursor_x, cursor_y) != (selected_unit["x"], selected_unit["y"]):
             selected_unit["x"], selected_unit["y"] = cursor_x, cursor_y
             selected_unit["moved"] = True
+            move_tiles = None
             state = STATE_COMMAND
             message = "MOVED"
 
@@ -592,7 +703,7 @@ def handle_weapon_input():
     elif thumby.buttonA.justPressed():
         selected_weapon = weapons[weapon_index]
         cursor_x, cursor_y = selected_unit["x"], selected_unit["y"]
-        message = selected_weapon["short"]
+        message = "A:OK"
         move_cursor(1, 0)
         state = STATE_TARGET
 
@@ -611,11 +722,19 @@ def handle_target_input():
 
 
 def update():
-    global state, mission_index, cursor_x, cursor_y, base_hp
+    global state, mission_index, cursor_x, cursor_y, base_hp, status_page
     global attack_phase, attack_timer, attack_damage
     if state == STATE_TITLE:
         if thumby.buttonA.justPressed():
-            state = STATE_MAP
+            # Holding B while pressing A runs the device benchmark instead.
+            if thumby.buttonB.pressed():
+                run_benchmark()
+                state = STATE_BENCH
+            else:
+                state = STATE_MAP
+    elif state == STATE_BENCH:
+        if thumby.buttonA.justPressed() or thumby.buttonB.justPressed():
+            state = STATE_TITLE
     elif state == STATE_MAP:
         handle_map_input()
     elif state == STATE_COMMAND:
@@ -623,7 +742,9 @@ def update():
     elif state == STATE_WEAPONS:
         handle_weapon_input()
     elif state == STATE_STATUS:
-        if thumby.buttonA.justPressed() or thumby.buttonB.justPressed():
+        if thumby.buttonL.justPressed() or thumby.buttonR.justPressed():
+            status_page = 1 - status_page
+        elif thumby.buttonA.justPressed() or thumby.buttonB.justPressed():
             state = STATE_COMMAND
     elif state == STATE_MOVE:
         handle_move_input()
@@ -656,22 +777,159 @@ def update():
         state = STATE_MAP
 
 
-def render():
+def draw_result_screen(line1, line2, prompt):
+    thumby.display.fill(0)
+    use_font(FONT_BIG)
+    draw_text_center(line1, 6)
+    draw_text_center(line2, 15)
+    use_font(FONT_SMALL)
+    draw_text_center(prompt, 30)
+
+
+def draw_frame(force=False):
+    """Draw the current state into the buffer without showing it."""
+    global last_static
+    if state in STATIC_STATES:
+        if state == last_static and not force:
+            return
+        last_static = state
+    else:
+        last_static = None
     if state == STATE_TITLE:
         draw_title()
-    elif state in (STATE_ATTACK,):
+    elif state == STATE_ATTACK:
         draw_attack()
     elif state == STATE_VICTORY:
-        thumby.display.fill(0)
-        draw_text("MISSION CLEAR", 2, 8)
-        draw_text("A:REPLAY", 11, 22)
+        draw_result_screen("MISSION", "CLEAR", "A:REPLAY")
     elif state == STATE_DEFEAT:
-        thumby.display.fill(0)
-        draw_text("MISSION FAILED", 1, 8)
-        draw_text("A:RETRY", 17, 22)
+        draw_result_screen("MISSION", "FAILED", "A:RETRY")
+    elif state == STATE_BENCH:
+        draw_bench()
     else:
         draw_map()
+
+
+def render():
+    draw_frame()
     thumby.display.update()
+
+
+def ticks_us():
+    if hasattr(time, "ticks_us"):
+        return time.ticks_us()
+    return int(time.perf_counter() * 1000000)
+
+
+def ticks_diff(a, b):
+    if hasattr(time, "ticks_diff"):
+        return time.ticks_diff(a, b)
+    return a - b
+
+
+def bench_scene(name, setup, frames=12):
+    """Average/max draw time in 0.1 ms for one representative scene."""
+    total = 0
+    worst = 0
+    for frame in range(frames):
+        setup(frame)
+        start = ticks_us()
+        draw_frame()
+        spent = ticks_diff(ticks_us(), start)
+        total += spent
+        worst = max(worst, spent)
+    return (name, total // frames // 100, worst // 100)
+
+
+def run_benchmark():
+    """Time drawing of the heaviest screens on a fresh M1 board.
+
+    Measures CPU drawing only; the SPI transfer and frame pacing in
+    display.update() are timed separately with pacing disabled.
+    """
+    global state, selected_unit, cursor_x, cursor_y, move_tiles
+    global selected_weapon, attack_target, attack_weapon, attack_is_special
+    global attack_phase, attack_timer, attack_damage, weapon_index, bench_results
+    global menu_index
+    gc.collect()
+    free_before = gc.mem_free() if hasattr(gc, "mem_free") else -1
+    unit = units[1]
+    enemy = alive_units(units, "enemy")[0]
+    results = []
+
+    def map_idle(frame):
+        global state, cursor_x, cursor_y
+        state = STATE_MAP
+        cursor_x, cursor_y = frame % MAP_WIDTH, frame % MAP_HEIGHT
+
+    def map_move(frame):
+        global state, selected_unit, move_tiles, cursor_x, cursor_y
+        state = STATE_MOVE
+        selected_unit = unit
+        move_tiles = reachable_tiles(unit, units)
+        cursor_x, cursor_y = unit["x"], unit["y"]
+
+    def menu(frame):
+        global state, selected_unit, menu_index
+        state = STATE_COMMAND
+        selected_unit = unit
+        menu_index = frame % len(COMMANDS)
+
+    def battle(frame):
+        global state, selected_unit, attack_target, attack_weapon
+        global attack_is_special, attack_phase, attack_timer, attack_damage
+        state = STATE_ATTACK
+        selected_unit = unit
+        attack_target = enemy
+        attack_weapon = unit["weapons"][frame % 2]
+        attack_is_special = False
+        attack_phase = 2 + (frame // 8) % 2
+        attack_timer = frame % 8
+        attack_damage = 10
+
+    def cut_in(frame):
+        global state, attack_phase, attack_weapon
+        battle(frame)
+        attack_weapon = unit["weapons"][-1]
+        attack_phase = 1
+
+    results.append(bench_scene("MAP", map_idle))
+    results.append(bench_scene("MOVE", map_move))
+    results.append(bench_scene("MENU", menu))
+    results.append(bench_scene("FIGHT", battle, 16))
+    results.append(bench_scene("CUTIN", cut_in))
+    # Push one frame with pacing off to time the display transfer itself.
+    try:
+        thumby.display.setFPS(0)
+        start = ticks_us()
+        thumby.display.update()
+        show = ticks_diff(ticks_us(), start) // 100
+    finally:
+        thumby.display.setFPS(FPS)
+    gc.collect()
+    free_after = gc.mem_free() if hasattr(gc, "mem_free") else -1
+    selected_unit = None
+    move_tiles = None
+    attack_target = None
+    attack_weapon = None
+    bench_results = (results, show, free_before, free_after)
+
+
+def fmt_ms(tenths):
+    return str(tenths // 10) + "." + str(tenths % 10)
+
+
+def draw_bench():
+    thumby.display.fill(0)
+    use_font(FONT_SMALL)
+    results, show, free_before, free_after = bench_results
+    draw_text("DRAW MS AVG/MAX", 0, 0)
+    for index, (name, average, worst) in enumerate(results):
+        y = 6 + index * 6
+        draw_text(name, 0, y)
+        draw_text_right(fmt_ms(average) + "/" + fmt_ms(worst), 71, y)
+    draw_text("SHOW " + fmt_ms(show), 0, 35)
+    free_k = str(free_after // 1024) + "K" if free_after >= 0 else "?"
+    draw_text_right("FREE " + free_k, 71, 35)
 
 
 def main():
@@ -681,5 +939,7 @@ def main():
         render()
 
 
-if __name__ == "__main__":
+# The Thumby launcher may import the game instead of running it as
+# __main__, so also start on MicroPython (same pattern as ThumbyBrawlBase).
+if __name__ == "__main__" or sys.implementation.name == "micropython":
     main()

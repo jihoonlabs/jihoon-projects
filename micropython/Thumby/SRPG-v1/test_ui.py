@@ -9,14 +9,31 @@ from rules import create_units
 class FakeDisplay:
     def __init__(self):
         self.text = []
+        self.placed = []
         self.rectangles = []
         self.pixels = []
+        # Thumby starts with the 5x7 font and 1 px spacing.
+        self.font = (5, 7, 1)
+        self.font_calls = 0
 
     def fill(self, _color):
         self.text = []
+        self.placed = []
+
+    def setFont(self, _path, width, height, space):
+        self.font = (width, height, space)
+        self.font_calls += 1
 
     def drawText(self, text, x, y, _color=1):
         self.text.append((str(text), x, y))
+        # Keep the font each string was drawn with for layout checks.
+        self.placed.append((str(text), x, y, self.font))
+
+    def update(self):
+        pass
+
+    def blit(self, *_args):
+        pass
 
     def drawFilledRectangle(self, *_args):
         pass
@@ -37,9 +54,13 @@ class FakeDisplay:
 class FakeButton:
     def __init__(self):
         self.edge = False
+        self.down = False
 
     def justPressed(self):
         return self.edge
+
+    def pressed(self):
+        return self.down or self.edge
 
 
 fake_display = FakeDisplay()
@@ -49,6 +70,23 @@ for button_name in ("U", "D", "L", "R", "A", "B"):
     setattr(fake_thumby, "button" + button_name, FakeButton())
 sys.modules["thumby"] = fake_thumby
 game = importlib.import_module("ThumbySRPG")
+
+
+def assert_text_fits(test, where):
+    """Every string drawn since the last fill stays on the 72x40 screen and
+    no two strings overlap, using the font each one was drawn with."""
+    boxes = []
+    for text, x, y, (width, height, space) in fake_display.placed:
+        right = x + len(text) * (width + space) - space
+        test.assertGreaterEqual(x, 0, (where, text))
+        test.assertGreaterEqual(y, 0, (where, text))
+        test.assertLessEqual(right, 72, (where, text))
+        test.assertLessEqual(y + height, 40, (where, text))
+        boxes.append((x, y, right, y + height, text))
+    for index, a in enumerate(boxes):
+        for b in boxes[index + 1:]:
+            apart = a[2] <= b[0] or b[2] <= a[0] or a[3] <= b[1] or b[3] <= a[1]
+            test.assertTrue(apart, (where, a[4], b[4]))
 
 
 class SRPGMenuTests(unittest.TestCase):
@@ -67,19 +105,30 @@ class SRPGMenuTests(unittest.TestCase):
             game.draw_weapon_menu()
             weapon_rows = [row for row in fake_display.text
                            if row[1] == 2 and row[2] >= 6]
-            self.assertEqual(len(weapon_rows), len(unit["weapons"]))
-            self.assertTrue(all(x + len(text) * 6 <= 72
-                                for text, x, _y in weapon_rows))
+            self.assertEqual([row[0] for row in weapon_rows],
+                             [weapon["name"] for weapon in unit["weapons"]])
+            assert_text_fits(self, "weapons " + unit["id"])
 
     def test_status_screen_contains_only_the_compact_core_stats(self):
         unit = create_units()[0]
-        fake_display.text = []
+        game.status_page = 0
+        fake_display.fill(0)
         game.draw_status_screen(unit)
         shown = {text for text, _x, _y in fake_display.text}
-        self.assertEqual(shown, {"RV REAL", "HP 50/50", "EN 30/30",
-                                 "ARM 5", "MOB 24", "MOVE 3", "B:BK"})
-        self.assertTrue(all(x + len(text) * 6 <= 72
-                            for text, x, _y in fake_display.text))
+        # Agreed vocabulary: HP, EN, MOB, ARM and weapons; no movement row.
+        self.assertEqual(shown, {"RV REAL", "1/2", "HP", "50/50", "EN",
+                                 "30/30", "MOB", "24", "ARM", "5",
+                                 "<> WEAPONS"})
+        assert_text_fits(self, "status page 1")
+        game.status_page = 1
+        fake_display.fill(0)
+        game.draw_status_screen(unit)
+        shown = [text for text, _x, _y in fake_display.text]
+        for weapon in unit["weapons"]:
+            self.assertIn(weapon["name"], shown)
+            self.assertIn("R" + str(weapon["range"]), shown)
+        assert_text_fits(self, "status page 2")
+        game.status_page = 0
 
     def test_weapon_selection_uses_selected_range_and_power_in_combat(self):
         game.units = create_units()
@@ -189,9 +238,10 @@ class SRPGMenuTests(unittest.TestCase):
         game.draw_combat_status(units[0], units[-1])
         labels = [text for text, _x, _y in fake_display.text]
         self.assertEqual(labels.count("HP"), 2)
-        self.assertIn("EN30", labels)
-        self.assertIn("EN20", labels)
-        hp_bars = [r for r in fake_display.rectangles if r[3:4] == (3,)]
+        self.assertEqual(labels.count("EN"), 2)
+        self.assertIn("30", labels)
+        self.assertIn("20", labels)
+        hp_bars = [r for r in fake_display.rectangles if r[3:4] == (4,)]
         self.assertEqual(len(hp_bars), 2)
 
         fake_display.text = []
@@ -254,8 +304,145 @@ class SRPGMenuTests(unittest.TestCase):
         fake_display.text = []
         game.draw_map()
         labels = {text for text, _x, _y in fake_display.text}
-        self.assertTrue({"RV", "H50", "MOVE", "ATK", "STAT", "END"}.issubset(labels))
-        self.assertNotIn("EN30", labels)
+        self.assertTrue({"RV", "MOVE", "ATK", "STAT", "END"}.issubset(labels))
+        # EN belongs to STATUS, not the command overlay ("END" is a command).
+        self.assertFalse(any(label.startswith("EN") and label != "END"
+                             for label in labels))
+        assert_text_fits(self, "command overlay")
+
+
+
+class SRPGLayoutTests(unittest.TestCase):
+    """72x40 readability with real Thumby font metrics (5x7 and 3x5)."""
+
+    def setUp(self):
+        game.units = create_units()
+        game.selected_unit = None
+        game.selected_weapon = None
+        game.move_tiles = None
+        game.message = "A:OK"
+
+    def render(self, where):
+        fake_display.fill(0)
+        game.draw_frame(force=True)
+        assert_text_fits(self, where)
+        return [text for text, _x, _y in fake_display.text]
+
+    def test_every_screen_fits_for_every_unit(self):
+        for state in (game.STATE_TITLE, game.STATE_MAP, game.STATE_VICTORY,
+                      game.STATE_DEFEAT):
+            game.state = state
+            self.render("state %d" % state)
+        enemy = game.units[-1]
+        for unit in game.units[:7]:
+            game.selected_unit = unit
+            game.cursor_x, game.cursor_y = unit["x"], unit["y"]
+            for state in (game.STATE_COMMAND, game.STATE_WEAPONS,
+                          game.STATE_STATUS, game.STATE_MOVE,
+                          game.STATE_TARGET):
+                game.state = state
+                game.selected_weapon = unit["weapons"][-1]
+                for message in ("A:OK", "NO TARGET", "OUT RANGE"):
+                    game.message = message
+                    self.render("%s state %d" % (unit["id"], state))
+            game.state = game.STATE_ATTACK
+            game.attack_target = enemy
+            game.attack_damage = 99
+            for weapon in unit["weapons"]:
+                game.attack_weapon = weapon
+                for phase in range(5):
+                    game.attack_phase = phase
+                    game.attack_timer = 3
+                    self.render("%s %s phase %d" % (unit["id"], weapon["name"], phase))
+
+    def test_font_is_loaded_only_when_it_changes(self):
+        game.state = game.STATE_TITLE
+        game.draw_frame()
+        # The title mixes two fonts, so it is drawn once and then kept.
+        calls = fake_display.font_calls
+        fake_display.text = []
+        for _ in range(5):
+            game.draw_frame()
+        self.assertEqual((fake_display.font_calls, fake_display.text), (calls, []))
+        game.state = game.STATE_WEAPONS
+        game.selected_unit = game.units[1]
+        game.draw_frame()
+        calls = fake_display.font_calls
+        for _ in range(5):
+            game.draw_frame()
+        self.assertEqual(fake_display.font_calls, calls)
+
+    def test_move_range_is_cached_while_choosing_a_tile(self):
+        unit = game.units[1]
+        game.selected_unit = unit
+        game.menu_index = 0
+        game.state = game.STATE_COMMAND
+        SRPGMenuTests.press(self, "A", game.handle_command_input)
+        self.assertEqual(game.state, game.STATE_MOVE)
+        self.assertEqual(game.move_tiles, game.reachable_tiles(unit, game.units))
+        cached = game.move_tiles
+        game.draw_frame()
+        self.assertIs(game.move_tiles, cached)
+        SRPGMenuTests.press(self, "B", game.handle_move_input)
+        self.assertIsNone(game.move_tiles)
+        SRPGMenuTests.press(self, "A", game.handle_command_input)
+        game.cursor_x += 1
+        SRPGMenuTests.press(self, "A", game.handle_move_input)
+        self.assertEqual((unit["x"], game.state), (game.cursor_x, game.STATE_COMMAND))
+        self.assertIsNone(game.move_tiles)
+
+    def test_status_pages_switch_with_left_and_right(self):
+        game.selected_unit = game.units[0]
+        game.menu_index = 2
+        game.state = game.STATE_COMMAND
+        game.status_page = 1
+        SRPGMenuTests.press(self, "A", game.handle_command_input)
+        self.assertEqual((game.state, game.status_page), (game.STATE_STATUS, 0))
+        SRPGMenuTests.press(self, "R", game.update)
+        self.assertEqual(game.status_page, 1)
+        SRPGMenuTests.press(self, "L", game.update)
+        self.assertEqual(game.status_page, 0)
+        SRPGMenuTests.press(self, "A", game.update)
+        self.assertEqual(game.state, game.STATE_COMMAND)
+
+    def test_mode_strip_avoids_the_cursor_row(self):
+        unit = game.units[1]
+        game.selected_unit = unit
+        game.move_tiles = game.reachable_tiles(unit, game.units)
+        game.state = game.STATE_MOVE
+        game.cursor_x, game.cursor_y = 1, 0
+        self.render("strip top cursor")
+        label_y = [y for text, _x, y in fake_display.text if text.startswith("MOVE")]
+        self.assertGreaterEqual(label_y[0], 33)
+        game.cursor_y = 9
+        self.render("strip bottom cursor")
+        label_y = [y for text, _x, y in fake_display.text if text.startswith("MOVE")]
+        self.assertLess(label_y[0], 6)
+
+    def test_benchmark_runs_from_title_and_restores_the_board(self):
+        before = [(u["id"], u["x"], u["y"], u["hp"]) for u in game.units]
+        game.state = game.STATE_TITLE
+        fake_thumby.buttonB.down = True
+        try:
+            SRPGMenuTests.press(self, "A", game.update)
+        finally:
+            fake_thumby.buttonB.down = False
+        self.assertEqual(game.state, game.STATE_BENCH)
+        results, _show, _free_before, _free_after = game.bench_results
+        self.assertEqual([r[0] for r in results],
+                         ["MAP", "MOVE", "MENU", "FIGHT", "CUTIN"])
+        self.assertTrue(all(r[1] >= 0 and r[2] >= r[1] for r in results))
+        self.assertEqual([(u["id"], u["x"], u["y"], u["hp"]) for u in game.units],
+                         before)
+        self.assertIsNone(game.selected_unit)
+        self.render("bench")
+        SRPGMenuTests.press(self, "B", game.update)
+        self.assertEqual(game.state, game.STATE_TITLE)
+
+    def test_plain_a_on_title_starts_the_map(self):
+        game.state = game.STATE_TITLE
+        SRPGMenuTests.press(self, "A", game.update)
+        self.assertEqual(game.state, game.STATE_MAP)
 
 
 if __name__ == "__main__":
