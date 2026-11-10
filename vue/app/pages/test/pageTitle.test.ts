@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { signInAs, signedOut } from '~/test/auth/signInAs';
 import { attendanceApi } from '~/test/mocks/attendance/attendanceApiHandlers';
 import { overrideApi } from '~/test/mocks/overrideApi';
-import { renderRoute } from '~/test/renderRoute';
+import { expectPath, renderRoute } from '~/test/renderRoute';
 
 const expectTabTitle = async (title: string) => {
   await waitFor(() => {
@@ -49,11 +49,15 @@ describe('タブの画面名', () => {
 
   it('別の画面へ移ると、移った先の画面名に変わること', async () => {
     signedOut();
-    const { user } = await renderRoute('/login');
+    const { router } = await renderRoute('/login');
     await expectTabTitle('ログイン | タスク管理');
 
-    await user.click(screen.getByRole('link', { name: '新規会員登録へ' }));
+    await router.push('/register');
 
+    await expectPath('/register');
+    expect(
+      await screen.findByRole('heading', { name: '会員登録' }),
+    ).toBeInTheDocument();
     await expectTabTitle('会員登録 | タスク管理');
   });
 });
