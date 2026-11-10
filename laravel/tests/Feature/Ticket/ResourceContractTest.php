@@ -20,15 +20,7 @@ class ResourceContractTest extends TestCase
         $project = $this->addToGeneralProject($user);
         $ticket = Ticket::factory()->create(['assignee_id' => $user->id]);
 
-        $responses = [
-            [$this->getJson('/api/tickets')->assertOk(), 'data.0'],
-            [$this->getJson('/api/tickets/'.$ticket->id)->assertOk(), 'data'],
-            [$this->patchJson('/api/tickets/'.$ticket->id, ['status' => 'DONE'])->assertOk(), 'data'],
-            [$this->postJson('/api/tickets', ['project_id' => $project->id, 'title' => 'Assigned', 'assignee_id' => $user->id])->assertCreated(), 'data'],
-        ];
-
-        foreach ($responses as [$response, $path]) {
-            $data = $response->json($path);
+        $assertTicketContract = function ($data) use ($user): void {
             $this->assertEqualsCanonicalizing([
                 'id', 'project_id', 'issue_key', 'title', 'description', 'status', 'priority',
                 'position', 'version', 'assignee', 'created_at', 'updated_at',
@@ -43,7 +35,19 @@ class ResourceContractTest extends TestCase
             $this->assertSame($user->name, $data['assignee']['name']);
             $this->assertEqualsCanonicalizing(['id', 'name', 'avatar_url'], array_keys($data['assignee']));
             $this->assertNull($data['assignee']['avatar_url']);
-        }
+        };
+
+        $listResponse = $this->getJson('/api/tickets')->assertOk();
+        $assertTicketContract($listResponse->json('data.0'));
+
+        $detailResponse = $this->getJson('/api/tickets/'.$ticket->id)->assertOk();
+        $assertTicketContract($detailResponse->json('data'));
+
+        $updateResponse = $this->patchJson('/api/tickets/'.$ticket->id, ['status' => 'DONE'])->assertOk();
+        $assertTicketContract($updateResponse->json('data'));
+
+        $createResponse = $this->postJson('/api/tickets', ['project_id' => $project->id, 'title' => 'Assigned', 'assignee_id' => $user->id])->assertCreated();
+        $assertTicketContract($createResponse->json('data'));
     }
 
     public function test_nullable_values_remain_null(): void

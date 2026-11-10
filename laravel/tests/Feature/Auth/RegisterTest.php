@@ -114,14 +114,15 @@ class RegisterTest extends TestCase
      */
     public function test_register_is_rate_limited(): void
     {
-        for ($i = 0; $i < 3; $i++) {
-            $this->postJson('/api/auth/register', [
-                'name' => 'test',
-                'email' => "test{$i}@example.com",
-                'password' => '1234567',
-                'password_confirmation' => '1234567',
-            ])->assertStatus(422);
-        }
+        $this->postJson('/api/auth/register', [
+            'name' => 'test', 'email' => 'test0@example.com', 'password' => '1234567', 'password_confirmation' => '1234567',
+        ])->assertStatus(422);
+        $this->postJson('/api/auth/register', [
+            'name' => 'test', 'email' => 'test1@example.com', 'password' => '1234567', 'password_confirmation' => '1234567',
+        ])->assertStatus(422);
+        $this->postJson('/api/auth/register', [
+            'name' => 'test', 'email' => 'test2@example.com', 'password' => '1234567', 'password_confirmation' => '1234567',
+        ])->assertStatus(422);
 
         $this->postJson('/api/auth/register', [
             'name' => 'test',
