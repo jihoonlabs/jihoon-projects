@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import DemoNotice from '~/features/auth/components/DemoNotice/DemoNotice.vue';
 import LoginForm from '~/features/auth/components/LoginForm/LoginForm.vue';
+import { pageTitle } from '~/shared/utils/pageTitle';
 
 definePageMeta({ layout: 'auth', middleware: 'guest' });
+useHead({ title: pageTitle('ログイン') });
 </script>
 
 <template>

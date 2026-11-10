@@ -1,4 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { APP_NAME } from './app/shared/utils/pageTitle';
+
 export default defineNuxtConfig({
   compatibilityDate: '2026-11-01',
 
@@ -17,7 +19,8 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: 'ja' },
-      title: 'タスク管理',
+      // 画面ごとの名前は各ページで pageTitle() から付ける
+      title: APP_NAME,
       meta: [{ name: 'description', content: 'チケット管理アプリケーション' }],
     },
   },
