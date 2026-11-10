@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import AuthCard from '~/features/auth/components/AuthCard/AuthCard.vue';
-import type { SocialProvider } from '~/features/auth/types/auth';
-import { socialLoginUrl } from '~/features/auth/utils/navigation';
 import FormMessage from '~/shared/components/FormMessage/FormMessage.vue';
 import TextInput from '~/shared/components/TextInput/TextInput.vue';
+
+import AuthCard from '../AuthCard/AuthCard.vue';
+import type { SocialProvider } from '../../types/auth';
+import { socialLoginUrl } from '../../utils/navigation';
 
 const {
   name,
