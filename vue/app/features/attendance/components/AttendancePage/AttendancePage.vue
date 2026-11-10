@@ -1,11 +1,8 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
-
-import HistoryTable from '~/features/attendance/components/HistoryTable/HistoryTable.vue';
-import TodayPanel from '~/features/attendance/components/TodayPanel/TodayPanel.vue';
+import HistoryTable from '../HistoryTable/HistoryTable.vue';
+import TodayPanel from '../TodayPanel/TodayPanel.vue';
 
 const demoMode = useRuntimeConfig().public.demoMode === true;
-const attendance = useAttendance();
 const {
   today,
   history,
@@ -16,11 +13,7 @@ const {
   actionsDisabled,
   changePage,
   clock,
-} = attendance;
-
-onMounted(() => {
-  void attendance.start();
-});
+} = useAttendance();
 </script>
 
 <template>

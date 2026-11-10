@@ -1,4 +1,4 @@
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 import { useAuthStore } from '~/features/auth/store/useAuthStore';
 import { isAbortError } from '~/shared/api/isAbortError';
@@ -15,7 +15,7 @@ import type {
 } from '../types/attendance';
 
 /**
- * 今日の勤怠と自分の勤怠記録を読み込み、出勤・退勤を記録する。
+ * 画面を開いたときに今日の勤怠と自分の勤怠記録を読み込み、出勤・退勤を記録する。
  * - 新しい読み込みを始めたら前の読み込みを中断し、遅れて届いた古い応答で表示を上書きしない。
  * - セッション期限切れの間は勤怠のエラーを出さず、レイアウトの再ログインに任せる。
  */
@@ -118,6 +118,10 @@ export function useAttendance() {
     },
   );
 
+  // 画面を開いたら読み込み、閉じたら読み込み中の通信を中断する
+  onMounted(() => {
+    void loadAndShowErrors(page.value);
+  });
   onBeforeUnmount(() => loadController?.abort());
 
   const actionsDisabled = computed(
@@ -132,7 +136,6 @@ export function useAttendance() {
     submitting,
     error,
     actionsDisabled,
-    start: () => loadAndShowErrors(page.value),
     changePage,
     clock,
   };
