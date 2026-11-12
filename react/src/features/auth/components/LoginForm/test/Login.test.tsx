@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import type { User } from '@/features/users/types/user';
@@ -30,6 +30,14 @@ const mockUser: User = {
   createdAt: '2026-09-17T00:00:00.000Z',
 };
 
+beforeEach(() => {
+  vi.stubEnv('NEXT_PUBLIC_DEMO_MODE', 'false');
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe('LoginForm ログイン処理', () => {
   beforeEach(() => {
     replaceMock.mockReset();
@@ -41,7 +49,7 @@ describe('LoginForm ログイン処理', () => {
     });
   });
 
-  it('ログイン成功後、ユーザー情報を保存してチケット一覧へ遷移すること', async () => {
+  it('通常モードのログイン成功後、ユーザー情報を保存して勤怠画面へ遷移すること', async () => {
     const user = userEvent.setup();
 
     server.use(
@@ -71,6 +79,27 @@ describe('LoginForm ログイン処理', () => {
       expect(replaceMock).toHaveBeenCalledWith('/attendance');
     });
 
+    expect(useAuthStore.getState().user).toEqual(mockUser);
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+  });
+
+  it('公開デモのログイン成功後、ユーザー情報を保存してチケット一覧へ遷移すること', async () => {
+    vi.stubEnv('NEXT_PUBLIC_DEMO_MODE', 'true');
+    const user = userEvent.setup();
+
+    server.use(
+      http.post(`${API_URL}/api/auth/login`, () =>
+        HttpResponse.json({ message: 'ログインしました。', user: mockUser }),
+      ),
+    );
+
+    render(<LoginForm />);
+    await user.click(screen.getByRole('button', { name: 'ログイン' }));
+
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith('/tickets');
+    });
+    expect(replaceMock).not.toHaveBeenCalledWith('/attendance');
     expect(useAuthStore.getState().user).toEqual(mockUser);
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
   });
