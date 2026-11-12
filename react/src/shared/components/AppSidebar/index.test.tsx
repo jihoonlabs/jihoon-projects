@@ -8,7 +8,7 @@ vi.mock('next/navigation', () => ({ usePathname: pathname }));
 
 beforeEach(() => pathname.mockReturnValue('/attendance'));
 
-it('shows implemented modules and marks the current page', () => {
+it('出退勤とチケットのリンクを表示し、現在のページを示す', () => {
   render(<AppSidebar />);
 
   expect(
@@ -31,7 +31,7 @@ it('shows implemented modules and marks the current page', () => {
   );
 });
 
-it('marks ticket subpages as active', () => {
+it('チケット配下のページでもチケットのリンクを選択中として示す', () => {
   pathname.mockReturnValue('/tickets/project-1');
   render(<AppSidebar />);
 

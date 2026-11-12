@@ -36,7 +36,7 @@ beforeEach(() => {
   });
 });
 
-it('enables only clock-in before work, then only clock-out after recording it', async () => {
+it('出勤前は出勤ボタンのみ、出勤後は退勤ボタンのみ有効にする', async () => {
   vi.mocked(api.fetchAttendanceToday)
     .mockResolvedValueOnce({
       date: '2026-10-20',
@@ -64,7 +64,7 @@ it('enables only clock-in before work, then only clock-out after recording it', 
   expect(api.clockIn).toHaveBeenCalledOnce();
 });
 
-it('disables both buttons after checkout and displays elapsed duration', async () => {
+it('退勤済みなら両方のボタンを無効にして勤務時間を表示する', async () => {
   vi.mocked(api.fetchAttendanceToday).mockResolvedValue({
     date: '2026-10-20',
     timezone: 'Asia/Tokyo',
@@ -94,7 +94,7 @@ it('disables both buttons after checkout and displays elapsed duration', async (
   expect(screen.getByText('1時間31分')).toBeInTheDocument();
 });
 
-it('keeps the original work date visible while an overnight shift is active', async () => {
+it('勤務が日付をまたいでも出勤した日を勤務日として表示する', async () => {
   vi.mocked(api.fetchAttendanceToday).mockResolvedValue({
     date: '2026-10-21',
     timezone: 'Asia/Tokyo',
@@ -115,7 +115,7 @@ it('keeps the original work date visible while an overnight shift is active', as
   expect(screen.getByRole('button', { name: '退勤' })).toBeEnabled();
 });
 
-it('does not display internal error details from the attendance API', async () => {
+it('勤怠 API の内部エラーの詳細を画面に表示しない', async () => {
   vi.mocked(api.fetchAttendanceToday).mockRejectedValue(
     new Error('SQLSTATE[HY000] /Users/example/app/database/database.sqlite'),
   );

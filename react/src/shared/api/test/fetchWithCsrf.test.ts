@@ -4,7 +4,7 @@ import { fetchWithCsrf } from '../fetchWithCsrf';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
-describe('fetchWithCsrf', () => {
+describe('fetchWithCsrf による CSRF トークン付きリクエスト', () => {
   afterEach(() => {
     document.cookie = 'XSRF-TOKEN=; Max-Age=0; path=/';
     vi.unstubAllGlobals();

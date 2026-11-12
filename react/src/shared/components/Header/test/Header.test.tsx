@@ -26,13 +26,13 @@ beforeEach(() => {
   });
 });
 
-it('shows workspace identity and user role', () => {
+it('ワークスペース名と管理者ロールを表示する', () => {
   render(<Header />);
   expect(screen.getByText('WORKSPACE')).toBeInTheDocument();
   expect(screen.getByText(/管理者/)).toBeInTheDocument();
 });
 
-it('waits for server logout before clearing the session and blocks duplicate requests', async () => {
+it('ログアウト完了までセッションを維持し、リクエストの重複送信を防ぐ', async () => {
   let complete!: () => void;
   vi.mocked(logoutApi).mockImplementation(
     () =>
@@ -52,7 +52,7 @@ it('waits for server logout before clearing the session and blocks duplicate req
   expect(useAuthStore.getState().user).toBeNull();
 });
 
-it('keeps the session on failure and allows a retry', async () => {
+it('ログアウトに失敗してもセッションを維持し、再試行できる', async () => {
   vi.mocked(logoutApi)
     .mockRejectedValueOnce(new Error('offline'))
     .mockResolvedValueOnce();

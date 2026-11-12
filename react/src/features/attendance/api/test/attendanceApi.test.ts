@@ -21,7 +21,7 @@ const record = {
   duration_minutes: null,
 };
 
-it("loads today's state and the authenticated user's paginated records", async () => {
+it('当日の勤怠状況と指定ページの勤怠記録を取得する', async () => {
   server.use(
     http.get(`${API_URL}/api/attendance/today`, () =>
       HttpResponse.json({
@@ -53,7 +53,7 @@ it("loads today's state and the authenticated user's paginated records", async (
   });
 });
 
-it('uses the existing CSRF flow for clock actions and surfaces conflicts', async () => {
+it('出勤リクエストに CSRF トークンを設定し、退勤時の 409 をエラーとして返す', async () => {
   server.use(
     http.post(`${API_URL}/api/attendance/clock-in`, ({ request }) => {
       expect(request.headers.get('X-XSRF-TOKEN')).toBe('test-csrf-token');
@@ -76,7 +76,7 @@ it('uses the existing CSRF flow for clock actions and surfaces conflicts', async
   } satisfies Partial<AttendanceApiError>);
 });
 
-it('hides server debug details from internal errors', async () => {
+it('サーバーの内部エラーの詳細を利用者向けメッセージに含めない', async () => {
   server.use(
     http.get(`${API_URL}/api/attendance/today`, () =>
       HttpResponse.json(
