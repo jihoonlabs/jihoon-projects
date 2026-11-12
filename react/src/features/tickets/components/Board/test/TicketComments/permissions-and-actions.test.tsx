@@ -26,7 +26,7 @@ it('shows edit and delete actions only for the signed-in author', async () => {
   ).not.toBeInTheDocument();
 });
 
-it("allows an application admin to delete another user's comment without editing it", async () => {
+it('管理者は他のユーザーのコメントを削除できるが編集はできない', async () => {
   vi.mocked(api.deleteTicketComment).mockResolvedValue();
   render(
     <TicketComments ticketId="1" currentUserId={7} currentUserRole="admin" />,
@@ -35,7 +35,13 @@ it("allows an application admin to delete another user's comment without editing
   const otherComment = (await screen.findByText('other comment')).closest(
     'li',
   )!;
-  fireEvent.click(within(otherComment).getByRole('button', { name: '削除' }));
+  const actions = within(otherComment);
+  expect(
+    actions.queryByRole('button', { name: '編集' }),
+  ).not.toBeInTheDocument();
+  const deleteButton = actions.getByRole('button', { name: '削除' });
+  expect(deleteButton).toBeVisible();
+  fireEvent.click(deleteButton);
   await waitFor(() =>
     expect(api.deleteTicketComment).toHaveBeenCalledWith('1', '11'),
   );
