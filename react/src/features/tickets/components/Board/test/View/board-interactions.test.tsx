@@ -77,10 +77,10 @@ const assertFailedDragRemainsVisibleAfterRevalidation = async (
   );
 };
 
-it('keeps the failed drag visible when project refresh succeeds and clears it on retry', () =>
+it('プロジェクト再取得に成功しても移動エラーを保持し、移動の再試行後に消す', () =>
   assertFailedDragRemainsVisibleAfterRevalidation(false));
 
-it('keeps the failed drag visible when project refresh fails and clears it on retry', () =>
+it('プロジェクト再取得に失敗しても移動エラーを保持し、移動の再試行後に消す', () =>
   assertFailedDragRemainsVisibleAfterRevalidation(true));
 
 const assertNewerProjectListFailureSurvivesDelayedDrag = async (
@@ -139,13 +139,13 @@ const assertNewerProjectListFailureSurvivesDelayedDrag = async (
   );
 };
 
-it('keeps a newer project list failure after delayed drag success in the same project', () =>
+it('同じプロジェクトで遅れて移動が成功しても、新しいプロジェクト一覧エラーを保持する', () =>
   assertNewerProjectListFailureSurvivesDelayedDrag(false));
 
-it('keeps a newer project list failure after delayed drag success and project switch', () =>
+it('プロジェクト切り替え後に遅れて移動が成功しても、新しいプロジェクト一覧エラーを保持する', () =>
   assertNewerProjectListFailureSurvivesDelayedDrag(true));
 
-it('allows manual status changes while search disables dragging', async () => {
+it('検索でドラッグが無効な間も手動でステータスを変更できる', async () => {
   const ticket = api.toTicket(responseTicket);
   vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
   vi.mocked(api.updateTicketStatus).mockResolvedValue({
@@ -176,7 +176,7 @@ it('allows manual status changes while search disables dragging', async () => {
   );
 });
 
-it('restores the selected project after a board move and page reload', async () => {
+it('ボード上で移動してページを再読み込みしても、選択中のプロジェクトを復元する', async () => {
   window.history.replaceState(
     window.history.state,
     '',

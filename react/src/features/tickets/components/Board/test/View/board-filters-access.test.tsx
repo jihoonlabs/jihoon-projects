@@ -8,7 +8,7 @@ import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useTicketStore } from '../../../../store/useTicketStore';
 import * as projectApi from '@/features/tickets/api/projectApi';
 
-it('shows tickets assigned to the signed-in user in the ME filter', async () => {
+it('「自分」フィルターでログイン中のユーザーが担当するチケットを表示する', async () => {
   const mine = api.toTicket(responseTicket);
   const other = api.toTicket({
     ...responseTicket,
@@ -48,7 +48,7 @@ it('shows tickets assigned to the signed-in user in the ME filter', async () => 
   }
 });
 
-it('exposes accessible names for search and assignee filters', async () => {
+it('検索欄と担当者フィルターにアクセシブルな名前を設定する', async () => {
   vi.mocked(api.fetchTickets).mockResolvedValue([]);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
 
@@ -65,7 +65,7 @@ it('exposes accessible names for search and assignee filters', async () => {
   ).toBeInTheDocument();
 });
 
-it('filters tickets by the selected project', async () => {
+it('選択したプロジェクトのチケットに絞り込む', async () => {
   const otherProjectTicket = api.toTicket({
     ...responseTicket,
     id: '2',

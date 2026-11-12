@@ -11,7 +11,7 @@ import {
 import { server } from '@/test/mocks/server';
 import { url } from '../setup';
 
-it('maps accessible Project and member resources to string IDs', async () => {
+it('アクセス可能なプロジェクトとメンバーのIDを文字列に変換する', async () => {
   server.use(
     http.get(`${url}/api/projects`, () =>
       HttpResponse.json({
@@ -60,7 +60,7 @@ it('maps accessible Project and member resources to string IDs', async () => {
   ]);
 });
 
-it('sends role and permission changes through the CSRF-protected API', async () => {
+it('役割と権限の変更をCSRF保護されたAPIで送信する', async () => {
   server.use(
     http.post(`${url}/api/projects/4/members`, async ({ request }) => {
       expect(request.headers.get('X-XSRF-TOKEN')).toBe('test-csrf-token');
@@ -116,7 +116,7 @@ it('sends role and permission changes through the CSRF-protected API', async () 
   await expect(removeProjectMember('4', '7')).resolves.toBeUndefined();
 });
 
-it('rejects failed requests and malformed envelopes', async () => {
+it('失敗したリクエストと不正なレスポンス形式を拒否する', async () => {
   server.use(
     http.get(`${url}/api/projects`, () => HttpResponse.json({ data: null })),
   );
@@ -129,7 +129,7 @@ it('rejects failed requests and malformed envelopes', async () => {
   await expect(fetchProjectMembers('4')).rejects.toThrow('403');
 });
 
-it('creates a Project with only the trimmed name and the existing CSRF contract', async () => {
+it('前後の空白を除いた名前だけを送り、既存のCSRF処理でプロジェクトを作成する', async () => {
   server.use(
     http.post(`${url}/api/projects`, async ({ request }) => {
       expect(request.headers.get('X-XSRF-TOKEN')).toBe('test-csrf-token');
@@ -155,7 +155,7 @@ it('creates a Project with only the trimmed name and the existing CSRF contract'
   });
 });
 
-it('rejects a failed or malformed Project creation response', async () => {
+it('プロジェクト作成の失敗や不正なレスポンスを拒否する', async () => {
   server.use(
     http.post(`${url}/api/projects`, () =>
       HttpResponse.json({}, { status: 403 }),

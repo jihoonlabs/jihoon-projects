@@ -3,7 +3,7 @@ import { expect, it } from 'vitest';
 import { server } from '@/test/mocks/server';
 import { url } from '../setup';
 
-it('maps archived Projects and uses existing CSRF routes for lifecycle and leadership', async () => {
+it('終了済みプロジェクトを変換し、終了・復元・リーダー引き継ぎに既存のCSRF保護ルートを使う', async () => {
   const resource = {
     id: 4,
     name: 'Product',
@@ -76,7 +76,7 @@ it('maps archived Projects and uses existing CSRF routes for lifecycle and leade
   });
 });
 
-it('explains incomplete-ticket archive refusal without treating it as success', async () => {
+it('未完了チケットがあるためプロジェクトを終了できない理由をエラーとして返す', async () => {
   server.use(
     http.post(`${url}/api/projects/4/archive`, () =>
       HttpResponse.json({}, { status: 409 }),

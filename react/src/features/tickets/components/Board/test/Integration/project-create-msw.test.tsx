@@ -8,7 +8,7 @@ import { useTicketStore } from '@/features/tickets/store/useTicketStore';
 import { server } from '@/test/mocks/server';
 import { url } from '@/features/tickets/api/test/setup';
 
-it('creates a project, loads its leader membership, and enables ticket creation', async () => {
+it('プロジェクト作成後にリーダー権限を取得し、チケットを作成できるようにする', async () => {
   let projectRequest: unknown;
   let projects: Array<Record<string, unknown>> = [];
   server.use(

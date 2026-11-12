@@ -9,7 +9,7 @@ import { useTicketStore } from '@/features/tickets/store/useTicketStore';
 import { server } from '@/test/mocks/server';
 import { url } from '@/features/tickets/api/test/setup';
 
-it('posts a comment from ticket details through the comment API', async () => {
+it('チケット詳細からコメントAPIを通じてコメントを投稿する', async () => {
   let commentRequest: unknown;
   const savedComment = {
     id: '9',

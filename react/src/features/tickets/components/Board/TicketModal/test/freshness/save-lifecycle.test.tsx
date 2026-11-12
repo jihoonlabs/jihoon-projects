@@ -54,13 +54,13 @@ const assertDraftFieldsUnlockAfterFailedSave = async (
   expect(screen.getByRole('button', { name: '保存' })).toBeEnabled();
 };
 
-it('locks and restores draft fields after a failed ticket creation', () =>
+it('新規作成の保存中は入力を無効にし、失敗したら下書きを保って入力を再開できる', () =>
   assertDraftFieldsUnlockAfterFailedSave('create'));
 
-it('locks and restores draft fields after a failed ticket edit', () =>
+it('編集の保存中は入力を無効にし、失敗したら下書きを保って入力を再開できる', () =>
   assertDraftFieldsUnlockAfterFailedSave('edit'));
 
-it('uses the successful save version for subsequent editing and keeps assignee', async () => {
+it('保存後も担当者を維持し、次の編集に保存結果のバージョンを使う', async () => {
   props.onUpdate.mockResolvedValue({
     ...ticket,
     title: 'Saved',
@@ -82,7 +82,7 @@ it('uses the successful save version for subsequent editing and keeps assignee',
   expect(props.onUpdate.mock.calls[1][1]).not.toHaveProperty('assigneeId');
 });
 
-it('adopts response fields and version together, including a newer canonical snapshot', async () => {
+it('レスポンスの項目とバージョンをまとめて採用し、サーバーに新しい状態があれば反映する', async () => {
   props.onUpdate.mockResolvedValue({
     ...ticket,
     title: 'Canonical newer title',

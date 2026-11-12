@@ -11,7 +11,7 @@ import { expect, it, vi } from 'vitest';
 import * as api from '../../../../../api/ticketApi';
 import TicketModal from '../..';
 
-it('preserves all input on conflict and refetch, with no automatic retry or rebase', async () => {
+it('競合後に最新情報を取得しても入力を保持し、保存の自動再試行や入力の自動適用を行わない', async () => {
   props.onUpdate.mockRejectedValueOnce(
     new api.TicketApiError('conflict', 409, 'ticket_conflict'),
   );
@@ -57,7 +57,7 @@ it('preserves all input on conflict and refetch, with no automatic retry or reba
   );
 });
 
-it('keeps conflict drafts when reloading fails or loses access, without re-enabling save', async () => {
+it('競合後の再取得に失敗したりアクセス権を失ったりしても、下書きを保持し保存は無効のままにする', async () => {
   props.onUpdate.mockRejectedValue(
     new api.TicketApiError('conflict', 409, 'ticket_conflict'),
   );
@@ -84,7 +84,7 @@ it('keeps conflict drafts when reloading fails or loses access, without re-enabl
   expect(screen.getByRole('button', { name: '保存' })).toBeDisabled();
 });
 
-it('does not treat an archived-project 409 as an edit version conflict', async () => {
+it('終了済みプロジェクトの409を編集バージョンの競合として扱わない', async () => {
   props.onUpdate.mockRejectedValue(new api.TicketApiError('Archived', 409));
   render(<TicketModal {...props} />);
   await edit();
@@ -122,10 +122,10 @@ const assertLateSaveIsIgnoredAfterTicketChange = async (
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 };
 
-it('ignores a late successful save after changing tickets', () =>
+it('チケットを切り替えた後に届く保存成功を無視する', () =>
   assertLateSaveIsIgnoredAfterTicketChange('success'));
 
-it('ignores a late save conflict after changing tickets', () =>
+it('チケットを切り替えた後に届く保存競合を無視する', () =>
   assertLateSaveIsIgnoredAfterTicketChange('conflict'));
 
 const assertLateConflictRefetchIsIgnoredAfterTicketChange = async (
@@ -155,8 +155,8 @@ const assertLateConflictRefetchIsIgnoredAfterTicketChange = async (
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 };
 
-it('ignores a late successful conflict refresh after changing tickets', () =>
+it('チケットを切り替えた後に届く競合後の再取得成功を無視する', () =>
   assertLateConflictRefetchIsIgnoredAfterTicketChange('success'));
 
-it('ignores a late forbidden conflict refresh after changing tickets', () =>
+it('チケットを切り替えた後に届く競合後の再取得の403エラーを無視する', () =>
   assertLateConflictRefetchIsIgnoredAfterTicketChange('forbidden'));

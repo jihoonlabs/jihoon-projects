@@ -16,7 +16,7 @@ import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useTicketStore } from '../../../../store/useTicketStore';
 import * as projectApi from '@/features/tickets/api/projectApi';
 
-it('keeps the create modal open and shows the save error when creation fails', async () => {
+it('作成に失敗したら作成画面を開いたままにして保存エラーを表示する', async () => {
   vi.mocked(api.fetchTickets).mockResolvedValue([]);
   vi.mocked(api.createTicket).mockRejectedValue(new Error('create failed'));
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
@@ -37,7 +37,7 @@ it('keeps the create modal open and shows the save error when creation fails', a
   expect(screen.getByLabelText('タイトル')).toHaveValue('New ticket');
 });
 
-it('keeps a create draft retryable after session expiry and reauthentication', async () => {
+it('セッション切れの後に再認証しても、チケットの下書きを保って作成を再試行できる', async () => {
   vi.mocked(api.fetchTickets).mockResolvedValue([]);
   vi.mocked(api.createTicket)
     .mockImplementationOnce(async () => {
@@ -71,7 +71,7 @@ it('keeps a create draft retryable after session expiry and reauthentication', a
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
-it('keeps the modal open when the backdrop is clicked while saving', async () => {
+it('保存中に背景をクリックしてもダイアログを閉じない', async () => {
   vi.mocked(api.fetchTickets).mockResolvedValue([]);
   let resolveCreate!: (value: ReturnType<typeof api.toTicket>) => void;
   vi.mocked(api.createTicket).mockReturnValue(
@@ -102,7 +102,7 @@ it('keeps the modal open when the backdrop is clicked while saving', async () =>
   );
 });
 
-it('keeps the edit modal open and shows the save error when editing fails', async () => {
+it('編集に失敗したら編集画面を開いたままにして保存エラーを表示する', async () => {
   const ticket = api.toTicket(responseTicket);
   vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
   vi.mocked(api.updateTicket).mockRejectedValue(new Error('update failed'));
@@ -125,7 +125,7 @@ it('keeps the edit modal open and shows the save error when editing fails', asyn
   expect(screen.getByLabelText('タイトル')).toHaveValue('Updated ticket');
 });
 
-it('opens details from the title with the keyboard and restores focus on close', async () => {
+it('タイトルをキーボードで操作して詳細を開き、閉じたらフォーカスを戻す', async () => {
   const user = userEvent.setup();
   vi.mocked(api.fetchTickets).mockResolvedValue([api.toTicket(responseTicket)]);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
@@ -143,7 +143,7 @@ it('opens details from the title with the keyboard and restores focus on close',
   await waitFor(() => expect(document.activeElement).toBe(title));
 });
 
-it('saves edits from detail and returns to the refreshed detail view', async () => {
+it('詳細画面から編集して保存し、更新済みの詳細に戻る', async () => {
   const ticket = api.toTicket(responseTicket);
   vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
   vi.mocked(api.updateTicket).mockResolvedValue({
@@ -241,8 +241,8 @@ const assertAssigneeCanBeChangedAndRestored = async (
   );
 };
 
-it('restores the original member assignee after two saves in one detail', () =>
+it('同じ詳細画面で2回保存し、担当者を元のメンバーに戻せる', () =>
   assertAssigneeCanBeChangedAndRestored('7'));
 
-it('restores an unassigned ticket after two saves in one detail', () =>
+it('同じ詳細画面で2回保存し、担当者を未設定に戻せる', () =>
   assertAssigneeCanBeChangedAndRestored(''));

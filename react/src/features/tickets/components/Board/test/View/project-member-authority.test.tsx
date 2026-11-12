@@ -7,7 +7,7 @@ import { responseTicket } from '../../../../api/test/ticketFixture';
 import { useTicketStore } from '../../../../store/useTicketStore';
 import * as projectApi from '@/features/tickets/api/projectApi';
 
-it('allows a read-only project leader to manage members without Ticket write controls', async () => {
+it('閲覧権限のみのリーダーはメンバーを管理できるが、チケット変更の操作は表示されない', async () => {
   vi.mocked(api.fetchTickets).mockResolvedValue([api.toTicket(responseTicket)]);
   vi.mocked(projectApi.fetchProjectMembers).mockResolvedValue([
     {
@@ -29,7 +29,7 @@ it('allows a read-only project leader to manage members without Ticket write con
   ).not.toBeInTheDocument();
 });
 
-it('updates leader authority immediately after a successful transfer', async () => {
+it('リーダー引き継ぎが成功したら管理権限をすぐに更新する', async () => {
   const leader = {
     id: '7',
     name: 'Tester',

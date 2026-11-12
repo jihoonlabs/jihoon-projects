@@ -17,7 +17,7 @@ const project = {
 };
 beforeEach(() => vi.resetAllMocks());
 
-it('renames through the existing API while retaining the Project key', async () => {
+it('既存のAPIでプロジェクト名を変更し、プロジェクトキーを保持する', async () => {
   const changed = { ...project, name: 'Renamed' };
   vi.mocked(api.renameProject).mockResolvedValue(changed);
   const onChanged = vi.fn();
@@ -37,7 +37,7 @@ it('renames through the existing API while retaining the Project key', async () 
   expect(api.renameProject).toHaveBeenCalledWith('1', 'Renamed');
 });
 
-it('requires explicit archive confirmation and preserves rejected operations for retry', async () => {
+it('プロジェクト終了前に明示的な確認を求め、失敗しても再試行できる', async () => {
   vi.mocked(api.archiveProject).mockRejectedValue(
     new Error('未完了のチケットがあります'),
   );
@@ -70,7 +70,7 @@ it('requires explicit archive confirmation and preserves rejected operations for
   );
 });
 
-it('restores archived Projects and blocks a duplicate request until it completes', async () => {
+it('終了済みプロジェクトを復元し、処理が完了するまで重複リクエストを防ぐ', async () => {
   let complete!: (value: typeof project) => void;
   vi.mocked(api.restoreProject).mockImplementation(
     () =>

@@ -10,7 +10,7 @@ import { expect, it, vi } from 'vitest';
 import * as api from '../../../../api/ticketCommentApi';
 import TicketComments from '../../TicketComments';
 
-it('shows edit and delete actions only for the signed-in author', async () => {
+it('ログイン中のユーザーが投稿したコメントにだけ編集・削除ボタンを表示する', async () => {
   render(<TicketComments ticketId="1" currentUserId={7} />);
 
   const myComment = (await screen.findByText('my comment')).closest('li')!;
@@ -42,7 +42,7 @@ it("allows an application admin to delete another user's comment without editing
   expect(screen.queryByText('other comment')).not.toBeInTheDocument();
 });
 
-it('creates a trimmed comment and appends the server response', async () => {
+it('前後の空白を除いてコメントを投稿し、サーバーが返したコメントを追加する', async () => {
   vi.mocked(api.createTicketComment).mockResolvedValue({
     ...mine,
     id: '12',
@@ -62,7 +62,7 @@ it('creates a trimmed comment and appends the server response', async () => {
   expect(await screen.findByText('new comment')).toBeInTheDocument();
 });
 
-it('edits an owned comment', async () => {
+it('自分のコメントを編集する', async () => {
   vi.mocked(api.updateTicketComment).mockResolvedValue({
     ...mine,
     body: 'updated',
@@ -82,7 +82,7 @@ it('edits an owned comment', async () => {
   expect(await screen.findByText('updated')).toBeInTheDocument();
 });
 
-it('deletes an owned comment', async () => {
+it('自分のコメントを削除する', async () => {
   vi.mocked(api.deleteTicketComment).mockResolvedValue();
   render(<TicketComments ticketId="1" currentUserId={7} />);
 
@@ -95,7 +95,7 @@ it('deletes an owned comment', async () => {
   expect(screen.queryByText('my comment')).not.toBeInTheDocument();
 });
 
-it('keeps content and shows an error when creation fails', async () => {
+it('投稿に失敗したら入力を保持してエラーを表示する', async () => {
   vi.mocked(api.createTicketComment).mockRejectedValue(
     new Error('create failed'),
   );
@@ -110,7 +110,7 @@ it('keeps content and shows an error when creation fails', async () => {
   expect(input).toHaveValue('keep me');
 });
 
-it('keeps archived comments visible without mutation controls, including for admins', async () => {
+it('終了済みプロジェクトではコメントを表示し、管理者にも変更操作を表示しない', async () => {
   render(
     <TicketComments
       ticketId="1"

@@ -5,7 +5,7 @@ import { responseTicket } from '../../../api/test/ticketFixture';
 import { getProjectBorderColor } from '../../../utils/projectColor';
 import Main from '../Main';
 
-it('renders null issue keys safely and searches actual ticket numbers', () => {
+it('チケット番号がnullでも表示でき、実際のチケット番号で検索できる', () => {
   const tickets = [
     toTicket({
       ...responseTicket,
@@ -47,7 +47,7 @@ it('renders null issue keys safely and searches actual ticket numbers', () => {
   expect(screen.queryByText('First ticket')).not.toBeInTheDocument();
 });
 
-it('renders each column in client position order without mutating input', () => {
+it('入力データを変更せず、列内をposition順に表示する', () => {
   const tickets = [
     toTicket({ ...responseTicket, title: 'Last', position: 10 }),
     toTicket({ ...responseTicket, id: '2', title: 'First', position: 2 }),
@@ -69,7 +69,7 @@ it('renders each column in client position order without mutating input', () => 
   expect(tickets[0].title).toBe('Last');
 });
 
-it('filters assigned tickets by the signed-in user ID', () => {
+it('ログイン中のユーザーIDで担当チケットを絞り込む', () => {
   const tickets = [
     toTicket({ ...responseTicket, title: 'Mine' }),
     toTicket({
@@ -113,7 +113,7 @@ it('filters assigned tickets by the signed-in user ID', () => {
   expect(screen.queryByText('Mine')).not.toBeInTheDocument();
 });
 
-it('uses the stored project color for card backgrounds while retaining ticket cues', () => {
+it('保存済みのプロジェクト色をカード背景に使い、チケット固有の表示を維持する', () => {
   const tickets = [
     toTicket(responseTicket),
     toTicket({

@@ -16,7 +16,7 @@ import { useTicketStore } from '../../../../store/useTicketStore';
 import { TicketBoardView } from '../../View';
 import * as projectApi from '@/features/tickets/api/projectApi';
 
-it('creates the first project and loads its leader membership before enabling Ticket creation', async () => {
+it('最初のプロジェクトを作成し、リーダー権限の取得後にチケット作成を有効にする', async () => {
   vi.mocked(projectApi.fetchProjects).mockResolvedValue([]);
   vi.mocked(api.fetchTickets).mockResolvedValue([]);
   vi.mocked(projectApi.createProject).mockResolvedValue({
@@ -69,7 +69,7 @@ it('creates the first project and loads its leader membership before enabling Ti
   ).toBeInTheDocument();
 });
 
-it('keeps archived Project boards read-only even for admins and exposes restoration', async () => {
+it('終了済みプロジェクトのボードを管理者にも閲覧専用にし、復元操作を表示する', async () => {
   const archived = {
     id: '1',
     name: 'General',
@@ -124,7 +124,7 @@ it('keeps archived Project boards read-only even for admins and exposes restorat
   ).not.toBeInTheDocument();
 });
 
-it('archives the current Project without deleting Tickets and removes it from the active list', async () => {
+it('現在のプロジェクトをチケットごと保持して終了し、利用中の一覧から取り除く', async () => {
   const project = {
     id: '1',
     name: 'General',
@@ -157,7 +157,7 @@ it('archives the current Project without deleting Tickets and removes it from th
   expect(useTicketStore.getState().tickets).toHaveLength(1);
 });
 
-it('does not resurrect an archived Project when an older Project refresh arrives late', async () => {
+it('古い一覧が遅れて届いても終了済みプロジェクトを利用中に戻さない', async () => {
   const project = {
     id: '1',
     name: 'General',

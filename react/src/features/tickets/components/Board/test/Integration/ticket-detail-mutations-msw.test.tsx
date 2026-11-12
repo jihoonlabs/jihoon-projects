@@ -60,7 +60,7 @@ const registerBoardReadHandlers = (
   );
 };
 
-it('saves ticket detail edits through the API and displays the updated result', async () => {
+it('詳細画面で編集内容をAPIに保存し、更新結果を表示する', async () => {
   let updateRequest: unknown;
   let currentTicket = responseTicket;
   registerBoardReadHandlers(() =>
@@ -115,7 +115,7 @@ it('saves ticket detail edits through the API and displays the updated result', 
   ).toBeInTheDocument();
 });
 
-it('deletes a ticket from detail after confirmation and removes it from the board', async () => {
+it('詳細画面で確認してからチケットを削除し、ボードから取り除く', async () => {
   let currentTicket: typeof responseTicket | null = responseTicket;
   let deleteRequestCount = 0;
   registerBoardReadHandlers(() => (currentTicket ? [currentTicket] : []));

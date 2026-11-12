@@ -8,7 +8,7 @@ import { responseTicket } from '../../../../api/test/ticketFixture';
 import { useTicketStore } from '../../../../store/useTicketStore';
 import * as projectApi from '@/features/tickets/api/projectApi';
 
-it('handles a failed project refresh after a manual status update', async () => {
+it('手動でステータスを更新した後のプロジェクト再取得エラーを処理する', async () => {
   const ticket = api.toTicket(responseTicket);
   vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
   vi.mocked(api.updateTicketStatus).mockResolvedValue({
@@ -35,7 +35,7 @@ it('handles a failed project refresh after a manual status update', async () => 
   );
 });
 
-it('keeps a failed manual status update visible and allows retry', async () => {
+it('手動のステータス更新エラーを表示し続け、再試行できる', async () => {
   const ticket = api.toTicket(responseTicket);
   vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
   vi.mocked(api.updateTicketStatus)
@@ -65,7 +65,7 @@ it('keeps a failed manual status update visible and allows retry', async () => {
   );
 });
 
-it('retries a failed initial Ticket list from the board', async () => {
+it('チケット一覧の初回取得に失敗してもボードから再試行できる', async () => {
   vi.mocked(api.fetchTickets)
     .mockRejectedValueOnce(new Error('ticket list unavailable'))
     .mockResolvedValueOnce([api.toTicket(responseTicket)]);
@@ -79,7 +79,7 @@ it('retries a failed initial Ticket list from the board', async () => {
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
 
-it('preserves the existing Ticket list and permits another retry after a failed refresh', async () => {
+it('再取得に失敗しても既存のチケット一覧を保持し、再試行できる', async () => {
   vi.mocked(api.fetchTickets)
     .mockRejectedValueOnce(new Error('first list failure'))
     .mockRejectedValueOnce(new Error('retry list failure'));
@@ -99,7 +99,7 @@ it('preserves the existing Ticket list and permits another retry after a failed 
   ).toBeEnabled();
 });
 
-it('announces a pending Ticket list retry without offering another retry request', async () => {
+it('チケット一覧の再取得中は処理中と伝え、重複リクエストを受け付けない', async () => {
   let resolveList!: (tickets: ReturnType<typeof api.toTicket>[]) => void;
   const pendingList = new Promise<ReturnType<typeof api.toTicket>[]>(
     (resolve) => {

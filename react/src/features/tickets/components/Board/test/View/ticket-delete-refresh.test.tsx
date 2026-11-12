@@ -7,7 +7,7 @@ import { responseTicket } from '../../../../api/test/ticketFixture';
 import { useTicketStore } from '../../../../store/useTicketStore';
 import * as projectApi from '@/features/tickets/api/projectApi';
 
-it('deletes a ticket from detail only after confirmation', async () => {
+it('詳細画面で確認してからチケットを削除する', async () => {
   const ticket = api.toTicket(responseTicket);
   vi.mocked(api.fetchTickets)
     .mockResolvedValueOnce([ticket])
@@ -30,7 +30,7 @@ it('deletes a ticket from detail only after confirmation', async () => {
   );
 });
 
-it('keeps detail open and reports a failed delete', async () => {
+it('削除に失敗したら詳細画面を開いたままにしてエラーを表示する', async () => {
   vi.mocked(api.fetchTickets).mockResolvedValue([api.toTicket(responseTicket)]);
   vi.mocked(api.deleteTicket).mockRejectedValue(new Error('delete failed'));
   vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
@@ -47,7 +47,7 @@ it('keeps detail open and reports a failed delete', async () => {
   ).toBeInTheDocument();
 });
 
-it('does not open a ticket detail from a drag completion on the board', async () => {
+it('ボードでドラッグを終えてもチケット詳細を開かない', async () => {
   const ticket = api.toTicket(responseTicket);
   vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
   vi.mocked(api.moveTicket).mockResolvedValue({ ticket, boardVersion: 4 });
@@ -61,7 +61,7 @@ it('does not open a ticket detail from a drag completion on the board', async ()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
-it('does not turn a saved Ticket into a failed creation when Project refresh fails', async () => {
+it('プロジェクト再取得に失敗しても、保存済みチケットの作成を失敗として扱わない', async () => {
   const ticket = api.toTicket(responseTicket);
   vi.mocked(api.fetchTickets)
     .mockResolvedValueOnce([])
@@ -87,7 +87,7 @@ it('does not turn a saved Ticket into a failed creation when Project refresh fai
   expect(api.createTicket).toHaveBeenCalledTimes(1);
 });
 
-it('closes a successfully deleted Ticket even when the Project refresh fails', async () => {
+it('プロジェクト再取得に失敗しても、削除に成功したチケットの詳細を閉じる', async () => {
   const ticket = api.toTicket(responseTicket);
   vi.mocked(api.fetchTickets)
     .mockResolvedValueOnce([ticket])

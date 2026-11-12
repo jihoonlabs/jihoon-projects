@@ -10,7 +10,7 @@ import { expect, it, vi } from 'vitest';
 import * as api from '../../../../../api/ticketApi';
 import TicketModal from '../..';
 
-it('hides stale card data while loading and displays the latest detail', async () => {
+it('詳細の取得中はカードの古い情報を隠し、取得後に最新の詳細を表示する', async () => {
   const request = deferred<typeof ticket>();
   vi.mocked(api.fetchTicket).mockReturnValue(request.promise);
   render(<TicketModal {...props} />);
@@ -44,31 +44,31 @@ const assertFetchFailureAllowsRetry = async (error: Error, message: string) => {
   expect(await screen.findByText(ticket.title)).toBeInTheDocument();
 };
 
-it('shows an offline detail error without stale editing and supports retry', () =>
+it('オフラインで詳細取得に失敗したらエラーを表示し、古い情報の編集を許さず再試行できる', () =>
   assertFetchFailureAllowsRetry(
     new Error('offline'),
     '最新のチケット情報を取得できませんでした',
   ));
 
-it('shows a deleted-ticket detail error without stale editing and supports retry', () =>
+it('削除済みチケットの詳細取得に失敗したらエラーを表示し、古い情報の編集を許さず再試行できる', () =>
   assertFetchFailureAllowsRetry(
     new api.TicketApiError('deleted', 404),
     '削除されたか、存在しません',
   ));
 
-it('shows a forbidden detail error without stale editing and supports retry', () =>
+it('権限不足で詳細取得に失敗したらエラーを表示し、古い情報の編集を許さず再試行できる', () =>
   assertFetchFailureAllowsRetry(
     new api.TicketApiError('forbidden', 403),
     'アクセス権限がありません',
   ));
 
-it('shows an expired-session detail error without stale editing and supports retry', () =>
+it('セッション切れで詳細取得に失敗したらエラーを表示し、古い情報の編集を許さず再試行できる', () =>
   assertFetchFailureAllowsRetry(
     new api.TicketApiError('expired', 401),
     'アクセス権限がありません',
   ));
 
-it('ignores reversed detail responses and late errors after switching tickets', async () => {
+it('チケット切り替え後に届く古い詳細レスポンスやエラーを無視する', async () => {
   const first = deferred<typeof ticket>();
   const second = deferred<typeof ticket>();
   vi.mocked(api.fetchTicket)

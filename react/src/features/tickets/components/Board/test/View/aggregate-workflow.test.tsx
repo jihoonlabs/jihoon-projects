@@ -12,7 +12,7 @@ import { useTicketStore } from '../../../../store/useTicketStore';
 import { TicketBoardView } from '../../View';
 import * as projectApi from '@/features/tickets/api/projectApi';
 
-it('keeps aggregate creation disabled for a read-only selected membership', async () => {
+it('全体ボードで閲覧権限のみのプロジェクトを選ぶとチケットを作成できない', async () => {
   vi.mocked(projectApi.fetchProjectMembers).mockResolvedValue([
     {
       id: '7',
@@ -40,7 +40,7 @@ it('keeps aggregate creation disabled for a read-only selected membership', asyn
   expect(api.createTicket).not.toHaveBeenCalled();
 });
 
-it('retries failed creation membership inside the modal without discarding its draft', async () => {
+it('作成画面で権限取得に失敗しても、下書きを保って再取得できる', async () => {
   vi.mocked(projectApi.fetchProjectMembers)
     .mockRejectedValueOnce(new Error('lookup failed'))
     .mockResolvedValue([
@@ -78,7 +78,7 @@ it('retries failed creation membership inside the modal without discarding its d
   );
 });
 
-it('opens the existing Project creation form directly from aggregate', async () => {
+it('全体ボードから既存のプロジェクト作成画面を直接開く', async () => {
   vi.mocked(api.fetchTickets).mockResolvedValue([]);
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
   render(<TicketBoardView />);

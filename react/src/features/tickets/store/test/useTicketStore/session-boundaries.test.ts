@@ -6,8 +6,8 @@ import { deferred, state, ticket } from './helpers';
 import type { Ticket } from '../../../types/ticket';
 import { describe, expect, it, vi } from 'vitest';
 
-describe('session boundaries', () => {
-  it('does not restore a deleted card when an old request fails after logout', async () => {
+describe('セッション切り替え', () => {
+  it('ログアウト後に以前のリクエストが失敗しても、削除したカードを復元しない', async () => {
     useTicketStore.setState({ tickets: [ticket('1')] });
     const pending = deferred<void>();
     vi.mocked(api.deleteTicket).mockReturnValue(pending.promise);
@@ -20,7 +20,7 @@ describe('session boundaries', () => {
     expect(state().error).toBeNull();
   });
 
-  it('discards an old list response after logout', async () => {
+  it('ログアウト後に届く古い一覧レスポンスを破棄する', async () => {
     const pending = deferred<Ticket[]>();
     vi.mocked(api.fetchTickets).mockReturnValue(pending.promise);
     const loading = state().fetchTickets();
@@ -30,7 +30,7 @@ describe('session boundaries', () => {
     expect(state().tickets).toEqual([]);
   });
 
-  it('cancels queued writes from the previous session', async () => {
+  it('以前のセッションで待機中だった更新をキャンセルする', async () => {
     useTicketStore.setState({ tickets: [ticket('1')] });
     const pending = deferred<Ticket>();
     vi.mocked(api.updateTicket).mockReturnValue(pending.promise);

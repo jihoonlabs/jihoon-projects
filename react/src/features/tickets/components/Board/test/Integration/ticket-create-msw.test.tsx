@@ -9,7 +9,7 @@ import { useTicketStore } from '@/features/tickets/store/useTicketStore';
 import { server } from '@/test/mocks/server';
 import { url } from '@/features/tickets/api/test/setup';
 
-it('creates a ticket through the board and renders the server response', async () => {
+it('ボードからチケットを作成し、サーバーが返した内容を表示する', async () => {
   let createRequest: unknown;
   let tickets = [] as (typeof responseTicket)[];
   const createdTicket = {

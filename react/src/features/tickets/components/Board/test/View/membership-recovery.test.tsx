@@ -20,7 +20,7 @@ const recoveryMember = {
   permission: 'write' as const,
 };
 
-it('recovers member authority on the same project after a failed initial lookup', async () => {
+it('初回の権限取得が失敗しても、同じプロジェクトで権限を再取得できる', async () => {
   vi.mocked(api.fetchTickets).mockResolvedValue([]);
   vi.mocked(projectApi.fetchProjectMembers)
     .mockRejectedValueOnce(new Error('membership unavailable'))
@@ -46,7 +46,7 @@ it('recovers member authority on the same project after a failed initial lookup'
   );
 });
 
-it('retains the retry action after another member lookup failure', async () => {
+it('権限の再取得に失敗しても再試行の操作を残す', async () => {
   vi.mocked(api.fetchTickets).mockResolvedValue([]);
   vi.mocked(projectApi.fetchProjectMembers)
     .mockRejectedValueOnce(new Error('first failure'))
@@ -66,7 +66,7 @@ it('retains the retry action after another member lookup failure', async () => {
   ).not.toBeInTheDocument();
 });
 
-it('ignores a late member response from dialog close after switching projects', async () => {
+it('プロジェクト切り替え後に届く前のダイアログのメンバー情報を無視する', async () => {
   let resolveOld!: (members: (typeof recoveryMember)[]) => void;
   const oldResponse = new Promise<(typeof recoveryMember)[]>((resolve) => {
     resolveOld = resolve;
@@ -110,7 +110,7 @@ it('ignores a late member response from dialog close after switching projects', 
   ).not.toBeInTheDocument();
 });
 
-it('does not clear a project list error when a pending member lookup succeeds', async () => {
+it('遅れてメンバー情報の取得が成功しても、プロジェクト一覧のエラーを消さない', async () => {
   let resolveMembers!: (members: (typeof recoveryMember)[]) => void;
   const membersResponse = new Promise<(typeof recoveryMember)[]>((resolve) => {
     resolveMembers = resolve;

@@ -5,7 +5,7 @@ import { deferred, state, ticket } from './helpers';
 import type { Ticket } from '../../../types/ticket';
 import { expect, it, vi } from 'vitest';
 
-it('appends created tickets to their column', async () => {
+it('作成したチケットを対象の列の末尾に追加する', async () => {
   useTicketStore.setState({
     tickets: [ticket('1', 4), ticket('2', 90, 'DONE')],
   });
@@ -15,7 +15,7 @@ it('appends created tickets to their column', async () => {
   expect(state().isLoading).toBe(false);
 });
 
-it('uses the server response for a manual status change', async () => {
+it('手動のステータス変更にはサーバーの結果を使う', async () => {
   useTicketStore.setState({
     tickets: [ticket('1', 3), ticket('2', 8, 'DONE')],
   });
@@ -31,7 +31,7 @@ it('uses the server response for a manual status change', async () => {
   });
 });
 
-it('applies server-confirmed ticket edits and keeps the current position', async () => {
+it('サーバーが確定した編集を反映し、チケットの位置を維持する', async () => {
   useTicketStore.setState({ tickets: [ticket('1', 4)] });
   vi.mocked(api.updateTicket).mockResolvedValue({
     ...ticket('1', 4),
@@ -52,7 +52,7 @@ it('applies server-confirmed ticket edits and keeps the current position', async
   });
 });
 
-it('uses the server position when an edit changes status', async () => {
+it('編集でステータスを変えたときはサーバーが返した位置を使う', async () => {
   useTicketStore.setState({
     tickets: [ticket('1', 4), ticket('2', 8, 'DONE')],
   });
@@ -67,7 +67,7 @@ it('uses the server position when an edit changes status', async () => {
   });
 });
 
-it('keeps the existing ticket and exposes an edit failure', async () => {
+it('編集に失敗しても既存のチケットを保持し、エラーを表示する', async () => {
   useTicketStore.setState({ tickets: [ticket('1', 4)] });
   vi.mocked(api.updateTicket).mockRejectedValue(new Error('edit failed'));
 
@@ -79,7 +79,7 @@ it('keeps the existing ticket and exposes an edit failure', async () => {
   expect(state().error).toBe('edit failed');
 });
 
-it('restores failed deletion without discarding a new ticket', async () => {
+it('削除に失敗したチケットを戻し、新しく作成したチケットは保持する', async () => {
   useTicketStore.setState({ tickets: [ticket('1', 4)] });
   const request = deferred<void>();
   vi.mocked(api.deleteTicket).mockReturnValue(request.promise);
@@ -100,7 +100,7 @@ it('restores failed deletion without discarding a new ticket', async () => {
   expect(new Set(state().tickets.map((t) => t.position)).size).toBe(2);
 });
 
-it('reserves the original position for failed column moves as well as deletes', async () => {
+it('列の移動や削除に失敗したときのために元の位置を確保する', async () => {
   useTicketStore.setState({ tickets: [ticket('1')] });
   const request = deferred<Ticket>();
   vi.mocked(api.updateTicketStatus).mockReturnValue(request.promise);
@@ -116,7 +116,7 @@ it('reserves the original position for failed column moves as well as deletes', 
   ]);
 });
 
-it('keeps state on failed fetch or create and releases loading', async () => {
+it('一覧の取得や作成が失敗しても状態を保持し、読み込み中の状態を解除する', async () => {
   useTicketStore.setState({ tickets: [ticket('1', 4)] });
   vi.mocked(api.fetchTickets).mockRejectedValue(new Error('fetch failed'));
   await state().fetchTickets();

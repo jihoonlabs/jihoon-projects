@@ -9,7 +9,7 @@ import { useTicketStore } from '@/features/tickets/store/useTicketStore';
 import { server } from '@/test/mocks/server';
 import { url } from '@/features/tickets/api/test/setup';
 
-it('renders API ticket data and updates its status through the board', async () => {
+it('APIから取得したチケットを表示し、ボードでステータスを更新する', async () => {
   let statusRequest: unknown;
   let ticketStatus = responseTicket.status;
   server.use(

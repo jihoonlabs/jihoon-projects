@@ -4,7 +4,7 @@ import { useTicketStore } from '../../useTicketStore';
 import { deferred, state, ticket } from './helpers';
 import { expect, it, vi } from 'vitest';
 
-it('keeps another project unchanged while a drag awaits confirmation and refresh fails', async () => {
+it('移動の確定待ちや再取得の失敗があっても別プロジェクトに影響しない', async () => {
   const moving = ticket('1');
   const target = ticket('2', 0, 'DONE');
   const otherProject = { ...ticket('3', 0, 'DONE'), projectId: '2' };
@@ -24,7 +24,7 @@ it('keeps another project unchanged while a drag awaits confirmation and refresh
   expect(state().error).toBe('refresh failed');
 });
 
-it('restores a rejected drag without changing another project order', async () => {
+it('移動が拒否されたら元に戻し、別プロジェクトの順序を変えない', async () => {
   const moving = ticket('1', 2);
   const target = ticket('2', 0, 'DONE');
   const otherProject = { ...ticket('3', 7, 'DONE'), projectId: '2' };
@@ -43,7 +43,7 @@ it('restores a rejected drag without changing another project order', async () =
   expect(api.fetchTickets).not.toHaveBeenCalled();
 });
 
-it('uses server positions as the source of truth on refresh', async () => {
+it('ボードの再取得時はサーバーのpositionを採用する', async () => {
   vi.mocked(api.fetchTickets).mockResolvedValue([
     ticket('1', 0),
     ticket('2', 1),
@@ -61,7 +61,7 @@ it('uses server positions as the source of truth on refresh', async () => {
   expect(state().tickets.map((t) => t.position)).toEqual([2, 3, 1]);
 });
 
-it('appends remote column changes and removes server-deleted tickets', async () => {
+it('サーバーで別の列に移動したチケットを追加し、削除されたチケットを取り除く', async () => {
   useTicketStore.setState({
     tickets: [ticket('1', 50), ticket('2', 7, 'DONE'), ticket('3')],
   });
@@ -76,7 +76,7 @@ it('appends remote column changes and removes server-deleted tickets', async () 
   ]);
 });
 
-it('persists a drag move and adopts the server reordering', async () => {
+it('ドラッグによる移動を保存し、サーバーが返した順序を採用する', async () => {
   useTicketStore.setState({ tickets: [ticket('1', 0), ticket('2', 1)] });
   const serverOrder = [ticket('2', 0, 'DONE'), ticket('1', 1, 'DONE')];
   vi.mocked(api.moveTicket).mockResolvedValue({
@@ -97,7 +97,7 @@ it('persists a drag move and adopts the server reordering', async () => {
   expect(api.fetchTickets).toHaveBeenCalledTimes(1);
 });
 
-it('re-fetches the board after a stale-version move conflict', async () => {
+it('古いバージョンでの移動が競合したらボードを再取得する', async () => {
   const freshTickets = [ticket('1', 2), ticket('2', 0, 'DONE')];
   useTicketStore.setState({ tickets: [ticket('1', 0), ticket('2', 1)] });
   vi.mocked(api.moveTicket).mockRejectedValue(

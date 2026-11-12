@@ -5,7 +5,7 @@ import { userEvent } from '@testing-library/user-event';
 import { TicketBoardView } from '../../View';
 import * as projectApi from '@/features/tickets/api/projectApi';
 
-it('keeps the project directory off the board until requested and closes after selection', async () => {
+it('プロジェクト一覧は開く操作をするまでボードに表示せず、選択後に閉じる', async () => {
   const user = userEvent.setup();
   render(<TicketBoardView />);
   await screen.findByRole('option', { name: 'General' });
@@ -26,7 +26,7 @@ it('keeps the project directory off the board until requested and closes after s
   expect(trigger).toHaveFocus();
 });
 
-it('opens creation directly and blocks closing until a failed save can be retried', async () => {
+it('作成画面を直接開き、保存中は閉じられないようにし、失敗後に再試行できる', async () => {
   const user = userEvent.setup();
   let rejectSave!: (reason: Error) => void;
   vi.mocked(projectApi.createProject).mockImplementation(

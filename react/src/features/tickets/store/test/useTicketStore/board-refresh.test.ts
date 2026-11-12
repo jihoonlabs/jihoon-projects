@@ -5,7 +5,7 @@ import { deferred, state, ticket } from './helpers';
 import type { Ticket } from '../../../types/ticket';
 import { expect, it, vi } from 'vitest';
 
-it('revalidates discarded GETs after a write and includes unrelated server tickets', async () => {
+it('更新中に破棄したGETの後で一覧を再取得し、更新対象外のチケットも反映する', async () => {
   useTicketStore.setState({ tickets: [ticket('1')] });
   const request = deferred<Ticket>();
   vi.mocked(api.updateTicketStatus).mockReturnValue(request.promise);
@@ -22,7 +22,7 @@ it('revalidates discarded GETs after a write and includes unrelated server ticke
   expect(state().tickets[0].status).toBe('DONE');
 });
 
-it('does not duplicate a ticket when GET sees an in-flight creation', async () => {
+it('作成処理中にGETが同じチケットを返しても重複させない', async () => {
   useTicketStore.setState({ tickets: [ticket('1')] });
   const request = deferred<Ticket>();
   vi.mocked(api.createTicket).mockReturnValue(request.promise);
@@ -34,7 +34,7 @@ it('does not duplicate a ticket when GET sees an in-flight creation', async () =
   expect(state().tickets.map((t) => t.id)).toEqual(['1', '2']);
 });
 
-it('ignores stale GET responses that overlap a mutation', async () => {
+it('変更処理と重なった古いGETレスポンスを無視する', async () => {
   useTicketStore.setState({ tickets: [ticket('1')] });
   const request = deferred<Ticket[]>();
   vi.mocked(api.fetchTickets)
@@ -50,7 +50,7 @@ it('ignores stale GET responses that overlap a mutation', async () => {
   expect(api.fetchTickets).toHaveBeenCalledTimes(2);
 });
 
-it('reports failed revalidation without retrying indefinitely', async () => {
+it('再取得に失敗したらエラーを報告し、無制限に再試行しない', async () => {
   useTicketStore.setState({ tickets: [ticket('1')] });
   const request = deferred<Ticket>();
   vi.mocked(api.updateTicketStatus).mockReturnValue(request.promise);
@@ -67,7 +67,7 @@ it('reports failed revalidation without retrying indefinitely', async () => {
   expect(state().isLoading).toBe(false);
 });
 
-it('waits for queued writes before revalidating once', async () => {
+it('待機中の更新が完了してから一覧を1回だけ再取得する', async () => {
   useTicketStore.setState({ tickets: [ticket('1')] });
   const first = deferred<Ticket>();
   const second = deferred<Ticket>();

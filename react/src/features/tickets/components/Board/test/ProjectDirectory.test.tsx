@@ -10,7 +10,7 @@ const projects = [
 ];
 beforeEach(() => vi.resetAllMocks());
 
-it('shows accessible projects and searches by project key before switching boards', () => {
+it('アクセス可能なプロジェクトを表示し、キーで検索してからボードを切り替える', () => {
   const onSelect = vi.fn();
   render(
     <ProjectDirectory
@@ -35,7 +35,7 @@ it('shows accessible projects and searches by project key before switching board
   expect(onSelect).toHaveBeenCalledWith('2');
 });
 
-it('blocks duplicate creation until the result returns and selects the returned project', async () => {
+it('作成結果が返るまで重複送信を防ぎ、作成されたプロジェクトを選択する', async () => {
   let complete!: (project: (typeof projects)[0]) => void;
   vi.mocked(createProject).mockImplementation(
     () =>
@@ -68,7 +68,7 @@ it('blocks duplicate creation until the result returns and selects the returned 
   expect(screen.getByLabelText('プロジェクト名')).toHaveValue('');
 });
 
-it('preserves a failed draft and allows a retry', async () => {
+it('作成に失敗しても入力を保持し、再試行できる', async () => {
   vi.mocked(createProject)
     .mockRejectedValueOnce(new Error('作成拒否'))
     .mockResolvedValueOnce(projects[1]);
@@ -93,7 +93,7 @@ it('preserves a failed draft and allows a retry', async () => {
   await waitFor(() => expect(onCreated).toHaveBeenCalledWith(projects[1]));
 });
 
-it('does not create before the initial project list finishes loading', () => {
+it('初回のプロジェクト一覧取得が終わるまで作成を受け付けない', () => {
   render(
     <ProjectDirectory
       loading

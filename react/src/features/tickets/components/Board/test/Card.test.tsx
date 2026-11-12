@@ -4,7 +4,7 @@ import { toTicket } from '../../../api/ticketApi';
 import { responseTicket } from '../../../api/test/ticketFixture';
 import Card from '../Card';
 
-it('opens details from the title or card double click while leaving status controls independent', () => {
+it('タイトルのクリックとカードのダブルクリックで詳細を開き、ステータス操作では開かない', () => {
   const ticket = toTicket(responseTicket);
   const open = vi.fn();
   const status = vi.fn();

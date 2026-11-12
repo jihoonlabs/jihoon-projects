@@ -5,7 +5,7 @@ import { deferred, state, ticket } from './helpers';
 import type { Ticket } from '../../../types/ticket';
 import { expect, it, vi } from 'vitest';
 
-it('rolls back only the failed ticket while retaining a concurrent success', async () => {
+it('同時更新が成功したチケットを維持し、失敗したチケットだけを元に戻す', async () => {
   useTicketStore.setState({ tickets: [ticket('1', 3), ticket('2', 8)] });
   const request = deferred<Ticket>();
   vi.mocked(api.updateTicketStatus).mockImplementation((id) =>
@@ -19,7 +19,7 @@ it('rolls back only the failed ticket while retaining a concurrent success', asy
   expect(state().tickets[1]).toMatchObject({ status: 'DONE', position: 0 });
 });
 
-it('serializes same-ticket updates and restores the last confirmed state on failure', async () => {
+it('同じチケットの更新を順番に処理し、失敗したら最後に確定した状態に戻す', async () => {
   useTicketStore.setState({ tickets: [ticket('1')] });
   const request = deferred<Ticket>();
   vi.mocked(api.updateTicketStatus)
@@ -33,7 +33,7 @@ it('serializes same-ticket updates and restores the last confirmed state on fail
   expect(state().tickets[0].status).toBe('DONE');
 });
 
-it('preserves a concurrent same-project edit when drag rollback and refresh fail', async () => {
+it('ドラッグの取り消しと再取得が失敗しても、同じプロジェクトで同時に成功した編集を保持する', async () => {
   useTicketStore.setState({ tickets: [ticket('1'), ticket('2', 1)] });
   const request = deferred<Awaited<ReturnType<typeof api.moveTicket>>>();
   vi.mocked(api.moveTicket).mockReturnValue(request.promise);
@@ -61,7 +61,7 @@ it('preserves a concurrent same-project edit when drag rollback and refresh fail
   expect(state().error).toBe('refresh failed');
 });
 
-it('preserves concurrent same-project creation and deletion when drag rollback and refresh fail', async () => {
+it('ドラッグの取り消しと再取得が失敗しても、同じプロジェクトで同時に成功した作成と削除を保持する', async () => {
   useTicketStore.setState({ tickets: [ticket('1'), ticket('2', 1)] });
   const request = deferred<Awaited<ReturnType<typeof api.moveTicket>>>();
   vi.mocked(api.moveTicket).mockReturnValue(request.promise);
@@ -86,7 +86,7 @@ it('preserves concurrent same-project creation and deletion when drag rollback a
   expect(state().error).toBe('refresh failed');
 });
 
-it('runs a later explicit queued drag after a failed drag without retrying the failed request', async () => {
+it('ドラッグに失敗した後は失敗したリクエストを再送せず、利用者が続けて行った次の移動を処理する', async () => {
   useTicketStore.setState({ tickets: [ticket('1')] });
   const first = deferred<Awaited<ReturnType<typeof api.moveTicket>>>();
   vi.mocked(api.moveTicket)
@@ -112,7 +112,7 @@ it('runs a later explicit queued drag after a failed drag without retrying the f
   expect(results[1]).toEqual({ status: 'fulfilled', value: 5 });
 });
 
-it('keeps a later queued drag conflict rejected without automatically retrying', async () => {
+it('待機中の次の移動も競合したら拒否したままにし、自動再試行しない', async () => {
   useTicketStore.setState({ tickets: [ticket('1')] });
   const first = deferred<Awaited<ReturnType<typeof api.moveTicket>>>();
   vi.mocked(api.moveTicket)

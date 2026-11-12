@@ -44,7 +44,7 @@ beforeEach(() => {
   vi.mocked(api.fetchProjectMembers).mockResolvedValue(members);
 });
 
-it('shows roles without direct edits, keeps the leader and adds only ordinary members', async () => {
+it('役割を変更できない形で表示し、リーダーを維持して一般メンバーだけを追加する', async () => {
   vi.mocked(api.addProjectMember).mockResolvedValue(members[1]);
   render(<ProjectMembersDialog project={project} onClose={vi.fn()} />);
   await screen.findByText(/Aki.*リーダー/);
@@ -67,7 +67,7 @@ it('shows roles without direct edits, keeps the leader and adds only ordinary me
   );
 });
 
-it('uses leader transfer and immediately updates parent permissions even if the reload fails', async () => {
+it('リーダー引き継ぎ後の再取得が失敗しても、親画面の権限をすぐに更新する', async () => {
   const leader = { ...members[1], role: 'leader' as const };
   vi.mocked(api.transferProjectLeader).mockResolvedValue(leader);
   const changed = vi.fn();
@@ -104,7 +104,7 @@ it('uses leader transfer and immediately updates parent permissions even if the 
   expect(api.transferProjectLeader).toHaveBeenCalledTimes(1);
 });
 
-it('locks mutation and dismissal while the save is pending', async () => {
+it('保存中は変更操作とダイアログを閉じる操作を無効にする', async () => {
   let complete!: (value: ProjectMember) => void;
   vi.mocked(api.updateProjectMember).mockImplementation(
     () =>
@@ -133,7 +133,7 @@ it('locks mutation and dismissal while the save is pending', async () => {
   );
 });
 
-it('renders a read-only member list after management rights change', async () => {
+it('管理権限を失うと、メンバー一覧を閲覧専用で表示する', async () => {
   render(
     <ProjectMembersDialog
       project={project}

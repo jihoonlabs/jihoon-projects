@@ -10,7 +10,7 @@ import { expect, it, vi } from 'vitest';
 import * as api from '../../../../api/ticketCommentApi';
 import TicketComments from '../../TicketComments';
 
-it('blocks submission while the initial list is pending instead of losing a new comment to an older GET', async () => {
+it('初回一覧の取得中は投稿を無効にし、古いGET結果で新規コメントが消えるのを防ぐ', async () => {
   const list = deferred<(typeof mine)[]>();
   vi.mocked(api.fetchTicketComments).mockReturnValueOnce(list.promise);
   render(<TicketComments ticketId="1" currentUserId={7} />);
@@ -33,7 +33,7 @@ it('blocks submission while the initial list is pending instead of losing a new 
   );
 });
 
-it('retries a failed list without presenting it as empty or clearing the draft', async () => {
+it('一覧の取得に失敗しても空の一覧として表示せず、下書きを保って再取得できる', async () => {
   vi.mocked(api.fetchTicketComments).mockRejectedValueOnce(
     new Error('list failed'),
   );
@@ -53,7 +53,7 @@ it('retries a failed list without presenting it as empty or clearing the draft',
   expect(screen.getByRole('button', { name: '送信' })).toBeEnabled();
 });
 
-it('preserves the next draft typed while a previous comment is being sent and rejects duplicate submit events', async () => {
+it('コメントの送信中に入力した次の下書きを保持し、重複送信を防ぐ', async () => {
   const post = deferred<typeof mine>();
   vi.mocked(api.createTicketComment).mockReturnValueOnce(post.promise);
   render(<TicketComments ticketId="1" currentUserId={7} />);
@@ -70,7 +70,7 @@ it('preserves the next draft typed while a previous comment is being sent and re
   expect(input).toHaveValue('next draft');
 });
 
-it('isolates a new ticket from the previous ticket draft and late post response', async () => {
+it('チケットを切り替えると前の下書きと遅れて届く投稿結果を引き継がない', async () => {
   const post = deferred<typeof mine>();
   vi.mocked(api.createTicketComment).mockReturnValueOnce(post.promise);
   const view = render(<TicketComments ticketId="1" currentUserId={7} />);
@@ -93,7 +93,7 @@ it('isolates a new ticket from the previous ticket draft and late post response'
   expect(screen.queryByText('my comment')).not.toBeInTheDocument();
 });
 
-it('locks the edit field during save so changes cannot disappear after the response', async () => {
+it('編集内容の保存中は入力を無効にし、保存結果による未送信の変更の消失を防ぐ', async () => {
   const edit = deferred<typeof mine>();
   vi.mocked(api.updateTicketComment).mockReturnValueOnce(edit.promise);
   render(<TicketComments ticketId="1" currentUserId={7} />);
@@ -109,7 +109,7 @@ it('locks the edit field during save so changes cannot disappear after the respo
   expect(input).toHaveValue('saved edit');
 });
 
-it('ignores a previous ticket list response after switching tickets', async () => {
+it('チケットを切り替えた後に届く前のコメント一覧を無視する', async () => {
   const oldList = deferred<(typeof mine)[]>();
   vi.mocked(api.fetchTicketComments).mockReturnValueOnce(oldList.promise);
   const view = render(<TicketComments ticketId="1" currentUserId={7} />);

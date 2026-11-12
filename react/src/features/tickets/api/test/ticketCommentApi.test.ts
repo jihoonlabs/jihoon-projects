@@ -17,8 +17,8 @@ const responseComment = {
   updated_at: '2026-09-30T00:00:00.000000Z',
 };
 
-describe('Ticket comment API boundary', () => {
-  it('fetches and maps comments', async () => {
+describe('チケットコメントAPI', () => {
+  it('取得したコメントを画面用の形式に変換する', async () => {
     server.use(
       http.get(`${url}/api/tickets/1/comments`, ({ request }) => {
         expect(request.credentials).toBe('include');
@@ -37,7 +37,7 @@ describe('Ticket comment API boundary', () => {
     ]);
   });
 
-  it('creates and updates comments with CSRF', async () => {
+  it('コメントの投稿と更新にCSRF保護を適用する', async () => {
     server.use(
       http.post(`${url}/api/tickets/1/comments`, async ({ request }) => {
         expect(request.headers.get('X-XSRF-TOKEN')).toBe('test-csrf-token');
@@ -64,7 +64,7 @@ describe('Ticket comment API boundary', () => {
     ).resolves.toMatchObject({ body: 'updated comment' });
   });
 
-  it('deletes a comment', async () => {
+  it('コメントを削除する', async () => {
     server.use(
       http.delete(`${url}/api/tickets/1/comments/10`, ({ request }) => {
         expect(request.headers.get('X-XSRF-TOKEN')).toBe('test-csrf-token');
@@ -84,13 +84,13 @@ describe('Ticket comment API boundary', () => {
     await expect(fetchTicketComments('1')).rejects.toThrow(String(status));
   };
 
-  it('rejects an unauthorized comments response', () =>
+  it('コメント一覧の401レスポンスをエラーにする', () =>
     rejectsListRequestWithStatus(401));
-  it('rejects a forbidden comments response', () =>
+  it('コメント一覧の403レスポンスをエラーにする', () =>
     rejectsListRequestWithStatus(403));
-  it('rejects an invalid comments response', () =>
+  it('コメント一覧の422レスポンスをエラーにする', () =>
     rejectsListRequestWithStatus(422));
-  it('rejects a server-error comments response', () =>
+  it('コメント一覧の500レスポンスをエラーにする', () =>
     rejectsListRequestWithStatus(500));
 
   const rejectsInvalidListEnvelope = async (body: Record<string, unknown>) => {
@@ -100,10 +100,10 @@ describe('Ticket comment API boundary', () => {
     await expect(fetchTicketComments('1')).rejects.toThrow();
   };
 
-  it('rejects a missing comments data envelope', () =>
+  it('dataがないコメント一覧レスポンスを拒否する', () =>
     rejectsInvalidListEnvelope({}));
-  it('rejects null comments data', () =>
+  it('dataがnullのコメント一覧レスポンスを拒否する', () =>
     rejectsInvalidListEnvelope({ data: null }));
-  it('rejects an object where the comments list is expected', () =>
+  it('dataが配列でなくオブジェクトのコメント一覧レスポンスを拒否する', () =>
     rejectsInvalidListEnvelope({ data: {} }));
 });

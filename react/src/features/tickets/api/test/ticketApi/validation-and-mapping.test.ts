@@ -10,31 +10,31 @@ import { responseTicket } from '../ticketFixture';
 import { server } from '@/test/mocks/server';
 import { url } from '../setup';
 
-it('rejects a non-numeric project ID', async () => {
+it('数値でないプロジェクトIDを拒否する', async () => {
   await expect(
     createTicket({ projectId: 'not-an-id', title: 'New' }),
   ).rejects.toThrow('プロジェクトID');
 });
 
-it('rejects zero as a project ID', async () => {
+it('プロジェクトIDが0の場合は拒否する', async () => {
   await expect(createTicket({ projectId: '0', title: 'New' })).rejects.toThrow(
     'プロジェクトID',
   );
 });
 
-it('rejects a non-numeric assignee ID instead of sending null', async () => {
+it('数値でない担当者IDをnullに変えずに拒否する', async () => {
   await expect(
     createTicket({ projectId: '1', title: 'New', assigneeId: 'not-an-id' }),
   ).rejects.toThrow('担当者ID');
 });
 
-it('rejects zero as an assignee ID instead of sending null', async () => {
+it('担当者IDが0の場合はnullに変えずに拒否する', async () => {
   await expect(
     createTicket({ projectId: '1', title: 'New', assigneeId: '0' }),
   ).rejects.toThrow('担当者ID');
 });
 
-it('maps snake_case, nullable fields, and numeric assignee IDs', () => {
+it('snake_caseの項目、nullを許す項目、数値の担当者IDを変換する', () => {
   expect(toTicket({ ...responseTicket, position: 12 })).toEqual({
     id: '1',
     projectId: '1',
@@ -65,7 +65,7 @@ it('maps snake_case, nullable fields, and numeric assignee IDs', () => {
   });
 });
 
-it('reads the data envelope and preserves API order', async () => {
+it('レスポンスのdataからチケットを取り出し、APIが返した順序を保つ', async () => {
   server.use(
     http.get(`${url}/api/tickets`, ({ request }) => {
       expect(request.credentials).toBe('include');
@@ -82,13 +82,13 @@ it('reads the data envelope and preserves API order', async () => {
   ]);
 });
 
-it('rejects a non-numeric update assignee ID', async () => {
+it('更新時に数値でない担当者IDを拒否する', async () => {
   await expect(updateTicket('1', { assigneeId: 'not-an-id' })).rejects.toThrow(
     '担当者ID',
   );
 });
 
-it('rejects zero as an update assignee ID', async () => {
+it('更新時に担当者IDが0の場合は拒否する', async () => {
   await expect(updateTicket('1', { assigneeId: '0' })).rejects.toThrow(
     '担当者ID',
   );
@@ -103,11 +103,11 @@ const rejectListFetchWithStatus = async (status: number) => {
   await expect(fetchTickets()).rejects.toThrow(String(status));
 };
 
-it('rejects an unauthorized ticket list response', () =>
+it('チケット一覧の401レスポンスをエラーにする', () =>
   rejectListFetchWithStatus(401));
-it('rejects a forbidden ticket list response', () =>
+it('チケット一覧の403レスポンスをエラーにする', () =>
   rejectListFetchWithStatus(403));
-it('rejects a server-error ticket list response', () =>
+it('チケット一覧の500レスポンスをエラーにする', () =>
   rejectListFetchWithStatus(500));
 
 const rejectListEnvelope = async (body: Record<string, unknown>) => {
@@ -115,11 +115,10 @@ const rejectListEnvelope = async (body: Record<string, unknown>) => {
   await expect(fetchTickets()).rejects.toThrow();
 };
 
-it('rejects a ticket list response without a data envelope', () =>
-  rejectListEnvelope({}));
-it('rejects a ticket list response with null data', () =>
+it('dataがないチケット一覧レスポンスを拒否する', () => rejectListEnvelope({}));
+it('dataがnullのチケット一覧レスポンスを拒否する', () =>
   rejectListEnvelope({ data: null }));
-it('rejects a ticket list response with an object instead of a list', () =>
+it('dataが配列でなくオブジェクトのチケット一覧レスポンスを拒否する', () =>
   rejectListEnvelope({ data: {} }));
 const rejectsUnsafeVersion = (version: unknown) => {
   expect(() =>
@@ -127,5 +126,6 @@ const rejectsUnsafeVersion = (version: unknown) => {
   ).toThrow('バージョン');
 };
 
-it('rejects a missing response version', () => rejectsUnsafeVersion(undefined));
-it('rejects zero as a response version', () => rejectsUnsafeVersion(0));
+it('レスポンスにバージョンがなければ拒否する', () =>
+  rejectsUnsafeVersion(undefined));
+it('レスポンスのバージョンが0なら拒否する', () => rejectsUnsafeVersion(0));

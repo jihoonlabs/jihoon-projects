@@ -13,7 +13,7 @@ import { responseTicket } from '../ticketFixture';
 import { server } from '@/test/mocks/server';
 import { url } from '../setup';
 
-it('maps detail and PATCH responses through the same boundary', async () => {
+it('詳細取得とPATCHのレスポンスを同じ処理で変換する', async () => {
   server.use(
     http.get(`${url}/api/tickets/1`, () =>
       HttpResponse.json({ data: responseTicket }),
@@ -33,7 +33,7 @@ it('maps detail and PATCH responses through the same boundary', async () => {
   });
 });
 
-it('sends assignee_id rather than the display object and preserves server defaults', async () => {
+it('表示用の担当者オブジェクトの代わりにassignee_idを送り、サーバーの初期値を保持する', async () => {
   server.use(
     http.post(`${url}/api/tickets`, async ({ request }) => {
       expect(request.credentials).toBe('include');
@@ -60,7 +60,7 @@ it('sends assignee_id rather than the display object and preserves server defaul
   ).toMatchObject({ title: 'New', issueKey: 'TICK-1' });
 });
 
-it('sends editable ticket fields through PATCH', async () => {
+it('編集可能なチケット項目をPATCHで送信する', async () => {
   server.use(
     http.patch(`${url}/api/tickets/1`, async ({ request }) => {
       expect(request.headers.get('X-XSRF-TOKEN')).toBe('test-csrf-token');
@@ -99,7 +99,7 @@ it('sends editable ticket fields through PATCH', async () => {
   });
 });
 
-it('does not interpret DELETE message as a Ticket', async () => {
+it('DELETEの結果メッセージをチケットとして扱わない', async () => {
   server.use(
     http.delete(`${url}/api/tickets/1`, () =>
       HttpResponse.json({ message: 'Deleted' }),
@@ -108,7 +108,7 @@ it('does not interpret DELETE message as a Ticket', async () => {
   await expect(deleteTicket('1')).resolves.toBeUndefined();
 });
 
-it('sends a versioned move and maps the authoritative board version', async () => {
+it('移動リクエストにバージョンを含め、サーバーが返したボードバージョンを採用する', async () => {
   server.use(
     http.patch(`${url}/api/tickets/1/move`, async ({ request }) => {
       expect(request.headers.get('X-XSRF-TOKEN')).toBe('test-csrf-token');
@@ -134,7 +134,7 @@ it('sends a versioned move and maps the authoritative board version', async () =
   });
 });
 
-it('preserves a stale board conflict as a 409 API error', async () => {
+it('古いボードバージョンの競合を409のAPIエラーとして扱う', async () => {
   server.use(
     http.patch(`${url}/api/tickets/1/move`, () =>
       HttpResponse.json({ message: 'stale' }, { status: 409 }),
@@ -146,7 +146,7 @@ it('preserves a stale board conflict as a 409 API error', async () => {
   });
 });
 
-it('transmits expected_version, adopts response version, and parses conflict code', async () => {
+it('expected_versionを送り、レスポンスのバージョンを採用し、競合コードを読み取る', async () => {
   server.use(
     http.patch(`${url}/api/tickets/1`, async ({ request }) => {
       expect(await request.json()).toEqual({
@@ -171,7 +171,7 @@ it('transmits expected_version, adopts response version, and parses conflict cod
   );
 });
 
-it('fetches detail without caching and forwards cancellation', async () => {
+it('キャッシュを使わずに詳細を取得し、キャンセルをリクエストに伝える', async () => {
   const controller = new AbortController();
   server.use(
     http.get(`${url}/api/tickets/1`, ({ request }) => {
