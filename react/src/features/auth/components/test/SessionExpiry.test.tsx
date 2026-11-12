@@ -38,7 +38,7 @@ beforeEach(() => {
   useAuthStore.getState().login(user);
   useAuthStore.getState().initialize();
 });
-it('hides protected content and restores same-user drafts after login', () => {
+it('セッション失効時は認証が必要な内容を隠し、同じユーザーの再ログイン後に下書きを復元すること', () => {
   render(
     <DashboardLayout>
       <Draft />
@@ -56,7 +56,7 @@ it('hides protected content and restores same-user drafts after login', () => {
   expect(screen.getByLabelText('draft')).toBeVisible();
   expect(screen.getByLabelText('draft')).toHaveValue('Unsaved ticket');
 });
-it('never restores a previous account draft to another account', () => {
+it('別のアカウントで再ログインしても以前のアカウントの下書きを復元しないこと', () => {
   render(
     <DashboardLayout>
       <Draft />
@@ -69,7 +69,7 @@ it('never restores a previous account draft to another account', () => {
   act(() => useAuthStore.getState().login({ ...user, id: 2 }));
   expect(screen.getByLabelText('draft')).toHaveValue('');
 });
-it('still removes content and routes to login for explicit logout', () => {
+it('明示的にログアウトすると内容を取り除いてログイン画面へ遷移すること', () => {
   render(
     <DashboardLayout>
       <Draft />

@@ -38,7 +38,7 @@ beforeEach(() => {
   });
 });
 
-it('allows a valid Sanctum session after /api/auth/me initializes the auth store', async () => {
+it('有効なSanctumセッションを/api/auth/meで確認すると認証が必要な画面を表示すること', async () => {
   server.use(http.get(`${API_URL}/api/auth/me`, () => HttpResponse.json(user)));
 
   render(
@@ -55,7 +55,7 @@ it('allows a valid Sanctum session after /api/auth/me initializes the auth store
   expect(useAuthStore.getState().user).toEqual(user);
 });
 
-it('redirects to login when /api/auth/me rejects an unauthenticated session', async () => {
+it('/api/auth/meが未認証を示す401を返すとログイン画面へ遷移すること', async () => {
   server.use(
     http.get(`${API_URL}/api/auth/me`, () =>
       HttpResponse.json({}, { status: 401 }),
@@ -76,7 +76,7 @@ it('redirects to login when /api/auth/me rejects an unauthenticated session', as
   expect(useAuthStore.getState().isAuthenticated).toBe(false);
 });
 
-it('does not let an obsolete initial session response erase a newer successful login', async () => {
+it('セッションの初回確認の401応答が遅れて届いても、後から成立したログイン状態を維持すること', async () => {
   let deliver!: () => void;
   const pending = new Promise<void>((resolve) => {
     deliver = resolve;
@@ -98,7 +98,7 @@ it('does not let an obsolete initial session response erase a newer successful l
   expect(useAuthStore.getState().isAuthenticated).toBe(true);
 });
 
-it('does not let an obsolete session success restore a session after logout', async () => {
+it('ログアウト後に初回のセッション確認が成功しても、ログイン状態を復元しないこと', async () => {
   let deliver!: () => void;
   const pending = new Promise<void>((resolve) => {
     deliver = resolve;
@@ -120,7 +120,7 @@ it('does not let an obsolete session success restore a session after logout', as
 });
 
 it.each(['login', 'logout'])(
-  'aborts initial session lookup before %s sends a credential-changing request',
+  '%sの認証状態を変更するリクエストを送信する前に、セッションの初回確認を中断すること',
   async (action) => {
     let initialSignal: AbortSignal | undefined;
     server.use(

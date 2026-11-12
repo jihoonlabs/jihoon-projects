@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { validateRegisterForm } from '../auth';
 
-describe('validateRegisterForm', () => {
+describe('会員登録フォームの入力検証', () => {
   it('正しい入力内容の場合、エラーがないこと', () => {
     expect(
       validateRegisterForm(

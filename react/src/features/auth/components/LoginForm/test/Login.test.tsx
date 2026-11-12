@@ -139,7 +139,7 @@ describe('LoginForm ログイン処理', () => {
   });
 });
 
-it('does not expose login fields while initial session verification is pending', async () => {
+it('セッションの初回確認が終わるまでログインフォームの入力欄を表示しないこと', async () => {
   useAuthStore.setState({
     user: null,
     isAuthenticated: false,
@@ -154,7 +154,7 @@ it('does not expose login fields while initial session verification is pending',
   expect(screen.getByLabelText('メールアドレス')).toBeInTheDocument();
 });
 
-it('replaces a restored authenticated login route without showing the login form', async () => {
+it('ログイン済みのセッションが復元された場合、ログインフォームを表示せず勤怠画面へ遷移すること', async () => {
   useAuthStore.setState({
     user: mockUser,
     isAuthenticated: true,

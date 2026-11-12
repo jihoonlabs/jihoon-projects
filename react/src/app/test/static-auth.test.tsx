@@ -18,7 +18,7 @@ describe('静的認証ページのクエリ引き継ぎ', () => {
       isInitialized: true,
     });
   });
-  it('メール確認の結果をログイン画面に表示する', () => {
+  it('メールアドレスの認証完了をログイン画面に表示すること', () => {
     query.value = 'verified=1';
     render(<LoginPage />);
     expect(
@@ -27,19 +27,19 @@ describe('静的認証ページのクエリ引き継ぎ', () => {
       ),
     ).toBeInTheDocument();
   });
-  it('OAuth失敗の結果を保持する', () => {
+  it('OAuth認証の失敗をログイン画面に表示すること', () => {
     query.value = 'error=social_login_failed&provider=google';
     render(<LoginPage />);
     expect(screen.getByText('Google認証に失敗しました。')).toBeInTheDocument();
   });
-  it('有効なresetリンクは入力フォームを表示する', () => {
+  it('有効なパスワード再設定リンクで入力フォームを表示すること', () => {
     query.value = 'email=demo%40example.com&token=sample';
     render(<ResetPasswordPage />);
     expect(
       screen.getByRole('button', { name: 'パスワードを再設定' }),
     ).toBeInTheDocument();
   });
-  it('重複したresetパラメータを受け入れない', () => {
+  it('パスワード再設定リンクにトークンが重複している場合はエラーを表示すること', () => {
     query.value = 'email=demo%40example.com&token=a&token=b';
     render(<ResetPasswordPage />);
     expect(screen.getByRole('alert')).toHaveTextContent(

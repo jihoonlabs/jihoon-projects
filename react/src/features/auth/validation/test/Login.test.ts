@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { validateLoginForm } from '../auth';
 
-describe('validateLoginForm', () => {
+describe('ログインフォームの入力検証', () => {
   it('正しいメールアドレスとパスワードの場合、エラーがないこと', () => {
     expect(validateLoginForm('user@example.com', 'password123')).toEqual({});
   });

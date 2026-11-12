@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { validatePasswordResetLinkForm } from '../auth';
 
-describe('validatePasswordResetLinkForm', () => {
+describe('パスワード再設定メール送信フォームの入力検証', () => {
   it('正しいメールアドレスの場合、エラーがないこと', () => {
     expect(validatePasswordResetLinkForm('user@example.com')).toEqual({});
   });

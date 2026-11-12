@@ -72,7 +72,7 @@ describe('LoginForm メール認証処理', () => {
     [true, false],
     [true, true],
   ])(
-    'keeps newer login recovery after delayed resend (failure: %s, email change: %s)',
+    '認証メールの再送応答が遅れて届いても、最新のログイン試行の案内を維持すること（再送失敗: %s、メールアドレス変更: %s）',
     async (fails, changeEmail) => {
       const user = userEvent.setup();
       let release!: () => void;

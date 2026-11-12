@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { validatePasswordResetForm } from '../auth';
 
-describe('validatePasswordResetForm', () => {
+describe('パスワード再設定フォームの入力検証', () => {
   it('正しい入力内容の場合、エラーがないこと', () => {
     expect(validatePasswordResetForm('password123', 'password123')).toEqual({});
   });

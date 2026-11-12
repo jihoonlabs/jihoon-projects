@@ -24,8 +24,8 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-describe('protected session requests', () => {
-  it('expires the current session on 401 while retaining draft owner identity', async () => {
+describe('認証が必要なリクエスト', () => {
+  it('401を受け取ると、下書きの所有者情報を保持したままセッションを失効させること', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(new Response(null, { status: 401 })),
@@ -38,7 +38,7 @@ describe('protected session requests', () => {
       user,
     });
   });
-  it('does not log out on a permission denial', async () => {
+  it('権限不足で403を受け取ってもログイン状態を維持すること', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(new Response(null, { status: 403 })),
@@ -47,7 +47,7 @@ describe('protected session requests', () => {
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
   });
   it.each([200, 401])(
-    'discards a stale %s response after a new login',
+    '再ログイン後に届いた以前のリクエストの%s応答を破棄すること',
     async (status) => {
       const pending = deferred<Response>();
       const fetchMock = vi.fn().mockReturnValue(pending.promise);
@@ -67,7 +67,7 @@ describe('protected session requests', () => {
       });
     },
   );
-  it('blocks further requests while expired', async () => {
+  it('セッションが失効している間は読み取りと更新のリクエストを送信しないこと', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     useAuthStore.getState().expireSession();
@@ -79,7 +79,7 @@ describe('protected session requests', () => {
     ).rejects.toMatchObject({ name: 'AbortError' });
     expect(fetchMock).not.toHaveBeenCalled();
   });
-  it('handles a write 401 after CSRF setup', async () => {
+  it('CSRFの準備後に更新リクエストが401を受け取るとセッションを失効させること', async () => {
     document.cookie = 'XSRF-TOKEN=fixture; path=/';
     const fetchMock = vi
       .fn()
