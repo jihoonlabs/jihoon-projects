@@ -92,7 +92,7 @@ it('filters tickets by the selected project', async () => {
   expect(screen.queryByText('First ticket')).not.toBeInTheDocument();
 });
 
-it('keeps read members read-only while allowing Ticket details and comments', async () => {
+it('閲覧権限のメンバーはチケットを変更できず、詳細とコメントを閲覧できる', async () => {
   vi.mocked(api.fetchTickets).mockResolvedValue([api.toTicket(responseTicket)]);
   vi.mocked(projectApi.fetchProjectMembers).mockResolvedValue([
     {
@@ -109,12 +109,7 @@ it('keeps read members read-only while allowing Ticket details and comments', as
   const ticketTitle = await screen.findByRole('button', {
     name: 'TICK-1 の詳細を開く',
   });
-  expect(
-    ticketTitle.closest('[aria-roledescription="sortable"]'),
-  ).not.toHaveAttribute('aria-disabled', 'true');
-  expect(
-    await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' }),
-  ).toBeInTheDocument();
+  expect(ticketTitle).toBeEnabled();
   expect(
     screen.queryByRole('button', { name: '編集' }),
   ).not.toBeInTheDocument();
@@ -130,7 +125,7 @@ it('keeps read members read-only while allowing Ticket details and comments', as
   expect(
     screen.queryByRole('combobox', { name: 'First ticket のステータス' }),
   ).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'TICK-1 の詳細を開く' }));
+  fireEvent.click(ticketTitle);
   expect(
     await screen.findByRole('heading', { name: 'チケット詳細' }),
   ).toBeInTheDocument();

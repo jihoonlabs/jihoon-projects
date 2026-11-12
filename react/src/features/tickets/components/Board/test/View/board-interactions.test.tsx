@@ -15,19 +15,51 @@ import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import * as projectApi from '@/features/tickets/api/projectApi';
 import { TicketBoardView } from '../../View';
 
-it('persists a board drop with the selected project version', async () => {
+it('編集権限のあるメンバーは選択中のプロジェクトのバージョンを指定してチケットを移動できる', async () => {
   const ticket = api.toTicket(responseTicket);
   vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
   vi.mocked(api.moveTicket).mockResolvedValue({ ticket, boardVersion: 4 });
   useTicketStore.setState({ tickets: [], error: null, isLoading: false });
   await renderSelectedProject();
-  await waitFor(() =>
-    expect(useTicketStore.getState().tickets).toHaveLength(1),
-  );
+  await screen.findByRole('combobox', { name: 'First ticket のステータス' });
   fireEvent.click(screen.getByText('drop DONE'));
   await waitFor(() =>
     expect(api.moveTicket).toHaveBeenCalledWith('1', 'DONE', 0, 3),
   );
+});
+
+it('閲覧権限のメンバーはドロップイベントを受けてもチケットを移動できない', async () => {
+  const ticket = api.toTicket(responseTicket);
+  vi.mocked(api.fetchTickets).mockResolvedValue([ticket]);
+  vi.mocked(api.moveTicket).mockResolvedValue({
+    ticket: { ...ticket, status: 'DONE' },
+    boardVersion: 4,
+  });
+  vi.mocked(projectApi.fetchProjectMembers).mockResolvedValue([
+    {
+      id: '7',
+      name: 'Tester',
+      email: 'tester@example.com',
+      role: 'member',
+      permission: 'read',
+    },
+  ]);
+
+  await renderSelectedProject();
+  await screen.findByRole('button', { name: 'TICK-1 の詳細を開く' });
+  await waitFor(() =>
+    expect(projectApi.fetchProjectMembers).toHaveBeenCalledWith('1'),
+  );
+  expect(useTicketStore.getState().tickets).toEqual([ticket]);
+  vi.mocked(api.moveTicket).mockClear();
+
+  // DndContext のテスト用ボタンからドロップイベントを直接送る。
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'drop DONE' }));
+  });
+
+  expect(api.moveTicket).not.toHaveBeenCalled();
+  expect(useTicketStore.getState().tickets).toEqual([ticket]);
 });
 
 const assertFailedDragRemainsVisibleAfterRevalidation = async (
