@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Post;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,6 +16,8 @@ class PostApiTest extends TestCase
      */
     public function test_post_can_be_created(): void
     {
+        $this->actingAs(User::factory()->create(['status' => 'active']));
+
         // 실제 서버를 띄우지 않고 Laravel 내부에서 POST 요청을 보냄
         $response = $this->postJson('/api/posts', [
             'content' => '첫 번째 게시글입니다.',
@@ -69,6 +72,8 @@ class PostApiTest extends TestCase
      */
     public function test_post_can_be_updated(): void
     {
+        $this->actingAs(User::factory()->create(['status' => 'active']));
+
         // 수정할 게시글 생성
         $post = Post::create([
             'content' => '수정 전 게시글입니다.',
@@ -107,6 +112,8 @@ class PostApiTest extends TestCase
      */
     public function test_post_can_be_deleted(): void
     {
+        $this->actingAs(User::factory()->create(['status' => 'active']));
+
         // 삭제할 게시글 생성
         $post = Post::create([
             'content' => '삭제할 게시글입니다.',

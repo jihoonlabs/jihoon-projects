@@ -8,6 +8,7 @@ namespace Tests\Feature;
 | TestCase: Laravel 테스트 기본 클래스
 */
 use App\Models\Notice;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -23,6 +24,8 @@ class NoticeApiTest extends TestCase
     */
     public function test_title_is_required_when_creating_notice(): void
     {
+        $this->actingAs(User::factory()->create(['status' => 'active']));
+
         $response = $this->postJson('/api/notices', [
             'content' => 'title nothing', // no title
         ]);
@@ -40,6 +43,8 @@ class NoticeApiTest extends TestCase
 
     public function test_notice_can_be_created(): void
     {
+        $this->actingAs(User::factory()->create(['status' => 'active']));
+
         $response = $this->postJson('/api/notices', [
             'title' => '1st',
             'content' => 'test',
