@@ -35,7 +35,7 @@ class PostController extends Controller
     {
         $validated = $request->validate([
             'content' => ['required', 'string'],
-            'image_url' => ['nullable', 'string'],
+            'image_url' => ['nullable', 'string', 'max:255', 'url:http,https'],
         ]);
 
         $post = Post::create($validated);
@@ -73,7 +73,7 @@ class PostController extends Controller
         // 수정 요청 데이터 검증
         $validated = $request->validate([
             'content' => ['required', 'string'],
-            'image_url' => ['nullable', 'string'],
+            'image_url' => ['nullable', 'string', 'max:255', 'url:http,https'],
         ]);
 
         // Route Model Binding으로 찾은 게시글 수정

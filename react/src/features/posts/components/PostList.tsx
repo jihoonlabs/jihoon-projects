@@ -6,6 +6,20 @@ import { fetchPosts } from '../api/postApi';
 import { setPosts } from '../postSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
+// 保存済みの画像URLにも、ブラウザーへ渡す前にスキーム制限を適用する。
+function getHttpImageUrl(value: string | null): string | null {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:'
+      ? url.href
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function PostList() {
   // Redux에 action을 전달하기 위한 dispatch
   const dispatch = useAppDispatch();
@@ -33,24 +47,28 @@ export default function PostList() {
   return (
     <section>
       <ul>
-        {posts.map((post) => (
-          <li key={post.id}>
-            <article>
-              <h2>{post.title}</h2>
+        {posts.map((post) => {
+          const imageUrl = getHttpImageUrl(post.image_url);
 
-              <p>{post.content}</p>
+          return (
+            <li key={post.id}>
+              <article>
+                <h2>{post.title}</h2>
 
-              {post.image_url && <img src={post.image_url} alt={post.title} />}
+                <p>{post.content}</p>
 
-              <div>
-                <span>Likes: {post.like_count}</span>
-                <span>Comments: {post.comment_count}</span>
-              </div>
+                {imageUrl && <img src={imageUrl} alt={post.title} />}
 
-              <time>{post.created_at}</time>
-            </article>
-          </li>
-        ))}
+                <div>
+                  <span>Likes: {post.like_count}</span>
+                  <span>Comments: {post.comment_count}</span>
+                </div>
+
+                <time>{post.created_at}</time>
+              </article>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
