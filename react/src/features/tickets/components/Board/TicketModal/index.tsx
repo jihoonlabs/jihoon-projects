@@ -11,6 +11,7 @@ import type {
 } from '@/features/tickets/types/ticket';
 import { fetchTicket, TicketApiError } from '@/features/tickets/api/ticketApi';
 import TicketComments from '../TicketComments';
+import TicketDetailView from './TicketDetailView';
 import type { Project, ProjectMember } from '@/features/tickets/types/project';
 import { getProjectBorderColor } from '@/features/tickets/utils/projectColor';
 import styles from './index.module.css';
@@ -392,68 +393,27 @@ function TicketModalContent({
         </header>
 
         {isDetail && ticket ? (
-          <div className={styles.detailContent}>
-            <h3 className={styles.detailTitle}>{title}</h3>
-            <dl className={styles.detailGrid}>
-              <div className={styles.detailItem}>
-                <dt>ステータス</dt>
-                <dd>
-                  {STATUSES.find((item) => item.value === status)?.label ??
-                    status}
-                </dd>
-              </div>
-              <div className={styles.detailItem}>
-                <dt>優先度</dt>
-                <dd>
-                  {PRIORITIES.find((item) => item.value === priority)?.label ??
-                    priority}
-                </dd>
-              </div>
-              <div className={styles.detailItem}>
-                <dt>担当者</dt>
-                <dd>{assigneeName}</dd>
-              </div>
-            </dl>
-            <section
-              className={styles.descriptionSection}
-              aria-labelledby="ticket-description-title"
-            >
-              <h3 id="ticket-description-title">説明</h3>
-              <p>{description.trim() || '説明はありません。'}</p>
-            </section>
-            <div className={styles.actions}>
-              <button type="button" onClick={onClose} disabled={submitting}>
-                閉じる
-              </button>
-              {canEdit && (
-                <button
-                  type="button"
-                  className={styles.primaryButton}
-                  onClick={() => {
-                    setSaveError(null);
-                    setMode('edit');
-                  }}
-                >
-                  編集
-                </button>
-              )}
-              {canEdit && (
-                <button
-                  type="button"
-                  className={styles.dangerButton}
-                  onClick={() => void remove()}
-                  disabled={submitting}
-                >
-                  削除
-                </button>
-              )}
-            </div>
-            {saveError && (
-              <p className={styles.error} role="alert">
-                {saveError}
-              </p>
-            )}
-          </div>
+          <TicketDetailView
+            title={title}
+            status={
+              STATUSES.find((item) => item.value === status)?.label ?? status
+            }
+            priority={
+              PRIORITIES.find((item) => item.value === priority)?.label ??
+              priority
+            }
+            assigneeName={assigneeName}
+            description={description}
+            canEdit={canEdit}
+            submitting={submitting}
+            saveError={saveError}
+            onClose={onClose}
+            onEdit={() => {
+              setSaveError(null);
+              setMode('edit');
+            }}
+            onDelete={() => void remove()}
+          />
         ) : (
           <form onSubmit={submit} className={styles.form}>
             {!ticket && projectSelection && (
