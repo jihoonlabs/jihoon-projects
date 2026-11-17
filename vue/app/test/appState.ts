@@ -1,4 +1,5 @@
 import { useAuthStore } from '~/features/auth/store/useAuthStore';
+import { useTicketStore } from '~/features/tickets/store/useTicketStore';
 
 /**
  * テストごとにアプリの状態（Pinia ストア）を初期状態へ戻す。
@@ -6,4 +7,5 @@ import { useAuthStore } from '~/features/auth/store/useAuthStore';
  */
 export function resetAppState(): void {
   useAuthStore().reset();
+  useTicketStore().reset();
 }
