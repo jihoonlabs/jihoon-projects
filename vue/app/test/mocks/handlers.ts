@@ -13,6 +13,10 @@ export function apiHandlers(): RequestHandler[] {
       HttpResponse.json({ message: 'Unauthenticated.' }, { status: 401 }),
     ),
 
+    // チケットボードは開くだけで一覧を読むため、既定では空の一覧を返す
+    http.get('*/api/tickets', () => HttpResponse.json({ data: [] })),
+    http.get('*/api/projects', () => HttpResponse.json({ data: [] })),
+
     // Sanctum の CSRF Cookie 発行（Next.js 版の既定ハンドラーと同じ振る舞い）
     http.get('*/sanctum/csrf-cookie', () => {
       document.cookie = 'XSRF-TOKEN=test-csrf-token; path=/';
