@@ -6,33 +6,19 @@ defineProps<{ title: string; description: string }>();
 </script>
 
 <template>
-  <div :class="$style.page">
-    <div :class="$style.card">
-      <h1 :class="$style.title">{{ title }}</h1>
-      <p :class="$style.description">{{ description }}</p>
-      <div :class="$style.body">
-        <slot />
-      </div>
-      <div v-if="$slots.footer" :class="$style.footer">
-        <slot name="footer" />
-      </div>
+  <div :class="$style.card">
+    <h1 :class="$style.title">{{ title }}</h1>
+    <p :class="$style.description">{{ description }}</p>
+    <div :class="$style.body">
+      <slot />
+    </div>
+    <div v-if="$slots.footer" :class="$style.footer">
+      <slot name="footer" />
     </div>
   </div>
 </template>
 
 <style module lang="scss">
-.page {
-  display: grid;
-  flex: 1;
-  place-items: center;
-  min-height: 100vh;
-  min-height: 100svh;
-  padding: 2rem 1.25rem;
-  background: #f3f5f9;
-  color: #17243b;
-  color-scheme: light;
-}
-
 .card {
   width: 100%;
   max-width: 440px;

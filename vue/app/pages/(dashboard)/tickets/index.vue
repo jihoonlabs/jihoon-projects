@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import TicketsPage from '~/features/tickets/components/TicketsPage/TicketsPage.vue';
+import { pageTitle } from '~/shared/utils/pageTitle';
+
 definePageMeta({ layout: 'dashboard', middleware: 'auth' });
+useHead({ title: pageTitle('チケット管理') });
 </script>
 
 <template>
-  <section aria-labelledby="tickets-title">
-    <h1 id="tickets-title">チケット管理</h1>
-    <p>Vue 版のチケット管理は準備中です。</p>
-  </section>
+  <TicketsPage />
 </template>

@@ -10,6 +10,7 @@ import { authApi } from '~/test/mocks/auth/authApiHandlers';
 import { signInAs, signedOut } from '~/test/auth/signInAs';
 import { apiUrl } from '~/test/mocks/apiUrl';
 import { overrideApi } from '~/test/mocks/overrideApi';
+import { ticketApi } from '~/test/mocks/tickets/ticketApiHandlers';
 import { expectPath, renderRoute } from '~/test/renderRoute';
 
 const expireByUnauthorizedResponse = async () => {
@@ -110,7 +111,8 @@ describe('ログインが必要な画面', () => {
       await screen.findByRole('heading', { name: 'チケット管理' });
       await expireByUnauthorizedResponse();
       await screen.findByRole('region', { name: '再ログイン' });
-      overrideApi(authApi.loginSucceeds(original));
+      // 再ログイン後はチケットを取得し直すため、期限切れの 401 を成功の応答に戻す
+      overrideApi(authApi.loginSucceeds(original), ticketApi.tickets([]));
 
       await user.type(
         screen.getByLabelText('メールアドレス'),

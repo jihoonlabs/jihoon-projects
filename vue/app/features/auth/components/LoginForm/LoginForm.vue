@@ -1,218 +1,52 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, ref } from 'vue';
 
-import { useRuntimeConfig } from '#imports';
-import type { User } from '~/features/users/types/user';
-import { useApiClient } from '~/shared/api/apiClient';
-
-import { AccountError } from '../../api/accountRequest';
-import { login, LoginError } from '../../api/login';
-import { resendVerificationEmail } from '../../api/resendVerificationEmail';
-import { useAuthStore } from '../../store/useAuthStore';
-import type { LoginNotice, SocialProvider } from '../../types/auth';
-import { socialLoginUrl } from '../../utils/navigation';
-import {
-  hasErrors,
-  validateLogin,
-  type LoginValidationErrors,
-} from '../../validation/auth';
-
+import DemoAccountPicker from '../DemoAccountPicker/DemoAccountPicker.vue';
 import PasswordVisibilityIcon from '../PasswordVisibilityIcon/PasswordVisibilityIcon.vue';
+import SocialLoginLinks from '../SocialLoginLinks/SocialLoginLinks.vue';
 
 const props = withDefaults(
   defineProps<{
-    notice?: LoginNotice;
     /**
      * セッション期限切れ後の同じタブでの再ログイン。
-     * 画面を離れると未保存の入力が失われるため、外部へ移る導線（ソーシャルログイン・会員登録など）を出さない。
+     * 画面を離れると未保存の入力が失われるため、外部へ移る導線（ソーシャルログイン・会員登録など）を出さず、ログイン後も今の画面に留まる。
      */
     relogin?: boolean;
   }>(),
-  { notice: () => ({}), relogin: false },
+  { relogin: false },
 );
 
-const emit = defineEmits<{ 'signed-in': [user: User] }>();
+const demoMode = useRuntimeConfig().public.demoMode === true;
 
-const DEMO_ACCOUNTS = {
-  user: { email: 'demo@example.com', password: 'TicketDemo2026!' },
-  admin: { email: 'demo-admin@example.com', password: 'TicketAdmin2026!' },
-} as const;
+// 再ログインの窓では、開いている画面のクエリを通知として読まない
+const initialMessages = props.relogin
+  ? { error: '', success: '' }
+  : useLoginNotice();
 
-type DemoAccount = keyof typeof DEMO_ACCOUNTS;
+const {
+  email,
+  password,
+  errors,
+  loading,
+  serverError,
+  successMessage,
+  verification,
+  selectDemoAccount,
+  onEmailInput,
+  onPasswordInput,
+  submit,
+} = useLoginForm({ relogin: props.relogin, initialMessages });
 
-const config = useRuntimeConfig();
-const demoMode = config.public.demoMode === true;
-const client = useApiClient();
-const auth = useAuthStore();
+const {
+  required: verificationRequired,
+  resending: resendingVerification,
+  resend: resendVerification,
+} = verification;
 
-const email = ref(demoMode ? DEMO_ACCOUNTS.user.email : '');
-const password = ref(demoMode ? DEMO_ACCOUNTS.user.password : '');
 const showPassword = ref(false);
-const loading = ref(false);
-const errors = ref<LoginValidationErrors>({});
-
-const providerLabel = (provider?: string) => {
-  if (provider === 'google') return 'Google';
-  if (provider === 'line') return 'LINE';
-
-  return null;
-};
-
-// 表示メッセージは画面を開いた時点のクエリだけで決める
-const initialServerError = () => {
-  if (props.notice.error === 'social_login_failed') {
-    const label = providerLabel(props.notice.provider);
-
-    return label
-      ? `${label}認証に失敗しました。`
-      : 'ソーシャルログインに失敗しました。';
-  }
-
-  if (props.notice.error === 'account_unavailable') {
-    return 'このアカウントは現在利用できません。';
-  }
-
-  return '';
-};
-
-const initialSuccessMessage = () => {
-  if (props.notice.verified === '1') {
-    return 'メールアドレスの認証が完了しました。ログインしてください。';
-  }
-
-  if (props.notice.registered === '1') {
-    return '認証メールを送信しました。メールをご確認ください。';
-  }
-
-  return '';
-};
-
-const serverError = ref(initialServerError());
-const successMessage = ref(initialSuccessMessage());
 
 // 公開デモでは新規登録・メール送信・ソーシャルログインを使えないため導線を出さない
 const showExternalLinks = computed(() => !props.relogin && !demoMode);
-
-const verificationRequired = ref(false);
-const resendingVerification = ref(false);
-let verificationController: AbortController | null = null;
-// 入力変更や新しいログインのたびに進め、古い再送結果を表示に反映しない
-let verificationRevision = 0;
-
-const cancelVerificationRequest = () => {
-  verificationController?.abort();
-  verificationController = null;
-  resendingVerification.value = false;
-  verificationRevision += 1;
-};
-
-onBeforeUnmount(() => verificationController?.abort());
-
-const socialHref = (provider: SocialProvider) =>
-  socialLoginUrl(config.public.apiUrl, provider);
-
-const clearMessages = () => {
-  serverError.value = '';
-  successMessage.value = '';
-};
-
-const selectDemoAccount = (account: DemoAccount) => {
-  cancelVerificationRequest();
-  verificationRequired.value = false;
-  email.value = DEMO_ACCOUNTS[account].email;
-  password.value = DEMO_ACCOUNTS[account].password;
-  errors.value = {};
-  clearMessages();
-};
-
-const onEmailInput = () => {
-  // 別のメールアドレスに対する再送を続けない
-  cancelVerificationRequest();
-  verificationRequired.value = false;
-
-  if (errors.value.email) {
-    errors.value = { ...errors.value, email: undefined };
-  }
-};
-
-const onPasswordInput = () => {
-  if (errors.value.password) {
-    errors.value = { ...errors.value, password: undefined };
-  }
-};
-
-const preventWhileLoading = (event: MouseEvent) => {
-  if (loading.value) {
-    event.preventDefault();
-  }
-};
-
-const submit = async () => {
-  cancelVerificationRequest();
-  verificationRequired.value = false;
-  clearMessages();
-
-  const validationErrors = validateLogin(email.value, password.value);
-
-  if (hasErrors(validationErrors)) {
-    errors.value = validationErrors;
-    return;
-  }
-
-  errors.value = {};
-  loading.value = true;
-
-  try {
-    const user = await login(client, {
-      email: email.value,
-      password: password.value,
-    });
-
-    auth.signIn(user);
-    emit('signed-in', user);
-  } catch (error) {
-    serverError.value =
-      error instanceof LoginError
-        ? error.message
-        : 'ログイン中にエラーが発生しました。';
-    verificationRequired.value =
-      error instanceof LoginError && error.reason === 'email_not_verified';
-  } finally {
-    loading.value = false;
-  }
-};
-
-const resendVerification = async () => {
-  cancelVerificationRequest();
-  const controller = new AbortController();
-  const revision = verificationRevision;
-  verificationController = controller;
-  clearMessages();
-  resendingVerification.value = true;
-
-  try {
-    const response = await resendVerificationEmail(
-      client,
-      email.value,
-      controller.signal,
-    );
-
-    if (revision !== verificationRevision) return;
-    successMessage.value = response.message;
-    verificationRequired.value = false;
-  } catch (error) {
-    if (revision !== verificationRevision) return;
-    serverError.value =
-      error instanceof AccountError
-        ? error.message
-        : '認証メールの再送中にエラーが発生しました。';
-  } finally {
-    if (verificationController === controller) {
-      verificationController = null;
-      resendingVerification.value = false;
-    }
-  }
-};
 </script>
 
 <template>
@@ -247,33 +81,12 @@ const resendVerification = async () => {
     </button>
 
     <form :class="$style.form" novalidate @submit.prevent="submit">
-      <div
+      <DemoAccountPicker
         v-if="demoMode"
-        :class="$style.demoAccounts"
-        role="group"
-        aria-label="デモ用アカウント"
-      >
-        <button
-          type="button"
-          :class="$style.demoAccount"
-          :aria-pressed="email === DEMO_ACCOUNTS.user.email"
-          :disabled="loading"
-          @click="selectDemoAccount('user')"
-        >
-          一般ユーザー
-          <span>1プロジェクト</span>
-        </button>
-        <button
-          type="button"
-          :class="$style.demoAccount"
-          :aria-pressed="email === DEMO_ACCOUNTS.admin.email"
-          :disabled="loading"
-          @click="selectDemoAccount('admin')"
-        >
-          管理者
-          <span>2プロジェクト</span>
-        </button>
-      </div>
+        :selected-email="email"
+        :disabled="loading"
+        @select="selectDemoAccount"
+      />
 
       <div :class="$style.field">
         <label for="login-email">メールアドレス</label>
@@ -343,29 +156,7 @@ const resendVerification = async () => {
         {{ loading ? 'ログイン中...' : 'ログイン' }}
       </button>
 
-      <template v-if="showExternalLinks">
-        <div :class="$style.alternative">その他のログイン方法</div>
-        <div :class="$style.socialGroup">
-          <a
-            :href="socialHref('google')"
-            :class="$style.social"
-            :aria-disabled="loading || undefined"
-            @click="preventWhileLoading"
-          >
-            <img src="/auth/google-g.svg" width="20" height="20" alt="" />
-            <span>Googleでログイン</span>
-          </a>
-          <a
-            :href="socialHref('line')"
-            :class="$style.social"
-            :aria-disabled="loading || undefined"
-            @click="preventWhileLoading"
-          >
-            <img src="/auth/line-login.png" width="28" height="28" alt="" />
-            <span>LINEでログイン</span>
-          </a>
-        </div>
-      </template>
+      <SocialLoginLinks v-if="showExternalLinks" :disabled="loading" />
     </form>
 
     <div v-if="showExternalLinks" :class="$style.register">
@@ -456,40 +247,6 @@ $accent: #295dcc;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-
-.demoAccounts {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.6rem;
-}
-
-.demoAccount {
-  display: grid;
-  min-height: 52px;
-  align-content: center;
-  justify-items: center;
-  gap: 0.15rem;
-  border: 1px solid $border;
-  border-radius: 8px;
-  background: #fff;
-  color: #475569;
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-
-  span {
-    color: $muted;
-    font-size: 0.7rem;
-    font-weight: 400;
-  }
-
-  &[aria-pressed='true'] {
-    border-color: $accent;
-    background: #eef4ff;
-    color: #1d4ed8;
-  }
 }
 
 .field {
@@ -599,56 +356,27 @@ $accent: #295dcc;
   font-size: 0.75rem;
 }
 
-.submit,
-.social {
+.submit {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   min-height: 44px;
   padding: 0.7rem 0.85rem;
+  border: 1px solid $accent;
   border-radius: 8px;
+  background: $accent;
+  color: #fff;
   font: inherit;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-}
-
-.submit {
-  border: 1px solid $accent;
-  background: $accent;
-  color: #fff;
 
   &:hover {
     background: #224fac;
   }
 
   &:disabled {
-    opacity: 0.55;
-    cursor: wait;
-  }
-}
-
-.alternative {
-  color: $muted;
-  font-size: 0.75rem;
-  text-align: center;
-}
-
-.socialGroup {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.65rem;
-}
-
-.social {
-  border: 1px solid $border;
-  background: #fff;
-  color: #475569;
-  font-size: 0.8rem;
-  white-space: nowrap;
-
-  &[aria-disabled='true'] {
     opacity: 0.55;
     cursor: wait;
   }
