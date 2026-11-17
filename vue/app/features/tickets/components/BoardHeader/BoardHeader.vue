@@ -16,7 +16,7 @@ defineEmits<{ select: [projectId: string] }>();
 </script>
 
 <template>
-  <header :class="$style.header">
+  <div :class="$style.header">
     <h1 :class="$style.title">チケット管理</h1>
 
     <select
@@ -62,7 +62,7 @@ defineEmits<{ select: [projectId: string] }>();
       <option value="ME">自分に割り当て</option>
       <option value="UNASSIGNED">未割り当て</option>
     </select>
-  </header>
+  </div>
 </template>
 
 <style module lang="scss">

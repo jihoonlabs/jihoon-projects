@@ -16,6 +16,7 @@ export function apiHandlers(): RequestHandler[] {
     // チケットボードは開くだけで一覧を読むため、既定では空の一覧を返す
     http.get('*/api/tickets', () => HttpResponse.json({ data: [] })),
     http.get('*/api/projects', () => HttpResponse.json({ data: [] })),
+    http.get('*/api/projects/*/members', () => HttpResponse.json({ data: [] })),
 
     // Sanctum の CSRF Cookie 発行（Next.js 版の既定ハンドラーと同じ振る舞い）
     http.get('*/sanctum/csrf-cookie', () => {

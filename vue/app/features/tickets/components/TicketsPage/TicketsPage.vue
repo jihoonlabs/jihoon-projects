@@ -21,10 +21,12 @@ const { searchQuery, assigneeFilter, reset } = useTicketFilters();
 // ログイン直後・再ログイン後にチケットを取得し直す
 watch(
   () => auth.sessionRevision,
-  () => void store.fetchTickets(),
-  {
-    immediate: true,
+  () => {
+    if (auth.isAuthenticated) {
+      void store.fetchTickets();
+    }
   },
+  { immediate: true },
 );
 onBeforeUnmount(() => store.reset());
 

@@ -11,10 +11,10 @@ defineProps<{
 
 <template>
   <section :class="$style.column" :aria-label="label">
-    <header :class="$style.header">
+    <div :class="$style.header">
       <span>{{ label }}</span>
       <span :class="$style.count">{{ tickets.length }}</span>
-    </header>
+    </div>
     <div :class="$style.list">
       <TicketCard
         v-for="ticket in tickets"
