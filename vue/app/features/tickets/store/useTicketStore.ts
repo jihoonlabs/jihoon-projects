@@ -25,7 +25,7 @@ export const useTicketStore = defineStore('tickets', () => {
   let controller: AbortController | null = null;
 
   async function fetchTickets(): Promise<void> {
-    if (auth.sessionExpired) {
+    if (!auth.isAuthenticated) {
       return;
     }
 

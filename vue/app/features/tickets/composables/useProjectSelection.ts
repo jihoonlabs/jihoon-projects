@@ -50,7 +50,7 @@ export function useProjectSelection() {
   }
 
   async function load(): Promise<void> {
-    if (auth.sessionExpired) {
+    if (!auth.isAuthenticated) {
       return;
     }
 

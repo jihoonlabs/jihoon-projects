@@ -33,7 +33,7 @@ export function useProjectMembers(selectedProjectId: Ref<string>) {
 
     const projectId = selectedProjectId.value;
 
-    if (auth.sessionExpired || projectId === ALL_PROJECTS) {
+    if (!auth.isAuthenticated || projectId === ALL_PROJECTS) {
       return;
     }
 
