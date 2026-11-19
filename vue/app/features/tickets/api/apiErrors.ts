@@ -48,3 +48,17 @@ export async function translateFailure<T>(
     throw toError(error);
   }
 }
+
+/**
+ * 他の人が先に更新したため保存できなかった（Laravel の ticket_conflict / 409）
+ */
+export class TicketConflictError extends TicketApiError {
+  constructor() {
+    super(
+      'このチケットは他の人が更新しています。最新の内容を読み込んでから、もう一度編集してください。',
+      409,
+      'ticket_conflict',
+    );
+    this.name = 'TicketConflictError';
+  }
+}
