@@ -44,3 +44,28 @@ export interface TicketResponse {
   created_at: string | null;
   updated_at: string | null;
 }
+
+/**
+ * チケット作成の入力（画面側の値。ID は文字列）
+ */
+export interface CreateTicketInput {
+  projectId: string;
+  title: string;
+  description?: string | null;
+  status?: TicketStatus;
+  priority?: TicketPriority;
+  assigneeId?: string | null;
+}
+
+/**
+ * チケット更新の入力。未指定の項目は送らない。
+ * expectedVersion を渡すと、別の人が先に更新していた場合に 409 で止まる。
+ */
+export interface UpdateTicketInput {
+  expectedVersion?: number;
+  title?: string;
+  description?: string | null;
+  status?: TicketStatus;
+  priority?: TicketPriority;
+  assigneeId?: string | null;
+}
