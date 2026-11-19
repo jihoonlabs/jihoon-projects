@@ -29,3 +29,33 @@ export function canWriteProject(context: PermissionContext): boolean {
     (context.isAdmin || context.membership?.permission === 'write')
   );
 }
+
+/**
+ * メンバーの管理（追加・権限変更・リーダー引き継ぎ）は、アーカイブ済みでない場合だけ行える
+ */
+export function canManageMembers(context: PermissionContext): boolean {
+  return canManageProject(context) && context.project?.archivedAt === null;
+}
+
+/**
+ * 応答が現在のセッションと選択中のプロジェクトのものである場合だけ、自分のメンバー情報を返す。
+ * 古いセッションや別プロジェクトのメンバーで権限を判定しないための関門。
+ */
+export function resolveCurrentMembership(input: {
+  members: ProjectMember[];
+  membersProjectId: string;
+  selectedProjectId: string;
+  membersSession: number;
+  sessionRevision: number;
+  userId: number | null;
+}): ProjectMember | undefined {
+  if (
+    input.userId === null ||
+    input.membersSession !== input.sessionRevision ||
+    input.membersProjectId !== input.selectedProjectId
+  ) {
+    return undefined;
+  }
+
+  return input.members.find((member) => member.id === String(input.userId));
+}
