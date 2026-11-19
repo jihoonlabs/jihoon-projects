@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\NoticeController;
+use App\Http\Middleware\RestrictPublicDemo;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -17,11 +18,13 @@ Route::get('/', [NoticeController::class, 'index']);
 // GET /api/notices/{id}
 Route::get('/{id}', [NoticeController::class, 'show']);
 
-// POST /api/notices
-Route::post('/', [NoticeController::class, 'store']);
+Route::middleware(['auth:sanctum', 'active.user', RestrictPublicDemo::class])->group(function () {
+    // POST /api/notices
+    Route::post('/', [NoticeController::class, 'store']);
 
-// PUT /api/notices/{id}
-Route::put('/{id}', [NoticeController::class, 'update']);
+    // PUT /api/notices/{id}
+    Route::put('/{id}', [NoticeController::class, 'update']);
 
-// DELETE /api/notices/{id}
-Route::delete('/{id}', [NoticeController::class, 'destroy']);
+    // DELETE /api/notices/{id}
+    Route::delete('/{id}', [NoticeController::class, 'destroy']);
+});
