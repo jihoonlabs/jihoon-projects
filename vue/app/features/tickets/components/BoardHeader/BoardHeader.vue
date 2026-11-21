@@ -5,6 +5,7 @@ import type { AssigneeFilter } from '../../utils/filterTickets';
 defineProps<{
   projects: Project[];
   selectedProjectId: string;
+  canCreateTicket: boolean;
 }>();
 
 const searchQuery = defineModel<string>('searchQuery', { required: true });
@@ -12,7 +13,7 @@ const assigneeFilter = defineModel<AssigneeFilter>('assigneeFilter', {
   required: true,
 });
 
-defineEmits<{ select: [projectId: string] }>();
+defineEmits<{ select: [projectId: string]; create: [] }>();
 </script>
 
 <template>
@@ -62,6 +63,15 @@ defineEmits<{ select: [projectId: string] }>();
       <option value="ME">自分に割り当て</option>
       <option value="UNASSIGNED">未割り当て</option>
     </select>
+
+    <button
+      v-if="canCreateTicket"
+      type="button"
+      :class="$style.create"
+      @click="$emit('create')"
+    >
+      + チケット作成
+    </button>
   </div>
 </template>
 
@@ -92,5 +102,8 @@ defineEmits<{ select: [projectId: string] }>();
   gap: 0.5rem;
   color: #4b5563;
   font-size: 0.85rem;
+}
+.create {
+  margin-left: auto;
 }
 </style>

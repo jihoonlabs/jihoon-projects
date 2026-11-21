@@ -42,5 +42,23 @@ export function useTicketApi() {
 
       return body.data.map(toTicket);
     },
+    /**
+     * 1 件の最新状態を取得する（詳細モーダルを開くときと、競合のあとに使う）。
+     */
+    async fetchTicket(id: string, signal?: AbortSignal): Promise<Ticket> {
+      const body = await translateFailure(
+        api.getJson<{ data?: TicketResponse | null }>(
+          `/api/tickets/${encodeURIComponent(id)}`,
+          { signal },
+        ),
+        toTicketError,
+      );
+
+      if (!body || !body.data) {
+        throw new TicketApiError('チケットの応答形式が不正です。');
+      }
+
+      return toTicket(body.data);
+    },
   };
 }

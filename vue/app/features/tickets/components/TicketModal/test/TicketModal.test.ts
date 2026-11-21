@@ -11,18 +11,17 @@ import { ticketFixture } from '../../../api/test/ticketFixture';
 
 const openTicket = async (title: string) => {
   signInAs();
+  // 詳細は開くときに 1 件を取り直すため、一覧と同じ内容を 1 件取得にも返す
+  const ticket = ticketFixture({
+    id: '1',
+    title,
+    description: '1行目\n2行目',
+    assignee: null,
+    priority: 'HIGH',
+  });
   overrideApi(ticketApi.projects([projectFixture({ id: '1', name: 'Alpha' })]));
-  overrideApi(
-    ticketApi.tickets([
-      ticketFixture({
-        id: '1',
-        title,
-        description: '1行目\n2行目',
-        assignee: null,
-        priority: 'HIGH',
-      }),
-    ]),
-  );
+  overrideApi(ticketApi.tickets([ticket]));
+  overrideApi(ticketApi.ticket(ticket));
   const { user } = await renderRoute('/tickets');
   await user.click(await screen.findByRole('button', { name: title }));
   return { user, dialog: await screen.findByRole('dialog') };
