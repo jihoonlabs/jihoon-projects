@@ -24,6 +24,19 @@ export const ticketApi = {
     );
   },
 
+  /** 1 件の取得（詳細モーダルが開くとき・競合のあとに読む） */
+  ticket(ticket: TicketResponse) {
+    return http.get(apiUrl(`/api/tickets/${ticket.id}`), () =>
+      HttpResponse.json({ data: ticket }),
+    );
+  },
+
+  ticketFail(id: string, status: number) {
+    return http.get(apiUrl(`/api/tickets/${id}`), () =>
+      HttpResponse.json({ message: 'Error' }, { status }),
+    );
+  },
+
   projects(projects: ProjectResponse[]) {
     return http.get(apiUrl('/api/projects'), () =>
       HttpResponse.json({ data: projects }),
