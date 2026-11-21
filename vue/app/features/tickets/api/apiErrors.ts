@@ -62,3 +62,15 @@ export class TicketConflictError extends TicketApiError {
     this.name = 'TicketConflictError';
   }
 }
+
+/**
+ * チケット API の失敗かを、名前で判定する。
+ * クラスの同一性（instanceof）に頼らないのは、同じモジュールが別の経路で二重に読み込まれる
+ * 環境（テスト）でも、store が投げた失敗を画面側で見分けられるようにするため。
+ */
+export function isTicketApiError(error: unknown): error is TicketApiError {
+  return (
+    error instanceof Error &&
+    (error.name === 'TicketApiError' || error.name === 'TicketConflictError')
+  );
+}

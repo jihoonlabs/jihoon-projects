@@ -5,7 +5,12 @@ import { useAuthStore } from '~/features/auth/store/useAuthStore';
 import { isAbortError } from '~/shared/api/isAbortError';
 
 import { useTicketApi } from '../api/ticketApi';
-import type { Ticket } from '../types/ticket';
+import { useTicketWriteApi } from '../api/ticketWriteApi';
+import type {
+  CreateTicketInput,
+  Ticket,
+  UpdateTicketInput,
+} from '../types/ticket';
 
 const UNEXPECTED_ERROR_MESSAGE = '予期しないエラーが発生しました。';
 
@@ -16,6 +21,7 @@ const UNEXPECTED_ERROR_MESSAGE = '予期しないエラーが発生しました�
 export const useTicketStore = defineStore('tickets', () => {
   const auth = useAuthStore();
   const api = useTicketApi();
+  const writeApi = useTicketWriteApi();
 
   const tickets = ref<Ticket[]>([]);
   const isLoading = ref(false);
@@ -62,6 +68,50 @@ export const useTicketStore = defineStore('tickets', () => {
   }
 
   /**
+   * 書き込みの応答は、同じログインセッションのうちだけ一覧へ反映する
+   * （別のアカウントの表示を、遅れて届いた応答で汚さない）
+   */
+  async function applyWrite<T>(
+    run: () => Promise<T>,
+    apply: (result: T) => void,
+  ): Promise<T> {
+    const revision = auth.sessionRevision;
+    const result = await run();
+
+    if (revision === auth.sessionRevision) {
+      apply(result);
+    }
+
+    return result;
+  }
+
+  const createTicket = (input: CreateTicketInput) =>
+    applyWrite(
+      () => writeApi.createTicket(input),
+      (created) => {
+        tickets.value = [...tickets.value, created];
+      },
+    );
+
+  const updateTicket = (id: string, input: UpdateTicketInput) =>
+    applyWrite(
+      () => writeApi.updateTicket(id, input),
+      (updated) => {
+        tickets.value = tickets.value.map((ticket) =>
+          ticket.id === updated.id ? updated : ticket,
+        );
+      },
+    );
+
+  const deleteTicket = (id: string) =>
+    applyWrite(
+      () => writeApi.deleteTicket(id),
+      () => {
+        tickets.value = tickets.value.filter((ticket) => ticket.id !== id);
+      },
+    );
+
+  /**
    * 画面を離れる・別のアカウントになるときに、取得中の要求ごと状態を初期化する
    */
   function reset(): void {
@@ -73,5 +123,14 @@ export const useTicketStore = defineStore('tickets', () => {
     error.value = null;
   }
 
-  return { tickets, isLoading, error, fetchTickets, reset };
+  return {
+    tickets,
+    isLoading,
+    error,
+    fetchTickets,
+    createTicket,
+    updateTicket,
+    deleteTicket,
+    reset,
+  };
 });

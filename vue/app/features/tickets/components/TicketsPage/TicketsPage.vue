@@ -2,6 +2,7 @@
 import { useAuthStore } from '~/features/auth/store/useAuthStore';
 import type { Ticket } from '../../types/ticket';
 
+import { useBoardWriteAccess } from '../../composables/useBoardWriteAccess';
 import { useProjectMembers } from '../../composables/useProjectMembers';
 import { useProjectSelection } from '../../composables/useProjectSelection';
 import { useTicketFilters } from '../../composables/useTicketFilters';
@@ -20,6 +21,7 @@ const { projects, selectedProjectId, loading, error, select, retry } =
 const members = useProjectMembers(selectedProjectId);
 const { searchQuery, assigneeFilter, reset } = useTicketFilters();
 const openedTicket = ref<Ticket | null>(null);
+const creating = ref(false);
 
 // ログイン直後・再ログイン後にチケットを取得し直す
 watch(
@@ -38,6 +40,16 @@ const selectedProject = computed(
     projects.value.find((project) => project.id === selectedProjectId.value) ??
     null,
 );
+const access = useBoardWriteAccess({
+  projects,
+  projectsLoading: loading,
+  selectedProject,
+  selectedProjectId,
+  members: members.members,
+  membersProjectId: members.membersProjectId,
+  membersError: members.error,
+  currentMembership: members.currentMembership,
+});
 const projectColors = computed(() =>
   Object.fromEntries(
     projects.value.map((project) => [project.id, project.color]),
@@ -59,11 +71,22 @@ const columns = computed(() => {
   );
 });
 
-const openedProjectColor = computed(() =>
-  openedTicket.value
-    ? (projectColors.value[openedTicket.value.projectId] ?? null)
-    : null,
+// 詳細は開いたチケットのプロジェクト、作成は選択中のプロジェクトを基準にする
+const modalProjectId = computed(
+  () => openedTicket.value?.projectId ?? selectedProjectId.value,
 );
+const modalProjectColor = computed(
+  () => projectColors.value[modalProjectId.value] ?? null,
+);
+// 全体表示で開いた詳細は、権限を判定できる個別プロジェクトがないため閲覧のみ
+const modalReadOnly = computed(() =>
+  openedTicket.value ? !access.canWrite.value : access.createReadOnly.value,
+);
+
+function closeModal() {
+  openedTicket.value = null;
+  creating.value = false;
+}
 
 async function selectProject(projectId: string) {
   reset();
@@ -78,7 +101,9 @@ async function selectProject(projectId: string) {
       v-model:assignee-filter="assigneeFilter"
       :projects="projects"
       :selected-project-id="selectedProjectId"
+      :can-create-ticket="access.canCreateTicket.value"
       @select="selectProject"
+      @create="creating = true"
     />
 
     <BoardNotices
@@ -105,10 +130,17 @@ async function selectProject(projectId: string) {
     </div>
 
     <TicketModal
-      v-if="openedTicket"
+      v-if="openedTicket || creating"
+      :key="openedTicket?.id ?? 'create'"
       :ticket="openedTicket"
-      :project-color="openedProjectColor"
-      @close="openedTicket = null"
+      :project-id="modalProjectId"
+      :project-color="modalProjectColor"
+      :project-members="access.modalMembers.value"
+      :project-choice="openedTicket ? null : access.projectChoice.value"
+      :read-only="modalReadOnly"
+      @close="closeModal"
+      @change-project="selectProject"
+      @retry-members="members.retry()"
     />
   </section>
 </template>
