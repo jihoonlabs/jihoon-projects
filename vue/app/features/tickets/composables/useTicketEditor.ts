@@ -4,6 +4,7 @@ import { isAbortError } from '~/shared/api/isAbortError';
 
 import { isTicketApiError } from '../api/apiErrors';
 import { useTicketApi } from '../api/ticketApi';
+import { WRITE_MESSAGE } from '../constants/ticketMessages';
 import type {
   CreateTicketInput,
   Ticket,
@@ -12,9 +13,6 @@ import type {
 import { detailError } from '../utils/detailError';
 import { useTicketDraft } from './useTicketDraft';
 
-const CONFLICT_MESSAGE =
-  '他のユーザーが変更したため保存できませんでした。入力内容は保持されています。';
-const SAVE_FAILED_MESSAGE = '保存に失敗しました。';
 const LOST_ACCESS = [401, 403, 404];
 
 interface Options {
@@ -103,7 +101,7 @@ export function useTicketEditor(options: Options) {
   function handleFailure(error: unknown): void {
     if (isTicketApiError(error) && error.code === 'ticket_conflict') {
       conflict.value = true;
-      saveError.value = CONFLICT_MESSAGE;
+      saveError.value = WRITE_MESSAGE.conflict;
       return;
     }
 
@@ -113,7 +111,7 @@ export function useTicketEditor(options: Options) {
         ? detailError(error)
         : error instanceof Error
           ? error.message
-          : SAVE_FAILED_MESSAGE;
+          : WRITE_MESSAGE.saveFailed;
   }
 
   async function submit(event: Event): Promise<void> {

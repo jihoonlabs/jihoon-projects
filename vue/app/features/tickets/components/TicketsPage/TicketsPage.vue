@@ -12,9 +12,11 @@ import { filterTickets, ticketsInScope } from '../../utils/filterTickets';
 import BoardColumn from '../BoardColumn/BoardColumn.vue';
 import BoardHeader from '../BoardHeader/BoardHeader.vue';
 import BoardNotices from '../BoardNotices/BoardNotices.vue';
+import DemoGuide from '../DemoGuide/DemoGuide.vue';
 import TicketModal from '../TicketModal/TicketModal.vue';
 
 const auth = useAuthStore();
+const demoMode = useRuntimeConfig().public.demoMode === true;
 const store = useTicketStore();
 const { projects, selectedProjectId, loading, error, select, retry } =
   useProjectSelection();
@@ -96,6 +98,8 @@ async function selectProject(projectId: string) {
 
 <template>
   <section :class="$style.page" aria-label="チケットボード">
+    <DemoGuide v-if="demoMode" />
+
     <BoardHeader
       v-model:search-query="searchQuery"
       v-model:assignee-filter="assigneeFilter"
