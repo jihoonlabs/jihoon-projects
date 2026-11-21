@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/features/auth/store/useAuthStore';
+import type { Ticket } from '../../types/ticket';
 
 import { useProjectMembers } from '../../composables/useProjectMembers';
 import { useProjectSelection } from '../../composables/useProjectSelection';
@@ -10,6 +11,7 @@ import { filterTickets, ticketsInScope } from '../../utils/filterTickets';
 import BoardColumn from '../BoardColumn/BoardColumn.vue';
 import BoardHeader from '../BoardHeader/BoardHeader.vue';
 import BoardNotices from '../BoardNotices/BoardNotices.vue';
+import TicketModal from '../TicketModal/TicketModal.vue';
 
 const auth = useAuthStore();
 const store = useTicketStore();
@@ -17,6 +19,7 @@ const { projects, selectedProjectId, loading, error, select, retry } =
   useProjectSelection();
 const members = useProjectMembers(selectedProjectId);
 const { searchQuery, assigneeFilter, reset } = useTicketFilters();
+const openedTicket = ref<Ticket | null>(null);
 
 // ログイン直後・再ログイン後にチケットを取得し直す
 watch(
@@ -56,6 +59,12 @@ const columns = computed(() => {
   );
 });
 
+const openedProjectColor = computed(() =>
+  openedTicket.value
+    ? (projectColors.value[openedTicket.value.projectId] ?? null)
+    : null,
+);
+
 async function selectProject(projectId: string) {
   reset();
   await select(projectId);
@@ -91,8 +100,16 @@ async function selectProject(projectId: string) {
         :label="column.label"
         :tickets="column.tickets"
         :project-colors="projectColors"
+        @open="openedTicket = $event"
       />
     </div>
+
+    <TicketModal
+      v-if="openedTicket"
+      :ticket="openedTicket"
+      :project-color="openedProjectColor"
+      @close="openedTicket = null"
+    />
   </section>
 </template>
 

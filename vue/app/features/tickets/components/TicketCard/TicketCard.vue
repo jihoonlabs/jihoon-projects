@@ -1,19 +1,14 @@
 <script setup lang="ts">
 import type { Ticket } from '../../types/ticket';
 import { getProjectBorderColor } from '../../utils/projectColor';
+import { PRIORITY_LABELS } from '../../utils/ticketLabels';
 
 const props = defineProps<{
   ticket: Ticket;
   projectColor: string | null;
 }>();
 
-const PRIORITY_LABELS: Record<Ticket['priority'], string> = {
-  HIGHEST: '最高',
-  HIGH: '高',
-  MEDIUM: '中',
-  LOW: '低',
-  LOWEST: '最低',
-};
+defineEmits<{ open: [] }>();
 
 // 色は #RRGGBB だけを使い、それ以外は中立の見た目にする
 const borderColor = computed(() => getProjectBorderColor(props.projectColor));
@@ -25,7 +20,11 @@ const borderColor = computed(() => getProjectBorderColor(props.projectColor));
     :style="borderColor ? { '--project-color': borderColor } : undefined"
   >
     <p v-if="ticket.issueKey" :class="$style.key">{{ ticket.issueKey }}</p>
-    <p :class="$style.title">{{ ticket.title }}</p>
+    <p :class="$style.title">
+      <button type="button" :class="$style.titleButton" @click="$emit('open')">
+        {{ ticket.title }}
+      </button>
+    </p>
     <div :class="$style.meta">
       <span :class="$style.priority">
         優先度: {{ PRIORITY_LABELS[ticket.priority] }}
@@ -58,6 +57,21 @@ const borderColor = computed(() => getProjectBorderColor(props.projectColor));
   margin-bottom: 0.5rem;
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+.titleButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
 }
 
 .meta {
