@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 
+import { WRITE_MESSAGE } from '../../constants/ticketMessages';
 import { useTicketEditor } from '../../composables/useTicketEditor';
 import { useTicketStore } from '../../store/useTicketStore';
 import type { ProjectMember } from '../../types/project';
@@ -122,7 +123,7 @@ async function remove() {
     emit('close');
   } catch (error) {
     deleteError.value =
-      error instanceof Error ? error.message : '削除に失敗しました。';
+      error instanceof Error ? error.message : WRITE_MESSAGE.deleteFailed;
   } finally {
     deleting.value = false;
   }
