@@ -7,6 +7,8 @@ defineProps<{
   tickets: Ticket[];
   projectColors: Record<string, string | null>;
 }>();
+
+defineEmits<{ open: [ticket: Ticket] }>();
 </script>
 
 <template>
@@ -21,6 +23,7 @@ defineProps<{
         :key="ticket.id"
         :ticket="ticket"
         :project-color="projectColors[ticket.projectId] ?? null"
+        @open="$emit('open', ticket)"
       />
     </div>
   </section>
