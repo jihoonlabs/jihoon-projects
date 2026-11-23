@@ -10,8 +10,17 @@ class RestrictPublicDemo
 {
     public function handle(Request $request, Closure $next): Response
     {
+        if (! config('demo.enabled')) {
+            return $next($request);
+        }
+
+        // 共有デモアカウントによる公開コンテンツの変更を防ぐ。
+        if (! $request->isMethodSafe() && $request->is('api/posts', 'api/posts/*', 'api/notices', 'api/notices/*')) {
+            return response()->json(['message' => '公開デモでは投稿・お知らせを変更できません。'], 403);
+        }
+
         // 公開デモでは外部アカウント・メールと接続しない。
-        if (config('demo.enabled') && $request->is(
+        if ($request->is(
             'api/auth/register',
             'api/auth/forgot-password',
             'api/auth/reset-password',
