@@ -270,23 +270,30 @@ it('discards a member dialog refresh started before same-account reauthenticatio
   await waitFor(() =>
     expect(projectApi.fetchProjectMembers).toHaveBeenCalledTimes(4),
   );
-  await act(async () => {
-    resolveDialogRefresh([recoveryMember, addedMember]);
-    await dialogRefresh;
-  });
-  expect(
-    screen.queryByRole('button', { name: '+ チケット作成' }),
-  ).not.toBeInTheDocument();
-  expect(
-    screen.queryByRole('button', { name: 'メンバー管理' }),
-  ).not.toBeInTheDocument();
+  // 新セッションのプロジェクト一覧の更新が終わってから、古い応答を完了させる。
+  await waitFor(() =>
+    expect(projectApi.fetchProjects).toHaveBeenCalledTimes(2),
+  );
 
+  // 新セッションの read 応答を先に完了させる。
   await act(async () => {
     resolveBoardLookup([{ ...recoveryMember, permission: 'read' }]);
     await boardLookup;
   });
   expect(
     await screen.findByRole('button', { name: 'メンバー管理' }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: '+ チケット作成' }),
+  ).not.toBeInTheDocument();
+
+  // その後で、再ログイン前に始まった write 応答を完了させても権限は上書きされない。
+  await act(async () => {
+    resolveDialogRefresh([recoveryMember, addedMember]);
+    await dialogRefresh;
+  });
+  expect(
+    screen.getByRole('button', { name: 'メンバー管理' }),
   ).toBeInTheDocument();
   expect(
     screen.queryByRole('button', { name: '+ チケット作成' }),
