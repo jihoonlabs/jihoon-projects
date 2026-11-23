@@ -23,11 +23,9 @@ import ProjectOperations from '../ProjectOperations';
 import ProjectDirectory from '../ProjectDirectory';
 import ProjectDirectoryDialog from '../ProjectDirectory/Dialog';
 import ProjectMembersDialog from '../ProjectMembersDialog';
-import {
-  fetchProjects,
-  fetchProjectMembers,
-} from '@/features/tickets/api/projectApi';
-import type { Project, ProjectMember } from '@/features/tickets/types/project';
+import { fetchProjects } from '@/features/tickets/api/projectApi';
+import type { Project } from '@/features/tickets/types/project';
+import { useProjectMembers } from './useProjectMembers';
 import styles from './index.module.css';
 
 const ALL_PROJECTS = 'ALL';
@@ -74,15 +72,13 @@ export function TicketBoardView() {
   const initialProjectSelectionRestored = useRef(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState(ALL_PROJECTS);
-  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
-  const memberRevision = useRef(0);
-  const [memberAttempt, setMemberAttempt] = useState(0);
-  const [memberError, setMemberError] = useState<{
-    projectId: string;
-    message: string;
-  } | null>(null);
-  const [membersProjectId, setMembersProjectId] = useState('');
-  const [membersSession, setMembersSession] = useState(sessionRevision);
+  const {
+    projectMembers,
+    membersProjectId,
+    memberError,
+    retryMembers,
+    acceptMembers,
+  } = useProjectMembers(selectedProjectId, sessionRevision, sessionExpired);
   const [projectsSession, setProjectsSession] = useState(sessionRevision);
   const [projectError, setProjectError] = useState<string | null>(null);
   const [managingMembers, setManagingMembers] = useState(false);
@@ -175,52 +171,10 @@ export function TicketBoardView() {
     updateProjectQuery(ALL_PROJECTS);
   }, [projects, projectsLoading, selectedProjectId]);
 
-  useEffect(() => {
-    if (
-      sessionExpired ||
-      !selectedProjectId ||
-      selectedProjectId === ALL_PROJECTS
-    )
-      return;
-    let active = true;
-    const revision = memberRevision.current;
-    fetchProjectMembers(selectedProjectId)
-      .then((items) => {
-        if (active && revision === memberRevision.current) {
-          setProjectMembers(items);
-          setMembersSession(sessionRevision);
-          setMembersProjectId(selectedProjectId);
-          setMemberError(null);
-        }
-      })
-      .catch((reason) => {
-        if (active && revision === memberRevision.current) {
-          setMembersProjectId('');
-          setMemberError({
-            projectId: selectedProjectId,
-            message:
-              reason instanceof Error
-                ? reason.message
-                : 'メンバーを取得できませんでした。',
-          });
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [selectedProjectId, memberAttempt, sessionExpired, sessionRevision]);
-
-  const retryMembers = () => {
-    memberRevision.current += 1;
-    setMembersProjectId('');
-    setMemberError(null);
-    setMemberAttempt((attempt) => attempt + 1);
-  };
-
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) ?? null;
   const currentMembership =
-    membersSession === sessionRevision && membersProjectId === selectedProjectId
+    membersProjectId === selectedProjectId
       ? projectMembers.find((member) => member.id === String(currentUserId))
       : undefined;
   const isAdmin = currentUser?.role === 'admin';
@@ -699,10 +653,7 @@ export function TicketBoardView() {
           project={selectedProject}
           canManage={canManageMembers}
           onMembersChanged={(items) => {
-            memberRevision.current += 1;
-            setMemberError(null);
-            setProjectMembers(items);
-            setMembersProjectId(selectedProject.id);
+            acceptMembers(selectedProject.id, items);
           }}
           onClose={() => {
             setManagingMembers(false);

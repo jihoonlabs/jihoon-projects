@@ -11,13 +11,15 @@ import {
 import * as api from '../../../../api/ticketApi';
 import { useTicketStore } from '../../../../store/useTicketStore';
 import * as projectApi from '@/features/tickets/api/projectApi';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
+import type { ProjectMember } from '@/features/tickets/types/project';
 
-const recoveryMember = {
+const recoveryMember: ProjectMember = {
   id: '7',
   name: 'Tester',
   email: 'tester@example.com',
-  role: 'leader' as const,
-  permission: 'write' as const,
+  role: 'leader',
+  permission: 'write',
 };
 
 it('recovers member authority on the same project after a failed initial lookup', async () => {
@@ -143,4 +145,157 @@ it('does not clear a project list error when a pending member lookup succeeds', 
   expect(screen.getByRole('alert')).toHaveTextContent(
     'project list unavailable',
   );
+});
+
+it('ignores a pending retry failure after switching projects', async () => {
+  let rejectRetry!: (reason: Error) => void;
+  const retryResponse = new Promise<(typeof recoveryMember)[]>((_, reject) => {
+    rejectRetry = reject;
+  });
+  vi.mocked(projectApi.fetchProjects).mockResolvedValue([
+    { id: '1', name: 'General', projectKey: 'GEN', boardVersion: 3 },
+    { id: '2', name: 'Design', projectKey: 'DSN', boardVersion: 3 },
+  ]);
+  vi.mocked(projectApi.fetchProjectMembers)
+    .mockRejectedValueOnce(new Error('first failure'))
+    .mockReturnValueOnce(retryResponse)
+    .mockResolvedValueOnce([{ ...recoveryMember, permission: 'read' }]);
+  await renderSelectedProject();
+  await screen.findByText('first failure');
+  fireEvent.click(
+    screen.getByRole('button', { name: 'メンバーと権限を再取得' }),
+  );
+  await waitFor(() =>
+    expect(projectApi.fetchProjectMembers).toHaveBeenCalledTimes(2),
+  );
+  fireEvent.change(screen.getByRole('combobox', { name: 'プロジェクト' }), {
+    target: { value: '2' },
+  });
+  await waitFor(() =>
+    expect(projectApi.fetchProjectMembers).toHaveBeenLastCalledWith('2'),
+  );
+  await act(async () => {
+    rejectRetry(new Error('old retry failure'));
+    await retryResponse.catch(() => undefined);
+  });
+  expect(screen.queryByText('old retry failure')).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: '+ チケット作成' }),
+  ).not.toBeInTheDocument();
+});
+
+it('ignores an old session member response while the new session lookup is pending', async () => {
+  let resolveOld!: (members: (typeof recoveryMember)[]) => void;
+  const oldResponse = new Promise<(typeof recoveryMember)[]>((resolve) => {
+    resolveOld = resolve;
+  });
+  let resolveNew!: (members: (typeof recoveryMember)[]) => void;
+  const newResponse = new Promise<(typeof recoveryMember)[]>((resolve) => {
+    resolveNew = resolve;
+  });
+  vi.mocked(projectApi.fetchProjectMembers)
+    .mockReturnValueOnce(oldResponse)
+    .mockReturnValueOnce(newResponse);
+  await renderSelectedProject();
+  await waitFor(() =>
+    expect(projectApi.fetchProjectMembers).toHaveBeenCalledTimes(1),
+  );
+  act(() => {
+    useAuthStore.setState((state) => ({
+      sessionRevision: state.sessionRevision + 1,
+    }));
+  });
+  await waitFor(() =>
+    expect(projectApi.fetchProjectMembers).toHaveBeenCalledTimes(2),
+  );
+  await act(async () => {
+    resolveOld([recoveryMember]);
+    await oldResponse;
+  });
+  expect(
+    screen.queryByRole('button', { name: 'メンバー管理' }),
+  ).not.toBeInTheDocument();
+  await act(async () => {
+    resolveNew([{ ...recoveryMember, permission: 'read' }]);
+    await newResponse;
+  });
+  expect(
+    screen.queryByRole('button', { name: '+ チケット作成' }),
+  ).not.toBeInTheDocument();
+});
+
+it('discards a member dialog refresh started before same-account reauthentication', async () => {
+  const addedMember: ProjectMember = {
+    id: '8',
+    name: 'New member',
+    email: 'new@example.com',
+    role: 'member',
+    permission: 'read',
+  };
+  let resolveDialogRefresh!: (members: ProjectMember[]) => void;
+  const dialogRefresh = new Promise<ProjectMember[]>((resolve) => {
+    resolveDialogRefresh = resolve;
+  });
+  let resolveBoardLookup!: (members: ProjectMember[]) => void;
+  const boardLookup = new Promise<ProjectMember[]>((resolve) => {
+    resolveBoardLookup = resolve;
+  });
+  vi.mocked(projectApi.fetchProjectMembers)
+    .mockResolvedValueOnce([recoveryMember])
+    .mockResolvedValueOnce([recoveryMember])
+    .mockReturnValueOnce(dialogRefresh)
+    .mockReturnValueOnce(boardLookup);
+  vi.mocked(projectApi.addProjectMember).mockResolvedValue(addedMember);
+
+  await renderSelectedProject();
+  fireEvent.click(await screen.findByRole('button', { name: 'メンバー管理' }));
+  const dialog = within(screen.getByRole('dialog'));
+  const email = dialog.getByRole('textbox', { name: 'メールアドレス' });
+  await waitFor(() => expect(email).toBeEnabled());
+  fireEvent.change(email, { target: { value: addedMember.email } });
+  fireEvent.click(dialog.getByRole('button', { name: 'メンバーを追加' }));
+  await waitFor(() =>
+    expect(projectApi.fetchProjectMembers).toHaveBeenCalledTimes(3),
+  );
+  // 基準: 再ログイン前は write 権限で生成ボタンが表示されていること。
+  // これがないと、後段の「非表示」単言が常に成立してしまう。
+  expect(
+    await screen.findByRole('button', { name: '+ チケット作成' }),
+  ).toBeInTheDocument();
+
+  const auth = useAuthStore.getState();
+  const user = auth.user!;
+  act(() => auth.expireSession());
+  act(() => auth.login(user));
+  await waitFor(() =>
+    expect(projectApi.fetchProjectMembers).toHaveBeenCalledTimes(4),
+  );
+  // 新セッションのプロジェクト一覧の更新が終わってから、古い応答を完了させる。
+  await waitFor(() =>
+    expect(projectApi.fetchProjects).toHaveBeenCalledTimes(2),
+  );
+
+  // 新セッションの read 応答を先に完了させる。
+  await act(async () => {
+    resolveBoardLookup([{ ...recoveryMember, permission: 'read' }]);
+    await boardLookup;
+  });
+  expect(
+    await screen.findByRole('button', { name: 'メンバー管理' }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: '+ チケット作成' }),
+  ).not.toBeInTheDocument();
+
+  // その後で、再ログイン前に始まった write 応答を完了させても権限は上書きされない。
+  await act(async () => {
+    resolveDialogRefresh([recoveryMember, addedMember]);
+    await dialogRefresh;
+  });
+  expect(
+    screen.getByRole('button', { name: 'メンバー管理' }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: '+ チケット作成' }),
+  ).not.toBeInTheDocument();
 });
