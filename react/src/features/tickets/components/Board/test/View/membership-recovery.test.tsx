@@ -257,6 +257,11 @@ it('discards a member dialog refresh started before same-account reauthenticatio
   await waitFor(() =>
     expect(projectApi.fetchProjectMembers).toHaveBeenCalledTimes(3),
   );
+  // 基準: 再ログイン前は write 権限で生成ボタンが表示されていること。
+  // これがないと、後段の「非表示」単言が常に成立してしまう。
+  expect(
+    await screen.findByRole('button', { name: '+ チケット作成' }),
+  ).toBeInTheDocument();
 
   const auth = useAuthStore.getState();
   const user = auth.user!;
