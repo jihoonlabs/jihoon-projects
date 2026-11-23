@@ -12,6 +12,23 @@ import { apiUrl } from '../apiUrl';
  * チケット・プロジェクト API の応答。各テストで overrideApi に渡して使う。
  */
 export const ticketApi = {
+  ticket(ticket: TicketResponse) {
+    return http.get(apiUrl(`/api/tickets/${ticket.id}`), () =>
+      HttpResponse.json({ data: ticket }),
+    );
+  },
+
+  updateTicket(id: string, response: TicketResponse | { status: number; code: string }) {
+    return http.patch(apiUrl(`/api/tickets/${id}`), () =>
+      'data' in response
+        ? HttpResponse.json({ data: response })
+        : HttpResponse.json(
+            { code: response.code, message: 'conflict' },
+            { status: response.status },
+          ),
+    );
+  },
+
   tickets(tickets: TicketResponse[]) {
     return http.get(apiUrl('/api/tickets'), () =>
       HttpResponse.json({ data: tickets }),
