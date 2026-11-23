@@ -46,27 +46,30 @@ describe('protected session requests', () => {
     await protectedFetch('/api/tickets');
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
   });
-  it.each([200, 401])(
-    'discards a stale %s response after a new login',
-    async (status) => {
-      const pending = deferred<Response>();
-      const fetchMock = vi.fn().mockReturnValue(pending.promise);
-      vi.stubGlobal('fetch', fetchMock);
-      const request = protectedFetch('/api/projects');
-      const rejected = expect(request).rejects.toMatchObject({
-        name: 'AbortError',
-      });
-      useAuthStore.getState().login({ ...user, id: 2 });
-      expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
-      pending.resolve(new Response(null, { status }));
-      await rejected;
-      expect(useAuthStore.getState()).toMatchObject({
-        isAuthenticated: true,
-        sessionExpired: false,
-        user: { id: 2 },
-      });
-    },
-  );
+  const assertStaleResponseIsDiscarded = async (status: number) => {
+    const pending = deferred<Response>();
+    const fetchMock = vi.fn().mockReturnValue(pending.promise);
+    vi.stubGlobal('fetch', fetchMock);
+    const request = protectedFetch('/api/projects');
+    const rejected = expect(request).rejects.toMatchObject({
+      name: 'AbortError',
+    });
+    useAuthStore.getState().login({ ...user, id: 2 });
+    expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
+    pending.resolve(new Response(null, { status }));
+    await rejected;
+    expect(useAuthStore.getState()).toMatchObject({
+      isAuthenticated: true,
+      sessionExpired: false,
+      user: { id: 2 },
+    });
+  };
+
+  it('discards a stale successful response after a new login', () =>
+    assertStaleResponseIsDiscarded(200));
+
+  it('discards a stale unauthorized response after a new login', () =>
+    assertStaleResponseIsDiscarded(401));
   it('blocks further requests while expired', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

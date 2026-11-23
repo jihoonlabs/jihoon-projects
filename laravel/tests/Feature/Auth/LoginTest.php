@@ -178,12 +178,12 @@ class LoginTest extends TestCase
      */
     public function test_login_is_rate_limited(): void
     {
-        for ($i = 0; $i < 5; $i++) {
-            $this->postJson('/api/auth/login', [
-                'email' => 'test@example.com',
-                'password' => 'wrongpassword',
-            ])->assertStatus(422);
-        }
+        // 5回までは資格情報エラー、6回目から429になる境界を明示する。
+        $this->postJson('/api/auth/login', ['email' => 'test@example.com', 'password' => 'wrongpassword'])->assertStatus(422);
+        $this->postJson('/api/auth/login', ['email' => 'test@example.com', 'password' => 'wrongpassword'])->assertStatus(422);
+        $this->postJson('/api/auth/login', ['email' => 'test@example.com', 'password' => 'wrongpassword'])->assertStatus(422);
+        $this->postJson('/api/auth/login', ['email' => 'test@example.com', 'password' => 'wrongpassword'])->assertStatus(422);
+        $this->postJson('/api/auth/login', ['email' => 'test@example.com', 'password' => 'wrongpassword'])->assertStatus(422);
 
         $this->postJson('/api/auth/login', [
             'email' => 'test@example.com',
