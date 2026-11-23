@@ -11,6 +11,7 @@ import type {
   UpdateTicketInput,
 } from '../types/ticket';
 import { detailError } from '../utils/detailError';
+import { writeFailureMessage } from '../utils/writeFailureMessage';
 import { useTicketDraft } from './useTicketDraft';
 
 const LOST_ACCESS = [401, 403, 404];
@@ -109,9 +110,7 @@ export function useTicketEditor(options: Options) {
     saveError.value =
       isTicketApiError(error) && LOST_ACCESS.includes(error.status ?? 0)
         ? detailError(error)
-        : error instanceof Error
-          ? error.message
-          : WRITE_MESSAGE.saveFailed;
+        : writeFailureMessage(error, WRITE_MESSAGE.saveFailed);
   }
 
   async function submit(event: Event): Promise<void> {

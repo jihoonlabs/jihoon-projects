@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { apiUrl } from '~/test/mocks/apiUrl';
 import { overrideApi } from '~/test/mocks/overrideApi';
 
+import { WRITE_MESSAGE } from '../../../constants/ticketMessages';
+
 import { toTicket } from '../../../api/ticketMapper';
 import {
   recordUpdates,
@@ -42,8 +44,10 @@ describe('書き込みの失敗の表示', () => {
     await user.click(screen.getByRole('button', { name: '保存' }));
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('500');
+    // 画面の文言は定数から出し、API の文言は使わない
+    expect(alert).toHaveTextContent(`${WRITE_MESSAGE.saveFailed} (500)`);
     expect(alert).not.toHaveTextContent('internal detail');
+    expect(alert).not.toHaveTextContent('チケット操作に失敗しました');
     expect(screen.getByRole('button', { name: '保存' })).toBeEnabled();
   });
 
@@ -55,6 +59,7 @@ describe('書き込みの失敗の表示', () => {
     await user.click(screen.getByRole('button', { name: '保存' }));
 
     const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(`${WRITE_MESSAGE.saveFailed} (500)`);
     expect(alert).not.toHaveTextContent('internal detail');
     expect(screen.getByLabelText('タイトル')).toHaveValue('Keep me');
   });

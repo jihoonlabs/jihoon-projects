@@ -94,9 +94,14 @@ describe('チケットストアの書き込み', () => {
 
   it('保存の最中にログインし直されたら、遅れて届いた結果を一覧へ反映しないこと', async () => {
     const store = await loadedStore();
+    const entered = deferred();
     const gate = deferred();
+    let received = 0;
     overrideApi(
       http.post(apiUrl('/api/tickets'), async () => {
+        // 要求がサーバー（ハンドラー）へ届いたことを知らせてから、応答を止める
+        received += 1;
+        entered.resolve();
         await gate.promise;
 
         return HttpResponse.json(
@@ -109,10 +114,14 @@ describe('チケットストアの書き込み', () => {
     const pending = store
       .createTicket({ projectId: '1', title: 'Late' })
       .catch(() => undefined);
+    // 送信前の取り消しで通ってしまわないよう、ハンドラーに届いてから再ログインする
+    await entered.promise;
     useAuthStore().signIn(useAuthStore().user!);
     gate.resolve();
     await pending;
 
+    // 送信前の取り消しではなく、届いた要求の応答を捨てたことを確かめる
+    expect(received).toBe(1);
     expect(ids(store)).not.toContain('3');
   });
 });
