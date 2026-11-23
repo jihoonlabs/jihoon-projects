@@ -4,6 +4,7 @@ import { computed, ref } from 'vue';
 import { WRITE_MESSAGE } from '../../constants/ticketMessages';
 import { useTicketEditor } from '../../composables/useTicketEditor';
 import { useTicketStore } from '../../store/useTicketStore';
+import { writeFailureMessage } from '../../utils/writeFailureMessage';
 import type { ProjectMember } from '../../types/project';
 import type { Ticket } from '../../types/ticket';
 import type { ProjectChoice } from '../../types/ticketModal';
@@ -122,8 +123,7 @@ async function remove() {
     await store.deleteTicket(target.id);
     emit('close');
   } catch (error) {
-    deleteError.value =
-      error instanceof Error ? error.message : WRITE_MESSAGE.deleteFailed;
+    deleteError.value = writeFailureMessage(error, WRITE_MESSAGE.deleteFailed);
   } finally {
     deleting.value = false;
   }

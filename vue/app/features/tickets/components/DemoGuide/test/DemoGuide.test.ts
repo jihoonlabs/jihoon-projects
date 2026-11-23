@@ -12,6 +12,8 @@ describe('デモの使い方', () => {
       within(guide).getByText('まずはこの3つをお試しください'),
     ).toBeInTheDocument();
     expect(within(guide).getAllByRole('listitem')).toHaveLength(4);
+    // まだ提供していない機能（コメント）は案内しない
+    expect(within(guide).queryByText(/コメント/)).not.toBeInTheDocument();
     expect(
       within(guide).getByText(/個人情報は入力しないでください/),
     ).toBeInTheDocument();

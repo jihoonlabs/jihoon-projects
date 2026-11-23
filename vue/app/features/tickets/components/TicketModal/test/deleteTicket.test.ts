@@ -6,6 +6,8 @@ import { deferred } from '~/test/deferred';
 import { apiUrl } from '~/test/mocks/apiUrl';
 import { overrideApi } from '~/test/mocks/overrideApi';
 
+import { WRITE_MESSAGE } from '../../../constants/ticketMessages';
+
 import {
   recordUpdates,
   renderModal,
@@ -68,7 +70,9 @@ describe('チケットの削除', () => {
 
     await user.click(await screen.findByRole('button', { name: '削除' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('500');
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(`${WRITE_MESSAGE.deleteFailed} (500)`);
+    expect(alert).not.toHaveTextContent('チケット操作に失敗しました');
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: '削除' })).toBeEnabled();
   });
