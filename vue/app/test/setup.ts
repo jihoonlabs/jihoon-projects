@@ -24,9 +24,9 @@ beforeAll(() => {
 
   server.listen({
     // 応答を定義していない外部への要求（Laravel API を含む）はテストを失敗させる
-    onUnhandledRequest(request, print) {
+    onUnhandledRequest(request) {
       if (new URL(request.url).origin !== appOrigin) {
-        print.error();
+        throw new Error(`未定義の外部要求: ${request.method} ${request.url}`);
       }
     },
   });
