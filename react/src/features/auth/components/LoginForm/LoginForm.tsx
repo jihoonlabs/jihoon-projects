@@ -4,10 +4,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { LoginApiError, loginApi } from '@/features/auth/api/login';
-import { resendVerificationEmailApi } from '@/features/auth/api/resendVerificationEmail';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import type {
   LoginRedirectParams,
@@ -16,6 +15,7 @@ import type {
 import { validateLoginForm } from '@/features/auth/validation/auth';
 
 import styles from './LoginForm.module.css';
+import { useVerificationResend } from './useVerificationResend';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 const DEMO_ACCOUNTS = {
@@ -81,21 +81,20 @@ export function LoginForm({
   const [showPassword, setShowPassword] = useState(false);
   const [verificationEmailRequired, setVerificationEmailRequired] =
     useState(false);
-  const [resendingVerificationEmail, setResendingVerificationEmail] =
-    useState(false);
-  const verificationRevision = useRef(0);
-  const verificationRequest = useRef<AbortController | null>(null);
-
-  // 古い再送応答のSet-Cookieで新しいログインを取り消さない。
-  const cancelVerificationRequest = () => {
-    verificationRequest.current?.abort();
-    verificationRequest.current = null;
-    setResendingVerificationEmail(false);
-  };
+  const { isResending, cancelResend, resend } = useVerificationResend({
+    onStart: () => {
+      setServerError('');
+      setSuccessMessage('');
+    },
+    onSuccess: (message) => {
+      setSuccessMessage(message);
+      setVerificationEmailRequired(false);
+    },
+    onError: setServerError,
+  });
 
   const selectDemoAccount = (account: keyof typeof DEMO_ACCOUNTS) => {
-    cancelVerificationRequest();
-    verificationRevision.current += 1;
+    cancelResend();
     setEmail(DEMO_ACCOUNTS[account].email);
     setPassword(DEMO_ACCOUNTS[account].password);
     setErrors({});
@@ -103,8 +102,6 @@ export function LoginForm({
     setSuccessMessage('');
     setVerificationEmailRequired(false);
   };
-
-  useEffect(() => () => verificationRequest.current?.abort(), []);
 
   useEffect(() => {
     // 表示済みのクエリパラメータをURLから削除する
@@ -119,8 +116,7 @@ export function LoginForm({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    cancelVerificationRequest();
-    verificationRevision.current += 1;
+    cancelResend();
 
     setServerError('');
     setSuccessMessage('');
@@ -165,41 +161,6 @@ export function LoginForm({
     }
   };
 
-  const handleResendVerificationEmail = async () => {
-    cancelVerificationRequest();
-    const controller = new AbortController();
-    verificationRequest.current = controller;
-    const revision = verificationRevision.current;
-    setServerError('');
-    setSuccessMessage('');
-    setResendingVerificationEmail(true);
-
-    try {
-      const data = await resendVerificationEmailApi(
-        { email },
-        controller.signal,
-      );
-
-      // 入力変更・新しいログイン後に、古い再送応答を表示へ反映しない。
-      if (revision !== verificationRevision.current) return;
-      setSuccessMessage(data.message);
-      setVerificationEmailRequired(false);
-    } catch (error) {
-      if (revision !== verificationRevision.current) return;
-      if (error instanceof Error) {
-        setServerError(error.message);
-        return;
-      }
-
-      setServerError('認証メールの再送中にエラーが発生しました。');
-    } finally {
-      if (verificationRequest.current === controller) {
-        verificationRequest.current = null;
-        setResendingVerificationEmail(false);
-      }
-    }
-  };
-
   if (!isInitialized || isAuthenticated) {
     return <p role="status">認証情報を確認中...</p>;
   }
@@ -234,12 +195,10 @@ export function LoginForm({
           <button
             type="button"
             className={styles.resendButton}
-            onClick={handleResendVerificationEmail}
-            disabled={resendingVerificationEmail}
+            onClick={() => void resend(email)}
+            disabled={isResending}
           >
-            {resendingVerificationEmail
-              ? '認証メールを再送中...'
-              : '認証メールを再送する'}
+            {isResending ? '認証メールを再送中...' : '認証メールを再送する'}
           </button>
         )}
 
@@ -285,8 +244,7 @@ export function LoginForm({
               aria-describedby={errors.email ? 'email-error' : undefined}
               value={email}
               onChange={(event) => {
-                cancelVerificationRequest();
-                verificationRevision.current += 1;
+                cancelResend();
                 setEmail(event.target.value);
                 setVerificationEmailRequired(false);
 
