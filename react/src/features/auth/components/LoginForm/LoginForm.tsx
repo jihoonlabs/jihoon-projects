@@ -6,15 +6,11 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { LoginApiError, loginApi } from '@/features/auth/api/login';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
-import type {
-  LoginRedirectParams,
-  LoginValidationErrors,
-} from '@/features/auth/types/auth';
-import { validateLoginForm } from '@/features/auth/validation/auth';
+import type { LoginRedirectParams } from '@/features/auth/types/auth';
 
 import styles from './LoginForm.module.css';
+import { useLoginSubmit } from './useLoginSubmit';
 import { useVerificationResend } from './useVerificationResend';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
@@ -32,7 +28,6 @@ export function LoginForm({
   const router = useRouter();
   const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
-  const login = useAuthStore((state) => state.login);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isInitialized = useAuthStore((state) => state.isInitialized);
 
@@ -48,8 +43,6 @@ export function LoginForm({
   const [password, setPassword] = useState(() =>
     DEMO_MODE ? 'TicketDemo2026!' : '',
   );
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<LoginValidationErrors>({});
   const [serverError, setServerError] = useState(() => {
     if (error === 'social_login_failed') {
       const providerName =
@@ -93,11 +86,24 @@ export function LoginForm({
     onError: setServerError,
   });
 
+  const { loading, errors, clearError, resetErrors, submit } = useLoginSubmit({
+    onStart: () => {
+      cancelResend();
+      setServerError('');
+      setSuccessMessage('');
+      setVerificationEmailRequired(false);
+    },
+    onError: (message, requiresVerification) => {
+      setServerError(message);
+      if (requiresVerification) setVerificationEmailRequired(true);
+    },
+  });
+
   const selectDemoAccount = (account: keyof typeof DEMO_ACCOUNTS) => {
     cancelResend();
     setEmail(DEMO_ACCOUNTS[account].email);
     setPassword(DEMO_ACCOUNTS[account].password);
-    setErrors({});
+    resetErrors();
     setServerError('');
     setSuccessMessage('');
     setVerificationEmailRequired(false);
@@ -114,51 +120,9 @@ export function LoginForm({
     window.location.href = `${API_URL}/api/auth/${socialProvider}/redirect`;
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    cancelResend();
-
-    setServerError('');
-    setSuccessMessage('');
-    setVerificationEmailRequired(false);
-
-    const validationErrors = validateLoginForm(email, password);
-
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
-
-    setErrors({});
-    setLoading(true);
-
-    try {
-      const data = await loginApi({
-        email,
-        password,
-      });
-
-      login(data.user);
-    } catch (error) {
-      if (error instanceof LoginApiError) {
-        setServerError(error.message);
-
-        if (error.code === 'email_not_verified') {
-          setVerificationEmailRequired(true);
-        }
-
-        return;
-      }
-
-      if (error instanceof Error) {
-        setServerError(error.message);
-        return;
-      }
-
-      setServerError('ログイン中にエラーが発生しました。');
-    } finally {
-      setLoading(false);
-    }
+    void submit(email, password);
   };
 
   if (!isInitialized || isAuthenticated) {
@@ -248,12 +212,7 @@ export function LoginForm({
                 setEmail(event.target.value);
                 setVerificationEmailRequired(false);
 
-                if (errors.email) {
-                  setErrors((prev) => ({
-                    ...prev,
-                    email: undefined,
-                  }));
-                }
+                clearError('email');
               }}
               required
               disabled={loading}
@@ -283,12 +242,7 @@ export function LoginForm({
                 onChange={(event) => {
                   setPassword(event.target.value);
 
-                  if (errors.password) {
-                    setErrors((prev) => ({
-                      ...prev,
-                      password: undefined,
-                    }));
-                  }
+                  clearError('password');
                 }}
                 required
                 disabled={loading}
