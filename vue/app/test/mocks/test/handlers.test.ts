@@ -23,8 +23,12 @@ describe('テスト用 API 応答', () => {
   });
 
   describe('未定義の要求', () => {
-    it('応答を定義していない API 要求は失敗させること', async () => {
-      await expect(fetch(apiUrl('/api/undefined-endpoint'))).rejects.toThrow();
+    it('応答を定義していない API 要求は実サーバーへ送らず失敗させること', async () => {
+      // MSW は未定義の要求で例外が出ると 500 の応答に変換する。
+      // 実サーバー（ローカルの Laravel など）が起動していても 404 などが返らないことを確かめる。
+      const response = await fetch(apiUrl('/api/undefined-endpoint'));
+
+      expect(response.status).toBe(500);
     });
   });
 
@@ -43,7 +47,9 @@ describe('テスト用 API 応答', () => {
     });
 
     it('前のテストの上書きは次のテストに残らないこと', async () => {
-      await expect(fetch(apiUrl('/api/isolation-probe'))).rejects.toThrow();
+      const response = await fetch(apiUrl('/api/isolation-probe'));
+
+      expect(response.status).toBe(500);
     });
 
     it('前のテストで設定された Cookie は次のテストに残らないこと', () => {
