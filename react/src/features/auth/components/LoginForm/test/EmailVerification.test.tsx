@@ -72,7 +72,7 @@ describe('LoginForm メール認証処理', () => {
     [true, false],
     [true, true],
   ])(
-    'keeps newer login recovery after delayed resend (failure: %s, email change: %s)',
+    '再ログイン時に認証メールの再送を中断し、遅い応答を表示しない（再送失敗: %s、メール変更: %s）',
     async (fails, changeEmail) => {
       const user = userEvent.setup();
       let release!: () => void;
@@ -122,11 +122,14 @@ describe('LoginForm メール認証処理', () => {
         await screen.findByRole('button', { name: '認証メールを再送する' }),
       );
       await waitFor(() => expect(started).toBe(true));
+      expect(resendSignal?.aborted).toBe(false);
 
       if (changeEmail) {
         await user.clear(email);
         await user.type(email, 'second@example.com');
       }
+      // 入力を変えない場合、送信の直前まで再送は継続している。
+      expect(resendSignal?.aborted).toBe(changeEmail);
       await user.click(screen.getByRole('button', { name: 'ログイン' }));
       expect(await screen.findByRole('alert')).toHaveTextContent(
         'New login needs verification',

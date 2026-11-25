@@ -110,6 +110,48 @@ describe('LoginForm ログイン処理', () => {
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
   });
 
+  it('ログインの応答待ちは入力と送信を無効にし、失敗後に再入力できること', async () => {
+    const user = userEvent.setup();
+    let completeLogin!: (response: Response) => void;
+    const pendingLogin = new Promise<Response>((resolve) => {
+      completeLogin = resolve;
+    });
+    const loginRequest = vi.fn(() => pendingLogin);
+
+    server.use(http.post(`${API_URL}/api/auth/login`, loginRequest));
+    render(<LoginForm />);
+
+    const email = screen.getByLabelText('メールアドレス');
+    const password = screen.getByLabelText('パスワード');
+    await user.type(email, 'user@example.com');
+    await user.type(password, 'password123');
+    await user.click(screen.getByRole('button', { name: 'ログイン' }));
+
+    try {
+      await waitFor(() => expect(loginRequest).toHaveBeenCalledTimes(1));
+      const pendingButton = screen.getByRole('button', {
+        name: 'ログイン中...',
+      });
+      expect(email).toBeDisabled();
+      expect(password).toBeDisabled();
+      expect(pendingButton).toBeDisabled();
+    } finally {
+      completeLogin(
+        HttpResponse.json(
+          { errors: { email: ['ログインできませんでした。'] } },
+          { status: 422 },
+        ),
+      );
+    }
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'ログインできませんでした。',
+    );
+    expect(email).toBeEnabled();
+    expect(password).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'ログイン' })).toBeEnabled();
+  });
+
   it('ログイン試行回数が多すぎる場合、制限メッセージを表示すること', async () => {
     const user = userEvent.setup();
 
