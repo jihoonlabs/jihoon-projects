@@ -9,15 +9,12 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import type { LoginRedirectParams } from '@/features/auth/types/auth';
 
+import { DemoAccountPicker, DEMO_ACCOUNTS } from './DemoAccountPicker';
 import styles from './LoginForm.module.css';
 import { useLoginSubmit } from './useLoginSubmit';
 import { useVerificationResend } from './useVerificationResend';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
-const DEMO_ACCOUNTS = {
-  user: { email: 'demo@example.com', password: 'TicketDemo2026!' },
-  admin: { email: 'demo-admin@example.com', password: 'TicketAdmin2026!' },
-};
 
 export function LoginForm({
   error,
@@ -38,10 +35,10 @@ export function LoginForm({
   }, [isInitialized, isAuthenticated, router, DEMO_MODE]);
 
   const [email, setEmail] = useState(() =>
-    DEMO_MODE ? 'demo@example.com' : '',
+    DEMO_MODE ? DEMO_ACCOUNTS.user.email : '',
   );
   const [password, setPassword] = useState(() =>
-    DEMO_MODE ? 'TicketDemo2026!' : '',
+    DEMO_MODE ? DEMO_ACCOUNTS.user.password : '',
   );
   const [serverError, setServerError] = useState(() => {
     if (error === 'social_login_failed') {
@@ -168,32 +165,11 @@ export function LoginForm({
 
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
           {DEMO_MODE && (
-            <div
-              className={styles.demoAccountChoices}
-              role="group"
-              aria-label="デモ用アカウント"
-            >
-              <button
-                type="button"
-                className={styles.demoAccountButton}
-                aria-pressed={email === DEMO_ACCOUNTS.user.email}
-                disabled={loading}
-                onClick={() => selectDemoAccount('user')}
-              >
-                一般ユーザー
-                <span>1プロジェクト</span>
-              </button>
-              <button
-                type="button"
-                className={styles.demoAccountButton}
-                aria-pressed={email === DEMO_ACCOUNTS.admin.email}
-                disabled={loading}
-                onClick={() => selectDemoAccount('admin')}
-              >
-                管理者
-                <span>2プロジェクト</span>
-              </button>
-            </div>
+            <DemoAccountPicker
+              email={email}
+              disabled={loading}
+              onSelect={selectDemoAccount}
+            />
           )}
 
           <div className={styles.inputGroup}>
